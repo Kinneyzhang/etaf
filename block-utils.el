@@ -48,7 +48,7 @@
                     " " 'face
                     `(:inverse-video t :foreground ,color)
                     'display `(space :width (,n-pixel)))))
-      (multiline string height))))
+      (block-string-duplines string height))))
 
 (defun block-string-nchar-pixel (string n &optional from-end)
   "Return the pixel width of n char in STRING from start
