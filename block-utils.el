@@ -100,8 +100,9 @@ lines from the top, using PADSTR to fill blank lines."
 
 (defun block-string-concat (&rest strings)
   (let* ((height (-max (-map #'block-string-linum strings)))
-         (strings (--map (block-lines-pad it height)
-                         strings)))
+         (strings (mapcar (lambda (string)
+                            (block-lines-pad string height))
+                          strings)))
     (block-string-join
      (apply 'cl-mapcar #'concat
             (mapcar (lambda (string)

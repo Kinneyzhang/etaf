@@ -2,6 +2,7 @@
 ;;; String operation related to pixel
 
 (require 's)
+(require 'ekp)
 
 (defun block-pixel-spacing (pixel)
   "Return a pixel spacing with a PIXEL pixel width."
