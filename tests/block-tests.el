@@ -140,6 +140,7 @@
 
 (defun block-demo-show ()
   (interactive)
+  (delete-other-windows)
   (block-pop-buffer "*block-demo*"
     (insert
      (block-render
