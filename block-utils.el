@@ -181,7 +181,9 @@ ALIGN should be one of top,center,bottom."
   (let ((max-width (-max (-map #'string-pixel-width strings))))
     (mapconcat (lambda (string)
                  (block-lines-justify
+                  ;; 再 justify 整个 block
                   (block-lines-justify
+                   ;; 先 justify 文本
                    string (string-pixel-width string) text-align)
                   max-width align))
                strings "\n")))

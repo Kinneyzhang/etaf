@@ -368,7 +368,8 @@ to a symbol 'right, count the right side only."
                        (if (string-match-p "\n$" line)
                            line
                          (concat line "\n")))
-                     block-lines))))
+                     block-lines))
+    (string-trim-right block-string "\n")))
 
 ;;;###autoload
 (defun block-concat (&rest blocks)
