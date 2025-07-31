@@ -7,7 +7,7 @@
 
 (defclass block ()
   ((content :initarg :content)
-   (width :initarg :width)
+   (width :initarg :width :initform nil)
    (justify :initarg :justify :initform 'left)
    (height :initarg :height :initform nil)
    (align :initarg :align :initform 'top)
@@ -160,23 +160,29 @@ to a symbol 'right, count the right side only."
 
 (defun block-total-pixel (block)
   "Return the total pixel width of BLOCK."
-  (let ((width (oref block :width)))
-    (cond
-     ((consp width) (car width))
-     ((numberp width)
-      (let ((content (oref block :content)))
-        (+ (block-side-pixel block)
-           (or (block-string-nchar-pixel content width)
-               ;; 内容小于 width 个字符时，用空格补齐剩余字符计算像素
-               (+ (string-pixel-width content)
-                  (* (- width (length content))
-                     (string-pixel-width " ")))))))
-     (t (error "Invalid format of block width: %S" width)))))
+  (if-let ((width (oref block :width)))
+      (cond
+       ((consp width) (car width))
+       ((numberp width)
+        (let ((content (oref block :content)))
+          (+ (block-side-pixel block)
+             (or (block-string-nchar-pixel content width)
+                 ;; 内容小于 width 个字符时，用空格补齐剩余字符计算像素
+                 (+ (string-pixel-width content)
+                    (* (- width (length content))
+                       (string-pixel-width " ")))))))
+       (t (error "Invalid format of block width: %S" width)))
+    ;; when :width is nil, total-pixel = content pixel + side pixel
+    (+ (string-pixel-width (oref block :content))
+       (block-side-pixel block))))
 
 (defun block-content-pixel (block)
   "Return the pixel width of BLOCK's content."
-  (- (block-total-pixel block)
-     (block-side-pixel block)))
+  (if (oref block :width)
+      (- (block-total-pixel block)
+         (block-side-pixel block))
+    ;; when :width is nil, use the real content pixel
+    (string-pixel-width (oref block :content))))
 
 (defun block-content (block)
   "Return the block content after justified and set width."
@@ -375,12 +381,12 @@ to a symbol 'right, count the right side only."
 (defun block-concat (&rest blocks)
   "TEXT-ALIGN should be one of left,center,right.
 ALIGN should be one of top,center,bottom."
-  (block-lines-concat (mapcar #'block-render blocks)))
+  (block :content (block-lines-concat (mapcar #'block-render blocks))))
 
 ;;;###autoload
 (defun block-stack (&rest blocks)
   "ALIGN used for all blocks, TEXT-ALIGN used for text in a block."
-  (block-lines-stack (mapcar #'block-render blocks)))
+  (block :content (block-lines-stack (mapcar #'block-render blocks))))
 
 ;;;###autoload
 (defun block-string (&rest kvs)
