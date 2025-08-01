@@ -268,7 +268,6 @@ ALIGN should be one of top,center,bottom."
 ;; 在 block-string 返回的字符串中存储 block 相关信息
 ;; 在 block-lines-concat 和 block-lines-stack 获取这些存储的信息
 ;; 在 block-concat 和 block--stack 再这些信息存储到新的 block 中
-
 (defun block-lines-stack (strings &optional align text-align)
   "ALIGN used for all blocks, TEXT-ALIGN used for text in a block."
   (let ((max-width (-max (-map #'string-pixel-width strings)))
