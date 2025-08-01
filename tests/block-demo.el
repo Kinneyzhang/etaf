@@ -8,12 +8,12 @@
 
 (defmacro block-pop-buffer (buffer-name &rest body)
   (declare (indent defun))
-  (delete-other-windows)
   `(let ((buffer (get-buffer-create ,buffer-name)))
      (with-current-buffer buffer
        (local-set-key "q" 'quit-window)
        (erase-buffer)
        ,@body)
+     (delete-other-windows)
      (switch-to-buffer buffer)))
 
 (defvar block-demo-header-str
@@ -74,7 +74,8 @@
 (defun block-demo-tabs ()
   (block :content block-demo-tabs-str
          :width `(,(floor (* 0.7 (block-demo-body-pixel))))
-         :border '(:bottom ("#7D9EC0" . "#40E0D0"))))
+         :border '(:bottom ("#7D9EC0" . "#40E0D0"))
+         :margin '(:bottom 1)))
 
 (defun block-demo-login ()
   (block :content "注册 登陆"

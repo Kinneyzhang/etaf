@@ -365,8 +365,6 @@ to a symbol 'right, count the right side only."
              block-lines
              (make-list
               bottom-margin (block-pixel-spacing total-pixel)))))
-
-    ;; FIXME: block 最后会多一行，在连接的时候如何处理?
     
     ;; 必须要在最后连接所有行，因为中间直接字符串操作可能使 line-height 失效
     (setq block-string
@@ -375,6 +373,7 @@ to a symbol 'right, count the right side only."
                            line
                          (concat line "\n")))
                      block-lines))
+    ;; 去掉最后的换行符
     (string-trim-right block-string "\n")))
 
 ;;;###autoload
