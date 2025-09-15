@@ -592,10 +592,31 @@
     ;; cross-gaps-lst: 交叉轴方向的主轴之间的 gap
     ;; cross-items-pads-lst: 每个主轴方向的 items 在交叉轴方向的 pads
     (pcase direction
-      '(row )
+      '(row
+        )
       '(row-reverse)
       '(column)
       '(column-reverse))
     ))
+
+(defun etml-flex--items-concat (items-plists
+                                main-gaps-lst
+                                cross-items-pads-lst)
+  "在水平方向从左到右依次连接 items 和 gaps，同时根据交叉轴方向的对齐方式，为每个
+item 补齐高度。"
+  (let ((items (etml-plists-get items-plists :item))
+        )
+    (etml-lines-concat
+     (mapcar #'etml-block-render blocks))
+    )
+  )
+
+(defun etml-flex--items-stack (flex)
+  "在垂直方向连接 items"
+  )
+
+(defun etml-flex-items-concat (flex)
+  "在主轴方向连接 items"
+  )
 
 (provide 'etml-flex)
