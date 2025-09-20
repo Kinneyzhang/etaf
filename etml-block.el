@@ -407,10 +407,10 @@ to a symbol 'right, count the right side only."
   (etml-string-linum (etml-block-content block)))
 
 (defun etml-block-side-height (block)
-  (+ (etml-block-padding block 'top)
-     (etml-block-padding block 'bottom)
-     (etml-block-margin block 'top)
-     (etml-block-margin block 'bottom)))
+  (+ (etml-block-padding block :top)
+     (etml-block-padding block :bottom)
+     (etml-block-margin block :top)
+     (etml-block-margin block :bottom)))
 
 (defun etml-block-total-height (block)
   (+ (etml-block-side-height block)
@@ -893,8 +893,9 @@ If type is 'scroll, it's a scroll bar. Use SCROLL-BAR-HEIGHT,
                            line
                          (concat line "\n")))
                      block-lines))
-
-    (string-trim-right block-string "\n")))
+    (propertize
+     (string-trim-right block-string "\n")
+     'etml-block-uuid uuid)))
 
 ;;;###autoload
 (defun etml-block-concat (&rest blocks)
