@@ -1,6 +1,15 @@
 ;; -*- lexical-binding: t -*-
 
 (require 'etml-pixel)
+(require 'dash)
+
+(defun etml-interleave (seq1 seq2)
+  "交叉组合 seq1 和 seq2，seq1 的元素个数必须比 seq2 多一个。"
+  (if (= (length seq1) (1+ (length seq2)))
+      (let ((head-seq1 (seq-take seq1 (1- (length seq1))))
+            (last-elem (car (last seq1))))
+        (append (-interleave head-seq1 seq2) (list last-elem)))
+    (error "(length %S) != (1+ (length %S))" seq1 seq2)))
 
 (defun etml-split-size (size n &optional extra start end)
   "将 SIZE 分为 N 等份，并且在 start 到 end 位置加上额外的数字 extra"
@@ -319,6 +328,7 @@ When JUSTIFY is nil, set it to 'left' by default."
 (defun etml-lines-concat (strings &optional align text-align)
   "TEXT-ALIGN should be one of left,center,right.
 ALIGN should be one of top,center,bottom."
+  (setq strings (delete nil strings))
   (let ((max-height (-max (-map #'etml-string-linum strings))))
     (apply 'etml-string-concat
            (mapcar (lambda (string)
@@ -330,6 +340,7 @@ ALIGN should be one of top,center,bottom."
 
 (defun etml-lines-stack (strings &optional align text-align)
   "ALIGN used for all blocks, TEXT-ALIGN used for text in a block."
+  (setq strings (delete nil strings))
   (let ((max-width (-max (-map #'string-pixel-width strings))))
     (mapconcat (lambda (string)
                  (etml-lines-justify
