@@ -2,14 +2,20 @@
 
 (defun etml-flex-tests-block1 (num)
   (etml-block :content (format "etml test block etml test block etml test block etml test happy hacking emacs and vim ...%s" num)
-              :width '(200)
+              ;; :width '(200)
               :padding t
               :border t))
 
 (defun etml-flex-tests-block2 (num)
   (etml-block :content (format "test block etml test block etml test %s" num)
-              :width '(200)
+              ;; :width '(200)
               :padding t
+              :border t))
+
+(defun etml-flex-tests-block-number (num)
+  (etml-block :content (format "emacs %s" num)
+              ;; :width '(100)
+              ;; :padding t
               :border t))
 
 ;; (pop-buffer-insert 15
@@ -28,6 +34,18 @@
    :self (etml-flex-tests-block2 num)
    :basis 300))
 
+(defun etml-flex-tests-item-number (num)
+  (etml-flex-item
+   :self (etml-flex-tests-block-number num)
+   ;; FIXME: :basis 超过容器宽度时，使用容器的宽度
+   ;; 使用容器宽度限制 item 宽度
+   :basis 700
+   :justify 'center
+   :shrink 1
+   :grow 0))
+
+;; (string-pixel-width "emacs")
+
 (defun etml-flex-test-line-pixel ()
   (save-excursion
     (goto-char (point-min))
@@ -38,20 +56,32 @@
 (defun etml-flex-test-render ()
   (progn
     (elog-log-clear)
-    (pop-buffer-insert 15
+    (pop-buffer-insert 20
       (etml-flex-render
        (etml-flex
-        :width '(490)
+        :width '(680)
         :wrap 'wrap
-        :height 10
-        :column-gap 20
+        ;; :height 10
+        ;; :column-gap 2
         ;; :row-gap 1
-        :content-justify 'center
+        :content-justify 'flex-start
         :items-align 'center
-        :items (list (etml-flex-tests-item1 1)
-                     (etml-flex-tests-item2 2)
-                     (etml-flex-tests-item1 3)
-                     (etml-flex-tests-item2 4)))))))
+        :items
+        ;; (list (etml-flex-tests-item1 1)
+        ;;       (etml-flex-tests-item2 2)
+        ;;       (etml-flex-tests-item1 3)
+        ;;       (etml-flex-tests-item2 4))
+        (list (etml-flex-tests-item-number 1)
+              ;; (etml-flex-tests-item-number 2)
+              ;; (etml-flex-tests-item-number 3)
+              ;; (etml-flex-tests-item-number 4)
+              ;; (etml-flex-tests-item-number 5)
+              ;; (etml-flex-tests-item-number 6)
+              ;; (etml-flex-tests-item-number 7)
+              ;; (etml-flex-tests-item-number 8)
+              ;; (etml-flex-tests-item-number 9)
+              )
+        )))))
 
 (etml-flex-test-render)
 

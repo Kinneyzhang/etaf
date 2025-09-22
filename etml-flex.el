@@ -134,51 +134,62 @@
          (basis (oref item basis))
          (block (oref item self))
          (content (oref block content))
-         (item-min-units (seq-min (ekp-boxes-widths content)))
+         ;; 最长的单词的宽度作为最小单位长度
+         (block-min-pixel (seq-max (ekp-boxes-widths content)))
+         (block-side-pixel (etml-block-side-pixel block))
          curr-units min-units max-units)
     ;; basis 是 item 的初始长度，包含 margin, padding !
     (pcase direction
       ((or 'row 'row-reverse)
-       (let ((max-units (+ (etml-flex-item-side-pixel item)
-                           (if-let ((max-width (oref item max-width)))
-                               (min max-width
-                                    (string-pixel-width content))
-                             (string-pixel-width content))))
-             (min-units (+ (etml-flex-item-side-pixel item)
-                           (if-let ((min-width (oref item min-width)))
-                               (max min-width item-min-units)
-                             item-min-units))))
-         (list (pcase basis
-                 ;; FIXME: number 需在最小和最大长度范围内
-                 ((pred numberp) basis)
-                 ('auto
-                  (setq curr-units (etml-flex-item-total-pixel item)))
-                 ((or 'content 'max-content) max-units)
-                 ('min-content min-units)
-                 ('fit-content
-                  (min max-units (max min-units curr-units))))
-               min-units max-units)))
+       (setq curr-units (etml-flex-item-total-pixel item))
+       (setq min-units
+             (progn
+               (oset item width (list (+ block-side-pixel
+                                         block-min-pixel)))
+               (etml-flex-item-total-pixel item)))
+       ;; 这里的 max-units 是 (min max-content max-width)
+       ;; basis: max-content 也是 (min max-content max-width)
+       (setq max-units
+             (progn
+               (oset item width nil
+                     ;; (list (+ block-side-pixel
+                     ;;          (string-pixel-width content)))
+                     )
+               (etml-flex-item-total-pixel item)))
+       (list (pcase basis
+               ((pred numberp)
+                (if (or ;; (> basis max-units)
+                     (< basis min-units))
+                    (error "basis %s it not between min-units %s\
+ and max-units %s" basis min-units max-units)
+                  basis))
+               ('auto curr-units)
+               ((or 'content 'max-content) max-units)
+               ('min-content min-units)
+               ('fit-content
+                (min max-units (max min-units curr-units))))
+             min-units max-units))
       ((or 'column 'column-reverse)
-       (let ((max-units
-              (progn
-                (oset item width nil)
-                ;; `etml-flex-item-total-height' 已经考虑了 max-height
-                (etml-flex-item-total-height item)))
-             (min-units
-              (progn
-                (oset item width (list item-min-units))
-                ;; `etml-flex-item-total-height' 已经考虑了 min-height
-                (etml-flex-item-total-height item))))
-         (list (pcase basis
-                 ;; FIXME: number 需在最小和最大长度范围内
-                 ((pred numberp) basis)
-                 ('auto
-                  (setq curr-units (etml-flex-item-total-height item)))
-                 ((or 'content 'max-content) max-units)
-                 ('min-content min-units)
-                 ('fit-content
-                  (min max-units (max min-units curr-units))))
-               min-units max-units))))))
+       (setq curr-units (etml-flex-item-total-height item))
+       (setq min-units
+             (progn (oset item width (list block-min-pixel))
+                    (etml-flex-item-total-height item)))
+       (setq max-units (progn (oset item width nil)
+                              (etml-flex-item-total-height item)))
+       (list (pcase basis
+               ((pred numberp)
+                (if (or (< basis min-units)
+                        ;; (> basis max-units)
+                        )
+                    (error "basis %s it not between min-units %s\
+ and max-units %s" basis min-units max-units)
+                  basis))
+               ('auto curr-units)
+               ((or 'content 'max-content) max-units)
+               ('min-content min-units)
+               ('fit-content
+                (min max-units (max min-units curr-units))))
+             min-units max-units)))))
 
 (defun etml-flex--cross-edge-units (item items-cross-max-units flex)
   "根据 align，计算需要在 item 交叉轴开头和结尾增加的单元数。
@@ -254,7 +265,7 @@
                     (if (< rest-idx rest-num) 1 0)))
            (cl-incf rest-idx 1))
          ;; 按照方向设置 item 的新的主轴方向长度
-         (elog-debug "grow:%s" final-units)
+         ;; (elog-debug "grow:%s" final-units)
          (pcase direction
            ;; 关键点:
            ;; 1. basis units 是 item block 总长度
@@ -305,7 +316,7 @@
                       (- (- base-units (* shrink average-shrink))
                          (if (< rest-idx rest-num) 1 0))))
            (cl-incf rest-idx 1))
-         (elog-debug "shrink:%s" final-units)
+         ;; (elog-debug "shrink:%s" final-units)
          (pcase direction
            ;; 关键点:
            ;; 1. basis units 是 item block 总长度
@@ -355,7 +366,8 @@
          (direction (oref flex direction))
          (items-units (etml-flex-items-main-units items-plists flex))
          (gaps-units (etml-flex-main-gaps-units items-plists flex)))
-    ;; (elog-debug "flex-units:%S" flex-units)
+    (elog-debug "flex-units:%S" flex-units)
+    (elog-debug "items-units:%S" items-units)
     ;; 容器长度 >= 子项总长度: 拉伸
     (if (>= flex-units items-units)
         (etml-flex-items-grow
@@ -624,6 +636,9 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                           items))
          (items-plists (etml-flex-items-plist flex))
          (items-units-lst (etml-plists-get items-plists :base-units))
+         (_ (elog-debug "base: %S" items-units-lst))
+         (_ (elog-debug "min: %S" (etml-plists-get items-plists :min-units)))
+         (_ (elog-debug "max: %S" (etml-plists-get items-plists :max-units)))
          ;; 当前使用 base-units 计算初始的总宽度
          ;; 后续动态调整中更多的使用实时计算出来的 items 总宽度
          (items-units (apply '+ items-units-lst))
