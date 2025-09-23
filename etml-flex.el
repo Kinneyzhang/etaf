@@ -288,7 +288,7 @@
   (let* ((items (etml-plists-get items-plists :item))
          (items-units-lst (etml-plists-get items-plists :base-units))
          ;; shrink 后不能小于 最小宽度 或 最小高度(1)
-         (rest-units (- flex-units items-units gaps-units))
+         (rest-units (abs (- flex-units items-units gaps-units)))
          (min-units-lst (etml-plists-get items-plists :min-units))
          (shrinks (etml-plists-get items-plists :shrink))
          (shrinks-sum (apply '+ shrinks))
@@ -299,6 +299,7 @@
                        (% rest-units shrinks-sum)
                      0))
          (rest-idx 0))
+    (elog-debug "rest-units:%S" rest-units)
     (seq-map-indexed
      (lambda (shrink idx)
        (let* ((base-units (nth idx items-units-lst))
@@ -315,13 +316,17 @@
                  (max min-units
                       (- (- base-units (* shrink average-shrink))
                          (if (< rest-idx rest-num) 1 0))))
+           ;; (elog-debug "final-units:%S" final-units)
            (cl-incf rest-idx 1))
          ;; (elog-debug "shrink:%s" final-units)
          (pcase direction
            ;; 关键点:
            ;; 1. basis units 是 item block 总长度
            ;; 2. item block 的 width/height 属性是内容的长度
-           ((or 'row 'row-reverse) 
+           ((or 'row 'row-reverse)
+            (elog-debug "final-units:%S"
+                        (- final-units
+                           (etml-flex-item-side-pixel item)))
             (oset item width
                   (list (- final-units
                            (etml-flex-item-side-pixel item)))))
@@ -674,6 +679,9 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
             ;; 容器长度 < items总长度，考虑 shrink 和 换行
             (etml-flex-items-shrink
              items-plists flex-units items-units gaps-units direction)
+
+            ;;; FIXME: shrink, then?
+            
             (let* ((items-units (etml-flex-items-main-units
                                  items-plists flex)))
               (unless (and (eq 'nowarp (oref flex wrap))
