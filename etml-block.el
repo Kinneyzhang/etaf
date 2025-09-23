@@ -628,6 +628,7 @@ If type is 'scroll, it's a scroll bar. Use SCROLL-BAR-HEIGHT,
                      ;; 需要确定几次滚动对应滚动条的一次移动
                      (setq y-scroll-bar-height 1)
                      (setq y-scroll-bar-steps
+                           ;; FIXME: 当高度为1时，滚动条无法移动，但是需要滚动
                            (let ((each (/ y-overflow-num
                                           (1- shown-content-height)))
                                  (rest
