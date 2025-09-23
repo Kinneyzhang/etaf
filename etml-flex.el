@@ -316,7 +316,6 @@
                  (max min-units
                       (- (- base-units (* shrink average-shrink))
                          (if (< rest-idx rest-num) 1 0))))
-           ;; (elog-debug "final-units:%S" final-units)
            (cl-incf rest-idx 1))
          ;; (elog-debug "shrink:%s" final-units)
          (pcase direction
@@ -371,8 +370,8 @@
          (direction (oref flex direction))
          (items-units (etml-flex-items-main-units items-plists flex))
          (gaps-units (etml-flex-main-gaps-units items-plists flex)))
-    (elog-debug "flex-units:%S" flex-units)
-    (elog-debug "items-units:%S" items-units)
+    ;; (elog-debug "flex-units:%S" flex-units)
+    ;; (elog-debug "items-units:%S" items-units)
     ;; 容器长度 >= 子项总长度: 拉伸
     (if (>= flex-units items-units)
         (etml-flex-items-grow
@@ -680,10 +679,15 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
             (etml-flex-items-shrink
              items-plists flex-units items-units gaps-units direction)
 
-            ;;; FIXME: shrink, then?
+            (elog-debug "xxx: %S"(mapcar (lambda (item)
+                                           (oref item width))
+                                         items))
+            ;; FIXME: shrink, then?
             
             (let* ((items-units (etml-flex-items-main-units
                                  items-plists flex)))
+              (elog-debug "after items-units: %S" items-units)
+              (elog-debug "after flex-units: %S" flex-units)
               (unless (and (eq 'nowarp (oref flex wrap))
                            (<= items-units flex-units))
                 ;; 缩减之后仍然超过容器长度的，且非 nowrap，
@@ -790,7 +794,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                     (append (list 0)
                             (make-list (1- main-num) gap-units)
                             (list 0)))))
-          (elog-info "cross-gaps-lst:%S" cross-gaps-lst)
+          ;; (elog-info "cross-gaps-lst:%S" cross-gaps-lst)
           (setq items-plists-lst (nreverse items-plists-lst))
           (setq cross-items-pads-lst (nreverse cross-items-pads-lst))
           (setq cross-gaps-lst (nreverse cross-gaps-lst)))
