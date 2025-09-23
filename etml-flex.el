@@ -234,12 +234,12 @@
 ;; basis 决定 items 的基础宽度
 ;; grow or shrink
 
-(defun etml-flex-items-grow (items-plists
-                             flex-units items-units gaps-units
-                             direction)
+;; 使用基于 base-units 进行调整
+(defun etml-flex-items-grow (items-plists flex-units gaps-units direction)
   "按照 grow 拉伸并设置子项长度"
   (let* ((items (etml-plists-get items-plists :item))
          (items-units-lst (etml-plists-get items-plists :base-units))
+         (items-units (apply #'+ items-units-lst))
          (rest-units (abs (- flex-units items-units gaps-units)))
          (grows (etml-plists-get items-plists :grow))
          (grows-sum (apply '+ grows))
@@ -265,28 +265,28 @@
                     (if (< rest-idx rest-num) 1 0)))
            (cl-incf rest-idx 1))
          ;; 按照方向设置 item 的新的主轴方向长度
-         ;; (elog-debug "grow:%s" final-units)
          (pcase direction
            ;; 关键点:
            ;; 1. basis units 是 item block 总长度
            ;; 2. item block 的 width/height 属性是内容的长度
            ((or 'row 'row-reverse)
             (oset item width
-                  (list (- final-units (etml-flex-item-side-pixel item)))))
+                  (list (- final-units
+                           (etml-flex-item-side-pixel item)))))
            ((or 'column 'column-reverse)
             (oset item height
-                  (- final-units (etml-flex-item-side-height item)))))))
+                  (- final-units
+                     (etml-flex-item-side-height item)))))))
      grows)))
 
 ;; 当前最新的总宽度
 ;; (etml-flex-items-main-units items)
 
-(defun etml-flex-items-shrink (items-plists
-                               flex-units items-units gaps-units
-                               direction)
+(defun etml-flex-items-shrink (items-plists flex-units gaps-units direction)
   "按照 shrink 缩减并设置子项长度"
   (let* ((items (etml-plists-get items-plists :item))
          (items-units-lst (etml-plists-get items-plists :base-units))
+         (items-units (apply #'+ items-units-lst))
          ;; shrink 后不能小于 最小宽度 或 最小高度(1)
          (rest-units (abs (- flex-units items-units gaps-units)))
          (min-units-lst (etml-plists-get items-plists :min-units))
@@ -323,9 +323,6 @@
            ;; 1. basis units 是 item block 总长度
            ;; 2. item block 的 width/height 属性是内容的长度
            ((or 'row 'row-reverse)
-            (elog-debug "final-units:%S"
-                        (- final-units
-                           (etml-flex-item-side-pixel item)))
             (oset item width
                   (list (- final-units
                            (etml-flex-item-side-pixel item)))))
@@ -368,17 +365,18 @@
   "根据容器长度、items长度、shrink、grow 等动态调整子项长度。"
   (let* ((flex-units (etml-flex-main-units flex))
          (direction (oref flex direction))
-         (items-units (etml-flex-items-main-units items-plists flex))
+         (items-units
+          (apply #'+ (etml-plists-get items-plists :base-units)))
          (gaps-units (etml-flex-main-gaps-units items-plists flex)))
-    ;; (elog-debug "flex-units:%S" flex-units)
-    ;; (elog-debug "items-units:%S" items-units)
+    (elog-debug "adjust flex-units:%S" flex-units)
+    (elog-debug "adjust items-units:%S" items-units)
     ;; 容器长度 >= 子项总长度: 拉伸
     (if (>= flex-units items-units)
         (etml-flex-items-grow
-         items-plists flex-units items-units gaps-units direction)
+         items-plists flex-units gaps-units direction)
       ;; 容器长度 < 子项总长度: 缩减
       (etml-flex-items-shrink
-       items-plists flex-units items-units gaps-units direction))))
+       items-plists flex-units gaps-units direction))))
 
 ;; FIXME: need consider max?
 (defun etml-flex-main-units (flex)
@@ -401,21 +399,19 @@
      (when-let ((width (oref flex width)))
        (etml-width-pixel width)))))
 
+(defun etml-flex-item-main-units (item direction)
+  "获取单个 item 主轴方向的当前长度"
+  (pcase direction
+    ((or 'row 'row-reverse)
+     (etml-flex-item-total-pixel item))
+    ((or 'column 'column-reverse)
+     (etml-flex-item-total-height item))))
+
 (defun etml-flex-items-main-units (items-plists flex)
   "获取当前左右子项最新的长度总和"
   (let ((direction (oref flex direction)))
     (apply #'+ (mapcar (lambda (item)
-                         (pcase direction
-                           ((or 'row 'row-reverse)
-                            (etml-flex-item-total-pixel item)
-                            ;; (+ (etml-flex-item-side-pixel item)
-                            ;;    (etml-flex-item-content-pixel item))
-                            )
-                           ((or 'column 'column-reverse)
-                            (etml-flex-item-total-height item)
-                            ;; (+ (etml-flex-item-side-height item)
-                            ;;    (etml-flex-item-content-height item))
-                            )))
+                         (etml-flex-item-main-units item direction))
                        (etml-plists-get items-plists :item)))))
 
 (defun etml-flex-items-cross-max-units (items flex)
@@ -674,38 +670,39 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
           (if (>= rest-units 0)
               ;; 容器长度 >= items总长度，考虑 grow，不换行
               (etml-flex-items-grow
-               items-plists flex-units items-units gaps-units direction)
+               items-plists flex-units gaps-units direction)
             ;; 容器长度 < items总长度，考虑 shrink 和 换行
             (etml-flex-items-shrink
-             items-plists flex-units items-units gaps-units direction)
+             items-plists flex-units gaps-units direction)
 
-            (elog-debug "xxx: %S"(mapcar (lambda (item)
-                                           (oref item width))
-                                         items))
-            ;; FIXME: shrink, then?
-            
-            (let* ((items-units (etml-flex-items-main-units
-                                 items-plists flex)))
-              (elog-debug "after items-units: %S" items-units)
-              (elog-debug "after flex-units: %S" flex-units)
-              (unless (and (eq 'nowarp (oref flex wrap))
-                           (<= items-units flex-units))
-                ;; 缩减之后仍然超过容器长度的，且非 nowrap，
-                ;; 计算换行点
-                (setq wrap-lst (etml-flex-line-breaks
-                                flex-units items-units-lst
-                                (etml-flex-main-gap-units flex)))
-                ;; (elog-debug "wrap-lst:%S" wrap-lst)
-                (let ((prev 0))
-                  (dolist (num wrap-lst)
-                    ;; 当前主轴方向的新的 items
-                    (let ((sub-items-plists
-                           (seq-subseq items-plists
-                                       prev (+ prev num))))
-                      ;; 重新计算每行的 item 长度
-                      (etml-flex-items-adjust sub-items-plists flex)
-                      (setq prev (+ prev num))))))))
+            ;; 缩减之后非 nowrap，items 个数大于1且超过容器长度的
+            ;; 多个 items 换行后，重新计算
+            (when (and (not (eq 'nowarp (oref flex wrap)))
+                       (> (length items-plists) 1))
+              (let ((items-units
+                     (etml-flex-items-main-units items-plists flex)))
+                (when (> items-units flex-units)
+                  (setq wrap-lst (etml-flex-line-breaks
+                                  flex-units items-units-lst
+                                  (etml-flex-main-gap-units flex)))
+                  (elog-debug "wrap-lst:%S" wrap-lst)
+                  (let ((prev 0))
+                    (dolist (num wrap-lst)
+                      ;; 当前主轴方向的新的 items
+                      (let ((sub-items-plists
+                             (seq-subseq items-plists
+                                         prev (+ prev num))))
+                        ;; 重新计算每行的 item 长度
+                        (etml-flex-items-adjust sub-items-plists flex)
+                        (setq prev (+ prev num)))))))))
 
+          ;; after adjust
+          (elog-debug "dd:%S"
+                      (mapcar (lambda (item)
+                                (oref item width))
+                              (etml-plists-get items-plists :item)))
+          ;;
+          
           ;; 依次处理每一条主轴上的 content-justify
           ;; 设置 main-gaps-lst 和 cross-max-units-lst
           (let ((prev 0)
@@ -739,8 +736,11 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                            items-num rest-units content-justify
                            gap-units)
                           main-gaps-lst)
-                  (push (make-list (1+ items-num) gap-units) main-gaps-lst))
-                ;; (elog-debug "main-gaps-lst:%S" main-gaps-lst)
+                  (push (append
+                         '(0) (make-list (1- items-num) gap-units) '(0))
+                        main-gaps-lst))
+                (elog-debug "main-gaps-lst:%S" main-gaps-lst)
+                (elog-debug "items-units:%S" items-units)
                 (setq prev (+ prev num))))
             (setq main-gaps-lst (nreverse main-gaps-lst))
             (setq cross-max-units-lst (nreverse cross-max-units-lst)))
@@ -848,14 +848,17 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
     ;; (elog-debug "cross-items-pads-lst:%S" cross-items-pads-lst)
     ;; (elog-debug "main-gaps-lst:%S" main-gaps-lst)
     ;; (elog-debug "cross-gaps-lst:%S" cross-gaps-lst)
-    (pcase direction
-      ((or 'row row-reverse)
-       (etml-flex-rows-render direction items-plists-lst
-                              cross-items-pads-lst main-gaps-lst
-                              cross-gaps-lst))
-      ((or 'column 'column-reverse)
-       (etml-flex-columns-render direction items-plists-lst
-                                 cross-items-pads-lst main-gaps-lst
-                                 cross-gaps-lst)))))
+    (let ((content
+           (pcase direction
+             ((or 'row row-reverse)
+              (etml-flex-rows-render direction items-plists-lst
+                                     cross-items-pads-lst main-gaps-lst
+                                     cross-gaps-lst))
+             ((or 'column 'column-reverse)
+              (etml-flex-columns-render direction items-plists-lst
+                                        cross-items-pads-lst main-gaps-lst
+                                        cross-gaps-lst)))))
+      (oset flex :content content)
+      (etml-block-render flex))))
 
 (provide 'etml-flex)
