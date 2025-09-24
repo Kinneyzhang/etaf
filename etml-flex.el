@@ -623,6 +623,16 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                     :align (oref item cross-align))))
           (oref flex items)))
 
+(defun etml-item-set-cross-units (item total-units direction)
+  "设置 item 交叉轴的长度"
+  (pcase direction
+    ((or 'row 'row-reverse)
+     (oset item height
+           (- total-units (etml-flex-item-side-height item))))
+    ((or 'column 'column-reverse)
+     (oset item width
+           (list (- total-units (etml-flex-item-side-pixel item)))))))
+
 (defun etml-flex-render (flex)
   (let* ((display (oref flex display))
          (direction (oref flex direction))
@@ -787,27 +797,49 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
 
             ;; content-align 为 'stretch 时
             ;; 需要重新设置每个主轴上的所有 items 的交叉轴长度为最大长度
-            (if (eq content-align 'stretch)
-                (let ((prev 0) (idx 0))
-                  (dolist (num wrap-lst)
-                    (let (())
-                      (setq prev (+ prev num))
-                      (cl-incf idx 1))))
-              ;; 其余 content-align 值，只计算主轴之间的 gap
-              (if (and (not (eq 'nowarp (oref flex wrap)))
-                       cross-flex-units
-                       (> main-num 1)
-                       (< cross-content-units cross-flex-units))
-                  (setq cross-gaps-lst
-                        (etml-flex-content-align
-                         main-num
-                         (- cross-flex-units cross-content-units)
-                         content-align gap-units))
-                ;; 只设置基础 gaps
-                (setq cross-gaps-lst
-                      (append (list 0)
-                              (make-list (1- main-num) gap-units)
-                              (list 0)))))))
+            (if cross-flex-units
+                (if (eq content-align 'stretch)
+                    (let* ((prev 0) (idx 0)
+                           (rest-units
+                            (- cross-flex-units cross-content-units))
+                           (num (length wrap-lst))
+                           (plus-lst (etml-split-size rest-units num)))
+                      (dolist (num wrap-lst)
+                        (let* ((sub-items-plists
+                                (seq-subseq items-plists prev (+ prev num)))
+                               (items (etml-plists-get sub-items-plists :item))
+                               (cross-max-units (nth idx cross-max-units-lst))
+                               (plus (nth idx plus-lst)))
+                          (mapcar (lambda (item)
+                                    (etml-item-set-cross-units
+                                     ;; stretch 表示加上额外的长度
+                                     item (+ plus cross-max-units) direction))
+                                  items)
+                          (setq prev (+ prev num))
+                          (cl-incf idx 1)))
+                      (setq cross-gaps-lst
+                            (append (list 0)
+                                    (make-list (1- main-num) gap-units)
+                                    (list 0))))
+                  ;; 其余 content-align 值，只计算主轴之间的 gap
+                  (if (and (not (eq 'nowarp (oref flex wrap)))
+                           (> main-num 1)
+                           (< cross-content-units cross-flex-units))
+                      (setq cross-gaps-lst
+                            (etml-flex-content-align
+                             main-num
+                             (- cross-flex-units cross-content-units)
+                             content-align gap-units))
+                    ;; 只设置基础 gaps
+                    (setq cross-gaps-lst
+                          (append (list 0)
+                                  (make-list (1- main-num) gap-units)
+                                  (list 0)))))
+              ;; flex 没有设置交叉轴方向的长度，不考虑 content-align，只设置基础 gaps
+              (setq cross-gaps-lst
+                    (append (list 0)
+                            (make-list (1- main-num) gap-units)
+                            (list 0))))))
       ;; else:
       ;; flex 容器未设置主轴方向的长度，items 不换行
       ;; grow=0 不拉伸；grow>0 拉伸值最大宽度 (min max-width max-content)
