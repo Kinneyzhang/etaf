@@ -455,8 +455,9 @@ If type is 'scroll, it's a scroll bar. Use SCROLL-BAR-HEIGHT,
                         (mapcar (lambda (n)
                                   (setq prefix (+ prefix n)))
                                 scroll-bar-steps)))
-                     (shown-offset (etml--num-in-prefixs
-                                    scroll-offset prefixs))
+                     (shown-offset
+                      (or (etml--num-in-prefixs scroll-offset prefixs)
+                          1))
                      (uuid (oref block uuid)))
                 ;; 滚动条字符串
                 (setq scroll-string
@@ -537,7 +538,6 @@ If type is 'scroll, it's a scroll bar. Use SCROLL-BAR-HEIGHT,
           (if (string-empty-p content)
               (list "")
             (split-string content "\n" t)))
-         ;; FIXME: keep face after ekp justify!!!
          (content-height (etml-string-linum content))
          ;; process overflow, scroll-bar-height and scroll-offset
          ;; 判断是否溢出
@@ -629,19 +629,20 @@ If type is 'scroll, it's a scroll bar. Use SCROLL-BAR-HEIGHT,
                      (setq y-scroll-bar-height 1)
                      (setq y-scroll-bar-steps
                            ;; FIXME: 当高度为1时，滚动条无法移动，但是需要滚动
-                           (let ((each (/ y-overflow-num
-                                          (1- shown-content-height)))
-                                 (rest
-                                  (% y-overflow-num
-                                     (1- shown-content-height))))
-                             (seq-map-indexed
-                              (lambda (elem idx)
-                                (if (< idx rest)
-                                    (1+ elem)
-                                  elem))
-                              (make-list
-                               ;; 可以滚动的高度 = 展示内容高度 - 1
-                               (1- shown-content-height) each)))))
+                           (when (> shown-content-height 1)
+                             (let ((each (/ y-overflow-num
+                                            (1- shown-content-height)))
+                                   (rest
+                                    (% y-overflow-num
+                                       (1- shown-content-height))))
+                               (seq-map-indexed
+                                (lambda (elem idx)
+                                  (if (< idx rest)
+                                      (1+ elem)
+                                    elem))
+                                (make-list
+                                 ;; 可以滚动的高度 = 展示内容高度 - 1
+                                 (1- shown-content-height) each))))))
                    ;; 给每行文本缓存 block 相关的边界信息和文本内容，用于滚动
                    ;; 边界信息用于在滚动时设置首行和尾行的边框:
                    ;; 判断：无 top/bottom padding
