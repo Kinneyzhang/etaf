@@ -368,8 +368,8 @@
          (items-units
           (apply #'+ (etml-plists-get items-plists :base-units)))
          (gaps-units (etml-flex-main-gaps-units items-plists flex)))
-    (elog-debug "adjust flex-units:%S" flex-units)
-    (elog-debug "adjust items-units:%S" items-units)
+    ;; (elog-debug "adjust flex-units:%S" flex-units)
+    ;; (elog-debug "adjust items-units:%S" items-units)
     ;; 容器长度 >= 子项总长度: 拉伸
     (if (>= flex-units items-units)
         (etml-flex-items-grow
@@ -636,9 +636,9 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                           items))
          (items-plists (etml-flex-items-plist flex))
          (items-units-lst (etml-plists-get items-plists :base-units))
-         (_ (elog-debug "base: %S" items-units-lst))
-         (_ (elog-debug "min: %S" (etml-plists-get items-plists :min-units)))
-         (_ (elog-debug "max: %S" (etml-plists-get items-plists :max-units)))
+         ;; (_ (elog-debug "base: %S" items-units-lst))
+         ;; (_ (elog-debug "min: %S" (etml-plists-get items-plists :min-units)))
+         ;; (_ (elog-debug "max: %S" (etml-plists-get items-plists :max-units)))
          ;; 当前使用 base-units 计算初始的总宽度
          ;; 后续动态调整中更多的使用实时计算出来的 items 总宽度
          (items-units (apply '+ items-units-lst))
@@ -697,11 +697,10 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                         (setq prev (+ prev num)))))))))
 
           ;; after adjust
-          (elog-debug "dd:%S"
-                      (mapcar (lambda (item)
-                                (oref item width))
-                              (etml-plists-get items-plists :item)))
-          ;;
+          ;; (elog-debug "dd:%S"
+          ;;             (mapcar (lambda (item)
+          ;;                       (oref item width))
+          ;;                     (etml-plists-get items-plists :item)))
           
           ;; 依次处理每一条主轴上的 content-justify
           ;; 设置 main-gaps-lst 和 cross-max-units-lst
@@ -739,8 +738,8 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                   (push (append
                          '(0) (make-list (1- items-num) gap-units) '(0))
                         main-gaps-lst))
-                (elog-debug "main-gaps-lst:%S" main-gaps-lst)
-                (elog-debug "items-units:%S" items-units)
+                ;; (elog-debug "main-gaps-lst:%S" main-gaps-lst)
+                ;; (elog-debug "items-units:%S" items-units)
                 (setq prev (+ prev num))))
             (setq main-gaps-lst (nreverse main-gaps-lst))
             (setq cross-max-units-lst (nreverse cross-max-units-lst)))
@@ -778,6 +777,8 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                                          (* gap-units (1- main-num))))
                  (content-align (oref flex content-align))
                  (cross-flex-units (etml-flex-cross-units flex)))
+            (elog-debug "cross-flex-units:%S" cross-flex-units)
+            (elog-debug "cross-content-units:%S" cross-content-units)
             ;; wrap 不是 nowrap, 子项分布在多行(列),
             ;; 且容器在交叉轴方向必须有额外空间​，才考虑 content-align
             (if (and (not (eq 'nowarp (oref flex wrap)))
@@ -842,12 +843,14 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
       (setq cross-items-pads-lst (nreverse cross-items-pads-lst))
       (setq main-gaps-lst (nreverse main-gaps-lst))
       (setq cross-gaps-lst (nreverse cross-gaps-lst)))
+    
     ;; (elog-debug "items-plists-lst:%S" items-plists-lst)
     ;; (elog-debug "items:%S" (etml-plists-get (nth 0 items-plists-lst)
     ;;                                         :item))
-    ;; (elog-debug "cross-items-pads-lst:%S" cross-items-pads-lst)
+    (elog-debug "cross-items-pads-lst:%S" cross-items-pads-lst)
     ;; (elog-debug "main-gaps-lst:%S" main-gaps-lst)
-    ;; (elog-debug "cross-gaps-lst:%S" cross-gaps-lst)
+    (elog-debug "cross-gaps-lst:%S" cross-gaps-lst)
+    
     (let ((content
            (pcase direction
              ((or 'row row-reverse)

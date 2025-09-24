@@ -152,14 +152,15 @@
   "Find the position of the smallest number in PREFIXS
  that is greater than NUM. Position counts from 1.
 If NUM is greater than all elements, return (1+ (length PREFIXS))."
-  (cond
-   ((= num 0) 0)
-   ((> num (car (last prefixs))) (length prefixs))
-   (t (let ((pos 1))
-        (while (and prefixs (< (car prefixs) num))
-          (setq prefixs (cdr prefixs))
-          (setq pos (1+ pos)))
-        pos))))
+  (when prefixs
+    (cond
+     ((= num 0) 0)
+     ((> num (car (last prefixs))) (length prefixs))
+     (t (let ((pos 1))
+          (while (and prefixs (< (car prefixs) num))
+            (setq prefixs (cdr prefixs))
+            (setq pos (1+ pos)))
+          pos)))))
 
 (defun etml--num-in-lst (num lst)
   "计算 NUM 落在 LST 中的第几个元素的前缀和区间内。"
