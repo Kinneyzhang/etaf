@@ -528,8 +528,8 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 当个主轴方向的。"
                  (when (> tail-units 0)
                    (etml-string-duplines "" tail-units))))))
            items)))
-    ;; (elog-debug "items-strings:%S" items-strings)
     ;; (elog-debug "main-gaps-lst:%S" main-gaps-lst)
+    ;; (elog-debug "concat items-strings:%S" items-strings)
     (etml-lines-concat
      (etml-interleave
       (mapcar #'etml-pixel-spacing main-gaps-lst)
@@ -556,7 +556,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                       string
                       (etml-pixel-spacing tail-units)))))
            items)))
-    ;; (elog-debug "main-gaps-lst:%S" main-gaps-lst)
+    ;; (elog-debug "stack items-strings:%S" items-strings)
     (etml-lines-stack
      (etml-interleave
       (mapcar (lambda (gaps)
@@ -807,7 +807,8 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                       (dolist (num wrap-lst)
                         (let* ((sub-items-plists
                                 (seq-subseq items-plists prev (+ prev num)))
-                               (items (etml-plists-get sub-items-plists :item))
+                               (items (etml-plists-get
+                                       sub-items-plists :item))
                                (cross-max-units (nth idx cross-max-units-lst))
                                (plus (nth idx plus-lst)))
                           (mapcar (lambda (item)
@@ -894,7 +895,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
     
     (let ((content
            (pcase direction
-             ((or 'row row-reverse)
+             ((or 'row 'row-reverse)
               (etml-flex-rows-render direction items-plists-lst
                                      cross-items-pads-lst main-gaps-lst
                                      cross-gaps-lst))
