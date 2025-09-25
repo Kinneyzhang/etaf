@@ -906,4 +906,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
       (oset flex :content content)
       (etml-block-render flex))))
 
+(defun etml-flex-string (&rest kvs)
+  (etml-flex-render (apply #'etml-flex kvs)))
+
 (provide 'etml-flex)
