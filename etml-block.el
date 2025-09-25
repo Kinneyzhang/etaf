@@ -38,9 +38,9 @@
      (make-hash-table
       :test 'equal :size 100 :rehash-size 1.5 :weakness nil))))
 
-(defclass etml-block ()
+(defclass etml-div ()
   ((uuid :initarg :uuid :initform (org-id-uuid))
-   (content :initarg :content :initform "" :type string)
+   (content :initarg :content)
    (width :initarg :width :initform nil
           :documentation "content pixel width or char number.
 If it's a pixel, it should be a cons-cell (<n-pixel>); if it's
@@ -51,14 +51,12 @@ the same with width.")
    (max-width :initarg :max-width :initform nil
               :documentation "max width of content, format is
 the same with width.")
-   (justify :initarg :justify :initform 'left)
    (height :initarg :height :initform nil
            :documentation "content height")
    (min-height :initarg :min-height :initform 1
                :documentation "content min height")
    (max-height :initarg :max-height :initform nil
                :documentation "content max height")
-   (align :initarg :align :initform 'top)
    (bgcolor :initarg :bgcolor :initform nil)
    (border :initarg :border :initform nil)
    (margin :initarg :margin :initform nil)
@@ -96,6 +94,10 @@ set gaps at both.")
     :initform nil
     :documentation
     "在有border的时候生效，确定是否用两边border包裹的 scroll bar.")))
+
+(defclass etml-block (etml-div)
+  ((justify :initarg :justify :initform 'left)
+   (align :initarg :align :initform 'top)))
 
 (defun etml-block-parse-border (border)
   "Parse the BORDER data in a single direction and return a plist\

@@ -52,9 +52,7 @@
 ;;; type check functions ends.
 
 (defclass etml-flex-item (etml-block)
-  ((self :initarg :self :type etml-block
-         :documentation "item 本身。")
-   (order :initarg :order :initform 0 :type integer
+  ((order :initarg :order :initform 0 :type integer
           :documentation "item 在 flex 容器中顺序。")
    (basis :initarg :basis :initform 'auto :type (or integer symbol)
           :documentation "item 在​​分配空间前​​的​​初始尺寸。")
@@ -73,7 +71,8 @@
 ;; cross-axis cross-start cross-end cross-units
 
 (defclass etml-flex (etml-block)
-  ((display :initarg :display :initform 'flex :type symbol
+  ((content :initarg :content :documentation "子项目列表")
+   (display :initarg :display :initform 'flex :type symbol
             :documentation "容器是块级元素还是内联元素。")
    (direction :initarg :direction :initform 'row :type symbol
               :documentation "主轴方向。")
@@ -89,42 +88,86 @@
             :type number :documentation "多行之间的 gap。")
    (column-gap :initarg :column-gap :initform 0
                :type number :documentation "多列之间的 gap。")
-   (items :initarg :items :type (list-of etml-flex-item)
-          :documentation "子项目列表")
    (items-align
     :initarg :items-align :initform 'stretch :type symbol
     :documentation "所有 items 在交叉轴的对齐方式。"))
   "ETML flex layout model.")
 
+;; FIXME: item content 和 block conent 冲突
 (defun etml-flex-item-total-pixel (item)
-  (let ((string (etml-block-render (oref item self))))
-    (oset item content string)
-    (etml-block-total-pixel item)))
+  ;; 临时将 item content 设置为 string，使用 block 方法计算
+  (let* ((block (oref item content))
+         (string (etml-block-render block))
+         (_ (oset item content string))
+         (pixel (etml-block-total-pixel item)))
+    ;; 还原
+    (oset item content block)
+    pixel))
+
+;; (defun etml-flex-item-total-height (item)
+;;   (let ((string (etml-block-render (oref item content))))
+;;     (oset item content string)
+;;     (etml-block-total-height item)))
+
+;; (defun etml-flex-item-side-pixel (item)
+;;   (let ((string (etml-block-render (oref item content))))
+;;     (oset item content string)
+;;     (etml-block-side-pixel item)))
+
+;; (defun etml-flex-item-side-height (item)
+;;   (let ((string (etml-block-render (oref item content))))
+;;     (oset item content string)
+;;     (etml-block-side-height item)))
+
+;; (defun etml-flex-item-content-pixel (item)
+;;   (let ((string (etml-block-render (oref item content))))
+;;     (oset item content string)
+;;     (etml-block-content-pixel item)))
+
+;; (defun etml-flex-item-content-height (item)
+;;   (let ((string (etml-block-render (oref item content))))
+;;     (oset item content string)
+;;     (etml-block-content-height item)))
 
 (defun etml-flex-item-total-height (item)
-  (let ((string (etml-block-render (oref item self))))
-    (oset item content string)
-    (etml-block-total-height item)))
+  (let* ((block (oref item content))
+         (string (etml-block-render block))
+         (_ (oset item content string))
+         (height (etml-block-total-height item)))
+    (oset item content block)
+    height))
 
 (defun etml-flex-item-side-pixel (item)
-  (let ((string (etml-block-render (oref item self))))
-    (oset item content string)
-    (etml-block-side-pixel item)))
+  (let* ((block (oref item content))
+         (string (etml-block-render block))
+         (_ (oset item content string))
+         (pixel (etml-block-side-pixel item)))
+    (oset item content block)
+    pixel))
 
 (defun etml-flex-item-side-height (item)
-  (let ((string (etml-block-render (oref item self))))
-    (oset item content string)
-    (etml-block-side-height item)))
+  (let* ((block (oref item content))
+         (string (etml-block-render block))
+         (_ (oset item content string))
+         (height (etml-block-side-height item)))
+    (oset item content block)
+    height))
 
 (defun etml-flex-item-content-pixel (item)
-  (let ((string (etml-block-render (oref item self))))
-    (oset item content string)
-    (etml-block-content-pixel item)))
+  (let* ((block (oref item content))
+         (string (etml-block-render block))
+         (_ (oset item content string))
+         (pixel (etml-block-content-pixel item)))
+    (oset item content block)
+    pixel))
 
 (defun etml-flex-item-content-height (item)
-  (let ((string (etml-block-render (oref item self))))
-    (oset item content string)
-    (etml-block-content-height item)))
+  (let* ((block (oref item content))
+         (string (etml-block-render block))
+         (_ (oset item content string))
+         (height (etml-block-content-height item)))
+    (oset item content block)
+    height))
 
 (defun etml-flex-parse-basis (item flex)
   ;; 对于左右方向排列的文本，宽度会影响高度，但是高度不会影响宽度
@@ -132,7 +175,7 @@
   "返回 item 的基础宽度和最小宽度"
   (let* ((direction (oref flex direction))
          (basis (oref item basis))
-         (block (oref item self))
+         (block (oref item content))
          (content (oref block content))
          ;; 最长的单词的宽度作为最小单位长度
          (block-min-pixel (seq-max (ekp-boxes-widths content)))
@@ -496,7 +539,7 @@
      (etml-split-size rest-units (1+ items-num) gap 1 items-num))))
 
 (defun etml-flex-item-render (item)
-  (let ((block (oref item self)))
+  (let ((block (oref item content)))
     (oset block width
           (list (- (etml-flex-item-content-pixel item)
                    (etml-block-side-pixel block))))
@@ -621,7 +664,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                     :grow (oref item grow)
                     :shrink (oref item shrink)
                     :align (oref item cross-align))))
-          (oref flex items)))
+          (oref flex content)))
 
 (defun etml-item-set-cross-units (item total-units direction)
   "设置 item 交叉轴的长度"
@@ -637,7 +680,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
   (let* ((display (oref flex display))
          (direction (oref flex direction))
          (items-align (oref flex items-align))
-         (items (oref flex items))
+         (items (oref flex content))
          ;; 根据 order 重新排列 items
          (items (seq-sort (lambda (item1 item2)
                             (< (oref item1 order)
