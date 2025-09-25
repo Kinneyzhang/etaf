@@ -2,15 +2,19 @@
 
 (defun etml-test-quit-window ()
   (interactive)
-  (let ((map (current-local-map)))
-    (quit-window)
+  (let ((map (current-local-map))
+        (win-conf etml-test-ori-window-configuration))
+    (setq-local etml-test-ori-window-configuration nil)
+    (set-window-configuration win-conf)
     (unbind-key "q" map)))
 
 (defmacro etml-test-pop-buffer (buffer-name &rest body)
   (declare (indent defun))
-  `(let ((buffer (get-buffer-create ,buffer-name)))
+  `(let ((buffer (get-buffer-create ,buffer-name))
+         (win-conf (current-window-configuration)))
      (delete-other-windows)
      (switch-to-buffer buffer)
+     (setq-local etml-test-ori-window-configuration win-conf)
      (setq etml-demo-window-pixel (window-pixel-width))
      (with-current-buffer buffer
        (etml-block-caches-init buffer)
