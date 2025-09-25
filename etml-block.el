@@ -904,14 +904,26 @@ If type is 'scroll, it's a scroll bar. Use SCROLL-BAR-HEIGHT,
   "TEXT-ALIGN should be one of left,center,right."
   ;; ALIGN should be one of top,center,bottom.
   (etml-block :content (etml-lines-concat
-                        (mapcar #'etml-block-render blocks))))
+                        (mapcar (lambda (block)
+                                  (pcase block
+                                    ((pred etml-flex-p)
+                                     (etml-flex-render block))
+                                    ((pred etml-block-p)
+                                     (etml-block-render block))))
+                                blocks))))
 
 ;;;###autoload
 (defun etml-block-stack (&rest blocks)
   "ALIGN used for all blocks."
   ;; TEXT-ALIGN used for text in a block.
   (etml-block :content (etml-lines-stack
-                        (mapcar #'etml-block-render blocks))))
+                        (mapcar (lambda (block)
+                                  (pcase block
+                                    ((pred etml-flex-p)
+                                     (etml-flex-render block))
+                                    ((pred etml-block-p)
+                                     (etml-block-render block))))
+                                blocks))))
 
 ;;;###autoload
 (defun etml-block-string (&rest kvs)
