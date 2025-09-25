@@ -1,3 +1,5 @@
+(defvar etml-test-ori-window-configuration nil)
+
 (defun etml-test-quit-window ()
   (interactive)
   (let ((map (current-local-map)))
@@ -11,6 +13,7 @@
      (switch-to-buffer buffer)
      (setq etml-demo-window-pixel (window-pixel-width))
      (with-current-buffer buffer
+       (etml-block-caches-init buffer)
        (local-set-key "q" 'etml-test-quit-window)
        (erase-buffer)
        ,@body)))
