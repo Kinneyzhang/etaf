@@ -2,27 +2,52 @@
 
 (defun etml-flex-tests-item (num &rest kvs)
   (eval `(etml-flex-item
-          :self (etml-block :content (format "etml flex test %s" num))
+          :content (etml-block :content (format "etml flex test %s" num))
           :border '("#aaaaaa" . "lightGreen")
           :padding t
           ,@kvs)))
 
-;; (etml-test-pop-buffer "*etml-flex-tests*"
-;;   (insert
-;;    (etml-flex-string
-;;     :border t :padding '(4 . 1) :margin '(3 . 1)
-;;     :bgcolor '("#FFF9F0" . "#222222")
-;;     :items (list (etml-flex-item
-;;                   :self (etml-block :content "test etml-flex shrink"))
-;;                  (etml-flex-item
-;;                   :self
-;;                   (etml-flex
-;;                    :width '(300)
-;;                    :items (list (etml-flex-tests-item 1 :shrink 1)
-;;                                 (etml-flex-tests-item 2 :shrink 1)
-;;                                 (etml-flex-tests-item 3 :shrink 1)
-;;                                 (etml-flex-tests-item 4 :shrink 1)
-;;                                 (etml-flex-tests-item 5 :shrink 1))))))))
+;; (ekp-clear-caches)
+(etml-test-pop-buffer "*etml-flex-tests*"
+  (insert
+   (etml-flex-string
+    :border t :padding '(4 . 1) :margin '(3 . 1)
+    :bgcolor '("#FFF9F0" . "#222222")
+    :direction 'column
+    :content
+    (list (etml-flex-item
+           :content (etml-block :content "Test etml-flex :shrink"))
+          (etml-flex-item
+           :content (etml-block :content ""))
+          (etml-flex-item
+           :content
+           (etml-block
+            :content
+            (etml-flex-string
+             :width '(300)
+             :column-gap 8
+             :content (list (etml-flex-tests-item 1 :shrink 1)
+                            (etml-flex-tests-item 2 :shrink 1)
+                            (etml-flex-tests-item 3 :shrink 1)
+                            (etml-flex-tests-item 4 :shrink 1)
+                            (etml-flex-tests-item 5 :shrink 1)))))))))
+
+;; `(div :display 'flex
+;;       :border t
+;;       :padding '(4 . 1) :margin '(3 . 1)
+;;       :bgcolor '("#FFF9F0" . "#222222")
+;;       :direction 'column
+;;       (div "Test etml-flex :shrink")
+;;       (div "")
+;;       (div (div :display 'flex
+;;                 :width '(300)
+;;                 :column-gap 8
+;;                 ,@(mapcar
+;;                    (lambda (i)
+;;                      `(div :border '("#aaaaaa" . "lightGreen")
+;;                            :padding t
+;;                            ,(format "etml flex test %s" i)))
+;;                    (number-sequence 1 5)))))
 
 ;; test shrink
 
