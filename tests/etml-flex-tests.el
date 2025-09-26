@@ -15,22 +15,31 @@
     ;; :bgcolor '("#FFF9F0" . "#222222")
     :direction 'column
     :content
-    (list (etml-flex-item
-           :content (etml-block :content "Test etml-flex :shrink"))
-          (etml-flex-item
-           :content (etml-block :content ""))
+    (list (etml-flex-item :content "Test etml-flex :shrink")
+          (etml-flex-item :content "")
           (etml-flex-item
            :content
-           (etml-block
-            :content
-            (etml-flex-string
-             :width '(300)
-             :column-gap 8
-             :content (list (etml-flex-tests-item 1 :shrink 1)
-                            (etml-flex-tests-item 2 :shrink 1)
-                            (etml-flex-tests-item 3 :shrink 1)
-                            (etml-flex-tests-item 4 :shrink 1)
-                            (etml-flex-tests-item 5 :shrink 1)))))))))
+           ;; FIXME: etml-flex
+           (etml-flex-string
+            :width '(300)
+            :column-gap 8
+            :content (list (etml-flex-tests-item 1 :shrink 1)
+                           (etml-flex-tests-item 2 :shrink 1)
+                           (etml-flex-tests-item 3 :shrink 1)
+                           (etml-flex-tests-item 4 :shrink 1)
+                           (etml-flex-tests-item 5 :shrink 1)))
+           ;; (etml-block
+           ;;  :content
+           ;;  (etml-flex-string
+           ;;   :width '(300)
+           ;;   :column-gap 8
+           ;;   :content (list (etml-flex-tests-item 1 :shrink 1)
+           ;;                  (etml-flex-tests-item 2 :shrink 1)
+           ;;                  (etml-flex-tests-item 3 :shrink 1)
+           ;;                  (etml-flex-tests-item 4 :shrink 1)
+           ;;                  (etml-flex-tests-item 5 :shrink 1))))
+           )
+          ))))
 
 ;; `(div :display 'flex
 ;;       :border t :padding '(4 . 1) :margin '(3 . 1)

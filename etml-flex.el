@@ -188,11 +188,21 @@
   "返回 item 的基础宽度和最小宽度"
   (let* ((direction (oref flex direction))
          (basis (oref item basis))
-         (block (oref item content))
-         (content (oref block content))
+         (string (etml-flex-item-string item))
+         ;; (block (oref item content))
+         ;; (content (oref block content))
          ;; 最长的单词的宽度作为最小单位长度
-         (block-min-pixel (seq-max (ekp-boxes-widths content)))
-         (block-side-pixel (etml-block-side-pixel block))
+         (block-min-pixel (seq-max (ekp-boxes-widths string)))
+         (content (oref item content))
+         (block-side-pixel
+          (pcase content
+            ((pred etml-block-p)
+             (etml-flex-item-side-pixel content))
+            ((pred stringp) 0)
+            ;; FIXME: cal etml-flex side pixel
+            ((pred etml-flex-p) 0)
+            (_ (error "Invalid type %s of content in item."
+                      (type-of content)))))
          curr-units min-units max-units)
     ;; basis 是 item 的初始长度，包含 margin, padding !
     (pcase direction
