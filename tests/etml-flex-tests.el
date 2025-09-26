@@ -12,7 +12,7 @@
   (insert
    (etml-flex-string
     :border t :padding '(4 . 1) :margin '(3 . 1)
-    :bgcolor '("#FFF9F0" . "#222222")
+    ;; :bgcolor '("#FFF9F0" . "#222222")
     :direction 'column
     :content
     (list (etml-flex-item
@@ -33,15 +33,11 @@
                             (etml-flex-tests-item 5 :shrink 1)))))))))
 
 ;; `(div :display 'flex
-;;       :border t
-;;       :padding '(4 . 1) :margin '(3 . 1)
-;;       :bgcolor '("#FFF9F0" . "#222222")
+;;       :border t :padding '(4 . 1) :margin '(3 . 1)
 ;;       :direction 'column
 ;;       (div "Test etml-flex :shrink")
 ;;       (div "")
-;;       (div (div :display 'flex
-;;                 :width '(300)
-;;                 :column-gap 8
+;;       (div (div :display 'flex :width '(300) :column-gap 8
 ;;                 ,@(mapcar
 ;;                    (lambda (i)
 ;;                      `(div :border '("#aaaaaa" . "lightGreen")
