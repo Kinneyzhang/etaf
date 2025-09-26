@@ -93,15 +93,28 @@
     :documentation "所有 items 在交叉轴的对齐方式。"))
   "ETML flex layout model.")
 
+(defun etml-flex-item-string (item)
+  "item 的内容的字符串"
+  (let ((content (oref item content)))
+    (pcase content
+      ((pred etml-block-p)
+       (etml-block-render content))
+      ((pred stringp)
+       content)
+      ((pred etml-flex-p)
+       (etml-flex-render content))
+      (_ (error "Invalid type %s of content in item."
+                (type-of content))))))
+
 ;; FIXME: item content 和 block conent 冲突
 (defun etml-flex-item-total-pixel (item)
   ;; 临时将 item content 设置为 string，使用 block 方法计算
-  (let* ((block (oref item content))
-         (string (etml-block-render block))
+  (let* ((content (oref item content))
+         (string (etml-flex-item-string item))
          (_ (oset item content string))
          (pixel (etml-block-total-pixel item)))
     ;; 还原
-    (oset item content block)
+    (oset item content content)
     pixel))
 
 ;; (defun etml-flex-item-total-height (item)
@@ -130,43 +143,43 @@
 ;;     (etml-block-content-height item)))
 
 (defun etml-flex-item-total-height (item)
-  (let* ((block (oref item content))
-         (string (etml-block-render block))
+  (let* ((content (oref item content))
+         (string (etml-flex-item-string item))
          (_ (oset item content string))
          (height (etml-block-total-height item)))
-    (oset item content block)
+    (oset item content content)
     height))
 
 (defun etml-flex-item-side-pixel (item)
-  (let* ((block (oref item content))
-         (string (etml-block-render block))
+  (let* ((content (oref item content))
+         (string (etml-flex-item-string item))
          (_ (oset item content string))
          (pixel (etml-block-side-pixel item)))
-    (oset item content block)
+    (oset item content content)
     pixel))
 
 (defun etml-flex-item-side-height (item)
-  (let* ((block (oref item content))
-         (string (etml-block-render block))
+  (let* ((content (oref item content))
+         (string (etml-flex-item-string item))
          (_ (oset item content string))
          (height (etml-block-side-height item)))
-    (oset item content block)
+    (oset item content content)
     height))
 
 (defun etml-flex-item-content-pixel (item)
-  (let* ((block (oref item content))
-         (string (etml-block-render block))
+  (let* ((content (oref item content))
+         (string (etml-flex-item-string item))
          (_ (oset item content string))
          (pixel (etml-block-content-pixel item)))
-    (oset item content block)
+    (oset item content content)
     pixel))
 
 (defun etml-flex-item-content-height (item)
-  (let* ((block (oref item content))
-         (string (etml-block-render block))
+  (let* ((content (oref item content))
+         (string (etml-flex-item-string item))
          (_ (oset item content string))
          (height (etml-block-content-height item)))
-    (oset item content block)
+    (oset item content content)
     height))
 
 (defun etml-flex-parse-basis (item flex)
@@ -538,12 +551,17 @@
     ('space-evenly
      (etml-split-size rest-units (1+ items-num) gap 1 items-num))))
 
+;; (defun etml-flex-item-render (item)
+;;   (let ((block (oref item content)))
+;;     (oset block width
+;;           (list (- (etml-flex-item-content-pixel item)
+;;                    (etml-block-side-pixel block))))
+;;     (oset item content (etml-block-render block))
+;;     (etml-block-render item)))
+
 (defun etml-flex-item-render (item)
-  (let ((block (oref item content)))
-    (oset block width
-          (list (- (etml-flex-item-content-pixel item)
-                   (etml-block-side-pixel block))))
-    (oset item content (etml-block-render block))
+  (let ((string (etml-flex-item-string item)))
+    (oset item content string)
     (etml-block-render item)))
 
 (defun etml-flex-items-concat-single (items-plists
