@@ -101,6 +101,7 @@
        (etml-block-render content))
       ((pred stringp)
        content)
+      ;; FIXME: bug here
       ((pred etml-flex-p)
        (etml-flex-render content))
       (_ (error "Invalid type %s of content in item."
@@ -365,7 +366,7 @@
                        (% rest-units shrinks-sum)
                      0))
          (rest-idx 0))
-    (elog-debug "rest-units:%S" rest-units)
+    ;; (elog-debug "rest-units:%S" rest-units)
     (seq-map-indexed
      (lambda (shrink idx)
        (let* ((base-units (nth idx items-units-lst))
@@ -708,12 +709,14 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
   (let* ((display (oref flex display))
          (direction (oref flex direction))
          (items-align (oref flex items-align))
-         (items (oref flex content))
+         (old-items (oref flex content))
+         ;; (_ (elog-debug "items:%S" items))
          ;; 根据 order 重新排列 items
          (items (seq-sort (lambda (item1 item2)
                             (< (oref item1 order)
                                (oref item2 order)))
-                          items))
+                          old-items))
+         ;; (_ (elog-debug "items:%S" items))
          (items-plists (etml-flex-items-plist flex))
          (items-units-lst (etml-plists-get items-plists :base-units))
          ;; (_ (elog-debug "base: %S" items-units-lst))
@@ -765,7 +768,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                   (setq wrap-lst (etml-flex-line-breaks
                                   flex-units items-units-lst
                                   (etml-flex-main-gap-units flex)))
-                  (elog-debug "wrap-lst:%S" wrap-lst)
+                  ;; (elog-debug "wrap-lst:%S" wrap-lst)
                   (let ((prev 0))
                     (dolist (num wrap-lst)
                       ;; 当前主轴方向的新的 items
@@ -861,8 +864,8 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                                          (* gap-units (1- main-num))))
                  (content-align (oref flex content-align))
                  (cross-flex-units (etml-flex-cross-units flex)))
-            (elog-debug "cross-flex-units:%S" cross-flex-units)
-            (elog-debug "cross-content-units:%S" cross-content-units)
+            ;; (elog-debug "cross-flex-units:%S" cross-flex-units)
+            ;; (elog-debug "cross-content-units:%S" cross-content-units)
             ;; wrap 不是 nowrap, 子项分布在多行(列),
             ;; 且容器在交叉轴方向必须有额外空间​，才考虑 content-align
 
@@ -960,10 +963,9 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
     ;; (elog-debug "items-plists-lst:%S" items-plists-lst)
     ;; (elog-debug "items:%S" (etml-plists-get (nth 0 items-plists-lst)
     ;;                                         :item))
-    (elog-debug "cross-items-pads-lst:%S" cross-items-pads-lst)
+    ;; (elog-debug "cross-items-pads-lst:%S" cross-items-pads-lst)
     ;; (elog-debug "main-gaps-lst:%S" main-gaps-lst)
-    (elog-debug "cross-gaps-lst:%S" cross-gaps-lst)
-    
+    ;; (elog-debug "cross-gaps-lst:%S" cross-gaps-lst)
     (let ((content
            (pcase direction
              ((or 'row 'row-reverse)
