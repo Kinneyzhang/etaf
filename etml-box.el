@@ -79,6 +79,4 @@
 ;; (border-bottom :initarg :border-bottom :initform nil :documentation "下边框简写")
 ;; (border-left :initarg :border-left :initform nil :documentation "左边框简写")
 
-
-
 (provide 'etml-box)
