@@ -18,12 +18,11 @@
   "文本模型")
 
 (defclass etml-scroll-bar ()
-  ((pixel :initarg :pixel :initform 1 :documentation "滚动条像素宽度")
-   (gap :initarg :gap :initform 0
-        :documentation "滚动条 和 padding,border 之间的 gap")
+  ((size :initarg :size :initform 1 :documentation "滚动条像素宽度")
+   (gap :initarg :gap :initform 0 :documentation "滚动条 和 padding,border 之间的 gap")
    (color :initarg :color :initform nil :documentation "滚动条颜色")
    (direction :initarg :direction :initform right :documentation "滚动条方向")
-   (full :initarg :full :initform nil :documentation "full样式的滚动条"))
+   (style :initarg :style :initform nil :documentation "滚动条样式风格"))
   "滚动条模型")
 
 (defclass etml-box ()
