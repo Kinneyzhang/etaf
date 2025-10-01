@@ -3,6 +3,54 @@
 (require 'etml-pixel)
 (require 'dash)
 
+(defun etml-input-text (string length)
+  (if (> (length string) length)
+      (substring string 0 length)
+    (string-pad string length)))
+
+(defun etml-value (format)
+  (pcase format
+    ((and (pred listp)
+          (let head (car format))
+          (guard (or (functionp head)
+                     ;; (eq 'lambda head)
+                     )))
+     (eval format)
+     ;; (apply format)
+     )
+    ((pred symbolp) (symbol-value format))
+    (_ format)))
+
+(defun plist->alist (plist)
+  (unless (null plist)
+    (append
+     (list (list (pop plist) (pop plist)))
+     (plist->alist plist))))
+
+(defun etml-oset (object &rest kvs)
+  (let ((alist (plist->alist kvs)))
+    (dolist (kv alist)
+      (eval `(oset ,object ,(car kv) ',(cadr kv))))))
+
+(defun etml-get-ov-faces (string)
+  (seq-remove
+   'null
+   (mapcar (lambda (data)
+             (when-let* ((properties (nth 2 data))
+                         (ov-face (plist-get properties 'ov-face)))
+               (setf (nth 2 data) ov-face)
+               data))
+           (get-text-properties string))))
+
+(defun etml-make-region-editable (regions)
+  (let ((inhibit-read-only t))
+    (put-text-property (point-min) (point-max) 'read-only t)
+    (dolist (cons regions)
+      (remove-text-properties (car cons) (cdr cons)
+                              '(read-only nil)))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun etml-interleave (seq1 seq2)
   "交叉组合 seq1 和 seq2，seq1 的元素个数必须比 seq2 多一个。"
   (if (= (length seq1) (1+ (length seq2)))
