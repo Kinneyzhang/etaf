@@ -1,3 +1,7 @@
+(require 'etml-utils)
+(require 'etml-face)
+(require 'etml-type)
+
 (defclass etml-element ()
   ((fmtstr :initarg :fmtstr :type string
            :documentation "format string of element")
@@ -80,7 +84,7 @@
     (save-match-data
       (while (string-match "{\\(.*?\\)}" string start)
         (let* ((name (match-string 1 string))
-               (prop (string-to-keyword name))
+               (prop (etml-string-to-keyword name))
                (values (etml-value (plist-get data prop)))
                ;; (values (-map-indexed
                ;;          (lambda (index value)
@@ -112,6 +116,7 @@
 ;; (defun etml-element--get (name key)
 ;;   (plist-get (cdr (assoc name etml-element-definitions)) key))
 
+;;;###autoload
 (cl-defmacro etml-element-define (name inner keys &rest body)
   (declare (indent defun))
   (let* ((curr-func (etml-element-function name))
@@ -122,10 +127,10 @@
       (setq plist (cdr body)))
     (setq parent-sexp (plist-get plist :inherit))
     ;; set etml-element-definitions
-    (dolist (kv (plist->alist plist))
+    (dolist (kv (etml-plist->alist plist))
       (etml-element--set name inner (car kv) (cadr kv)))
     ;; remove :inherit :inner in plist
-    (setq plist (plist-remove-keys plist '(:inherit)))
+    (setq plist (etml-plist-remove-keys plist '(:inherit)))
     (if parent-sexp
         (progn
           (setcar parent-sexp (etml-element-function
@@ -147,11 +152,13 @@
          ,docstring
          (etml-element ,@plist)))))
 
+;;;###autoload
 (defun etml-element-render (name inner &rest kvs)
   (declare (indent defun))
   (let ((function (etml-element-function name)))
     (etml-element-string (apply function inner kvs))))
 
+;;;###autoload
 (defun etml-element-insert (name innner &rest kvs)
   "Insert etml element named NAME, KV is it's properties."
   (declare (indent defun))
@@ -167,6 +174,26 @@
                        (ov (make-overlay beg end)))
                   (overlay-put ov 'face face)))
               ov-faces))))
+
+;;;###autoload
+(defmacro etml-element-parse-1 (sexp)
+  "Parse single sexp to etml element."
+  `(let* ((lst ',sexp)
+          (elem-name (car lst))
+          (elem-func (etml-element-function elem-name))
+          (inner (car (last lst)))
+          (plist (seq-subseq lst 1 (1- (length lst)))))
+     (apply 'etml-element-render elem-name inner plist)))
+
+(defmacro etml-element-parse (sexp)
+  "Parse single sexp to etml element."
+  `(let* ((lst ',sexp)
+          (head (car lst)))
+     (if (consp head)
+         (mapconcat (lambda (it)
+                      (eval `(etml-element-parse-1 ,it)))
+                    lst "")
+       (etml-element-parse-1 ,sexp))))
 
 
 
@@ -191,10 +218,14 @@
 (etml-element-define h4 text ((height 1.3) (bold t))
   :inherit (headline text :height height :bold bold))
 
-(etml-element-define p text ()
+(etml-element-define p text nil
   :fmtstr "{1}"
   :data `(:1 (,text))
   :type 'block)
+
+(etml-element-define br num nil
+  :fmtstr "{1}"
+  :data `(:1 (,(make-string num ?\n))))
 
 ;; inline elememts
 
@@ -217,6 +248,25 @@
 
 (etml-element-define small text ((height 0.85))
   :inherit (inline text :style `(face (:height ,height))))
+
+(etml-element-define u text (color style)
+  "Supported STYLE are: 'line, double-line, 'wave, 'dots, or 'dashes."
+  :inherit (inline text :style
+                   `(face (:underline
+                           ,(append
+                             '(:position t)
+                             (cond
+                              ((and color style)
+                               `(:color ,color :style ,style))
+                              (color `(:color ,color))
+                              (style `(:style ,style))))))))
+
+(etml-element-define b text ()
+  :inherit (inline text :style `(face (:weight bold))))
+
+(etml-element-define del text (color)
+  :inherit (inline text :style
+                   `(face (:strike-through ,(or color t)))))
 
 ;; input elememts
 
@@ -260,23 +310,20 @@ REQUIRED: specifies that an input field must be filled out before submitting the
   :data `(:1 (seq-map-indexed
               (lambda (elt idx)
                 (concat (if ,orderp
-                            (concat (number-to-string (1+ idx)) ".")
+                            (concat (number-to-string (1+ idx))
+                                    ".")
                           ,prefix)
                         elt))
               (etml-value ',list))))
-
-(etml-element-define dl list nil
-  "list prefixed with dash"
-  :inherit (prefix-list list :prefix "- "))
-
-(etml-element-define cl list nil
-  "checklist"
-  :inherit (base-list list :prefix "□ "))
 
 (etml-element-define ul list nil
   :inherit (base-list list :prefix "• "))
 
 (etml-element-define ol list nil
   :inherit (base-list list :orderp t))
+
+(etml-element-define checklist list nil
+  "checklist"
+  :inherit (base-list list :prefix "□ "))
 
 (provide 'etml-element)

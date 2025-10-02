@@ -1,5 +1,6 @@
 ;; -*- lexical-binding: t -*-
 
+(require 'etml-element)
 (require 'etml-block)
 (require 'etml-flex)
 
@@ -29,8 +30,7 @@
 
 ;; etml-flex 下的子元素 div 全部解析为 etml-flex-item 对象，同样的，属性元素照搬，内容部分放在 :content 中。etml-flex-item 下子元素可以是 string，也可是 etml-block。
 
-(defun etml-parse (sexp)
-  
-  )
+;; (defun etml-parse (sexp)
+;;   )
 
 (provide 'etml)
