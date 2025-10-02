@@ -3,6 +3,12 @@
 (require 'etml-pixel)
 (require 'dash)
 
+(defun etml-symbol->keyword (symbol)
+  (etml-string-to-keyword (symbol-name symbol)))
+
+(defun etml-string-to-keyword (string)
+  (intern (concat ":" string)))
+
 (defun etml-input-text (string length)
   (if (> (length string) length)
       (substring string 0 length)
@@ -21,16 +27,43 @@
     ((pred symbolp) (symbol-value format))
     (_ format)))
 
-(defun plist->alist (plist)
+(defun etml-alist->plist (alist)
+  (mapcan (lambda (elem)
+            (cons (car elem) (cdr elem)))
+          alist))
+
+(defun etml-plist->alist (plist)
   (unless (null plist)
     (append
      (list (list (pop plist) (pop plist)))
-     (plist->alist plist))))
+     (etml-plist->alist plist))))
+
+(defun etml-plist-remove-keys (plist1 keys)
+  "Remove all element of PLIST2 from PLIST1."
+  (let ((alist1 (etml-plist->alist plist1)))
+    (etml-alist->plist
+     (seq-remove (lambda (elem)
+                   (member (car elem) keys))
+                 alist1))))
 
 (defun etml-oset (object &rest kvs)
-  (let ((alist (plist->alist kvs)))
+  (let ((alist (etml-plist->alist kvs)))
     (dolist (kv alist)
       (eval `(oset ,object ,(car kv) ',(cadr kv))))))
+
+(defun etml-get-text-properties (str)
+  "获取字符串STR的所有文本属性区间。
+返回值为列表，每个元素为 (START END PROPERTIES)，其中
+START和END为区间的起始和结束位置，PROPERTIES为该区间的属性。"
+  (let ((len (length str))
+        (pos 0) ranges)
+    (while (< pos len)
+      (let* ((props (text-properties-at pos str))
+             (next-pos (next-property-change pos str len)))
+        (when props
+          (push (list pos next-pos props) ranges))
+        (setq pos next-pos)))
+    (nreverse ranges)))
 
 (defun etml-get-ov-faces (string)
   (seq-remove
@@ -40,7 +73,7 @@
                          (ov-face (plist-get properties 'ov-face)))
                (setf (nth 2 data) ov-face)
                data))
-           (get-text-properties string))))
+           (etml-get-text-properties string))))
 
 (defun etml-make-region-editable (regions)
   (let ((inhibit-read-only t))

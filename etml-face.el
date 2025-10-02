@@ -4,6 +4,8 @@
 ;;; 2.使用定义的 etml face 渲染文本时，会先将 text properties 设置到文本中
 ;;; 3.在插入文本时，再将 overlay 设置到 buffer 的文本区域
 
+(require 'etml-utils)
+
 (defvar etml-face-list nil)
 
 (defun etml-theme-dark-p ()
@@ -33,7 +35,7 @@
            (kv-alist (cdr group)))
        (setcdr
         group
-        (list (alist->plist
+        (list (etml-alist->plist
                (if (eq :overlay-face type)
                    (mapcar
                     (lambda (kv)
@@ -46,7 +48,7 @@
                    (if (etml-face--ov-p (car lst))
                        :overlay-face
                      :property-face))
-                 (plist->alist plist))))
+                 (etml-plist->alist plist))))
 
 (defun etml-face-p (etml-face)
   "Judge of ETML-FACE is in etml face type."
