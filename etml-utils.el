@@ -92,12 +92,15 @@ START和END为区间的起始和结束位置，PROPERTIES为该区间的属性�
         (append (-interleave head-seq1 seq2) (list last-elem)))
     (error "(length %S) != (1+ (length %S))" seq1 seq2)))
 
-(defun etml-split-size (size n &optional extra start end)
-  "将 SIZE 分为 N 等份，并且在 start 到 end 位置加上额外的数字 extra"
+(defun etml-split-size (size n &optional extra start end from-tail)
+  "将 SIZE 分为 N 等份，并且在 start 到 end 位置加上额外的数字 extra.
+FROM-TAIL 为 t 表示优先从尾部加上多余的部分。"
   (let ((each-size (/ size n))
         (rest-num (% size n)))
     (seq-map-indexed (lambda (size idx)
-                       (let ((s (if (< idx rest-num)
+                       (let ((s (if (if from-tail
+                                        (>= idx (- n rest-num))
+                                      (< idx rest-num))
                                     (1+ size)
                                   size))
                              (start (or start 0))
@@ -212,14 +215,14 @@ START和END为区间的起始和结束位置，PROPERTIES为该区间的属性�
                (* (- width (length content))
                   (string-pixel-width " "))))
       (* width (string-pixel-width " "))))
-   (t (error "Invalid format of width %S" width))))
+   ;; (t (error "Invalid format of width %S" width))
+   ))
 
 (defun etml-default-border-color ()
   (frame-parameter nil 'foreground-color))
 
 (defun etml-pixel-border (n-pixel height &optional color)
-  (if (or (= 0 n-pixel) (= 0 height))
-      ""
+  (unless (or (= 0 n-pixel) (= 0 height))
     (let* ((color (if (eq t color)
                       (etml-default-border-color)
                     (or color (etml-default-border-color))))
@@ -312,12 +315,10 @@ by default. If FROM-END is non-nil, count from the end."
           (string-pixel-width (substring string (- strlen n)))
         (string-pixel-width (substring string 0 n))))))
 
-(defun etml-block-blank (pixel &optional height)
-  (if (= pixel 0)
-      ""
+(defun etml-pixel-blank (pixel height)
+  (unless (or (= pixel 0) (= height 0))
     (etml-string-duplines
-     (propertize " " 'display `(space :width (,pixel)))
-     (or height 1))))
+     (etml-pixel-spacing pixel) height)))
 
 (defun etml-string-linum (string &optional omit-nulls)
   (length (split-string string "\n" omit-nulls)))
@@ -329,24 +330,26 @@ by default. If FROM-END is non-nil, count from the end."
   (string-join (make-list length string) "\n"))
 
 (defun etml-lines-pad (string height &optional offset padstr)
-  "Pad the string to a height of HEIGHT, with the string offset by OFFSET
-lines from the top, using PADSTR to fill blank lines."
-  (if-let* ((linum (etml-string-linum string))
-            ((> height linum))
-            (rest (- height linum))
-            (top (etml-line-offset rest (or offset 0)))
-            (bottom (- rest top))
-            (padstr (or padstr ""))
-            (top-string
-             (if (> top 0)
-                 (concat (etml-string-duplines padstr top) "\n")
-               ""))
-            (bottom-string
-             (if (> bottom 0)
-                 (concat "\n" (etml-string-duplines padstr bottom))
-               "")))
-      (concat top-string string bottom-string)
-    string))
+  "Pad the string to a height of HEIGHT, with the string offset 
+by OFFSET lines from the top, using PADSTR to fill blank lines."
+  (let ((linum (etml-string-linum string)))
+    (if-let*
+        (((>= height linum))
+         (rest (- height linum))
+         (top (etml-line-offset rest (or offset 0)))
+         (bottom (- rest top))
+         (padstr (or padstr ""))
+         (top-string
+          (if (> top 0)
+              (concat (etml-string-duplines padstr top) "\n")
+            ""))
+         (bottom-string
+          (if (> bottom 0)
+              (concat "\n" (etml-string-duplines padstr bottom))
+            "")))
+        (concat top-string string bottom-string)
+      (error "height %s should not be less than linum of string %s"
+             height linum))))
 
 (defun etml-string-concat (&rest strings)
   (let* ((height (-max (-map #'etml-string-linum strings)))
@@ -372,7 +375,7 @@ are ARGLIST."
   "Apply FUNCTION to each line of STRING. If COLLECT-FUNC is non-nil,
 apply this function to the list and ARGLIST are arguments of this
 COLLECT-FUNC; otherwise return a list of lines."
-  (let ((lines (split-string string "\n")))
+  (let ((lines (split-string string "\n" t)))
     (if collect-func
         (etml-map-collect lines function collect-func arglist)
       (mapcar function lines))))
@@ -402,10 +405,17 @@ When JUSTIFY is nil, set it to 'left' by default."
                    string 'string-join "\n")))
 
 (defun etml-lines-align (string height &optional align)
-  (etml-lines-pad
-   string height
-   (etml-line-align-offset
-    (- height (etml-string-linum string)) (or align 'top))))
+  "垂直方向限制文本高度为 height，并根据 align 对齐"
+  (let ((linum (etml-string-linum string)))
+    (if (< height linum)
+        (string-join
+         (seq-take (split-string string "\n" t) height)
+         "\n")
+      (etml-lines-pad
+       string height
+       (etml-line-align-offset
+        (- height (etml-string-linum string)) (or align 'top))
+       (etml-pixel-spacing (string-pixel-width string))))))
 
 (defun etml-lines-concat (strings &optional align text-align)
   "TEXT-ALIGN should be one of left,center,right.
