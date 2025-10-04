@@ -398,12 +398,6 @@ to a symbol 'right, count the right side only."
              ('dark (cdr color))))
           (t (error "Invalid format of bgcolor: %S" color)))))
 
-(defun etml-block-bottom-border-line (width border)
-  (if border
-      (etml-propertize (etml-pixel-spacing width)
-                       `(face (:overline ,border)))
-    (etml-pixel-spacing width)))
-
 (defun etml-block-content-height (block)
   "文本设置了宽度之后的原始高度。"
   (etml-string-linum (etml-block-content block)))
@@ -466,7 +460,7 @@ If type is 'scroll, it's a scroll bar. Use SCROLL-BAR-HEIGHT,
                       (concat
                        ;; blank before scroll bar
                        (when (> shown-offset 0)
-                         (concat (etml-block-blank
+                         (concat (etml-pixel-blank
                                   scroll-bar-pixel
                                   shown-offset)
                                  "\n"))
@@ -498,7 +492,7 @@ If type is 'scroll, it's a scroll bar. Use SCROLL-BAR-HEIGHT,
                                     (- height (or scroll-bar-height 0)
                                        shown-offset))
                                    ((> rest-height 0)))
-                         (concat "\n" (etml-block-blank
+                         (concat "\n" (etml-pixel-blank
                                        scroll-bar-pixel
                                        rest-height)))))
                 ;; 设置 etml-block-scroll-bar，用于滚动时识别 scroll bar
@@ -511,8 +505,7 @@ If type is 'scroll, it's a scroll bar. Use SCROLL-BAR-HEIGHT,
                        "\n")))
             ;; padding部分滚动条填充
             ;; case: pad scroll border in padding line and height is 1
-            (setq scroll-string (etml-block-blank
-                                 scroll-bar-pixel)))
+            (setq scroll-string (etml-pixel-blank scroll-bar-pixel 1)))
           (if scroll-bar-full
               (etml-lines-concat
                (list border-string

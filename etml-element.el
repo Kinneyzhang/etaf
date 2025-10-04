@@ -2,6 +2,29 @@
 (require 'etml-face)
 (require 'etml-type)
 
+(defclass etml-text ()
+  ((string :initarg :string :initform "" :documentation "文本内容")
+   (wrap :initarg :wrap :initform 'kp :documentation "文本换行方式")
+   (color :initarg :color :initform nil :documentation "文本颜色")
+   (bgcolor :initarg :bgcolor :initform nil :documentation "文本背景颜色")
+   (family :initarg :family :initform nil :documentation "字体系列")
+   (size :initarg :size :initform nil :documentation "字体大小")
+   (weight :initarg :weight :initform nil :documentation "字体粗细")
+   (underline :initarg :underline :initform nil :documentation "字体下划线")
+   (overline :initarg :overline :initform nil :documentation "字体上划线")
+   (strike-through :initarg :strike-through :initform nil
+                   :documentation "字体中划线")
+   (box :initarg :box :initform nil :documentation "字体盒子")
+   (align :initarg :align :initform 'left :documentation "文本对齐")
+   (transform :initarg :transform :initform nil :documentation "文本转换")
+   (letter-spacing :initarg :letter-spacing :initform 'normal
+                   :documentation "字母间距")
+   (word-spacing :initarg :word-spacing :initform 'normal
+                 :documentation "单词间距")
+   (white-space :initarg :white-space :initform 'normal
+                :documentation "空白处理"))
+  "文本模型")
+
 (defclass etml-element ()
   ((fmtstr :initarg :fmtstr :type string
            :documentation "format string of element")
@@ -186,7 +209,7 @@
      (apply 'etml-element-render elem-name inner plist)))
 
 (defmacro etml-element-parse (sexp)
-  "Parse single sexp to etml element."
+  "Parse sexp to etml element."
   `(let* ((lst ',sexp)
           (head (car lst)))
      (if (consp head)

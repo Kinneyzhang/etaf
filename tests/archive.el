@@ -1,3 +1,40 @@
+(defun etml-box-side-pixel (box &optional side)
+  "除了内容以外的两侧的像素宽度和。SIDE 表示指定 'left 或 'right
+一侧的 border,padding,margin 的总像素宽度。"
+  (let* ((content (oref box content))
+         (border-left-pixel (etml-width-pixel
+                             (oref box border-left-pixel) content))
+         (padding-left-pixel (etml-width-pixel
+                              (oref box padding-left-pixel) content))
+         (margin-left-pixel (etml-width-pixel
+                             (oref box margin-left-pixel) content))
+         (left-side-pixel (+ border-left-pixel
+                             padding-left-pixel
+                             margin-left-pixel))
+         (border-right-pixel (etml-width-pixel
+                              (oref box border-right-pixel) content))
+         (padding-right-pixel (etml-width-pixel
+                               (oref box padding-right-pixel) content))
+         (margin-right-pixel (etml-width-pixel
+                              (oref box margin-right-pixel) content))
+         (right-side-pixel (+ border-right-pixel
+                              padding-right-pixel
+                              margin-right-pixel))
+         (y-scroll-bar (oref box y-scroll-bar))
+         ;; 固定的滚动条宽度
+         (y-scroll-bar-pixel (etml-scroll-bar-pixel y-scroll-bar))
+         (direction (oref box y-scroll-bar-direction)))
+    (pcase side
+      ('left (+ left-side-pixel
+                (if (eq 'left direction)
+                    y-scroll-bar-pixel
+                  0)))
+      ('right (+ right-side-pixel
+                 (if (eq 'right direction)
+                     y-scroll-bar-pixel
+                   0)))
+      (_ (+ left-side-pixel right-side-pixel y-scroll-bar-pixel)))))
+
 (defun etml-block-scroll-show (&optional force)
   (interactive)
   (let ((buffer (get-buffer-create "*etml-scroll-tests*")))
