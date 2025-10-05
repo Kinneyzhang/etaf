@@ -375,7 +375,7 @@ are ARGLIST."
   "Apply FUNCTION to each line of STRING. If COLLECT-FUNC is non-nil,
 apply this function to the list and ARGLIST are arguments of this
 COLLECT-FUNC; otherwise return a list of lines."
-  (let ((lines (split-string string "\n" t)))
+  (let ((lines (split-string string "\n")))
     (if collect-func
         (etml-map-collect lines function collect-func arglist)
       (mapcar function lines))))

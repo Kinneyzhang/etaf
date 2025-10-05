@@ -6,31 +6,31 @@
     :initarg :track-height :initform 1
     :documentation "滚动条轨道高度，根据 content-linum，content-height 计算得到")
    (track-color
-    :initarg :track-color :initform nil
+    :initarg :track-color :initform (face-attribute 'default :background)
     :documentation "滚动条轨道的颜色，仅作用于 padding 部分")
-   (track-left-padding-pixel
-    :initarg :track-left-padding-pixel :initform 0
+   (track-padding-left-pixel
+    :initarg :track-padding-left-pixel :initform 0
     :documentation "滚动条轨道的左 padding 像素")
-   (track-right-padding-pixel
-    :initarg :track-right-padding-pixel :initform 0
+   (track-padding-right-pixel
+    :initarg :track-padding-right-pixel :initform 0
     :documentation "滚动条轨道的右 padding 像素")
-   (track-left-margin-pixel
-    :initarg :track-left-margin-pixel :initform 0
+   (track-margin-left-pixel
+    :initarg :track-margin-left-pixel :initform 0
     :documentation "滚动条轨道的左 margin 像素")
-   (track-right-margin-pixel
-    :initarg :track-right-margin-pixel :initform 0
+   (track-margin-right-pixel
+    :initarg :track-margin-right-pixel :initform 0
     :documentation "滚动条轨道的右 margin 像素")
-   (track-left-border-pixel
-    :initarg :track-left-border-pixel :initform 0
+   (track-border-left-pixel
+    :initarg :track-border-left-pixel :initform 0
     :documentation "滚动条轨道左边的边框像素宽度")
-   (track-right-border-pixel
-    :initarg :track-right-border-pixel :initform 0
+   (track-border-right-pixel
+    :initarg :track-border-right-pixel :initform 0
     :documentation "滚动条轨道右边的边框像素宽度")
-   (track-left-border-color
-    :initarg :track-left-border-color :initform nil
+   (track-border-left-color
+    :initarg :track-border-left-color :initform nil
     :documentation "滚动条轨道左边的边框颜色")
-   (track-right-border-color
-    :initarg :track-right-border-color :initform nil
+   (track-border-right-color
+    :initarg :track-border-right-color :initform nil
     :documentation "滚动条轨道右边的边框颜色")
    (thumb-offset
     :initarg :thumb-offset :initform 0 :documentation "滚动条初始偏移量")
@@ -47,18 +47,25 @@
                 :documentation "滚动条滑块颜色"))
   "滚动条模型")
 
-(defun etml-scroll-bar-pixel (scroll-bar)
-  "滚动条的像素宽度"
-  (+ (oref scroll-bar track-left-padding-pixel)
-     (oref scroll-bar track-right-padding-pixel)
-     (oref scroll-bar track-left-margin-pixel)
-     (oref scroll-bar track-right-margin-pixel)
-     (oref scroll-bar track-left-border-pixel)
-     (oref scroll-bar track-right-border-pixel)
-     (oref scroll-bar thumb-pixel)
-     (if (oref scroll-bar thumb-border-p) 2 0)))
+(defun etml-scroll-bar-pixel (scroll-bar &optional border-box-p)
+  "滚动栏所占的总像素宽度, border-box-p为t时表示不包含 margin"
+  (let ((border-box-pixel
+         (+ (oref scroll-bar track-padding-left-pixel)
+            (oref scroll-bar track-padding-right-pixel)
+            (oref scroll-bar track-border-left-pixel)
+            (oref scroll-bar track-border-right-pixel)
+            (oref scroll-bar thumb-pixel)
+            (if (oref scroll-bar thumb-border-p) 2 0))))
+    (if border-box-p
+        border-box-pixel
+      (+ border-box-pixel
+         (oref scroll-bar track-margin-left-pixel)
+         (oref scroll-bar track-margin-right-pixel)))))
 
-(defun etml-scroll-bar-render (scroll-bar)
+;; 为了滚动需要给滚动条设置一些 text properties 属性
+(defun etml-scroll-bar-render (scroll-bar box-uuid scroll-steps)
+  ;; box-uuid 用来表示滚动条与哪个 box 关联
+  ;; 设置在 thumb 的开头和结尾的中
   (let* ((track-height (oref scroll-bar track-height))
          (thumb-offset (oref scroll-bar thumb-offset))
          (thumb-height (oref scroll-bar thumb-height))
@@ -71,6 +78,7 @@
            (thumb-border-p (oref scroll-bar thumb-border-p))
            (thumb-border-color (oref scroll-bar thumb-border-color))
            (thumb-str (etml-box-string
+                       :overflow-y 'visible
                        :content (etml-pixel-border
                                  thumb-pixel thumb-height
                                  (oref scroll-bar thumb-color))
@@ -82,14 +90,29 @@
                        :border-left-color thumb-border-color
                        :border-right-pixel (or (and thumb-border-p 1) 0)
                        :border-right-color thumb-border-color))
+           ;; 给滚动条首行设置 etml-v-scroll-bar-start: box-uuid
+           ;; 给滚动条尾行设置 etml-v-scroll-bar-end: box-uuid
+           (thumb-str (with-temp-buffer
+                        (insert thumb-str)
+                        (goto-char (point-min))
+                        (add-text-properties
+                         (line-beginning-position) (line-end-position)
+                         `( etml-v-scroll-bar-start ,box-uuid
+                            etml-v-scroll-steps ,scroll-steps))
+                        (goto-char (point-max))
+                        (add-text-properties
+                         (line-beginning-position) (line-end-position)
+                         `(etml-v-scroll-bar-end ,box-uuid))
+                        (buffer-string)))
            ;; 一行轨道颜色的滚动条，用于生成无滚动条的轨道部分
            (track-color
             (or (oref scroll-bar track-color)
                 (face-attribute 'default :background)))
            (dummy-single-thumb-str
             (etml-box-string
-             :content (etml-pixel-border
-                       thumb-pixel 1 track-color)
+             :overflow-y 'visible
+             :content (etml-pixel-border thumb-pixel 1 track-color)
+             ;; :bgcolor track-color
              :border-left-pixel (or (and thumb-border-p 1) 0)
              :border-left-color track-color
              :border-right-pixel (or (and thumb-border-p 1) 0)
@@ -105,37 +128,38 @@
            (thumb-str (etml-lines-stack
                        (list above-dummy-thumb-str
                              thumb-str below-dummy-thumb-str)))
-           (track-left-padding-pixel
-            (oref scroll-bar track-left-padding-pixel))
-           (track-right-padding-pixel
-            (oref scroll-bar track-right-padding-pixel))
-           (track-left-margin-pixel
-            (oref scroll-bar track-left-margin-pixel))
-           (track-right-margin-pixel
-            (oref scroll-bar track-right-margin-pixel))
-           (track-left-border-pixel
-            (oref scroll-bar track-left-border-pixel))
-           (track-right-border-pixel
-            (oref scroll-bar track-right-border-pixel))
-           (track-left-border-color
-            (oref scroll-bar track-left-border-color))
-           (track-right-border-color
-            (oref scroll-bar track-right-border-color))
+           (track-padding-left-pixel
+            (oref scroll-bar track-padding-left-pixel))
+           (track-padding-right-pixel
+            (oref scroll-bar track-padding-right-pixel))
+           (track-margin-left-pixel
+            (oref scroll-bar track-margin-left-pixel))
+           (track-margin-right-pixel
+            (oref scroll-bar track-margin-right-pixel))
+           (track-border-left-pixel
+            (oref scroll-bar track-border-left-pixel))
+           (track-border-right-pixel
+            (oref scroll-bar track-border-right-pixel))
+           (track-border-left-color
+            (oref scroll-bar track-border-left-color))
+           (track-border-right-color
+            (oref scroll-bar track-border-right-color))
            (thumb-curr-str nil)
            (thumb-above-str nil)
            (thumb-below-str nil))
       (etml-box-string
+       :overflow-y 'visible
        :content thumb-str
        :bgcolor (or track-color
                     (face-attribute 'default :foreground))
-       :padding-left-pixel track-left-padding-pixel
-       :padding-right-pixel track-right-padding-pixel
-       :border-left-pixel track-left-border-pixel
-       :border-right-pixel track-right-border-pixel
-       :border-left-color track-left-border-color
-       :border-right-color track-right-border-color
-       :margin-left-pixel track-left-margin-pixel
-       :margin-right-pixel track-right-margin-pixel))))
+       :padding-left-pixel track-padding-left-pixel
+       :padding-right-pixel track-padding-right-pixel
+       :border-left-pixel track-border-left-pixel
+       :border-right-pixel track-border-right-pixel
+       :border-left-color track-border-left-color
+       :border-right-color track-border-right-color
+       :margin-left-pixel track-margin-left-pixel
+       :margin-right-pixel track-margin-right-pixel))))
 
 ;; (defun etml-scroll-bar-y-render (box)
 ;;   (when-let ((y-overflow-num (etml-box-y-scroll-bar-p box))) ; 溢出的行数
@@ -152,9 +176,9 @@
 ;;       (setq y-scroll-offset final-y-scroll-offset)
 ;;       (cond
 ;;        ((eq scroll-bar-direction 'right)
-;;         (setq right-border-type 'scroll))
+;;         (setq border-right-type 'scroll))
 ;;        ((eq scroll-bar-direction 'left)
-;;         (setq left-border-type 'scroll))
+;;         (setq border-left-type 'scroll))
 ;;        (t (error "Invalid format of scroll-bar-direction:%S"
 ;;                  scroll-bar-direction)))
 ;;       (if (> box-content-height y-overflow-num)
