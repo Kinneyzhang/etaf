@@ -1,3 +1,22 @@
+(cl-loop for x in '(2 3 2 4 5 2 1)
+         sum x into total
+         collect total)
+
+(pop-buffer-insert 10
+  (propertize
+   "emacs" 'face '(:underline (:position t) :overline t)
+   'display '(raise .1)
+   )
+  (propertize
+   "vim 你好" 'face '(:underline (:position t) :overline t)
+   'display '(raise .1))
+  "\n"
+  (propertize "Large text" 'face '(:height 2.0 :overline t)
+              'display '(raise .1))
+  )
+
+(setq underline-minimum-offset 1)
+
 (defun etml-box-side-pixel (box &optional side)
   "除了内容以外的两侧的像素宽度和。SIDE 表示指定 'left 或 'right
 一侧的 border,padding,margin 的总像素宽度。"
