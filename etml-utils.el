@@ -146,6 +146,24 @@ FROM-TAIL 为 t 表示优先从尾部加上多余的部分。"
               start end prop value string)))))
     string))
 
+(defun etml-propertize-underline (string &optional color style)
+  (etml-propertize
+   string
+   `(face (:underline
+           ( :position t
+             ,@(when color
+                 `(:color ,(or color (face-attribute
+                                      'default :foreground))))
+             ,@(when style `(:style ,style)))))))
+
+(defun etml-propertize-overline (string &optional color)
+  (etml-propertize
+   string `(face (:overline ,(or color t)))))
+
+(defun etml-add-text-properties (start end properties &optional object)
+  (etml-get-text-properties)
+  (add-text-properties ))
+
 (defun etml-remove-face-attributes (start end removed-attributes)
   "将 scroll bar 的 face 清空，变为像素空格"
   ;; 局限性: 用 start 的 face 属性处理之后，渲染到所有字符上面

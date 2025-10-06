@@ -108,41 +108,6 @@
          (max (or min-pixel 0)
               (or curr-pixel original-pixel)))))
 
-(defun etml-box-side-pixel (box &optional side)
-  "除了内容以外的两侧的像素宽度和。SIDE 表示指定 'left 或 'right
-一侧的 border,padding,margin 的总像素宽度。"
-  (let* ((left-side-pixel (+ (oref box border-left-pixel)
-                             (oref box padding-left-pixel)
-                             (oref box margin-left-pixel)))
-         (right-side-pixel (+ (oref box border-right-pixel)
-                              (oref box padding-right-pixel)
-                              (oref box margin-right-pixel)))
-         ;; 如果 overflow-x:scroll 会有固定的滚动条宽度
-         (overflow-x (oref box overflow-x))
-         (v-scroll-bar-pixel (etml-scroll-bar-pixel
-                              (oref box v-scroll-bar)))
-         (v-scroll-bar-direction (oref box v-scroll-bar-direction)))
-    (pcase side
-      ('left (+ left-side-pixel
-                (if (and (eq 'scroll overflow-x)
-                         (eq 'left v-scroll-bar-direction))
-                    v-scroll-bar-pixel
-                  0)))
-      ('right (+ right-side-pixel
-                 (if (and (eq 'scroll overflow-x)
-                          (eq 'right v-scroll-bar-direction))
-                     v-scroll-bar-pixel
-                   0)))
-      (_ (+ left-side-pixel right-side-pixel
-            (if (eq 'scroll overflow-x)
-                v-scroll-bar-pixel
-              0))))))
-
-(defun etml-box-total-pixel (box)
-  "Return the total pixel width of BLOCK."
-  (+ (etml-box-side-pixel box)
-     (etml-box-content-pixel box)))
-
 (defun etml-box-original-content (box)
   "原始文本内容"
   (etml-lines-justify
@@ -164,6 +129,40 @@
     (min (or max-height 999999999)
          (max (or min-height 0)
               (or curr-height content-linum)))))
+
+(defun etml-box-side-pixel (box &optional side)
+  "除了内容以外的两侧的像素宽度和。SIDE 表示指定 'left 或 'right
+一侧的 border,padding,margin 的总像素宽度。"
+  (let* ((left-side-pixel (+ (oref box border-left-pixel)
+                             (oref box padding-left-pixel)
+                             (oref box margin-left-pixel)))
+         (right-side-pixel (+ (oref box border-right-pixel)
+                              (oref box padding-right-pixel)
+                              (oref box margin-right-pixel)))
+         (v-scroll-bar-p (etml-box-v-scroll-bar-p box))
+         (v-scroll-bar-pixel (etml-scroll-bar-pixel
+                              (oref box v-scroll-bar)))
+         (v-scroll-bar-direction (oref box v-scroll-bar-direction)))
+    (pcase side
+      ('left (+ left-side-pixel
+                (if (and (eq 'left v-scroll-bar-direction)
+                         v-scroll-bar-p)
+                    v-scroll-bar-pixel
+                  0)))
+      ('right (+ right-side-pixel
+                 (if (and (eq 'right v-scroll-bar-direction)
+                          v-scroll-bar-p)
+                     v-scroll-bar-pixel
+                   0)))
+      (_ (+ left-side-pixel right-side-pixel
+            (if v-scroll-bar-p
+                v-scroll-bar-pixel
+              0))))))
+
+(defun etml-box-total-pixel (box)
+  "Return the total pixel width of BLOCK."
+  (+ (etml-box-side-pixel box)
+     (etml-box-content-pixel box)))
 
 (defun etml-box-side-height (box)
   "内容以外，上下 padding, margin 的总高度"
@@ -240,7 +239,8 @@
                   ;; 当高度为1时，滚动条无法移动
                   (when (> content-height 1)
                     (etml-split-size
-                     overflow-linum (1- content-height) nil nil nil t))))
+                     overflow-linum (1- content-height)
+                     nil nil nil t))))
         ;; 无溢出时，滚动条长度会内容高度，step 为 nil
         (setq v-scroll-bar-thumb-height content-height)))
     (cons v-scroll-bar-thumb-height v-scroll-steps)))
@@ -273,11 +273,22 @@
           (thumb-height (etml-box-v-scroll-bar-thumb-height box))
           (thumb-offset (etml-box-v-scroll-bar-thumb-offset box))
           (scroll-steps (etml-box-v-scroll-steps box))
-          (box-uuid (oref box uuid)))
-      ;; 设置 box 计算之后用于滚动栏渲染必要的属性
+          (box-uuid (oref box uuid))
+          (track-padding-top-height
+           (floor (oref box padding-top-height)))
+          (track-padding-bottom-height
+           (floor (oref box padding-bottom-height))))
+      ;; 设置 box 计算之后用于滚动栏渲染必要的属性:
       (oset v-scroll-bar track-height track-height)
       (oset v-scroll-bar thumb-height thumb-height)
       (oset v-scroll-bar thumb-offset thumb-offset)
+      ;; scroll-bar 的 上下 padding 由 box 决定，但只需要整数部分
+      ;;   小数部分的 line-height 由 滚动栏所在的 box 整体渲染
+      (oset v-scroll-bar track-padding-top-height
+            track-padding-top-height)
+      (oset v-scroll-bar track-padding-bottom-height
+            track-padding-bottom-height)
+      
       (pcase v-scroll-bar-p
         ('real (etml-scroll-bar-render
                 v-scroll-bar box-uuid scroll-steps))
@@ -355,11 +366,14 @@
                    :content-linum (length original-content-lines)
                    :content-height content-height
                    :v-scroll-offset (oref box v-scroll-offset)
+                   :padding-top-height padding-top-float
+                   :padding-bottom-height padding-bottom-float
                    :border-top-p border-top-p
                    :border-top-color border-top-color
                    :border-bottom-p border-bottom-p
                    :border-bottom-color border-bottom-color
-                   :border-bottom-style border-bottom-style)
+                   :border-bottom-style border-bottom-style
+                   :v-scroll-bar (oref box v-scroll-bar))
              etml-box-caches)
     ;; 设置 etml-content-line 属性为 uuid
     ;; 设置滚动的 keymap
@@ -384,90 +398,40 @@
                    (etml-pixel-blank content-pixel padding-bottom-height)))))
     ;; 2. concat: 1 + left-padding(inner-height)
     ;;            + right-padding(inner-height)
-    (when (or (> padding-left-pixel 0) (> padding-right-pixel 0)))
-    (elog-info etml-box-logger
-      "concat left padding %s and right padding %s to box-string"
-      padding-left-pixel padding-right-pixel)
-    (setq box-string
-          (etml-lines-concat
-           (list (etml-pixel-blank padding-left-pixel inner-height)
-                 box-string
-                 (etml-pixel-blank padding-right-pixel inner-height))))
-    ;; 3. 设置垂直方向滚动条
-    (elog-info etml-box-logger
-      "render \"%s\" vertical scroll bar" (etml-box-v-scroll-bar-p box))
-    (when-let ((scroll-bar-str (etml-box-v-scroll-bar-render box)))
+    (when (or (> padding-left-pixel 0) (> padding-right-pixel 0))
       (elog-info etml-box-logger
-        "add vertical scroll bar to box-string")
-      (let* ((direction (oref box v-scroll-bar-direction))
-             (v-scroll-bar (oref box v-scroll-bar))
-             (scroll-bar-pixel (etml-scroll-bar-pixel v-scroll-bar t))
-             (track-color (oref v-scroll-bar track-color))
-             (track-margin-left-pixel
-              (oref v-scroll-bar track-margin-left-pixel))
-             (track-margin-right-pixel
-              (oref v-scroll-bar track-margin-right-pixel))
-             (scroll-bar-str
-              ;; 滚动条不会滚动到 padding 部分，但展示时需要加上下 padding
-              (etml-lines-stack
-               (list
-                (when (> padding-top-height 0)
-                  (etml-lines-concat
-                   ;; 单独连接 margin 是因为它不包含轨道的颜色
-                   (list (etml-pixel-blank
-                          track-margin-left-pixel padding-top-height)
-                         (etml-pixel-border
-                          scroll-bar-pixel padding-top-height
-                          track-color)
-                         (etml-pixel-blank
-                          track-margin-right-pixel padding-top-height))))
-                scroll-bar-str
-                (when (> padding-bottom-height 0)
-                  (etml-lines-concat
-                   ;; 单独连接 margin 是因为它不包含轨道的颜色
-                   (list (etml-pixel-blank
-                          track-margin-left-pixel padding-bottom-height)
-                         (etml-pixel-border
-                          scroll-bar-pixel padding-bottom-height
-                          track-color)
-                         (etml-pixel-blank
-                          track-margin-right-pixel
-                          padding-bottom-height))))))))
-        (setq box-string
-              (etml-lines-concat
-               (pcase direction
-                 ('right (list box-string scroll-bar-str))
-                 ('left (list scroll-bar-str box-string))
-                 (_ (error "Invalid format of v-scroll-bar-direction: %s"
-                           direction)))))))
+        "concat left padding %s and right padding %s to box-string"
+        padding-left-pixel padding-right-pixel)
+      (setq box-string
+            (etml-lines-concat
+             (list (etml-pixel-blank padding-left-pixel inner-height)
+                   box-string
+                   (etml-pixel-blank padding-right-pixel inner-height)))))
+    ;; 3. 设置垂直方向滚动条
+    (when-let ((scroll-bar-str (etml-box-v-scroll-bar-render box))
+               (direction (oref box v-scroll-bar-direction)))
+      (elog-info etml-box-logger
+        "render \"%s\" vertical scroll bar" (etml-box-v-scroll-bar-p box))
+      (setq box-string
+            (etml-lines-concat
+             (pcase direction
+               ('right (list box-string scroll-bar-str))
+               ('left (list scroll-bar-str box-string))
+               (_ (error "Invalid format of v-scroll-bar-direction: %s"
+                         direction))))))
     ;; 4. set top(overline) and bottom(underline) border
     (when (or border-top-p border-bottom-p)
       (let ((lines (split-string box-string "\n" t)))
         (when border-top-p
           (elog-info etml-box-logger "add top border to box-string")
           (setf (car lines)
-                (etml-propertize
-                 (car lines)
-                 `(face (:overline
-                         ,(or border-top-color
-                              (face-attribute 'default :foreground)))))))
+                (etml-propertize-overline (car lines) border-top-color)))
         (when border-bottom-p
           (elog-info etml-box-logger "add bottom border to box-string")
           (setf (car (last lines))
-                (etml-propertize
-                 (car (last lines))
-                 `(face
-                   (:underline
-                    ,(let ((lst `( :position t
-                                   :color
-                                   ,(or border-bottom-color
-                                        (face-attribute
-                                         'default :foreground)))))
-                       (when border-bottom-style
-                         (setq lst
-                               (append
-                                lst `(:style ,border-bottom-style))))
-                       lst))))))
+                (etml-propertize-underline (car (last lines))
+                                           border-bottom-color
+                                           border-bottom-style)))
         (setq box-string (string-join lines "\n"))))
     ;; 5. 设置背景色
     (when-let ((bgcolor (oref box bgcolor)))
@@ -598,10 +562,6 @@
               (content-lines (plist-get cache :content-lines))
               (content-linum (plist-get cache :content-linum))
               (content-height (plist-get cache :content-height))
-              (_ (elog-info etml-box-logger
-                   "content-linum:%s" content-linum))
-              (_ (elog-info etml-box-logger
-                   "content-height:%s" content-height))
               (v-scroll-offset
                (max 0 (min (plist-get cache :v-scroll-offset)
                            (- content-linum content-height))))
@@ -611,55 +571,111 @@
                            (1+ v-scroll-offset)))
                      ((eq 'up up-or-down)
                       (max 0 (1- v-scroll-offset)))))
-              (_ (elog-info etml-box-logger
-                   "new-v-scroll-offset:%s" new-v-scroll-offset))
               (box-content-lines
                (seq-subseq content-lines
                            new-v-scroll-offset
                            (+ new-v-scroll-offset content-height))))
     ;; 更新 new-v-scroll-offset 到缓存
     (plist-put cache :v-scroll-offset new-v-scroll-offset)
-    (save-excursion
-      (goto-char (point-min))
-      (let ((inhibit-read-only t)
-            (idx 0)
-            (border-top-p (plist-get cache :border-top-p))
-            (border-top-color (plist-get cache :border-top-color)) 
-            (border-bottom-p (plist-get cache :border-bottom-p)) 
-            (border-bottom-color (plist-get cache :border-bottom-color)) 
-            (border-bottom-style (plist-get cache :border-bottom-style)) 
-            match)
-        ;; 根据 uuid 属性搜索并将每一行替换为滚动后的新的文本
-        (while (setq match (text-property-search-forward
-                            'etml-content-line uuid t))
+    ;;; 一次滚动后，更新内容和滚动条位置
+    (let ((padding-top-height (plist-get cache :padding-top-height))
+          (padding-bottom-height (plist-get cache :padding-bottom-height))
+          (border-top-p (plist-get cache :border-top-p))
+          (border-top-color (plist-get cache :border-top-color)) 
+          (border-bottom-p (plist-get cache :border-bottom-p)) 
+          (border-bottom-color (plist-get cache :border-bottom-color)) 
+          (border-bottom-style (plist-get cache :border-bottom-style))
+          (v-scroll-bar (plist-get cache :v-scroll-bar))
+          (inhibit-read-only t)
+          (idx 0))
+      (save-excursion
+        ;; 更新内容: 根据 uuid 搜索并将每一行替换为滚动后的新的文本
+        (goto-char (point-min))
+        (while-let ((match (text-property-search-forward
+                            'etml-content-line uuid t)))
           (delete-region (prop-match-beginning match)
                          (prop-match-end match))
           (let ((line (propertize (nth idx box-content-lines)
                                   'etml-content-line uuid
                                   'keymap (etml-box-scroll-map))))
-            (cond
-             ((and (= idx 0) border-top-p)
-              (setq line
-                    (propertize
-                     line 'face `(:overline ,(or border-top-color t)))))
-             ((and (= idx (1- content-height)) border-bottom-p)
-              (setq line
-                    (propertize
-                     line 'face `(:underline
-                                  ( :position t
-                                    :color ,border-top-color
-                                    :style ,(or border-bottom-style
-                                                'line)))))))
+            ;; 滚动时替换文本会丢失上下边框，必要时要加上
+            (cond ((and (= idx 0)
+                        (< padding-top-height 1)
+                        border-top-p)
+                   (setq line (etml-propertize-overline
+                               line border-top-color)))
+                  ((and (= idx (1- content-height))
+                        (< padding-bottom-height 1)
+                        border-bottom-p)
+                   (setq line
+                         (etml-propertize-underline
+                          line border-top-color border-bottom-style))))
             (insert line))
           (cl-incf idx 1))
-        ;; 更新 滚动条位置
-        ;; (etml-box-v-scroll-bar-thumb-offset)
-        ))
-    ;; 滚动之后，重定向光标到当前行文本的开头
-    ;; (when-let ((match (text-property-search-forward
-    ;;                    'etml-box-line-idx line-idx t)))
-    ;;   (goto-char (prop-match-beginning match)))
+
+        ;; FIXME: 设计通用的增量更新方法
+        
+        ;; ;;; 更新滚动条位置
+        ;; (goto-char (point-min))
+        ;; ;;; 移动 thumb head
+        ;; (when-let* ((match (text-property-search-forward
+        ;;                     'etml-v-scroll-thumb-head uuid t))
+        ;;             (thumb-head-start (prop-match-beginning match))
+        ;;             (thumb-head-end (prop-match-end match)))
+        ;;   (elog-debug etml-box-logger
+        ;;     "find old thumb head region (%s %s)" start end)
+        ;;   ;; 搜索滚动条开头，取消 etml-v-scroll-thumb-head 属性
+        ;;   ;; 设置为轨道 face
+        ;;   (add-text-properties
+        ;;    thumb-head-start thumb-head-end
+        ;;    `( etml-v-scroll-thumb-head nil
+        ;;       face ,(etml-scroll-bar-track-face v-scroll-bar)))
+        ;;   ;; 继续搜索下一个可滚动位置，设置 etml-v-scroll-thumb-head 属性
+        ;;   (goto-char thumb-head-end)
+        ;;   (when-let* ((match (text-property-search-forward
+        ;;                       'etml-v-scroll-area uuid t))
+        ;;               (new-thumb-head-start (prop-match-beginning match))
+        ;;               (new-thumb-head-end (prop-match-end match)))
+        ;;     (elog-debug etml-box-logger
+        ;;       "find and set new thumb head region (%s %s)" start end)
+        ;;     (add-text-properties
+        ;;      new-thumb-head-start new-thumb-head-end
+        ;;      `(etml-v-scroll-thumb-head uuid)))
+        ;;   (goto-char thumb-head-start))
+        
+        ;; ;;; 移动 thumb tail
+        ;; (when-let* ((match (text-property-search-forward
+        ;;                     'etml-v-scroll-thumb-tail uuid t))
+        ;;             (thumb-tail-start (prop-match-beginning match))
+        ;;             (thumb-tail-end (prop-match-end match)))
+        ;;   (elog-debug etml-box-logger
+        ;;     "find old thumb head region (%s %s)" start end)
+        ;;   ;; 搜索滚动条开头，取消 etml-v-scroll-thumb-tail 属性
+        ;;   ;; 设置为轨道 face
+        ;;   (add-text-properties
+        ;;    thumb-tail-start thumb-tail-end
+        ;;    `( etml-v-scroll-thumb-tail nil
+        ;;       face ,(etml-scroll-bar-track-face v-scroll-bar)))
+        ;;   ;; 继续搜索下一个可滚动位置，设置 etml-v-scroll-thumb-tail 属性
+        ;;   (goto-char thumb-tail-end)
+        ;;   (when-let* ((match (text-property-search-forward
+        ;;                       'etml-v-scroll-area uuid t))
+        ;;               (new-thumb-tail-start (prop-match-beginning match))
+        ;;               (new-thumb-tail-end (prop-match-end match)))
+        ;;     (elog-debug etml-box-logger
+        ;;       "find and set new thumb head region (%s %s)" start end)
+        ;;     (add-text-properties
+        ;;      new-thumb-tail-start new-thumb-tail-end
+        ;;      `(etml-v-scroll-thumb-tail uuid)))
+        ;;   (goto-char thumb-tail-start))
+        )
+      )
     ))
+
+;; (text-property-search-forward
+;;  'etml-v-scroll-thumb-start
+;;  "6c1a5ecf-c8ae-49ca-9373-cc674e12b378"
+;;  t)
 
 ;;;###autoload
 (defun etml-box-scroll-up ()

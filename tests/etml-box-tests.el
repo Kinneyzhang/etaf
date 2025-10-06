@@ -29,29 +29,33 @@
 (elog-set-level etml-box-logger 'debug)
 (etml-render "*etml-box-test*"
   :overflow-y 'auto
-  :v-scroll-bar-direction 'right
-  :v-scroll-offset 2
+  :v-scroll-bar-direction 'left
+  :v-scroll-offset 0
   :v-scroll-bar
   (etml-scroll-bar
-   :track-color "#333"
-   ;; :thumb-color "orange"
+   ;; :track-color "#999"
+   :thumb-color "orange"
    :track-margin-left-pixel 0 :track-margin-right-pixel 0
-   :track-padding-left-pixel 0 :track-padding-right-pixel 0
-   :track-border-left-pixel 0 :track-border-right-pixel 0
-   :track-border-left-color nil :track-border-right-color nil
-   :thumb-pixel 4 :thumb-offset 2
-   :thumb-border-p nil :thumb-border-color "orange")
+   :track-padding-left-pixel 1 :track-padding-right-pixel 1
+   :track-border-left-pixel 1 :track-border-right-pixel 1
+   ;; :track-border-left-color "green" :track-border-right-color "green"
+   :thumb-pixel 8
+   :thumb-border-p nil
+   :thumb-border-color "grey"
+   )
   :content ;; (file-content "./text-zh-en_US.txt")
-  (file-content "./text-zh.txt")
+  (string-trim-right (file-content "./text-zh.txt"))
   :width '(300)
   :height 25
   :bgcolor nil
-  :border-left-pixel 1 :border-right-pixel 1
+  :border-left-pixel 0 :border-right-pixel 1
   :border-top-p t :border-bottom-p t
   :border-bottom-style 'line
   ;; 'line 'double-line 'wave 'dots 'dashes
   :margin-left-pixel 10 :margin-right-pixel 10
   :margin-top-height 1 :margin-bottom-height 1
-  :padding-left-pixel 10 :padding-right-pixel 10
-  :padding-top-height .6 :padding-bottom-height .6
+  :padding-left-pixel 14 :padding-right-pixel 14
+  :padding-top-height 1.5 :padding-bottom-height 1.5
   )
+
+

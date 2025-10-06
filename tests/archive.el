@@ -1,3 +1,47 @@
+;; (etml-lines-concat
+;;  (list
+;;   (etml-pixel-blank
+;;    (oref scroll-bar track-margin-left-pixel) track-height)
+;;   (etml-pixel-border
+;;    (oref scroll-bar track-border-left-pixel) track-height
+;;    (oref scroll-bar track-border-left-color))
+;;   ;; padding 部分设置背景色
+;;   (etml-propertize
+;;    (etml-pixel-blank
+;;     (oref scroll-bar track-padding-left-pixel) track-height)
+;;    `(face (:background ,track-color)))
+;;   track-height-thumb-str
+;;   ;; padding 部分设置背景色
+;;   (etml-propertize
+;;    (etml-pixel-blank
+;;     (oref scroll-bar track-padding-right-pixel) track-height)
+;;    `(face (:background ,track-color)))
+;;   (etml-pixel-border
+;;    (oref scroll-bar track-border-right-pixel) track-height
+;;    (oref scroll-bar track-border-right-color))
+;;   (etml-pixel-blank
+;;    (oref scroll-bar track-margin-right-pixel) track-height)))
+
+;; (etml-lines-concat
+;;  ;; 单独连接 margin 是因为它不包含轨道的颜色
+;;  (list (etml-pixel-blank
+;;         track-margin-left-pixel padding-top-height)
+;;        (etml-pixel-border
+;;         scroll-bar-pixel padding-top-height
+;;         track-color)
+;;        (etml-pixel-blank
+;;         track-margin-right-pixel padding-top-height)))
+;; (etml-lines-concat
+;;  ;; 单独连接 margin 是因为它不包含轨道的颜色
+;;  (list (etml-pixel-blank
+;;         track-margin-left-pixel padding-bottom-height)
+;;        (etml-pixel-border
+;;         scroll-bar-pixel padding-bottom-height
+;;         track-color)
+;;        (etml-pixel-blank
+;;         track-margin-right-pixel
+;;         padding-bottom-height)))
+
 (cl-loop for x in '(2 3 2 4 5 2 1)
          sum x into total
          collect total)
