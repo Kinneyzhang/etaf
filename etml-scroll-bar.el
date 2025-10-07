@@ -168,21 +168,22 @@ SCROLL-STEPS 用来表示内容滚动一次，滚动条如何移动。"
             (propertize track-height-thumb-str
                         'etml-v-scroll-area box-uuid))
       (etml-box-string
-       :content track-height-thumb-str
-       :bgcolor track-color 
-       :padding-left-pixel (oref scroll-bar track-padding-left-pixel)
-       :padding-right-pixel (oref scroll-bar track-padding-right-pixel)
-       :padding-top-height (oref scroll-bar track-padding-top-height)
-       :padding-bottom-height (oref scroll-bar track-padding-bottom-height)
-       :border-left-pixel (oref scroll-bar track-border-left-pixel)
-       :border-left-color (oref scroll-bar track-border-left-color)
-       :border-right-pixel (oref scroll-bar track-border-right-pixel)
-       :border-right-color (oref scroll-bar track-border-right-color)
-       :border-top-p (oref scroll-bar track-border-top-p)
-       :border-top-color (oref scroll-bar track-border-top-color)
-       :border-bottom-p (oref scroll-bar track-border-bottom-p)
-       :border-bottom-color (oref scroll-bar track-border-bottom-color)
-       :margin-left-pixel (oref scroll-bar track-margin-left-pixel)
-       :margin-right-pixel (oref scroll-bar track-margin-right-pixel)))))
+       (etml-box
+        :content track-height-thumb-str
+        :bgcolor track-color 
+        :padding-left-pixel (oref scroll-bar track-padding-left-pixel)
+        :padding-right-pixel (oref scroll-bar track-padding-right-pixel)
+        :padding-top-height (oref scroll-bar track-padding-top-height)
+        :padding-bottom-height (oref scroll-bar track-padding-bottom-height)
+        :border-left-pixel (oref scroll-bar track-border-left-pixel)
+        :border-left-color (oref scroll-bar track-border-left-color)
+        :border-right-pixel (oref scroll-bar track-border-right-pixel)
+        :border-right-color (oref scroll-bar track-border-right-color)
+        :border-top-p (oref scroll-bar track-border-top-p)
+        :border-top-color (oref scroll-bar track-border-top-color)
+        :border-bottom-p (oref scroll-bar track-border-bottom-p)
+        :border-bottom-color (oref scroll-bar track-border-bottom-color)
+        :margin-left-pixel (oref scroll-bar track-margin-left-pixel)
+        :margin-right-pixel (oref scroll-bar track-margin-right-pixel))))))
 
 (provide 'etml-scroll-bar)

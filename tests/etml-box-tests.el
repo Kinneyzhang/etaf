@@ -27,6 +27,7 @@
 (defvar etml-box-tests-box-1 nil)
 (elog-log-clear etml-box-logger)
 (elog-set-level etml-box-logger 'debug)
+(ekp-clear-caches)
 (etml-render "*etml-box-test*"
   :overflow-y 'auto
   :v-scroll-bar-direction 'left

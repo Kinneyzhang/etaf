@@ -1,3 +1,75 @@
+(defun etml-buffer-region-swap (region1 region2)
+  "交换 region1 和 region2 的文本，
+region 的格式是 cons-cell (start . end)
+region1 和 region2 不允许有交叉范围 且 region1 在 region2 前面"
+  (let* ((start1 (car region1))
+         (end1 (cdr region1))
+         (str1 (buffer-substring start1 end1))
+         (start2 (car region2))
+         (end2 (cdr region2))
+         (str2 (buffer-substring start2 end2))
+         (swap-first-pos-start (max start1 start2))
+         (swap-first-pos-end (max end1 end2))
+         (swap-second-pos-start (min start1 start2))
+         (swap-second-pos-end (min end1 end2)))
+    ;; 优先替换更靠后的 region，不会影响前面 region 的座标。
+    (save-excursion
+      (goto-char swap-first-pos)
+      (delete-region )
+      )))
+
+;; (save-excursion
+;;   ;; 更新内容: 根据 uuid 搜索并将每一行替换为滚动后的新的文本
+;;   (goto-char (point-min))
+;;   (while-let ((match (text-property-search-forward
+;;                       'etml-content-line uuid t)))
+;;     (delete-region (prop-match-beginning match)
+;;                    (prop-match-end match))
+;;     (let ((line (propertize (nth idx box-content-lines)
+;;                             'etml-content-line uuid
+;;                             'keymap (etml-box-scroll-map))))
+;;       ;; 滚动时替换文本会丢失上下边框，必要时要加上
+;;       (cond ((and (= idx 0)
+;;                   (< padding-top-height 1)
+;;                   border-top-p)
+;;              (setq line (etml-propertize-overline
+;;                          line border-top-color)))
+;;             ((and (= idx (1- content-height))
+;;                   (< padding-bottom-height 1)
+;;                   border-bottom-p)
+;;              (setq line
+;;                    (etml-propertize-underline
+;;                     line border-top-color border-bottom-style))))
+;;       (insert line))
+;;     (cl-incf idx 1))
+
+
+;;;###autoload
+(defun etml-box-concat (&rest blocks)
+  "TEXT-ALIGN should be one of left,center,right."
+  ;; ALIGN should be one of top,center,bottom.
+  (etml-box :content (etml-lines-concat
+                      (mapcar (lambda (block)
+                                (pcase block
+                                  ((pred etml-flex-p)
+                                   (etml-flex-render block))
+                                  ((pred etml-box-p)
+                                   (etml-box-render block))))
+                              blocks))))
+
+;;;###autoload
+(defun etml-box-stack (&rest blocks)
+  "ALIGN used for all blocks."
+  ;; TEXT-ALIGN used for text in a block.
+  (etml-box :content (etml-lines-stack
+                      (mapcar (lambda (block)
+                                (pcase block
+                                  ((pred etml-flex-p)
+                                   (etml-flex-render block))
+                                  ((pred etml-box-p)
+                                   (etml-box-render block))))
+                              blocks))))
+
 (defun etml-box-y-scroll-bar-p (box)
   "Return if BLOCK should have scroll bar in vertical."
   (let* ((overflow (oref box y-overflow))

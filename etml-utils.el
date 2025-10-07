@@ -3,6 +3,113 @@
 (require 'etml-pixel)
 (require 'dash)
 
+(defun etml-region-replace (string start end)
+  "把当前 buffer start 到 end 位置的文本提环为 string"
+  (save-excursion
+    (goto-char start)
+    (delete-region start end)
+    (insert string)))
+
+(defun etml-region-replace (string start end)
+  "把当前 buffer start 到 end 位置的文本提环为 string"
+  (goto-char start)
+  (delete-region start end)
+  (insert string))
+
+(defun etml-region-swap (region1 region2)
+  "交换 region1 和 region2 的文本，
+region 的格式是 cons-cell (start . end)
+region1 和 region2 不允许有交叉范围 且 region1 在 region2 前面"
+  (let* ((start1 (car region1))
+         (end1 (cdr region1))
+         (str1 (buffer-substring start1 end1))
+         (start2 (car region2))
+         (end2 (cdr region2))
+         (str2 (buffer-substring start2 end2)))
+    ;; 优先替换更靠后的 region，不会影响前面 region 的座标。
+    (etml-region-replace str1 start2 end2)
+    (etml-region-replace str2 start1 end1)))
+
+(defun etml-property-search-forward
+    (function property &optional value predicate)
+  "从当前位置向前搜索，并执行 function"
+  (when-let* ((match (text-property-search-forward
+                      property value predicate))
+              (start (prop-match-beginning match))
+              (end (prop-match-end match))
+              (value (prop-match-value match)))
+    (funcall function start end value)))
+
+(defun etml-property-forward-region
+    (property &optional value predicate)
+  "从当前位置向前搜索，并执行 function"
+  (etml-property-search-forward
+   (lambda (start end _) (cons start end))
+   property value predicate))
+
+(defun etml-property-forward-value
+    (property &optional value predicate)
+  "从当前位置向前搜索，并执行 function"
+  (etml-property-search-forward
+   (lambda (_ _ value) value)
+   property value predicate))
+
+(defun etml-property-search-backward
+    (function property &optional value predicate)
+  "从当前位置向后搜索，并执行 function"
+  (when-let* ((match (text-property-search-backward
+                      property value predicate))
+              (start (prop-match-beginning match))
+              (end (prop-match-end match))
+              (value (prop-match-value match)))
+    (funcall function start end value)))
+
+(defun etml-property-backward-region
+    (property &optional value predicate)
+  "从当前位置向前搜索，并执行 function"
+  (etml-property-search-backward
+   (lambda (start end _) (cons start end))
+   property value predicate))
+
+(defun etml-property-backward-value
+    (property &optional value predicate)
+  "从当前位置向前搜索，并执行 function"
+  (etml-property-search-backward
+   (lambda (_ _ value) value)
+   property value predicate))
+
+(defun etml-property-map-regions
+    (function property &optional value predicate collect)
+  "对属性匹配的开头和结尾 point 执行 function。collect 为 t 时返回结果列表"
+  (save-excursion
+    (goto-char (point-min))
+    (let ((idx 0) lst)
+      (while-let ((match (text-property-search-forward
+                          property value predicate))
+                  (start (prop-match-beginning match))
+                  (end (prop-match-end match)))
+        (let ((res (funcall function start end idx)))
+          (when collect (push res lst)))
+        (cl-incf idx 1))
+      (nreverse lst))))
+
+(defun etml-property-map-strings
+    (function property &optional value predicate collect)
+  "对属性匹配的字符串执行 function"
+  (etml-property-map-regions
+   (lambda (start end idx)
+     (funcall function (buffer-substring start end) idx))
+   property value predicate))
+
+;; (let ((inhibit-read-only 1))
+;;   (etml-property-map-regions
+;;    (lambda (start end idx)
+;;      (etml-region-replace "xxxx" start end))
+;;    'etml-content-line
+;;    "294e93cf-7568-4e61-ae2e-a6c17de990d4" t))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defun etml-symbol->keyword (symbol)
   (etml-string-to-keyword (symbol-name symbol)))
 
@@ -151,18 +258,14 @@ FROM-TAIL 为 t 表示优先从尾部加上多余的部分。"
    string
    `(face (:underline
            ( :position t
-             ,@(when color
-                 `(:color ,(or color (face-attribute
-                                      'default :foreground))))
+             :color ,(or color (face-attribute
+                                'default :foreground))
              ,@(when style `(:style ,style)))))))
 
 (defun etml-propertize-overline (string &optional color)
   (etml-propertize
-   string `(face (:overline ,(or color t)))))
-
-(defun etml-add-text-properties (start end properties &optional object)
-  (etml-get-text-properties)
-  (add-text-properties ))
+   string `(face (:overline
+                  ,(or color (face-attribute 'default :foreground))))))
 
 (defun etml-remove-face-attributes (start end removed-attributes)
   "将 scroll bar 的 face 清空，变为像素空格"
