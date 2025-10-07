@@ -44,9 +44,10 @@
    :thumb-border-color "grey"
    )
   :content ;; (file-content "./text-zh-en_US.txt")
-  (string-trim-right (file-content "./text-zh.txt"))
-  :width '(300)
-  :height 25
+  (propertize (string-trim-right (file-content "./text-zh.txt"))
+              'face 'etml-test-mono-face)
+  :width 30
+  :height 20
   :bgcolor nil
   :border-left-pixel 0 :border-right-pixel 1
   :border-top-p t :border-bottom-p t
@@ -57,5 +58,3 @@
   :padding-left-pixel 14 :padding-right-pixel 14
   :padding-top-height 1.5 :padding-bottom-height 1.5
   )
-
-
