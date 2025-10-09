@@ -3,6 +3,11 @@
 (require 'etml-pixel)
 (require 'dash)
 
+(defun etml-keyword->symbol (keyword)
+  (if (keywordp keyword)
+      (intern (substring (symbol-name keyword) 1))
+    keyword))
+
 (defmacro etml-alist-set (alist key value)
   `(setf (alist-get ,key ,alist) ,value))
 
@@ -132,13 +137,13 @@ region1 和 region2 不允许有交叉范围 且 region1 在 region2 前面"
 
 (defun etml-alist->plist (alist)
   (mapcan (lambda (elem)
-            (cons (car elem) (cdr elem)))
+            (list (car elem) (cdr elem)))
           alist))
 
 (defun etml-plist->alist (plist)
   (unless (null plist)
     (append
-     (list (list (pop plist) (pop plist)))
+     (list (cons (pop plist) (pop plist)))
      (etml-plist->alist plist))))
 
 (defun etml-plist-remove-keys (plist1 keys)
@@ -152,7 +157,7 @@ region1 和 region2 不允许有交叉范围 且 region1 在 region2 前面"
 (defun etml-oset (object &rest kvs)
   (let ((alist (etml-plist->alist kvs)))
     (dolist (kv alist)
-      (eval `(oset ,object ,(car kv) ',(cadr kv))))))
+      (eval `(oset ,object ,(car kv) ',(cdr kv))))))
 
 (defun etml-get-text-properties (str)
   "获取字符串STR的所有文本属性区间。

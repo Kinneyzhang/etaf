@@ -151,7 +151,7 @@
     (setq parent-sexp (plist-get plist :inherit))
     ;; set etml-element-definitions
     (dolist (kv (etml-plist->alist plist))
-      (etml-element--set name inner (car kv) (cadr kv)))
+      (etml-element--set name inner (car kv) (cdr kv)))
     ;; remove :inherit :inner in plist
     (setq plist (etml-plist-remove-keys plist '(:inherit)))
     (if parent-sexp

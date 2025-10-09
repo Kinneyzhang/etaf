@@ -198,14 +198,16 @@ SCROLL-STEPS 用来表示内容滚动一次，滚动条如何移动。"
 ;; :track-margin-left-pixel 4 :track-margin-right-pixel 2
 ;; :track-padding-left-pixel 2 :track-padding-right-pixel 2
 
-(etml-scroll-bar-define s1
-  :thumb-pixel 2)
+(etml-scroll-bar-define simple
+  :thumb-pixel 2
+  :track-padding-left-pixel 0
+  :track-padding-right-pixel 3)
 
 (etml-scroll-bar-define s2
   :thumb-pixel 2
   :track-border-left-pixel 1
-  :track-border-left-pixel 1)
-
-(alist-get 's2 etml-scroll-bar-alist)
+  :track-padding-left-pixel 12
+  :track-padding-right-pixel 12
+  :track-border-right-pixel 1)
 
 (provide 'etml-scroll-bar)
