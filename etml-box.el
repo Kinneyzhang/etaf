@@ -155,13 +155,12 @@
 
 (defun etml-v-scroll-bar (box)
   "返回 etml-scroll-bar 对象"
-  (if-let* ((type (oref box v-scroll-bar-type))
-            (kvs (alist-get type etml-scroll-bar-alist))
-            (scroll-bar (apply #'etml-scroll-bar kvs)))
-      (progn
-        (oset box v-scroll-bar scroll-bar)
-        scroll-bar)
-    (oref box v-scroll-bar)))
+  (let ((scroll-bar (or (oref box v-scroll-bar)
+                        (etml-scroll-bar))))
+    (when-let* ((type (oref box v-scroll-bar-type))
+                (kvs (alist-get type etml-scroll-bar-alist)))
+      (apply #'etml-oset scroll-bar kvs))
+    scroll-bar))
 
 (defun etml-box-side-pixel (box &optional side)
   "除了内容以外的两侧的像素宽度和。SIDE 表示指定 'left 或 'right
