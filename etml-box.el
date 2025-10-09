@@ -575,21 +575,28 @@
     ;; 更新 new-v-scroll-offset 到缓存
     (plist-put cache :v-scroll-offset new-v-scroll-offset)
     ;;; 一次滚动后，更新内容和滚动条位置
-    (let ((padding-top-height (plist-get cache :padding-top-height))
-          (padding-bottom-height (plist-get cache :padding-bottom-height))
-          (border-top-p (plist-get cache :border-top-p))
-          (border-top-color (plist-get cache :border-top-color)) 
-          (border-bottom-p (plist-get cache :border-bottom-p)) 
-          (border-bottom-color (plist-get cache :border-bottom-color)) 
-          (border-bottom-style (plist-get cache :border-bottom-style))
-          (v-scroll-bar (plist-get cache :v-scroll-bar))
-          (inhibit-read-only t))
-      ;; (setq box-content-lines
-      ;;       (append box-content-lines (make-list 10 1)))
-      ;; 更新内容: 根据 uuid 搜索并将每一行替换为滚动后的新的文本
+    (let* ((padding-top-height (plist-get cache :padding-top-height))
+           (padding-bottom-height (plist-get cache :padding-bottom-height))
+           (border-top-p (plist-get cache :border-top-p))
+           (border-top-color (plist-get cache :border-top-color))
+           (border-bottom-p (plist-get cache :border-bottom-p)) 
+           (border-bottom-color (plist-get cache :border-bottom-color)) 
+           (border-bottom-style (plist-get cache :border-bottom-style))
+           (v-scroll-bar (plist-get cache :v-scroll-bar))
+           (thumb-height (oref v-scroll-bar thumb-height))
+           (inhibit-read-only t))
+      ;; 先更新滚动条位置，因为内容更新会改变滚动条的 point
+      (save-excursion
+        (goto-char (point-min))
+        (let ((offset (abs (- new-thumb-offset thumb-offset))))
+          (dotimes (_ offset)
+            (if (= thumb-height 1)
+                (etml-box-v-scroll-1-height-thumb-shift up-or-down uuid)
+              (etml-box-v-scroll-n-height-thumb-shift up-or-down uuid)))))
+      new-thumb-offset
+      ;; 后更新内容: 根据 uuid 搜索并将每一行替换为滚动后的新的文本
       (etml-property-map-regions
        (lambda (start end idx)
-         ;; (message "idx:%S" idx)
          (let ((line (propertize (nth idx box-content-lines)
                                  'etml-content-line uuid
                                  'keymap (etml-box-scroll-map))))
@@ -606,43 +613,69 @@
                               line border-top-color
                               border-bottom-style))))
            (etml-region-replace line start end)))
-       'etml-content-line uuid t)
-      ;; 更新滚动条位置
-      (save-excursion
-        (let* ((thumb-head-region (etml-property-forward-region
-                                   'etml-v-scroll-thumb-head uuid t))
-               (thumb-head-start (car thumb-head-region))
-               (thumb-head-end (cdr thumb-head-region))
-               (thumb-tail-region (etml-property-forward-region
-                                   'etml-v-scroll-thumb-tail uuid t))
-               (thumb-tail-start (car thumb-head-region))
-               (thumb-tail-end (cdr thumb-head-region))
-               (offset (abs (- new-thumb-offset thumb-offset))))
-          (cond
-           ((eq 'down up-or-down)
-            ;; 向下移动
-            (elog-debug etml-box-logger
-              "thumb scroll down %s" offset)
-            (when (> offset 0)
-              ;; (goto-char thumb-head-end)
-              ;; (let (region)
-              ;;   (dotimes (_ offset)
-              ;;     (setq region (etml-property-forward-region
-              ;;                   'etml-v-scroll-area uuid t)))  
-              ;;   )
-              )
-            ) 
-           ((eq 'up up-or-down)
-            ;; 向上移动
-            (elog-debug etml-box-logger
-              "thumb scroll up %s" offset)
-            (when (> offset 0)
-              )))
-          ))
-      )
-    ))
+       'etml-content-line uuid t))))
 
+(defun etml-box-v-scroll-1-height-thumb-shift (up-or-down uuid)
+  "thumb-height = 1 时，滚动条如何移动一次"
+  (save-excursion
+    (goto-char (point-min))
+    (let* ((thumb-head-region (etml-property-forward-region
+                               'etml-v-scroll-thumb-head uuid t))
+           (thumb-head-start (car thumb-head-region))
+           (thumb-head-end (cdr thumb-head-region)))
+      (cond
+       ((eq 'down up-or-down) ;; 向下移动
+        (let ((head-next-region
+               (progn (goto-char thumb-head-end)
+                      (etml-property-forward-region
+                       'etml-v-scroll-area uuid t))))
+          (etml-region-swap thumb-head-region head-next-region)))
+       ((eq 'up up-or-down) ;; 向上移动
+        (let ((head-prev-region
+               (progn (goto-char thumb-head-start)
+                      (etml-property-backward-region
+                       'etml-v-scroll-area uuid t))))
+          (etml-region-swap thumb-head-region head-prev-region)))))))
 
+(defun etml-box-v-scroll-n-height-thumb-shift (up-or-down uuid)
+  "thumb-height > 1 时，滚动条如何移动一次"
+  (save-excursion
+    (goto-char (point-min))
+    (let* ((thumb-head-region (etml-property-forward-region
+                               'etml-v-scroll-thumb-head uuid t))
+           (thumb-head-start (car thumb-head-region))
+           (thumb-head-end (cdr thumb-head-region))
+           (thumb-tail-region
+            (progn (goto-char thumb-head-start)
+                   (etml-property-forward-region
+                    'etml-v-scroll-thumb-tail uuid t)))
+           (thumb-tail-start (car thumb-tail-region))
+           (thumb-tail-end (cdr thumb-tail-region)))
+      (cond
+       ((eq 'down up-or-down) ;; 向下移动
+        (let* ((head-next-region
+                (progn (goto-char thumb-head-end)
+                       (etml-property-forward-region
+                        'etml-v-scroll-area uuid t)))
+               (tail-next-region
+                (progn (goto-char thumb-tail-end)
+                       (etml-property-forward-region
+                        'etml-v-scroll-area uuid t))))
+          (etml-region-swap thumb-head-region head-next-region)
+          (etml-region-swap thumb-tail-region tail-next-region)
+          (etml-region-swap thumb-head-region thumb-tail-region)))
+       ((eq 'up up-or-down) ;; 向上移动
+        (let* ((head-prev-region
+                (progn (goto-char thumb-head-start)
+                       (etml-property-backward-region
+                        'etml-v-scroll-area uuid t)))
+               (tail-prev-region
+                (progn (goto-char thumb-tail-start)
+                       (etml-property-backward-region
+                        'etml-v-scroll-area uuid t))))
+          (etml-region-swap thumb-head-region head-prev-region)
+          (etml-region-swap thumb-tail-region tail-prev-region)
+          (etml-region-swap thumb-head-region thumb-tail-region)))))))
 
 ;;;###autoload
 (defun etml-box-scroll-up ()
