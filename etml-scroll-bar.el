@@ -158,7 +158,8 @@ SCROLL-STEPS 用来表示内容滚动一次，滚动条如何移动。"
                  `( face ,(etml-scroll-bar-thumb-face scroll-bar idx)
                     ,@(when (= idx 0)
                         `( etml-v-scroll-thumb-head ,box-uuid
-                           etml-v-scroll-steps ,scroll-steps))
+                           ;; etml-v-scroll-steps ,scroll-steps
+                           ))
                     ,@(when (= idx (1- thumb-height))
                         `(etml-v-scroll-thumb-tail ,box-uuid))))
                 (forward-line 1))

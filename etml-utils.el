@@ -3,12 +3,12 @@
 (require 'etml-pixel)
 (require 'dash)
 
-(defun etml-region-replace (string start end)
-  "把当前 buffer start 到 end 位置的文本提环为 string"
-  (save-excursion
-    (goto-char start)
-    (delete-region start end)
-    (insert string)))
+;; (defun etml-region-replace (string start end)
+;;   "把当前 buffer start 到 end 位置的文本提环为 string"
+;;   (save-excursion
+;;     (goto-char start)
+;;     (delete-region start end)
+;;     (insert string)))
 
 (defun etml-region-replace (string start end)
   "把当前 buffer start 到 end 位置的文本提环为 string"
