@@ -3,12 +3,8 @@
 (require 'etml-pixel)
 (require 'dash)
 
-;; (defun etml-region-replace (string start end)
-;;   "把当前 buffer start 到 end 位置的文本提环为 string"
-;;   (save-excursion
-;;     (goto-char start)
-;;     (delete-region start end)
-;;     (insert string)))
+(defmacro etml-alist-set (alist key value)
+  `(setf (alist-get ,key ,alist) ,value))
 
 (defun etml-region-replace (string start end)
   "把当前 buffer start 到 end 位置的文本提环为 string"
@@ -252,6 +248,11 @@ FROM-TAIL 为 t 表示优先从尾部加上多余的部分。"
           (_ (put-text-property
               start end prop value string)))))
     string))
+
+(defun etml-add-face-text-property (start end face)
+  "已有的 face 更新，没有的 face 增加"
+  ;; (add-face-text-property)
+  )
 
 (defun etml-propertize-underline (string &optional color style)
   (etml-propertize

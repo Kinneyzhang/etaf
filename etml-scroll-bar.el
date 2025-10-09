@@ -1,6 +1,9 @@
 (require 'etml-utils)
 ;; (require 'etml-box)
 
+(defvar etml-scroll-bar-alist nil
+  "存储不同风格滚动栏的定义的 alist，car 是滚动栏的名称，cdr 是滚动栏的kv列表")
+
 (defclass etml-scroll-bar ()
   ((track-height
     :initarg :track-height :initform 1
@@ -186,5 +189,23 @@ SCROLL-STEPS 用来表示内容滚动一次，滚动条如何移动。"
         :border-bottom-color (oref scroll-bar track-border-bottom-color)
         :margin-left-pixel (oref scroll-bar track-margin-left-pixel)
         :margin-right-pixel (oref scroll-bar track-margin-right-pixel))))))
+
+(defmacro etml-scroll-bar-define (name &rest kvs)
+  "定义不同风格滚动条"
+  (declare (indent defun))
+  `(etml-alist-set etml-scroll-bar-alist ',name ',kvs))
+
+;; :track-margin-left-pixel 4 :track-margin-right-pixel 2
+;; :track-padding-left-pixel 2 :track-padding-right-pixel 2
+
+(etml-scroll-bar-define s1
+  :thumb-pixel 2)
+
+(etml-scroll-bar-define s2
+  :thumb-pixel 2
+  :track-border-left-pixel 1
+  :track-border-left-pixel 1)
+
+(alist-get 's2 etml-scroll-bar-alist)
 
 (provide 'etml-scroll-bar)
