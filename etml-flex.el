@@ -2,7 +2,7 @@
 
 (require 'eieio)
 (require 'ekp)
-(require 'etml-block)
+(require 'etml-box)
 
 ;;; type check functions
 
@@ -25,17 +25,19 @@
 (defun etml-flex-items-flex-p (value)
   "检查 item-flex 的类型: 单个值为列表，列表形式为 '(0 1 auto)，第一第二个元素为整数，
 第三个元素为 'auto 或整数；多个值为向量，向量中每个元素为列表，列表中的元素类型同上。"
-  (let ((check-lst (lambda (lst)
-                     (and (integerp (nth 0 lst))
-                          (integerp (nth 1 lst))
-                          (let ((el (nth 2 lst)))
-                            (or (eq 'auto el)
-                                (integerp el)
-                                (and (consp el)
-                                     (= 1 (length el))
-                                     (integerp (car el)))))))))
+  (let ((check-lst
+         (lambda (lst)
+           (and (integerp (nth 0 lst))
+                (integerp (nth 1 lst))
+                (let ((el (nth 2 lst)))
+                  (or (eq 'auto el)
+                      (integerp el)
+                      (and (consp el)
+                           (= 1 (length el))
+                           (integerp (car el)))))))))
     (cond
-     ((symbolp value) (or (eq 'none value) (eq 'auto value)))
+     ((symbolp value) (or (eq 'none value)
+                          (eq 'auto value)))
      ((listp value) (funcall check-lst value))
      ((vectorp value) (seq-every-p check-lst value)))))
 
@@ -51,7 +53,7 @@
 
 ;;; type check functions ends.
 
-(defclass etml-flex-item (etml-block)
+(defclass etml-flex-item (etml-box)
   ((order :initarg :order :initform 0 :type integer
           :documentation "item 在 flex 容器中顺序。")
    (basis :initarg :basis :initform 'auto :type (or integer symbol)
@@ -60,7 +62,7 @@
          :documentation "item 在​​容器有剩余空间时​​的​​增长系数​​。")
    (shrink :initarg :shrink :initform 1 :type integer
            :documentation "item 在​​容器空间不足时​​的​​缩小系数。")
-   ;; 避免与 etml-block 的 align 属性冲突
+   ;; 避免与 etml-box 的 align 属性冲突
    (cross-align
     :initarg :cross-align :initform 'auto :type symbol
     :documentation "item 在交叉轴的对齐方式，覆盖容器的 items-align 属性。")))
@@ -70,10 +72,8 @@
 ;; main-axis main-start main-end main-units
 ;; cross-axis cross-start cross-end cross-units
 
-(defclass etml-flex (etml-block)
+(defclass etml-flex (etml-box)
   ((content :initarg :content :documentation "子项目列表")
-   (display :initarg :display :initform 'flex :type symbol
-            :documentation "容器是块级元素还是内联元素。")
    (direction :initarg :direction :initform 'row :type symbol
               :documentation "主轴方向。")
    (wrap :initarg :wrap :initform 'nowrap :type symbol
@@ -97,13 +97,10 @@
   "item 的内容的字符串"
   (let ((content (oref item content)))
     (pcase content
-      ((pred etml-block-p)
-       (etml-block-render content))
-      ((pred stringp)
-       content)
+      ((pred stringp) content)
+      ((pred etml-box-p) (etml-box-string content))
       ;; FIXME: bug here
-      ((pred etml-flex-p)
-       (etml-flex-render content))
+      ((pred etml-flex-p) (etml-flex-string content))
       (_ (error "Invalid type %s of content in item."
                 (type-of content))))))
 
@@ -113,41 +110,41 @@
   (let* ((content (oref item content))
          (string (etml-flex-item-string item))
          (_ (oset item content string))
-         (pixel (etml-block-total-pixel item)))
+         (pixel (etml-box-total-pixel item)))
     ;; 还原
     (oset item content content)
     pixel))
 
 ;; (defun etml-flex-item-total-height (item)
-;;   (let ((string (etml-block-render (oref item content))))
+;;   (let ((string (etml-box-string (oref item content))))
 ;;     (oset item content string)
-;;     (etml-block-total-height item)))
+;;     (etml-box-total-height item)))
 
 ;; (defun etml-flex-item-side-pixel (item)
-;;   (let ((string (etml-block-render (oref item content))))
+;;   (let ((string (etml-box-string (oref item content))))
 ;;     (oset item content string)
-;;     (etml-block-side-pixel item)))
+;;     (etml-box-side-pixel item)))
 
 ;; (defun etml-flex-item-side-height (item)
-;;   (let ((string (etml-block-render (oref item content))))
+;;   (let ((string (etml-box-string (oref item content))))
 ;;     (oset item content string)
-;;     (etml-block-side-height item)))
+;;     (etml-box-side-height item)))
 
 ;; (defun etml-flex-item-content-pixel (item)
-;;   (let ((string (etml-block-render (oref item content))))
+;;   (let ((string (etml-box-string (oref item content))))
 ;;     (oset item content string)
-;;     (etml-block-content-pixel item)))
+;;     (etml-box-content-pixel item)))
 
 ;; (defun etml-flex-item-content-height (item)
-;;   (let ((string (etml-block-render (oref item content))))
+;;   (let ((string (etml-box-string (oref item content))))
 ;;     (oset item content string)
-;;     (etml-block-content-height item)))
+;;     (etml-box-content-height item)))
 
 (defun etml-flex-item-total-height (item)
   (let* ((content (oref item content))
          (string (etml-flex-item-string item))
          (_ (oset item content string))
-         (height (etml-block-total-height item)))
+         (height (etml-box-total-height item)))
     (oset item content content)
     height))
 
@@ -155,7 +152,7 @@
   (let* ((content (oref item content))
          (string (etml-flex-item-string item))
          (_ (oset item content string))
-         (pixel (etml-block-side-pixel item)))
+         (pixel (etml-box-side-pixel item)))
     (oset item content content)
     pixel))
 
@@ -163,7 +160,7 @@
   (let* ((content (oref item content))
          (string (etml-flex-item-string item))
          (_ (oset item content string))
-         (height (etml-block-side-height item)))
+         (height (etml-box-side-height item)))
     (oset item content content)
     height))
 
@@ -171,7 +168,7 @@
   (let* ((content (oref item content))
          (string (etml-flex-item-string item))
          (_ (oset item content string))
-         (pixel (etml-block-content-pixel item)))
+         (pixel (etml-box-content-pixel item)))
     (oset item content content)
     pixel))
 
@@ -179,7 +176,7 @@
   (let* ((content (oref item content))
          (string (etml-flex-item-string item))
          (_ (oset item content string))
-         (height (etml-block-content-height item)))
+         (height (etml-box-content-height item)))
     (oset item content content)
     height))
 
@@ -197,7 +194,7 @@
          (content (oref item content))
          (block-side-pixel
           (pcase content
-            ((pred etml-block-p)
+            ((pred etml-box-p)
              (etml-flex-item-side-pixel content))
             ((pred stringp) 0)
             ;; FIXME: cal etml-flex side pixel
@@ -566,14 +563,14 @@
 ;;   (let ((block (oref item content)))
 ;;     (oset block width
 ;;           (list (- (etml-flex-item-content-pixel item)
-;;                    (etml-block-side-pixel block))))
-;;     (oset item content (etml-block-render block))
-;;     (etml-block-render item)))
+;;                    (etml-box-side-pixel block))))
+;;     (oset item content (etml-box-string block))
+;;     (etml-box-string item)))
 
 (defun etml-flex-item-render (item)
   (let ((string (etml-flex-item-string item)))
     (oset item content string)
-    (etml-block-render item)))
+    (etml-box-string item)))
 
 (defun etml-flex-items-concat-single (items-plists
                                       main-gaps-lst
@@ -587,7 +584,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 当个主轴方向的。"
            ;; 处理每个 items 在 交叉轴方向的 pads
            (lambda (item idx)
              ;; (elog-debug "%S" item)
-             ;; FIXME: 使用 etml-block-render 多态派发函数
+             ;; FIXME: 使用 etml-box-string 多态派发函数
              (let* ((string (etml-flex-item-render item))
                     (pads (nth idx cross-items-pads-lst))
                     (head-units (car pads))
@@ -618,7 +615,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
           (seq-map-indexed
            ;; 处理每个 items 在 交叉轴方向的 pads
            (lambda (item idx)
-             ;; FIXME: 使用 etml-block-render 多态派发函数
+             ;; FIXME: 使用 etml-box-string 多态派发函数
              (let* ((string (etml-flex-item-render item))
                     (pads (nth idx cross-items-pads-lst))
                     (head-units (car pads))
@@ -637,7 +634,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
               main-gaps-lst)
       items-strings))))
 
-(defun etml-flex-rows-render (direction
+(defun etml-flex-rows-string (direction
                               items-plists-lst
                               cross-items-pads-lst
                               main-gaps-lst
@@ -661,7 +658,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
           items-plists main-gaps cross-items-pads)))
      items-plists-lst))))
 
-(defun etml-flex-columns-render (direction
+(defun etml-flex-columns-string (direction
                                  items-plists-lst
                                  cross-items-pads-lst
                                  main-gaps-lst
@@ -705,20 +702,18 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
      (oset item width
            (list (- total-units (etml-flex-item-side-pixel item)))))))
 
-(defun etml-flex-render (flex)
-  (let* ((display (oref flex display))
-         (direction (oref flex direction))
+(defun etml-flex-string (flex)
+  (let* ((direction (oref flex direction))
          (items-align (oref flex items-align))
          (old-items (oref flex content))
-         ;; (_ (elog-debug "items:%S" items))
          ;; 根据 order 重新排列 items
          (items (seq-sort (lambda (item1 item2)
                             (< (oref item1 order)
                                (oref item2 order)))
                           old-items))
-         ;; (_ (elog-debug "items:%S" items))
          (items-plists (etml-flex-items-plist flex))
-         (items-units-lst (etml-plists-get items-plists :base-units))
+         (items-units-lst (etml-plists-get
+                           items-plists :base-units))
          ;; (_ (elog-debug "base: %S" items-units-lst))
          ;; (_ (elog-debug "min: %S" (etml-plists-get items-plists :min-units)))
          ;; (_ (elog-debug "max: %S" (etml-plists-get items-plists :max-units)))
@@ -778,13 +773,6 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                         ;; 重新计算每行的 item 长度
                         (etml-flex-items-adjust sub-items-plists flex)
                         (setq prev (+ prev num)))))))))
-
-          ;; after adjust
-          ;; (elog-debug "dd:%S"
-          ;;             (mapcar (lambda (item)
-          ;;                       (oref item width))
-          ;;                     (etml-plists-get items-plists :item)))
-          
           ;; 依次处理每一条主轴上的 content-justify
           ;; 设置 main-gaps-lst 和 cross-max-units-lst
           (let ((prev 0)
@@ -826,7 +814,6 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                 (setq prev (+ prev num))))
             (setq main-gaps-lst (nreverse main-gaps-lst))
             (setq cross-max-units-lst (nreverse cross-max-units-lst)))
-          
           ;; consider cross-align 和 items-align
           ;; 设置 cross-items-pads-lst 和 items-plists-lst
           ;; 重置默认值为 nil
@@ -854,7 +841,6 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                 (cl-incf idx 1)))
             (setq items-plists-lst (nreverse items-plists-lst))
             (setq cross-items-pads-lst (nreverse cross-items-pads-lst)))
-          
           ;; consider content-align
           (let* ((main-num (length wrap-lst))
                  ;; main-num 是主轴的个数
@@ -969,17 +955,18 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
     (let ((content
            (pcase direction
              ((or 'row 'row-reverse)
-              (etml-flex-rows-render direction items-plists-lst
+              (etml-flex-rows-string direction items-plists-lst
                                      cross-items-pads-lst main-gaps-lst
                                      cross-gaps-lst))
              ((or 'column 'column-reverse)
-              (etml-flex-columns-render direction items-plists-lst
+              (etml-flex-columns-string direction items-plists-lst
                                         cross-items-pads-lst main-gaps-lst
                                         cross-gaps-lst)))))
-      (oset flex :content content)
-      (etml-block-render flex))))
-
-(defun etml-flex-string (&rest kvs)
-  (etml-flex-render (apply #'etml-flex kvs)))
+      (let ((flex-content (oref flex content))
+            (string (progn (oset flex content content)
+                           (etml-box-string flex))))
+        ;; 还原原有的 content
+        (oset flex content flex-content)
+        string))))
 
 (provide 'etml-flex)
