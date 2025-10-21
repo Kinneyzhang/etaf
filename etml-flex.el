@@ -73,8 +73,7 @@
 ;; cross-axis cross-start cross-end cross-units
 
 (defclass etml-flex (etml-box)
-  ((content :initarg :content :documentation "子项目列表")
-   (direction :initarg :direction :initform 'row :type symbol
+  ((direction :initarg :direction :initform 'row :type symbol
               :documentation "主轴方向。")
    (wrap :initarg :wrap :initform 'nowrap :type symbol
          :documentation "换行方式。")
