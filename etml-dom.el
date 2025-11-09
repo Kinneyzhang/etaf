@@ -18,7 +18,7 @@
       (with-current-buffer buffer
         (erase-buffer)
         (insert (propertize text 'face face))
-        (let* ((width (car (window-text-pixel-size 
+        (let* ((width (car (window-text-pixel-size
                             nil (point-min) (point-max))))
                (height (cdr (window-text-pixel-size 
                              nil (point-min) (point-max)))))
