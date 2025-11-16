@@ -44,17 +44,13 @@
 (etaf-css-selector-query etaf-dom-tests-dom "ul code")
 
 ;; 子元素组合器 A > B: 仅选择A的直接子元素B(仅第一层嵌套)
-;; FIXME
-(length
- (etaf-css-selector-query etaf-dom-tests-dom "div > p"))
+(etaf-css-selector-query etaf-dom-tests-dom "div > p")
 
 ;; 相邻兄弟组合器 A + B: 选择紧跟在A后面的第一个同级B元素
-;; FIXME
 (etaf-css-selector-query etaf-dom-tests-dom "li#1 + li")
 
 ;; 后续兄弟组合器 A ~ B: 选择A之后的所有同级B元素
-;; FIXME
-(etaf-css-selector-query etaf-dom-tests-dom "li#1 ~ li")
+(etaf-css-selector-query etaf-dom-tests-dom "li#2 ~ li")
 
 ;; 组合器列表 A, B: 同时选择A、B元素
 (etaf-css-selector-query etaf-dom-tests-dom "li#1, li#3")
