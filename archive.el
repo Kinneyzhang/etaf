@@ -1,3 +1,47 @@
+(defun etaf-css-selector-walk-type (ast node-type func)
+  "遍历AST树中指定类型的节点，对每个节点调用FUNC。
+AST是要遍历的抽象语法树，NODE-TYPE是要匹配的节点类型，
+FUNC是对匹配节点调用的函数。
+
+示例：
+  (etaf-css-selector-walk-type ast 'class
+    (lambda (node)
+      (message \"Class: %s\" (plist-get node :value))))"
+  (etaf-css-selector-walk
+   ast (lambda (node)
+         (when (eq (plist-get node :type) node-type)
+           (funcall func node)))))
+
+(defun etaf-css-selector-stringify (ast)
+  "将AST转换回ETAF-CSS选择器字符串。
+AST是要转换的抽象语法树。
+
+示例：
+  (etaf-css-selector-stringify (etaf-css-selector-parse \"div.class\"))
+  ;; => \"div.class\""
+  (etaf-css-node-to-string ast))
+
+(defun etaf-css-selector-walk-tags (ast func)
+  "遍历AST中的所有标签选择器。"
+  (etaf-css-selector-walk-type ast 'tag func))
+
+(defun etaf-css-selector-walk-classes (ast func)
+  "遍历AST中的所有类选择器。"
+  (etaf-css-selector-walk-type ast 'class func))
+
+(defun etaf-css-selector-walk-ids (ast func)
+  "遍历AST中的所有ID选择器。"
+  (etaf-css-selector-walk-type ast 'id func))
+
+(defun etaf-css-selector-walk-pseudos (ast func)
+  "遍历AST中的所有伪类/伪元素。"
+  (etaf-css-selector-walk-type ast 'pseudo func))
+
+(defun etaf-css-selector-walk-attributes (ast func)
+  "遍历AST中的所有属性选择器。"
+  (etaf-css-selector-walk-type ast 'attribute func))
+
+
 (defun etml-buffer-region-swap (region1 region2)
   "交换 region1 和 region2 的文本，
 region 的格式是 cons-cell (start . end)
