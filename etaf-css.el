@@ -160,10 +160,10 @@ CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
 返回适用的规则列表。"
-  (let* ((matching-rules '())
-         (all-rules (plist-get cssom :all-rules))
-         (etaf-dom--query-root dom))
-    ;; 首先检查内联样式
+  (let ((matching-rules '())
+        (all-rules (plist-get cssom :all-rules))
+        (etaf-dom--query-root dom))
+    ;; 检查内联和外部样式
     (dolist (rule all-rules)
       (cond
        ;; 内联样式直接匹配节点
@@ -173,16 +173,17 @@ DOM 是根 DOM 节点。
        ;; 外部样式通过选择器匹配
        ((eq (plist-get rule :source) 'style-tag)
         (let ((selector (plist-get rule :selector)))
-          (condition-case nil
-              (let ((ast (etaf-css-selector-parse selector)))
-                (when ast
-                  ;; 检查节点是否匹配选择器
-                  (let ((first-selector (car (plist-get ast :nodes))))
-                    (when (and first-selector
-                              (eq (plist-get first-selector :type) 'selector))
-                      (when (etaf-css-selector-basic-match-p node first-selector)
-                        (push rule matching-rules))))))
-            (error nil))))))
+          (when selector
+            (condition-case nil
+                (let ((ast (etaf-css-selector-parse selector)))
+                  (when ast
+                    ;; 检查节点是否匹配选择器
+                    (let ((first-selector (car (plist-get ast :nodes))))
+                      (when (and first-selector
+                                (eq (plist-get first-selector :type) 'selector))
+                        (when (etaf-css-selector-basic-match-p node first-selector)
+                          (push rule matching-rules))))))
+              (error nil)))))))
     (nreverse matching-rules)))
 
 (defun etaf-css-get-computed-style (cssom node dom)
