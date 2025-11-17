@@ -1,5 +1,7 @@
 ;;; 将 etml 转为 dom
 
+(require 'etaf-utils)
+
 (defun etaf-tml-to-dom (sexp)
   "Convert S-expression from format 1 (plist) to format 2 (alist).
 Format 1: (tag :attr1 val1 :attr2 val2 child1 child2 ...)

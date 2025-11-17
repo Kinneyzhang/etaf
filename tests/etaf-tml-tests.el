@@ -1,5 +1,6 @@
 (setq-local lisp-indent-offset 2)
-(etaf-etml-to-dom
+
+(etaf-tml-to-dom
   '(div :class "rounded-xl bg-white p-10"
      (div :class "space-y-6"
        (p "An advanced online playground for Tailwind CSS, including support for things like:")
@@ -16,7 +17,7 @@
      (hr :class "my-6 w-full")
      (p :class "mb-3" "Want to dig deeper into Tailwind?")
      (p :class "font-semibold"
-       (a :href "https://tailwindcss.com/docs" :class "text-gray-950" "Read the docs →"))))
+       (a :href "https://tailwindcss.com/docs"
+         :class "text-gray-950" "Read the docs →"))))
 
-
-(etaf-alist-to-plist nil)
+(provide 'etaf-tml-tests)

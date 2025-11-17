@@ -1,3 +1,4 @@
+(load-file "./etaf-dom-tests.el")
 (require 'etaf-dom-tests)
 
 ;;; 测试基础选择器
