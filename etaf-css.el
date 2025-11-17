@@ -82,34 +82,48 @@ CSS-STRING 是形如 \"color: red; font-size: 14px\" 的字符串。
                           selector
                         (plist-get selector :selector))))
     ;; 计数 ID 选择器 (#id)
-    (let ((ids (split-string selector-str "#" t)))
-      (setq id-count (1- (length ids)))
-      (when (< id-count 0) (setq id-count 0)))
+    (let ((pos 0))
+      (while (string-match "#[a-zA-Z][a-zA-Z0-9_-]*" selector-str pos)
+        (cl-incf id-count)
+        (setq pos (match-end 0))))
     
-    ;; 计数类选择器 (.class) 和属性选择器 ([attr])
-    (let ((classes (split-string selector-str "\\." t)))
-      (setq class-count (1- (length classes)))
-      (when (< class-count 0) (setq class-count 0)))
-    (let ((count 0))
-      (while (string-match "\\[" selector-str count)
+    ;; 计数类选择器 (.class)
+    (let ((pos 0))
+      (while (string-match "\\.[a-zA-Z][a-zA-Z0-9_-]*" selector-str pos)
         (cl-incf class-count)
-        (setq count (1+ (match-beginning 0)))))
+        (setq pos (match-end 0))))
     
-    ;; 计数伪类选择器 (:hover, :not, etc.)
-    (let ((count 0))
-      (while (string-match ":[a-z-]+" selector-str count)
+    ;; 计数属性选择器 ([attr])
+    (let ((pos 0))
+      (while (string-match "\\[[^]]+\\]" selector-str pos)
+        (cl-incf class-count)
+        (setq pos (match-end 0))))
+    
+    ;; 计数伪类选择器 (:hover, :not, etc.)  
+    (let ((pos 0))
+      (while (string-match ":[a-zA-Z][a-zA-Z0-9_-]*" selector-str pos)
         (let ((pseudo (match-string 0 selector-str)))
           ;; :not 不计入，但其内容计入
           (unless (string= pseudo ":not")
             (cl-incf class-count))
-          (setq count (match-end 0)))))
+          (setq pos (match-end 0)))))
     
     ;; 计数类型选择器（标签名）
-    (let ((parts (split-string selector-str "[ >+~\\[#.:]" t)))
-      (dolist (part parts)
-        (when (and (not (string-empty-p part))
-                   (string-match "^[a-z]" part))
-          (cl-incf type-count))))
+    ;; 策略：移除所有 ID、类、属性、伪类后，剩余的字母开头的词就是标签
+    (let ((cleaned selector-str))
+      ;; 移除 ID
+      (setq cleaned (replace-regexp-in-string "#[a-zA-Z][a-zA-Z0-9_-]*" "" cleaned))
+      ;; 移除类
+      (setq cleaned (replace-regexp-in-string "\\.[a-zA-Z][a-zA-Z0-9_-]*" "" cleaned))
+      ;; 移除属性
+      (setq cleaned (replace-regexp-in-string "\\[[^]]+\\]" "" cleaned))
+      ;; 移除伪类和伪元素
+      (setq cleaned (replace-regexp-in-string ":[a-zA-Z][a-zA-Z0-9_-]*" "" cleaned))
+      ;; 现在计数剩余的标签（字母开头的词）
+      (let ((pos 0))
+        (while (string-match "\\<[a-z][a-z0-9]*\\>" cleaned pos)
+          (cl-incf type-count)
+          (setq pos (match-end 0)))))
     
     (list id-count class-count type-count)))
 
