@@ -21,16 +21,16 @@
 (setq example-dom
       (etaf-tml-to-dom
        '(html
-          (head
-            (style "
+         (head
+          (style "
               .header { background: navy; color: white; padding: 20px; }
               .highlight { background: yellow; }
             "))
-          (body
-            (div :class "header" :style "border-bottom: 2px solid gold;"
-              (h1 "欢迎"))
-            (div :class "content"
-              (p :class "highlight" :style "padding: 10px;" "这是高亮内容"))))))
+         (body
+          (div :class "header" :style "border-bottom: 2px solid gold;"
+               (h1 "欢迎"))
+          (div :class "content"
+               (p :class "highlight" :style "padding: 10px;" "这是高亮内容"))))))
 
 ;; 构建 CSSOM
 (setq cssom (etaf-css-build-cssom example-dom))
