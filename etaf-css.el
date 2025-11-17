@@ -99,7 +99,7 @@ CSS-STRING 是形如 \"color: red; font-size: 14px\" 的字符串。
         (cl-incf class-count)
         (setq pos (match-end 0))))
     
-    ;; 计数伪类选择器 (:hover, :not, etc.)
+    ;; 计数伪类选择器 (:hover, :not, etc.)  
     (let ((pos 0))
       (while (string-match ":[a-zA-Z][a-zA-Z0-9_-]*" selector-str pos)
         (let ((pseudo (match-string 0 selector-str)))
@@ -109,12 +109,21 @@ CSS-STRING 是形如 \"color: red; font-size: 14px\" 的字符串。
           (setq pos (match-end 0)))))
     
     ;; 计数类型选择器（标签名）
-    ;; 需要匹配不以 # . : [ 开头的标签名
-    (let ((pos 0))
-      (while (string-match "\\(?:^\\|[ >+~]\\)\\([a-z][a-z0-9]*\\)\\(?=[#.:\\[]\\|[ >+~]\\|$\\)" 
-                           selector-str pos)
-        (cl-incf type-count)
-        (setq pos (match-end 1))))
+    ;; 策略：移除所有 ID、类、属性、伪类后，剩余的字母开头的词就是标签
+    (let ((cleaned selector-str))
+      ;; 移除 ID
+      (setq cleaned (replace-regexp-in-string "#[a-zA-Z][a-zA-Z0-9_-]*" "" cleaned))
+      ;; 移除类
+      (setq cleaned (replace-regexp-in-string "\\.[a-zA-Z][a-zA-Z0-9_-]*" "" cleaned))
+      ;; 移除属性
+      (setq cleaned (replace-regexp-in-string "\\[[^]]+\\]" "" cleaned))
+      ;; 移除伪类和伪元素
+      (setq cleaned (replace-regexp-in-string ":[a-zA-Z][a-zA-Z0-9_-]*" "" cleaned))
+      ;; 现在计数剩余的标签（字母开头的词）
+      (let ((pos 0))
+        (while (string-match "\\<[a-z][a-z0-9]*\\>" cleaned pos)
+          (cl-incf type-count)
+          (setq pos (match-end 0)))))
     
     (list id-count class-count type-count)))
 
