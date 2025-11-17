@@ -54,3 +54,19 @@
 
 ;; 组合器列表 A, B: 同时选择A、B元素
 (etaf-css-selector-query etaf-dom-tests-dom "li#1, li#3")
+
+;;; 测试伪类
+(etaf-css-selector-query etaf-dom-tests-dom "ul li:first-child")
+(etaf-css-selector-query etaf-dom-tests-dom "ul li:last-child")
+(etaf-css-selector-query etaf-dom-tests-dom "ul li:nth-child(3)")
+(etaf-css-selector-query etaf-dom-tests-dom "ul li:nth-child(odd)")
+(etaf-css-selector-query etaf-dom-tests-dom "ul li:nth-child(even)")
+(etaf-css-selector-query etaf-dom-tests-dom "p:only-child")
+
+(etaf-css-selector-query etaf-dom-tests-dom "hr:empty")
+
+(etaf-css-selector-query etaf-dom-tests-dom "div#test-id > p:first-of-type")
+(etaf-css-selector-query etaf-dom-tests-dom "div#test-id > p:last-of-type")
+(etaf-css-selector-query etaf-dom-tests-dom "div#test-id > hr:only-of-type")
+
+

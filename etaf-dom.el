@@ -69,18 +69,15 @@ Format 1: (tag :attr1 val1 :attr2 val2 child1 child2 ...)"
 (defun etaf-dom-class-match-p (node class-name)
   "检查DOM节点NODE是否匹配类选择器CLASS-NAME。"
   (when (and node (listp node))
-    (let* ((attrs (dom-attributes node))
-           (class-attr (cdr (assq 'class attrs))))
-      (when class-attr
-        (let ((classes (split-string class-attr)))
-          (member class-name classes))))))
+    (when-let ((class-attr (dom-attr node 'class)))
+      (let ((classes (split-string class-attr)))
+        (member class-name classes)))))
 
 (defun etaf-dom-id-match-p (node id-name)
   "检查DOM节点NODE是否匹配ID选择器ID-NAME。"
   (when (and node (listp node))
-    (let* ((attrs (dom-attributes node))
-           (id-attr (cdr (assq 'id attrs))))
-      (and id-attr (string= id-attr id-name)))))
+    (when-let ((id-attr (dom-attr node 'id)))
+      (string= id-attr id-name))))
 
 (defun etaf-dom-map (func dom)
   "遍历DOM树的所有节点，对每个节点调用FUNC。
@@ -92,297 +89,147 @@ DOM是要遍历的DOM节点，FUNC是对每个节点调用的函数。"
         (when (listp child)  ; 跳过文本节点
           (etaf-dom-map func child))))))
 
+(defun etaf-dom-get-previous-sibling (node dom)
+  "获取节点NODE的前一个兄弟元素节点（跳过文本节点）。
+返回前一个兄弟节点，如果没有则返回nil。"
+  ;; 首先找到包含node的父节点
+  (when-let ((parent (dom-parent dom node)))
+    ;; 获取node的前一个非文本兄弟节点
+    (let ((children (dom-children parent))
+          (prev-sibling nil)
+          (found-node nil))
+      (dolist (child children)
+        (cond
+         ((eq child node)
+          (setq found-node t))
+         ((and (not found-node) (listp child))
+          ;; 这是node之前的一个元素节点
+          (setq prev-sibling child))))
+      prev-sibling)))
+
+(defun etaf-dom-get-previous-siblings (node dom)
+  "获取节点NODE之前的所有兄弟元素节点（跳过文本节点）。
+返回兄弟节点列表，按文档顺序（最早的在前）。"
+  ;; 首先找到包含node的父节点
+  (when-let ((parent (dom-parent dom node)))
+    ;; 获取node之前的所有非文本兄弟节点
+    (let ((children (dom-children parent))
+          (prev-siblings '())
+          (found-node nil))
+      (dolist (child children)
+        (cond
+         ((eq child node)
+          (setq found-node t))
+         ((and (not found-node) (listp child))
+          ;; 这是node之前的一个元素节点
+          (push child prev-siblings))))
+      (nreverse prev-siblings))))
+
 (defun etaf-dom-is-descendant-of (node ancestor)
   "检查 NODE 是否是 ANCESTOR 的后代。"
   (and (not (eq node ancestor))
-       (catch 'found
-         (etaf-dom-map (lambda (candidate)
-                         (when (eq candidate node)
-                           (throw 'found t)))
-                       ancestor)
-         nil)))
+       (not (null (dom-search
+                   ancestor
+                   (lambda (candidate)
+                     (eq candidate node)))))))
+
+(defun etaf-dom-get-parent (node dom)
+  "获取节点NODE的父节点，返回父节点，如果没有则返回 nil。"
+  (dom-parent dom node))
+
+(defun etaf-dom-get-element-children (node)
+  "获取节点NODE的所有元素子节点（跳过文本节点），返回子节点列表。"
+  (when (and node (listp node))
+    (dom-non-text-children node)))
+
+(defvar-local etaf-dom--query-root nil
+  "Dynamic variable holding the root DOM for the current query operation.")
+
+(defun etaf-dom-is-first-child (node)
+  "检查节点是否是其父节点的第一个子元素。"
+  (when etaf-dom--query-root
+    (let ((parent (etaf-dom-get-parent node etaf-dom--query-root)))
+      (when parent
+        (let ((element-children (etaf-dom-get-element-children parent)))
+          (and element-children
+               (eq node (car element-children))))))))
+
+(defun etaf-dom-is-last-child (node)
+  "检查节点是否是其父节点的最后一个子元素。"
+  (when etaf-dom--query-root
+    (let ((parent (etaf-dom-get-parent node etaf-dom--query-root)))
+      (when parent
+        (let ((element-children (etaf-dom-get-element-children parent)))
+          (and element-children
+               (eq node (car (last element-children)))))))))
+
+(defun etaf-dom-get-child-index (node)
+  "获取节点在其父节点中的索引位置（从1开始）。
+只计算元素节点，跳过文本节点。"
+  (when etaf-dom--query-root
+    (let ((parent (etaf-dom-get-parent node etaf-dom--query-root)))
+      (when parent
+        (let ((element-children (etaf-dom-get-element-children parent))
+              (index 0))
+          (catch 'found
+            (dolist (child element-children)
+              (cl-incf index)
+              (when (eq child node)
+                (throw 'found index)))
+            nil))))))
+
+(defun etaf-dom-is-first-of-type (node)
+  "检查节点是否是其父节点中该类型的第一个子元素。"
+  (when etaf-dom--query-root
+    (let ((parent (etaf-dom-get-parent node etaf-dom--query-root)))
+      (when parent
+        (let* ((node-tag (dom-tag node))
+               (element-children (etaf-dom-get-element-children parent))
+               (same-type-children
+                (cl-remove-if-not
+                 (lambda (child) (eq (dom-tag child) node-tag))
+                 element-children)))
+          (and same-type-children
+               (eq node (car same-type-children))))))))
+
+(defun etaf-dom-is-last-of-type (node)
+  "检查节点是否是其父节点中该类型的最后一个子元素。"
+  (when etaf-dom--query-root
+    (let ((parent (etaf-dom-get-parent node etaf-dom--query-root)))
+      (when parent
+        (let* ((node-tag (dom-tag node))
+               (element-children (etaf-dom-get-element-children parent))
+               (same-type-children
+                (cl-remove-if-not
+                 (lambda (child) (eq (dom-tag child) node-tag))
+                 element-children)))
+          (and same-type-children
+               (eq node (car (last same-type-children)))))))))
+
+(defun etaf-dom-is-only-of-type (node)
+  "检查节点是否是其父节点中该类型的唯一子元素。"
+  (when etaf-dom--query-root
+    (let ((parent (etaf-dom-get-parent node etaf-dom--query-root)))
+      (when parent
+        (let* ((node-tag (dom-tag node))
+               (element-children (etaf-dom-get-element-children parent))
+               (same-type-children
+                (cl-remove-if-not
+                 (lambda (child) (eq (dom-tag child) node-tag))
+                 element-children)))
+          (= (length same-type-children) 1))))))
+
+(defun etaf-dom-is-empty (node)
+  "检查节点是否为空（没有子节点，或只有空白文本节点）。"
+  (when (and node (listp node))
+    (let ((children (dom-children node)))
+      (or (null children)
+          (cl-every (lambda (child)
+                      (and (stringp child)
+                           (string-match-p "^[ \t\n\r]*$" child)))
+                    children)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun ecss-dom-node-matches-attribute (node attr-node)
-  "检查DOM节点NODE是否匹配属性选择器ATTR-NODE。"
-  (when (and node (listp node))
-    (let* ((attrs (dom-attributes node))
-           (attr-name (intern (plist-get attr-node :attribute)))
-           (operator (plist-get attr-node :operator))
-           (expected-value (plist-get attr-node :value))
-           (actual-value (cdr (assq attr-name attrs))))
-      (cond
-       ;; 仅检查属性存在
-       ((null operator)
-        (not (null actual-value)))
-       ;; 属性值完全匹配
-       ((string= operator "=")
-        (and actual-value (string= actual-value expected-value)))
-       ;; 属性值前缀匹配
-       ((string= operator "^=")
-        (and actual-value (string-prefix-p expected-value actual-value)))
-       ;; 属性值后缀匹配
-       ((string= operator "$=")
-        (and actual-value (string-suffix-p expected-value actual-value)))
-       ;; 属性值包含子串
-       ((string= operator "*=")
-        (and actual-value (string-match-p
-                           (regexp-quote expected-value) actual-value)))
-       ;; 属性值包含空格分隔的单词
-       ((string= operator "~=")
-        (and actual-value 
-             (member expected-value (split-string actual-value))))
-       ;; 属性值等于或以其开头后跟连字符
-       ((string= operator "|=")
-        (and actual-value
-             (or (string= actual-value expected-value)
-                 (string-prefix-p (concat expected-value "-")
-                                  actual-value))))
-       (t nil)))))
-
-(defun ecss-dom-node-matches-pseudo (node pseudo-node)
-  "检查DOM节点NODE是否匹配伪类选择器PSEUDO-NODE。
-目前支持基本的结构伪类。"
-  (when (and node (listp node))
-    (let ((pseudo-value (plist-get pseudo-node :value)))
-      (cond
-       ;; :first-child
-       ((string= pseudo-value ":first-child")
-        (ecss-dom-is-first-child node))
-       ;; :last-child
-       ((string= pseudo-value ":last-child")
-        (ecss-dom-is-last-child node))
-       ;; :only-child
-       ((string= pseudo-value ":only-child")
-        (and (ecss-dom-is-first-child node)
-             (ecss-dom-is-last-child node)))
-       ;; 其他伪类暂不支持，返回t以避免过滤
-       (t t)))))
-
-(defun ecss-dom-is-first-child (node)
-  "检查节点是否是其父节点的第一个子元素。"
-  ;; 简化实现：假设我们不保存父节点引用
-  ;; 在实际应用中需要遍历时跟踪
-  t)
-
-(defun ecss-dom-is-last-child (node)
-  "检查节点是否是其父节点的最后一个子元素。"
-  ;; 简化实现
-  t)
-
-(defun ecss-dom-node-matches-simple-selector (node selector-ast)
-  "检查DOM节点NODE是否匹配简单选择器SELECTOR-AST。
-简单选择器是没有组合器的选择器序列，如 'div.class#id'。"
-  (when (and node (listp node))
-    (let ((matches t))
-      ;; 遍历选择器的所有组件
-      (etaf-css-selector-walk
-       selector-ast
-       (lambda (sel-node)
-         (let ((type (plist-get sel-node :type)))
-           (cond
-            ((eq type 'tag)
-             (unless (etaf-dom-tag-match-p
-                      node (plist-get sel-node :value))
-               (setq matches nil)))
-            ((eq type 'class)
-             (unless (etaf-dom-class-match-p
-                      node (plist-get sel-node :value))
-               (setq matches nil)))
-            ((eq type 'id)
-             (unless (etaf-dom-id-match-p
-                      node (plist-get sel-node :value))
-               (setq matches nil)))
-            ((eq type 'universal)
-             ;; 通配符总是匹配
-             t)
-            ((eq type 'attribute)
-             (unless (ecss-dom-node-matches-attribute
-                      node sel-node)
-               (setq matches nil)))
-            ((eq type 'pseudo)
-             (unless (ecss-dom-node-matches-pseudo
-                      node sel-node)
-               (setq matches nil)))))))
-      matches)))
-
-;;; 选择器序列分割
-
-(defun ecss-dom-split-selector-by-combinators (selector-ast)
-  "将选择器AST按组合器分割成多个部分。
-返回一个列表，每个元素是 (selector-nodes . combinator)。"
-  (let ((parts '())
-        (current-nodes '())
-        (current-combinator nil)
-        (last-was-combinator nil))
-    (dolist (node (plist-get selector-ast :nodes))
-      (if (eq (plist-get node :type) 'combinator)
-          (progn
-            ;; 保存当前累积的节点和组合器
-            (when current-nodes
-              (push (cons (nreverse current-nodes) current-combinator)
-                    parts))
-            ;; 设置新的组合器
-            (setq current-combinator (plist-get node :value))
-            (setq current-nodes '())
-            (setq last-was-combinator t))
-        ;; 检查是否有隐式的后代组合器（空格）
-        ;; 只在上一个节点不是组合器时检查
-        (unless last-was-combinator
-          (let* ((spaces (plist-get node :spaces))
-                 (before-space (and spaces (plist-get spaces :before))))
-            (when (and before-space (not (string-empty-p before-space)))
-              ;; 有前导空格，表示这是一个新的选择器部分
-              (when current-nodes
-                (push (cons (nreverse current-nodes) current-combinator)
-                      parts))
-              ;; 设置后代组合器
-              (setq current-combinator " ")
-              (setq current-nodes '()))))
-        ;; 累积非组合器节点
-        (push node current-nodes)
-        (setq last-was-combinator nil)))
-    ;; 添加最后一组节点
-    (when current-nodes
-      (push (cons (nreverse current-nodes) current-combinator) parts))
-    (nreverse parts)))
-
-(defun etaf-css-selector-node-append (container node)
-  "将节点NODE添加到容器CONTAINER的子节点列表中。"
-  (let ((nodes (plist-get container :nodes)))
-    (plist-put container :nodes (append nodes (list node)))))
-
-(defun etaf-css-selector-part-match-p (node selector-nodes)
-  "检查DOM节点是否匹配选择器节点列表SELECTOR-NODES。"
-  (let ((matches t)
-        (mock-selector (ecss-make-selector)))
-    ;; 创建一个临时选择器节点来包含这些节点
-    (dolist (sel-node selector-nodes)
-      (etaf-css-selector-node-append mock-selector sel-node))
-    (ecss-dom-node-matches-simple-selector node mock-selector)))
-
-;;; 组合器匹配
-
-(defun ecss-dom-matches-descendant-combinator (node ancestor-nodes dom)
-  "检查节点NODE是否有祖先匹配ANCESTOR-NODES（后代组合器）。"
-  (let ((found nil))
-    (etaf-dom-map
-     (lambda (candidate)
-       (when (and (not found)
-                  (etaf-css-selector-part-match-p
-                   candidate ancestor-nodes)
-                  (etaf-dom-is-descendant-of node candidate dom))
-         (setq found t)))
-     dom)
-    found))
-
-(defun ecss-dom-matches-child-combinator (node parent-nodes dom)
-  "检查节点NODE的直接父节点是否匹配PARENT-NODES（子组合器）。"
-  ;; 简化实现：遍历DOM查找包含node作为直接子节点的节点
-  (let ((found nil))
-    (etaf-dom-map
-     (lambda (candidate)
-       (when (and (not found)
-                  (etaf-css-selector-part-match-p
-                   candidate parent-nodes))
-         (let ((children (dom-non-text-children candidate)))
-           (when (memq node children)
-             (setq found t)))))
-     dom)
-    found))
-
-(defun ecss-dom-matches-adjacent-sibling-combinator
-    (node prev-sibling-nodes dom)
-  "检查节点NODE的前一个兄弟节点是否匹配PREV-SIBLING-NODES（相邻兄弟组合器）。"
-  ;; 简化实现
-  t)
-
-(defun ecss-dom-matches-general-sibling-combinator
-    (node sibling-nodes dom)
-  "检查节点NODE之前的兄弟节点中是否有匹配SIBLING-NODES（通用兄弟组合器）。"
-  ;; 简化实现
-  t)
-
-;;; 主要查询函数
-
-(defun ecss-dom-query-selector-complex (dom selector-ast)
-  "使用复杂选择器（包含组合器）查询DOM，返回所有匹配的节点列表。"
-  (let ((parts (ecss-dom-split-selector-by-combinators selector-ast))
-        (results '()))
-    (if (= (length parts) 1)
-        ;; 简单选择器，无组合器
-        (etaf-dom-map (lambda (node)
-                        (when (etaf-css-selector-part-match-p
-                               node (caar parts))
-                          (push node results)))
-                      dom)
-      ;; 复杂选择器，有组合器
-      ;; 从右到左匹配
-      (let ((rightmost-part (car (last parts)))
-            (preceding-parts (butlast parts)))
-        ;; 首先找到匹配最右侧选择器的节点
-        (etaf-dom-map (lambda (node)
-                        (when (etaf-css-selector-part-match-p
-                               node (car rightmost-part))
-                          ;; 检查是否满足所有组合器关系
-                          (when (ecss-dom-check-combinator-chain
-                                 node preceding-parts dom)
-                            (push node results))))
-                      dom)))
-    (nreverse results)))
-
-(defun ecss-dom-check-combinator-chain (node parts dom)
-  "检查节点是否满足组合器链的所有条件，从右到左处理PARTS。"
-  (if (null parts)
-      t
-    (let* ((current-part (car (last parts)))
-           (remaining-parts (butlast parts))
-           (combinator (cdr current-part))
-           (selector-nodes (car current-part)))
-      (cond
-       ;; 后代组合器（空格）
-       ((or (null combinator) (string= combinator " "))
-        (and (ecss-dom-matches-descendant-combinator
-              node selector-nodes dom)
-             (if remaining-parts
-                 ;; 递归检查剩余部分（需要找到匹配的祖先）
-                 t  ; 简化实现
-               t)))
-       ;; 子组合器 (>)
-       ((string= combinator ">")
-        (and (ecss-dom-matches-child-combinator
-              node selector-nodes dom)
-             (if remaining-parts t t)))
-       ;; 相邻兄弟组合器 (+)
-       ((string= combinator "+")
-        (and (ecss-dom-matches-adjacent-sibling-combinator
-              node selector-nodes dom)
-             (if remaining-parts t t)))
-       ;; 通用兄弟组合器 (~)
-       ((string= combinator "~")
-        (and (ecss-dom-matches-general-sibling-combinator
-              node selector-nodes dom)
-             (if remaining-parts t t)))
-       (t t)))))
-
-(defun ecss-dom-query-selector-all (dom selector-string)
-  "在DOM树中查询所有匹配CSS选择器的节点。
-DOM是要查询的DOM树，SELECTOR-STRING是CSS选择器字符串。
-返回匹配节点的列表。
-
-示例：
-  (ecss-dom-query-selector-all dom \"div.container p.text\")"
-  (let* ((ast (ecss-selector-parse selector-string))
-         (root (plist-get ast :type))
-         (results '()))
-    ;; 处理根节点中的所有选择器（逗号分隔）
-    (dolist (selector (plist-get ast :nodes))
-      (when (eq (plist-get selector :type) 'selector)
-        (let ((matches (ecss-dom-query-selector-complex dom selector)))
-          (setq results (append results matches)))))
-    ;; 去重
-    (cl-remove-duplicates results :test #'equal)))
 
 ;; (defun ecss-dom-query-selector (dom selector-string)
 ;;   "在DOM树中查询第一个匹配CSS选择器的节点。
