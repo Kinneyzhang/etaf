@@ -163,32 +163,27 @@ DOM 是根 DOM 节点。
   (let ((matching-rules '())
         (all-rules (plist-get cssom :all-rules))
         (etaf-dom--query-root dom))
-    ;; 检查内联和外部样式
     (dolist (rule all-rules)
       (cond
        ;; 内联样式直接匹配节点
        ((eq (plist-get rule :source) 'inline)
-        ;; 比较节点：先尝试 eq（快速），如果失败则比较节点属性
         (let ((rule-node (plist-get rule :node)))
           (when (or (eq rule-node node)
-                    ;; 如果不是同一对象，比较节点的标签和属性
                     (and (eq (dom-tag rule-node) (dom-tag node))
                          (equal (dom-attributes rule-node) (dom-attributes node))))
             (push rule matching-rules))))
        ;; 外部样式通过选择器匹配
        ((eq (plist-get rule :source) 'style-tag)
-        (let ((selector (plist-get rule :selector)))
-          (when selector
-            (condition-case nil
-                (let ((ast (etaf-css-selector-parse selector)))
-                  (when ast
-                    ;; 检查节点是否匹配选择器
-                    (let ((first-selector (car (plist-get ast :nodes))))
-                      (when (and first-selector
-                                (eq (plist-get first-selector :type) 'selector))
-                        (when (etaf-css-selector-basic-match-p node first-selector)
-                          (push rule matching-rules))))))
-              (error nil)))))))
+        (condition-case nil
+            (let* ((selector (plist-get rule :selector))
+                   (ast (etaf-css-selector-parse selector)))
+              (when ast
+                (let ((first-selector (car (plist-get ast :nodes))))
+                  (when (and first-selector
+                            (eq (plist-get first-selector :type) 'selector))
+                    (when (etaf-css-selector-basic-match-p node first-selector)
+                      (push rule matching-rules))))))
+          (error nil)))))
     (nreverse matching-rules)))
 
 (defun etaf-css-get-computed-style (cssom node dom)
