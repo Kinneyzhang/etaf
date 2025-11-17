@@ -36,7 +36,8 @@
         (eq (plist-get rule :source) 'style-tag))))
 
 (should
- (let ((rule (etaf-css-parse-rule ".button { background: blue; padding: 10px; }")))
+ (let ((rule (etaf-css-parse-rule ".button
+ { background: blue; padding: 10px; }")))
    (and (equal (plist-get rule :selector) ".button")
         (equal (plist-get rule :declarations) 
                '((background . "blue") (padding . "10px"))))))
@@ -45,7 +46,7 @@
 
 (should
  (let ((rules (etaf-css-parse-stylesheet 
-               "div { color: red; } .button { background: blue; }")))
+               "div{color: red;}.button{background:blue;}")))
    (and (= (length rules) 2)
         (equal (plist-get (nth 0 rules) :selector) "div")
         (equal (plist-get (nth 1 rules) :selector) ".button"))))
@@ -55,11 +56,12 @@
 (setq etaf-css-tests-dom-with-inline
       (etaf-tml-to-dom
        '(div :style "color: red; font-size: 14px;"
-          (p :style "margin: 10px;" "Text")
-          (span "No style"))))
+             (p :style "margin:10px;" "Text")
+             (span "No style"))))
 
 (should
- (let ((rules (etaf-css-extract-inline-styles etaf-css-tests-dom-with-inline)))
+ (let ((rules (etaf-css-extract-inline-styles
+               etaf-css-tests-dom-with-inline)))
    (and (= (length rules) 2)
         (eq (plist-get (nth 0 rules) :source) 'inline)
         (equal (plist-get (nth 0 rules) :declarations)
@@ -70,13 +72,14 @@
 (setq etaf-css-tests-dom-with-style-tag
       (etaf-tml-to-dom
        '(html
-          (head
-            (style "div { color: blue; } .test { margin: 5px; }"))
-          (body
-            (div :class "test" "Content")))))
+         (head
+          (style "div { color: blue; } .test { margin: 5px; }"))
+         (body
+          (div :class "test" "Content")))))
 
 (should
- (let ((rules (etaf-css-extract-style-tags etaf-css-tests-dom-with-style-tag)))
+ (let ((rules (etaf-css-extract-style-tags
+               etaf-css-tests-dom-with-style-tag)))
    (and (= (length rules) 2)
         (equal (plist-get (nth 0 rules) :selector) "div")
         (equal (plist-get (nth 1 rules) :selector) ".test"))))
@@ -104,7 +107,8 @@
 (should
  (let* ((cssom (etaf-css-build-cssom etaf-css-tests-dom-full))
         (div-node (dom-by-class etaf-css-tests-dom-full "highlight"))
-        (rules (etaf-css-get-rules-for-node cssom div-node etaf-css-tests-dom-full)))
+        (rules (etaf-css-get-rules-for-node
+                cssom div-node etaf-css-tests-dom-full)))
    (> (length rules) 0)))
 
 ;;; 测试计算样式
@@ -125,15 +129,16 @@
 (setq etaf-css-tests-dom-cascade
       (etaf-tml-to-dom
        '(html
-          (head
-            (style "div { color: blue; font-size: 12px; }"))
-          (body
-            (div :id "test" :style "color: red;" "Text")))))
+         (head
+          (style "div { color: blue; font-size: 12px; }"))
+         (body
+          (div :id "test" :style "color: red;" "Text")))))
 
 (should
  (let* ((cssom (etaf-css-build-cssom etaf-css-tests-dom-cascade))
         (div-node (dom-by-id etaf-css-tests-dom-cascade "test"))
-        (computed (etaf-css-get-computed-style cssom div-node etaf-css-tests-dom-cascade)))
+        (computed (etaf-css-get-computed-style
+                   cssom div-node etaf-css-tests-dom-cascade)))
    (and (equal (cdr (assq 'color computed)) "red")  ; 内联样式覆盖
         (equal (cdr (assq 'font-size computed)) "12px"))))  ; 继承外部样式
 
