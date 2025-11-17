@@ -35,7 +35,7 @@
 
 (require 'cl-lib)
 
-(defconst etaf-css-token-types
+(defconst etaf-css-selector-token-types
   '((ampersand . 38)          ; &
     (asterisk . 42)           ; *
     (comma . 44)              ; ,
@@ -69,25 +69,25 @@
     (combinator . -4))        ; 组合器
   "ECSS token类型映射表。")
 
-(defconst etaf-css-word-delimiters
+(defconst etaf-css-selector-word-delimiters
   (let ((delims (make-hash-table)))
     (dolist (type '(space tab newline cr feed
                           ampersand asterisk bang comma colon semicolon
                           open-paren close-paren open-square close-square
                           single-quote double-quote plus pipe tilde
                           greater-than equals dollar caret slash))
-      (puthash (cdr (assq type etaf-css-token-types)) t delims))
+      (puthash (cdr (assq type etaf-css-selector-token-types)) t delims))
     delims)
   "单词分隔符集合。")
 
-(defconst etaf-css-whitespace-tokens
+(defconst etaf-css-selector-whitespace-tokens
   (let ((tokens (make-hash-table)))
     (dolist (type '(space tab newline cr feed))
-      (puthash (cdr (assq type etaf-css-token-types)) t tokens))
+      (puthash (cdr (assq type etaf-css-selector-token-types)) t tokens))
     tokens)
   "空白字符token集合。")
 
-(defconst etaf-css-hex-chars
+(defconst etaf-css-selector-hex-chars
   (let ((hex (make-hash-table)))
     (dolist (char '(?0 ?1 ?2 ?3 ?4 ?5 ?6 ?7 ?8 ?9
                        ?a ?b ?c ?d ?e ?f ?A ?B ?C ?D ?E ?F))
@@ -97,7 +97,7 @@
 
 ;;; 词法分析器（Tokenizer）
 
-(defun etaf-css-consume-escape (css start)
+(defun etaf-css-selector-consume-escape (css start)
   "从CSS字符串中消费一个转义序列。
 CSS是输入字符串，START是反斜杠的位置。
 返回转义序列的结束位置。"
@@ -105,25 +105,25 @@ CSS是输入字符串，START是反斜杠的位置。
         (code (and (< (1+ start) (length css))
                    (aref css (1+ start)))))
     (when code
-      (if (gethash code etaf-css-hex-chars)
+      (if (gethash code etaf-css-selector-hex-chars)
           ;; 十六进制转义
           (let ((hex-digits 0))
             (while (and (< hex-digits 6)
                         (< (1+ next) (length css))
-                        (gethash (aref css (1+ next)) etaf-css-hex-chars))
+                        (gethash (aref css (1+ next)) etaf-css-selector-hex-chars))
               (cl-incf next)
               (cl-incf hex-digits))
             ;; 如果少于6个十六进制字符，空格结束转义
             (when (and (< hex-digits 6)
                        (< (1+ next) (length css))
                        (= (aref css (1+ next))
-                          (cdr (assq 'space etaf-css-token-types))))
+                          (cdr (assq 'space etaf-css-selector-token-types))))
               (cl-incf next)))
         ;; 单字符转义
         (cl-incf next)))
     next))
 
-(defun etaf-css-consume-word (css start)
+(defun etaf-css-selector-consume-word (css start)
   "从CSS字符串中消费一个单词。
 CSS是输入字符串，START是单词的起始位置。
 返回单词的结束位置。"
@@ -133,15 +133,15 @@ CSS是输入字符串，START是单词的起始位置。
       (while (< next (length css))
         (setq code (aref css next))
         (cond
-         ((gethash code etaf-css-word-delimiters)
+         ((gethash code etaf-css-selector-word-delimiters)
           (cl-return (1- next)))
-         ((= code (cdr (assq 'backslash etaf-css-token-types)))
-          (setq next (1+ (etaf-css-consume-escape css next))))
+         ((= code (cdr (assq 'backslash etaf-css-selector-token-types)))
+          (setq next (1+ (etaf-css-selector-consume-escape css next))))
          (t
           (cl-incf next))))
       (1- next))))
 
-(defun etaf-css-tokenize (css)
+(defun etaf-css-selector-tokenize (css)
   "对ECSS选择器字符串进行词法分析。
 返回token列表，每个token是一个向量：
 [TYPE START-LINE START-COL END-LINE END-COL START-POS END-POS]"
@@ -155,45 +155,45 @@ CSS是输入字符串，START是单词的起始位置。
       (setq code (aref css start))
       
       ;; 更新行号
-      (when (= code (cdr (assq 'newline etaf-css-token-types)))
+      (when (= code (cdr (assq 'newline etaf-css-selector-token-types)))
         (setq offset start
               line (1+ line)))
       (cond
        ;; 空白字符
        ((memq code (mapcar (lambda (type)
-                             (cdr (assq type etaf-css-token-types)))
+                             (cdr (assq type etaf-css-selector-token-types)))
                            '(space tab newline cr feed)))
         (setq next start)
         (while (and (< (cl-incf next) length)
                     (memq (aref css next)
                           (mapcar (lambda (type)
-                                    (cdr (assq type etaf-css-token-types)))
+                                    (cdr (assq type etaf-css-selector-token-types)))
                                   '(space tab newline cr feed))))
-          (when (= (aref css next) (cdr (assq 'newline etaf-css-token-types)))
+          (when (= (aref css next) (cdr (assq 'newline etaf-css-selector-token-types)))
             (setq offset next
                   line (1+ line))))
-        (setq token-type (cdr (assq 'space etaf-css-token-types))
+        (setq token-type (cdr (assq 'space etaf-css-selector-token-types))
               end-line line
               end-column (- next offset 1)
               end next))
        ;; 组合器: + > ~ |
        ((memq code (mapcar (lambda (type)
-                             (cdr (assq type etaf-css-token-types)))
+                             (cdr (assq type etaf-css-selector-token-types)))
                            '(plus greater-than tilde pipe)))
         (setq next start)
         (while (and (< (cl-incf next) length)
                     (memq (aref css next)
                           (mapcar (lambda (type)
-                                    (cdr (assq type etaf-css-token-types)))
+                                    (cdr (assq type etaf-css-selector-token-types)))
                                   '(plus greater-than tilde pipe)))))
-        (setq token-type (cdr (assq 'combinator etaf-css-token-types))
+        (setq token-type (cdr (assq 'combinator etaf-css-selector-token-types))
               end-line line
               end-column (- start offset)
               end next))
        ;; 单字符token
        ((memq code
               (mapcar (lambda (type)
-                        (cdr (assq type etaf-css-token-types)))
+                        (cdr (assq type etaf-css-selector-token-types)))
                       '(asterisk ampersand bang comma equals dollar caret
                                  open-square close-square colon semicolon
                                  open-paren close-paren)))
@@ -204,10 +204,10 @@ CSS是输入字符串，START是单词的起始位置。
               end (1+ next)))
        ;; 字符串
        ((memq code (mapcar (lambda (type)
-                             (cdr (assq type etaf-css-token-types)))
+                             (cdr (assq type etaf-css-selector-token-types)))
                            '(single-quote double-quote)))
         (setq quote
-              (if (= code (cdr (assq 'single-quote etaf-css-token-types)))
+              (if (= code (cdr (assq 'single-quote etaf-css-selector-token-types)))
                   "'" "\"")
               next start
               escaped nil)
@@ -221,20 +221,20 @@ CSS是输入字符串，START是单词的起始位置。
                   escaped nil)
             (while (and (> escape-pos 0)
                         (= (aref css (1- escape-pos))
-                           (cdr (assq 'backslash etaf-css-token-types))))
+                           (cdr (assq 'backslash etaf-css-selector-token-types))))
               (cl-decf escape-pos)
               (setq escaped (not escaped)))
             (unless escaped
               (throw 'done nil))))
-        (setq token-type (cdr (assq 'str etaf-css-token-types))
+        (setq token-type (cdr (assq 'str etaf-css-selector-token-types))
               end-line line
               end-column (- start offset)
               end (1+ next)))
        ;; 注释或斜杠
-       ((= code (cdr (assq 'slash etaf-css-token-types)))
+       ((= code (cdr (assq 'slash etaf-css-selector-token-types)))
         (if (and (< (1+ start) length)
                  (= (aref css (1+ start))
-                    (cdr (assq 'asterisk etaf-css-token-types))))
+                    (cdr (assq 'asterisk etaf-css-selector-token-types))))
             ;; 注释
             (progn
               (setq next (string-match-p "\\*/" css (+ start 2)))
@@ -249,7 +249,7 @@ CSS是输入字符串，START是单词的起始位置。
                                        (length (nth last lines))))
                 (setq next-line line
                       next-offset offset))
-              (setq token-type (cdr (assq 'comment etaf-css-token-types))
+              (setq token-type (cdr (assq 'comment etaf-css-selector-token-types))
                     line next-line
                     end-line next-line
                     end-column (- (1+ next) next-offset)
@@ -261,8 +261,8 @@ CSS是输入字符串，START是单词的起始位置。
                 end-column (- start offset)
                 end (1+ next))))
        ;; 单词
-       (t (setq next (etaf-css-consume-word css start)
-                token-type (cdr (assq 'word etaf-css-token-types))
+       (t (setq next (etaf-css-selector-consume-word css start)
+                token-type (cdr (assq 'word etaf-css-selector-token-types))
                 end-line line
                 end-column (- next offset)
                 end (1+ next))))
@@ -279,14 +279,14 @@ CSS是输入字符串，START是单词的起始位置。
 
 ;;; 节点构造函数
 
-(defconst etaf-css-node-types
+(defconst etaf-css-selector-node-types
   '(root selector tag class id attribute pseudo
          universal combinator nesting comment string)
   "ECSS AST节点类型列表。")
 
-(defun etaf-css-make-node (type &rest props)
+(defun etaf-css-selector-make-node (type &rest props)
   "创建一个ECSS AST节点。TYPE是节点类型，PROPS是属性列表。"
-  (if (member type etaf-css-node-types)
+  (if (member type etaf-css-selector-node-types)
       (let ((node (list :type type)))
         (while props
           (setq node (plist-put node (car props) (cadr props))
@@ -296,58 +296,58 @@ CSS是输入字符串，START是单词的起始位置。
         node)
     (error "Type %S is not a valid ecss node type!" type)))
 
-(defun etaf-css-make-root (&rest props)
+(defun etaf-css-selector-make-root (&rest props)
   "创建根节点。"
-  (apply #'etaf-css-make-node 'root :nodes '() props))
+  (apply #'etaf-css-selector-make-node 'root :nodes '() props))
 
-(defun etaf-css-make-selector (&rest props)
+(defun etaf-css-selector-make-selector (&rest props)
   "创建选择器节点。"
-  (apply #'etaf-css-make-node 'selector :nodes '() props))
+  (apply #'etaf-css-selector-make-node 'selector :nodes '() props))
 
-(defun etaf-css-make-tag (value &rest props)
+(defun etaf-css-selector-make-tag (value &rest props)
   "创建标签选择器节点。"
-  (apply #'etaf-css-make-node 'tag :value value props))
+  (apply #'etaf-css-selector-make-node 'tag :value value props))
 
-(defun etaf-css-make-class (value &rest props)
+(defun etaf-css-selector-make-class (value &rest props)
   "创建类选择器节点。"
-  (apply #'etaf-css-make-node 'class :value value props))
+  (apply #'etaf-css-selector-make-node 'class :value value props))
 
-(defun etaf-css-make-id (value &rest props)
+(defun etaf-css-selector-make-id (value &rest props)
   "创建ID选择器节点。"
-  (apply #'etaf-css-make-node 'id :value value props))
+  (apply #'etaf-css-selector-make-node 'id :value value props))
 
-(defun etaf-css-make-attribute (&rest props)
+(defun etaf-css-selector-make-attribute (&rest props)
   "创建属性选择器节点。"
-  (apply #'etaf-css-make-node 'attribute props))
+  (apply #'etaf-css-selector-make-node 'attribute props))
 
-(defun etaf-css-make-pseudo (value &rest props)
+(defun etaf-css-selector-make-pseudo (value &rest props)
   "创建伪类/伪元素节点。"
-  (apply #'etaf-css-make-node 'pseudo :value value props))
+  (apply #'etaf-css-selector-make-node 'pseudo :value value props))
 
-(defun etaf-css-make-universal (&rest props)
+(defun etaf-css-selector-make-universal (&rest props)
   "创建通配符选择器节点。"
-  (apply #'etaf-css-make-node 'universal :value "*" props))
+  (apply #'etaf-css-selector-make-node 'universal :value "*" props))
 
-(defun etaf-css-make-combinator (value &rest props)
+(defun etaf-css-selector-make-combinator (value &rest props)
   "创建组合器节点。"
-  (apply #'etaf-css-make-node 'combinator :value value props))
+  (apply #'etaf-css-selector-make-node 'combinator :value value props))
 
-(defun etaf-css-make-nesting (&rest props)
+(defun etaf-css-selector-make-nesting (&rest props)
   "创建嵌套选择器节点。"
-  (apply #'etaf-css-make-node 'nesting :value "&" props))
+  (apply #'etaf-css-selector-make-node 'nesting :value "&" props))
 
-(defun etaf-css-make-comment (value &rest props)
+(defun etaf-css-selector-make-comment (value &rest props)
   "创建注释节点。"
-  (apply #'etaf-css-make-node 'comment :value value props))
+  (apply #'etaf-css-selector-make-node 'comment :value value props))
 
 ;;; 节点操作函数
 
-(defun etaf-css-node-append (container node)
+(defun etaf-css-selector-node-append (container node)
   "将节点NODE添加到容器CONTAINER的子节点列表中。"
   (let ((nodes (plist-get container :nodes)))
     (plist-put container :nodes (append nodes (list node)))))
 
-(defun etaf-css-node-to-string (node)
+(defun etaf-css-selector-node-to-string (node)
   "将节点转换为字符串。"
   (let ((type (plist-get node :type))
         (value (plist-get node :value))
@@ -357,9 +357,9 @@ CSS是输入字符串，START是单词的起始位置。
      (or (plist-get spaces :before) "")
      (cond
       ((eq type 'root)
-       (mapconcat #'etaf-css-node-to-string nodes ","))
+       (mapconcat #'etaf-css-selector-node-to-string nodes ","))
       ((eq type 'selector)
-       (mapconcat #'etaf-css-node-to-string nodes ""))
+       (mapconcat #'etaf-css-selector-node-to-string nodes ""))
       ((eq type 'tag) value)
       ((eq type 'class) (concat "." value))
       ((eq type 'id) (concat "#" value))
@@ -386,7 +386,7 @@ CSS是输入字符串，START是单词的起始位置。
 
 ;;; 语法分析器（Parser）
 
-(cl-defstruct etaf-css-parser
+(cl-defstruct etaf-css-selector-parser
   "ECSS解析器结构。"
   css             ; 输入ECSS字符串
   tokens          ; token数组
@@ -395,64 +395,67 @@ CSS是输入字符串，START是单词的起始位置。
   current         ; 当前选择器节点
   spaces-before)  ; 累积的前置空白
 
-(defun etaf-css-parser-curr-token (parser)
+(defun etaf-css-selector-parser-curr-token (parser)
   "获取解析器的当前token。"
-  (let ((pos (etaf-css-parser-position parser)))
-    (when (< pos (length (etaf-css-parser-tokens parser)))
-      (aref (etaf-css-parser-tokens parser) pos))))
+  (let ((pos (etaf-css-selector-parser-position parser)))
+    (when (< pos (length (etaf-css-selector-parser-tokens parser)))
+      (aref (etaf-css-selector-parser-tokens parser) pos))))
 
-(defun etaf-css-parser-next-token (parser)
+(defun etaf-css-selector-parser-next-token (parser)
   "获取解析器的下一个token。"
-  (let ((pos (1+ (etaf-css-parser-position parser))))
-    (when (< pos (length (etaf-css-parser-tokens parser)))
-      (aref (etaf-css-parser-tokens parser) pos))))
+  (let ((pos (1+ (etaf-css-selector-parser-position parser))))
+    (when (< pos (length (etaf-css-selector-parser-tokens parser)))
+      (aref (etaf-css-selector-parser-tokens parser) pos))))
 
-(defun etaf-css-parser-content (parser &optional token)
+(defun etaf-css-selector-parser-content (parser &optional token)
   "获取token的内容字符串。"
-  (let ((tok (or token (etaf-css-parser-curr-token parser))))
+  (let ((tok (or token (etaf-css-selector-parser-curr-token parser))))
     (when tok
-      (substring (etaf-css-parser-css parser)
+      (substring (etaf-css-selector-parser-css parser)
                  (aref tok 5)  ; START-POS
                  (aref tok 6)))))  ; END-POS
 
-(defun etaf-css-parser-new-node (parser node)
+(defun etaf-css-selector-parser-new-node (parser node)
   "添加新节点到当前选择器。"
   ;; 将累积的空白附加到节点的 :before
-  (when (etaf-css-parser-spaces-before parser)
+  (when (etaf-css-selector-parser-spaces-before parser)
     (let ((spaces (plist-get node :spaces)))
-      (plist-put spaces :before (etaf-css-parser-spaces-before parser)))
-    (setf (etaf-css-parser-spaces-before parser) ""))
-  (etaf-css-node-append (etaf-css-parser-current parser) node)
+      (plist-put spaces
+                 :before (etaf-css-selector-parser-spaces-before parser)))
+    (setf (etaf-css-selector-parser-spaces-before parser) ""))
+  (etaf-css-selector-node-append
+   (etaf-css-selector-parser-current parser) node)
   node)
 
-(defun etaf-css-parser-space (parser)
+(defun etaf-css-selector-parser-space (parser)
   "处理空白字符。"
   ;; 累积空白字符，稍后附加到下一个节点
-  (let ((space-content (etaf-css-parser-content parser)))
-    (setf (etaf-css-parser-spaces-before parser)
-          (concat (or (etaf-css-parser-spaces-before parser) "")
+  (let ((space-content (etaf-css-selector-parser-content parser)))
+    (setf (etaf-css-selector-parser-spaces-before parser)
+          (concat (or (etaf-css-selector-parser-spaces-before parser) "")
                   space-content)))
-  (cl-incf (etaf-css-parser-position parser)))
+  (cl-incf (etaf-css-selector-parser-position parser)))
 
-(defun etaf-css-parser-comment (parser)
+(defun etaf-css-selector-parser-comment (parser)
   "处理注释。"
-  (let* ((token (etaf-css-parser-curr-token parser))
-         (content (etaf-css-parser-content parser token)))
-    (etaf-css-parser-new-node
+  (let* ((token (etaf-css-selector-parser-curr-token parser))
+         (content (etaf-css-selector-parser-content parser token)))
+    (etaf-css-selector-parser-new-node
      parser
-     (etaf-css-make-comment content))
-    (cl-incf (etaf-css-parser-position parser))))
+     (etaf-css-selector-make-comment content))
+    (cl-incf (etaf-css-selector-parser-position parser))))
 
-(defun etaf-css-parser-comma (parser)
+(defun etaf-css-selector-parser-comma (parser)
   "处理逗号（新选择器）。"
-  (let ((selector (etaf-css-make-selector)))
-    (etaf-css-node-append (etaf-css-parser-root parser) selector)
-    (setf (etaf-css-parser-current parser) selector))
-  (cl-incf (etaf-css-parser-position parser)))
+  (let ((selector (etaf-css-selector-make-selector)))
+    (etaf-css-selector-node-append
+     (etaf-css-selector-parser-root parser) selector)
+    (setf (etaf-css-selector-parser-current parser) selector))
+  (cl-incf (etaf-css-selector-parser-position parser)))
 
-(defun etaf-css-parser-word (parser)
+(defun etaf-css-selector-parser-word (parser)
   "处理单词token。"
-  (let* ((content (etaf-css-parser-content parser))
+  (let* ((content (etaf-css-selector-parser-content parser))
          (i 0)
          (len (length content))
          nodes
@@ -467,7 +470,9 @@ CSS是输入字符串，START是单词的起始位置。
             (while (and (< end len)
                         (not (memq (aref content end) '(?. ?# ?\[))))
               (cl-incf end))
-            (push (etaf-css-make-class (substring content start end)) nodes)
+            (push (etaf-css-selector-make-class
+                   (substring content start end))
+                  nodes)
             (setq i end)))
          
          ((= ch ?#)  ; ID选择器
@@ -476,7 +481,9 @@ CSS是输入字符串，START是单词的起始位置。
             (while (and (< end len)
                         (not (memq (aref content end) '(?. ?# ?\[))))
               (cl-incf end))
-            (push (etaf-css-make-id (substring content start end)) nodes)
+            (push (etaf-css-selector-make-id
+                   (substring content start end))
+                  nodes)
             (setq i end)))
          
          (t  ; 标签选择器
@@ -486,105 +493,112 @@ CSS是输入字符串，START是单词的起始位置。
                         (not (memq (aref content end) '(?. ?# ?\[))))
               (cl-incf end))
             (when (> end start)
-              (push (etaf-css-make-tag (substring content start end)) nodes))
+              (push (etaf-css-selector-make-tag
+                     (substring content start end))
+                    nodes))
             (setq i end))))))
     
     ;; 添加节点 - 只有第一个节点获得累积的空白
     (dolist (node (nreverse nodes))
       (if first-node
           (progn
-            (etaf-css-parser-new-node parser node)
+            (etaf-css-selector-parser-new-node parser node)
             (setq first-node nil))
         ;; 后续节点直接添加，不获得累积的空白
-        (etaf-css-node-append (etaf-css-parser-current parser) node)))
-    (cl-incf (etaf-css-parser-position parser))))
+        (etaf-css-selector-node-append (etaf-css-selector-parser-current parser) node)))
+    (cl-incf (etaf-css-selector-parser-position parser))))
 
-(defun etaf-css-parser-universal (parser)
+(defun etaf-css-selector-parser-universal (parser)
   "处理通配符选择器。"
-  (etaf-css-parser-new-node parser (etaf-css-make-universal))
-  (cl-incf (etaf-css-parser-position parser)))
+  (etaf-css-selector-parser-new-node parser (etaf-css-selector-make-universal))
+  (cl-incf (etaf-css-selector-parser-position parser)))
 
-(defun etaf-css-parser-pseudo (parser)
+(defun etaf-css-selector-parser-pseudo (parser)
   "处理伪类/伪元素。"
-  (let ((content (etaf-css-parser-content parser))
-        (next (etaf-css-parser-next-token parser)))
+  (let ((content (etaf-css-selector-parser-content parser))
+        (next (etaf-css-selector-parser-next-token parser)))
     
     ;; 移动到冒号之后
-    (cl-incf (etaf-css-parser-position parser))
+    (cl-incf (etaf-css-selector-parser-position parser))
     
     ;; 检查是否为双冒号
-    (when (and (etaf-css-parser-curr-token parser)
-               (= (aref (etaf-css-parser-curr-token parser) 0) 
-                  (cdr (assq 'colon etaf-css-token-types))))
-      (setq content (concat content (etaf-css-parser-content parser)))
-      (cl-incf (etaf-css-parser-position parser)))
+    (when (and (etaf-css-selector-parser-curr-token parser)
+               (= (aref (etaf-css-selector-parser-curr-token parser) 0) 
+                  (cdr (assq 'colon etaf-css-selector-token-types))))
+      (setq content (concat content (etaf-css-selector-parser-content parser)))
+      (cl-incf (etaf-css-selector-parser-position parser)))
     
     ;; 消费伪类/伪元素名称（如果当前是word token）
-    (when (and (etaf-css-parser-curr-token parser)
-               (= (aref (etaf-css-parser-curr-token parser) 0) 
-                  (cdr (assq 'word etaf-css-token-types))))
-      (setq content (concat content (etaf-css-parser-content parser)))
-      (cl-incf (etaf-css-parser-position parser)))
+    (when (and (etaf-css-selector-parser-curr-token parser)
+               (= (aref (etaf-css-selector-parser-curr-token parser) 0) 
+                  (cdr (assq 'word etaf-css-selector-token-types))))
+      (setq content (concat content (etaf-css-selector-parser-content parser)))
+      (cl-incf (etaf-css-selector-parser-position parser)))
     
     ;; 处理带参数的伪类（如 :nth-child(2)）
-    (when (and (etaf-css-parser-curr-token parser)
-               (= (aref (etaf-css-parser-curr-token parser) 0) 
-                  (cdr (assq 'open-paren etaf-css-token-types))))
+    (when (and (etaf-css-selector-parser-curr-token parser)
+               (= (aref (etaf-css-selector-parser-curr-token parser) 0) 
+                  (cdr (assq 'open-paren etaf-css-selector-token-types))))
       ;; 消费开括号和所有内容直到闭括号
       (catch 'done
-        (while (< (etaf-css-parser-position parser)
-                  (length (etaf-css-parser-tokens parser)))
-          (let ((token (etaf-css-parser-curr-token parser)))
-            (setq content (concat content (etaf-css-parser-content parser)))
-            (cl-incf (etaf-css-parser-position parser))
+        (while (< (etaf-css-selector-parser-position parser)
+                  (length (etaf-css-selector-parser-tokens parser)))
+          (let ((token (etaf-css-selector-parser-curr-token parser)))
+            (setq content (concat content
+                                  (etaf-css-selector-parser-content parser)))
+            (cl-incf (etaf-css-selector-parser-position parser))
             (when (= (aref token 0)
-                     (cdr (assq 'close-paren etaf-css-token-types)))
+                     (cdr (assq 'close-paren etaf-css-selector-token-types)))
               (throw 'done nil))))))
     
-    (etaf-css-parser-new-node parser (etaf-css-make-pseudo content))))
+    (etaf-css-selector-parser-new-node
+     parser (etaf-css-selector-make-pseudo content))))
 
-(defun etaf-css-parser-combinator (parser)
+(defun etaf-css-selector-parser-combinator (parser)
   "处理组合器。"
-  (let ((content (etaf-css-parser-content parser)))
-    (etaf-css-parser-new-node
+  (let ((content (etaf-css-selector-parser-content parser)))
+    (etaf-css-selector-parser-new-node
      parser
-     (etaf-css-make-combinator
+     (etaf-css-selector-make-combinator
       (if (string-match-p "^[ \t\n\r\f]+$" content)
           " "
         content)))
-    (cl-incf (etaf-css-parser-position parser))))
+    (cl-incf (etaf-css-selector-parser-position parser))))
 
-(defun etaf-css-parser-nesting (parser)
+(defun etaf-css-selector-parser-nesting (parser)
   "处理嵌套选择器。"
-  (etaf-css-parser-new-node parser (etaf-css-make-nesting))
-  (cl-incf (etaf-css-parser-position parser)))
+  (etaf-css-selector-parser-new-node parser (etaf-css-selector-make-nesting))
+  (cl-incf (etaf-css-selector-parser-position parser)))
 
-(defun etaf-css-parser-attribute (parser)
+(defun etaf-css-selector-parser-attribute (parser)
   "处理属性选择器。"
   (let ((attr-tokens '())
-        (start-token (etaf-css-parser-curr-token parser)))
-    (cl-incf (etaf-css-parser-position parser))
+        (start-token (etaf-css-selector-parser-curr-token parser)))
+    (cl-incf (etaf-css-selector-parser-position parser))
     
     ;; 收集方括号内的token
-    (while (and (< (etaf-css-parser-position parser)
-                   (length (etaf-css-parser-tokens parser)))
-                (not (= (aref (etaf-css-parser-curr-token parser) 0)
-                        (cdr (assq 'close-square etaf-css-token-types)))))
-      (push (etaf-css-parser-curr-token parser) attr-tokens)
-      (cl-incf (etaf-css-parser-position parser)))
+    (while (and (< (etaf-css-selector-parser-position parser)
+                   (length (etaf-css-selector-parser-tokens parser)))
+                (not (= (aref (etaf-css-selector-parser-curr-token parser) 0)
+                        (cdr (assq 'close-square
+                                   etaf-css-selector-token-types)))))
+      (push (etaf-css-selector-parser-curr-token parser) attr-tokens)
+      (cl-incf (etaf-css-selector-parser-position parser)))
     
     (setq attr-tokens (nreverse attr-tokens))
     
     ;; 简化实现：只处理基本属性选择器 [attr] 和 [attr="value"]
-    (let ((node (etaf-css-make-attribute))
+    (let ((node (etaf-css-selector-make-attribute))
           (pos 0)
           (len (length attr-tokens)))
       
       (when (> len 0)
         ;; 第一个应该是属性名
         (let ((token (nth pos attr-tokens)))
-          (when (= (aref token 0) (cdr (assq 'word etaf-css-token-types)))
-            (plist-put node :attribute (etaf-css-parser-content parser token))
+          (when (= (aref token 0)
+                   (cdr (assq 'word etaf-css-selector-token-types)))
+            (plist-put node :attribute
+                       (etaf-css-selector-parser-content parser token))
             (cl-incf pos)))
         
         ;; 检查操作符
@@ -592,17 +606,20 @@ CSS是输入字符串，START是单词的起始位置。
           (let ((token (nth pos attr-tokens)))
             (when (or
                    (memq (aref token 0)
-                         (mapcar (lambda (type)
-                                   (cdr (assq type etaf-css-token-types)))
-                                 '(equals caret dollar asterisk tilde pipe)))
+                         (mapcar
+                          (lambda (type)
+                            (cdr (assq type etaf-css-selector-token-types)))
+                          '(equals caret dollar asterisk tilde pipe)))
                    ;; 也检查combinator类型，因为~和|可能被 tokenize 为 combinator
                    (= (aref token 0)
                       (cdr (assq 'combinator ecss-token-types))))
-              (let ((op-content (etaf-css-parser-content parser token)))
+              (let ((op-content (etaf-css-selector-parser-content
+                                 parser token)))
                 ;; 检查是否有后续的等号
                 (when (and (< (1+ pos) len)
                            (= (aref (nth (1+ pos) attr-tokens) 0)
-                              (cdr (assq 'equals etaf-css-token-types))))
+                              (cdr (assq 'equals
+                                         etaf-css-selector-token-types))))
                   (setq op-content (concat op-content "="))
                   (cl-incf pos))
                 (plist-put node :operator op-content)
@@ -612,62 +629,66 @@ CSS是输入字符串，START是单词的起始位置。
         (when (< pos len)
           (let ((token (nth pos attr-tokens)))
             (cond
-             ((= (aref token 0) (cdr (assq 'str etaf-css-token-types)))
-              (let ((content (etaf-css-parser-content parser token)))
+             ((= (aref token 0)
+                 (cdr (assq 'str etaf-css-selector-token-types)))
+              (let ((content (etaf-css-selector-parser-content parser token)))
                 (plist-put node :value (substring
                                         content 1 (1- (length content))))
                 (plist-put node :quote-mark (substring content 0 1))))
-             ((= (aref token 0) (cdr (assq 'word etaf-css-token-types)))
+             ((= (aref token 0)
+                 (cdr (assq 'word etaf-css-selector-token-types)))
               (plist-put
-               node :value (etaf-css-parser-content parser token)))))))
+               node :value (etaf-css-selector-parser-content
+                            parser token)))))))
       
-      (etaf-css-parser-new-node parser node))
-    (cl-incf (etaf-css-parser-position parser))))
+      (etaf-css-selector-parser-new-node parser node))
+    (cl-incf (etaf-css-selector-parser-position parser))))
 
-(defun etaf-css-parser-parse (parser)
+(defun etaf-css-selector-parser-parse (parser)
   "解析当前token。"
-  (let ((token (etaf-css-parser-curr-token parser)))
+  (let ((token (etaf-css-selector-parser-curr-token parser)))
     (when token
       (let ((type (aref token 0)))
         (cond
-         ((gethash type etaf-css-whitespace-tokens)
-          (etaf-css-parser-space parser))
-         ((= type (cdr (assq 'comment etaf-css-token-types)))
-          (etaf-css-parser-comment parser))
-         ((= type (cdr (assq 'comma etaf-css-token-types)))
-          (etaf-css-parser-comma parser))
-         ((= type (cdr (assq 'word etaf-css-token-types)))
-          (etaf-css-parser-word parser))
-         ((= type (cdr (assq 'asterisk etaf-css-token-types)))
-          (etaf-css-parser-universal parser))
-         ((= type (cdr (assq 'colon etaf-css-token-types)))
-          (etaf-css-parser-pseudo parser))
-         ((= type (cdr (assq 'combinator etaf-css-token-types)))
-          (etaf-css-parser-combinator parser))
-         ((= type (cdr (assq 'ampersand etaf-css-token-types)))
-          (etaf-css-parser-nesting parser))
-         ((= type (cdr (assq 'open-square etaf-css-token-types)))
-          (etaf-css-parser-attribute parser))
+         ((gethash type etaf-css-selector-whitespace-tokens)
+          (etaf-css-selector-parser-space parser))
+         ((= type (cdr (assq 'comment etaf-css-selector-token-types)))
+          (etaf-css-selector-parser-comment parser))
+         ((= type (cdr (assq 'comma etaf-css-selector-token-types)))
+          (etaf-css-selector-parser-comma parser))
+         ((= type (cdr (assq 'word etaf-css-selector-token-types)))
+          (etaf-css-selector-parser-word parser))
+         ((= type (cdr (assq 'asterisk etaf-css-selector-token-types)))
+          (etaf-css-selector-parser-universal parser))
+         ((= type (cdr (assq 'colon etaf-css-selector-token-types)))
+          (etaf-css-selector-parser-pseudo parser))
+         ((= type (cdr (assq 'combinator etaf-css-selector-token-types)))
+          (etaf-css-selector-parser-combinator parser))
+         ((= type (cdr (assq 'ampersand etaf-css-selector-token-types)))
+          (etaf-css-selector-parser-nesting parser))
+         ((= type (cdr (assq 'open-square etaf-css-selector-token-types)))
+          (etaf-css-selector-parser-attribute parser))
          (t
-          (cl-incf (etaf-css-parser-position parser))))))))
+          (cl-incf (etaf-css-selector-parser-position parser))))))))
 
-(defun etaf-css-parser-loop (parser)
+(defun etaf-css-selector-parser-loop (parser)
   "主解析循环。"
-  (while (< (etaf-css-parser-position parser)
-            (length (etaf-css-parser-tokens parser)))
-    (etaf-css-parser-parse parser))
+  (while (< (etaf-css-selector-parser-position parser)
+            (length (etaf-css-selector-parser-tokens parser)))
+    (etaf-css-selector-parser-parse parser))
   ;; 处理剩余的尾随空白 - 附加到最后一个节点的 :after
-  (when (and (etaf-css-parser-spaces-before parser)
-             (not (string= (etaf-css-parser-spaces-before parser) "")))
-    (let* ((current-selector (etaf-css-parser-current parser))
+  (when (and (etaf-css-selector-parser-spaces-before parser)
+             (not (string= (etaf-css-selector-parser-spaces-before parser)
+                           "")))
+    (let* ((current-selector (etaf-css-selector-parser-current parser))
            (nodes (plist-get current-selector :nodes)))
       (when nodes
         (let* ((last-node (car (last nodes)))
                (spaces (plist-get last-node :spaces)))
           (when spaces
             (plist-put spaces :after
-                       (etaf-css-parser-spaces-before parser)))))))
-  (etaf-css-parser-root parser))
+                       (etaf-css-selector-parser-spaces-before parser)))))))
+  (etaf-css-selector-parser-root parser))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -677,19 +698,19 @@ CSS是输入字符串，START是单词的起始位置。
 示例：
   (etaf-css-selector-parse \"div.class#id\")
   ;; => '(:type root :nodes ((:type selector :nodes ((:type tag :value \"div\" :spaces (:before \"\" :after \"\")) (:type class :value \"class\" :spaces (:before \"\" :after \"\")) (:type id :value \"id\" :spaces (:before \"\" :after \"\"))) :spaces (:before \"\" :after \"\"))) :spaces (:before \"\" :after \"\"))"
-  (let* ((tokens (etaf-css-tokenize string))
-         (root (etaf-css-make-root))
-         (selector (etaf-css-make-selector))
+  (let* ((tokens (etaf-css-selector-tokenize string))
+         (root (etaf-css-selector-make-root))
+         (selector (etaf-css-selector-make-selector))
          (parser nil))
-    (etaf-css-node-append root selector)
-    (setq parser (make-etaf-css-parser
+    (etaf-css-selector-node-append root selector)
+    (setq parser (make-etaf-css-selector-parser
                   :css string
                   :tokens (vconcat tokens)
                   :position 0
                   :root root
                   :current selector
                   :spaces-before ""))
-    (etaf-css-parser-loop parser)))
+    (etaf-css-selector-parser-loop parser)))
 
 (defun etaf-css-selector-walk (func ast)
   "遍历AST树的所有节点，对每个节点调用FUNC。
@@ -710,7 +731,7 @@ CSS是输入字符串，START是单词的起始位置。
   ;; (etaf-css-selector-parse "a[href=\"https://..\"]")
   ;; (:type attribute :spaces (:before "" :after "") :attribute "href" :operator "=" :value "https://.." :quote-mark "\"")
   (when (and node (listp node))
-    (let* ((attr-name (intern (plist-get attr-node :attribute)))
+    (let* ((attr-name (intern (plist-get ast-node :attribute)))
            (operator (plist-get ast-node :operator))
            (expected-value (plist-get ast-node :value))
            (actual-value (dom-attr node attr-name)))
