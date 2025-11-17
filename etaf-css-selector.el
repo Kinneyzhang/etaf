@@ -110,7 +110,8 @@ CSS是输入字符串，START是反斜杠的位置。
           (let ((hex-digits 0))
             (while (and (< hex-digits 6)
                         (< (1+ next) (length css))
-                        (gethash (aref css (1+ next)) etaf-css-selector-hex-chars))
+                        (gethash (aref css (1+ next))
+                                 etaf-css-selector-hex-chars))
               (cl-incf next)
               (cl-incf hex-digits))
             ;; 如果少于6个十六进制字符，空格结束转义
@@ -166,10 +167,12 @@ CSS是输入字符串，START是单词的起始位置。
         (setq next start)
         (while (and (< (cl-incf next) length)
                     (memq (aref css next)
-                          (mapcar (lambda (type)
-                                    (cdr (assq type etaf-css-selector-token-types)))
-                                  '(space tab newline cr feed))))
-          (when (= (aref css next) (cdr (assq 'newline etaf-css-selector-token-types)))
+                          (mapcar
+                           (lambda (type)
+                             (cdr (assq type etaf-css-selector-token-types)))
+                           '(space tab newline cr feed))))
+          (when (= (aref css next)
+                   (cdr (assq 'newline etaf-css-selector-token-types)))
             (setq offset next
                   line (1+ line))))
         (setq token-type (cdr (assq 'space etaf-css-selector-token-types))
@@ -183,9 +186,10 @@ CSS是输入字符串，START是单词的起始位置。
         (setq next start)
         (while (and (< (cl-incf next) length)
                     (memq (aref css next)
-                          (mapcar (lambda (type)
-                                    (cdr (assq type etaf-css-selector-token-types)))
-                                  '(plus greater-than tilde pipe)))))
+                          (mapcar
+                           (lambda (type)
+                             (cdr (assq type etaf-css-selector-token-types)))
+                           '(plus greater-than tilde pipe)))))
         (setq token-type (cdr (assq 'combinator etaf-css-selector-token-types))
               end-line line
               end-column (- start offset)
@@ -207,7 +211,8 @@ CSS是输入字符串，START是单词的起始位置。
                              (cdr (assq type etaf-css-selector-token-types)))
                            '(single-quote double-quote)))
         (setq quote
-              (if (= code (cdr (assq 'single-quote etaf-css-selector-token-types)))
+              (if (= code (cdr (assq 'single-quote
+                                     etaf-css-selector-token-types)))
                   "'" "\"")
               next start
               escaped nil)
@@ -221,7 +226,8 @@ CSS是输入字符串，START是单词的起始位置。
                   escaped nil)
             (while (and (> escape-pos 0)
                         (= (aref css (1- escape-pos))
-                           (cdr (assq 'backslash etaf-css-selector-token-types))))
+                           (cdr (assq 'backslash
+                                      etaf-css-selector-token-types))))
               (cl-decf escape-pos)
               (setq escaped (not escaped)))
             (unless escaped
@@ -249,7 +255,8 @@ CSS是输入字符串，START是单词的起始位置。
                                        (length (nth last lines))))
                 (setq next-line line
                       next-offset offset))
-              (setq token-type (cdr (assq 'comment etaf-css-selector-token-types))
+              (setq token-type (cdr (assq 'comment
+                                          etaf-css-selector-token-types))
                     line next-line
                     end-line next-line
                     end-column (- (1+ next) next-offset)
@@ -262,7 +269,8 @@ CSS是输入字符串，START是单词的起始位置。
                 end (1+ next))))
        ;; 单词
        (t (setq next (etaf-css-selector-consume-word css start)
-                token-type (cdr (assq 'word etaf-css-selector-token-types))
+                token-type (cdr (assq
+                                 'word etaf-css-selector-token-types))
                 end-line line
                 end-column (- next offset)
                 end (1+ next))))
@@ -505,7 +513,8 @@ CSS是输入字符串，START是单词的起始位置。
             (etaf-css-selector-parser-new-node parser node)
             (setq first-node nil))
         ;; 后续节点直接添加，不获得累积的空白
-        (etaf-css-selector-node-append (etaf-css-selector-parser-current parser) node)))
+        (etaf-css-selector-node-append
+         (etaf-css-selector-parser-current parser) node)))
     (cl-incf (etaf-css-selector-parser-position parser))))
 
 (defun etaf-css-selector-parser-universal (parser)
@@ -567,7 +576,8 @@ CSS是输入字符串，START是单词的起始位置。
 
 (defun etaf-css-selector-parser-nesting (parser)
   "处理嵌套选择器。"
-  (etaf-css-selector-parser-new-node parser (etaf-css-selector-make-nesting))
+  (etaf-css-selector-parser-new-node
+   parser (etaf-css-selector-make-nesting))
   (cl-incf (etaf-css-selector-parser-position parser)))
 
 (defun etaf-css-selector-parser-attribute (parser)
@@ -983,8 +993,6 @@ CSS是输入字符串，START是单词的起始位置。
            (when (memq node children)
              (throw 'found t))))))
     nil))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defun etaf-css-selector-adjacent-sibling-match-p
     (node prev-sibling-nodes dom)
