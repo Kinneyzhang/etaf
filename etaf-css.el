@@ -63,12 +63,73 @@ CSS-STRING 是形如 \"color: red; font-size: 14px\" 的字符串。
               (push (cons (intern prop) value) result)))))
       (nreverse result))))
 
+;;; CSS 特异性计算
+
+(defun etaf-css-calculate-specificity (selector)
+  "计算 CSS 选择器的特异性。
+返回 (id-count class-count type-count) 格式的列表。
+
+例如:
+  'div'          => (0 0 1)
+  '.button'      => (0 1 0)
+  '#main'        => (1 0 0)
+  'div.button'   => (0 1 1)
+  '#main .text'  => (1 1 0)"
+  (let ((id-count 0)
+        (class-count 0)
+        (type-count 0)
+        (selector-str (if (stringp selector)
+                          selector
+                        (plist-get selector :selector))))
+    ;; 计数 ID 选择器 (#id)
+    (let ((ids (split-string selector-str "#" t)))
+      (setq id-count (1- (length ids)))
+      (when (< id-count 0) (setq id-count 0)))
+    
+    ;; 计数类选择器 (.class) 和属性选择器 ([attr])
+    (let ((classes (split-string selector-str "\\." t)))
+      (setq class-count (1- (length classes)))
+      (when (< class-count 0) (setq class-count 0)))
+    (let ((count 0))
+      (while (string-match "\\[" selector-str count)
+        (cl-incf class-count)
+        (setq count (1+ (match-beginning 0)))))
+    
+    ;; 计数伪类选择器 (:hover, :not, etc.)
+    (let ((count 0))
+      (while (string-match ":[a-z-]+" selector-str count)
+        (let ((pseudo (match-string 0 selector-str)))
+          ;; :not 不计入，但其内容计入
+          (unless (string= pseudo ":not")
+            (cl-incf class-count))
+          (setq count (match-end 0)))))
+    
+    ;; 计数类型选择器（标签名）
+    (let ((parts (split-string selector-str "[ >+~\\[#.:]" t)))
+      (dolist (part parts)
+        (when (and (not (string-empty-p part))
+                   (string-match "^[a-z]" part))
+          (cl-incf type-count))))
+    
+    (list id-count class-count type-count)))
+
+(defun etaf-css-specificity> (spec1 spec2)
+  "比较两个特异性，如果 spec1 > spec2 返回 t。
+特异性格式: (id-count class-count type-count)。
+比较规则：首先比较 ID 数，然后类数，最后标签数。"
+  (or (> (nth 0 spec1) (nth 0 spec2))
+      (and (= (nth 0 spec1) (nth 0 spec2))
+           (> (nth 1 spec1) (nth 1 spec2)))
+      (and (= (nth 0 spec1) (nth 0 spec2))
+           (= (nth 1 spec1) (nth 1 spec2))
+           (> (nth 2 spec1) (nth 2 spec2)))))
+
 ;;; CSS 规则解析
 
 (defun etaf-css-parse-rule (rule-string)
   "解析单个 CSS 规则字符串。
 RULE-STRING 是形如 \"selector { declarations }\" 的字符串。
-返回 (:selector selector :declarations declarations) 格式的 plist。"
+返回 (:selector selector :declarations declarations :specificity ...) 格式的 plist。"
   (when (string-match "^[ \t\n\r]*\\([^{]+\\)[ \t\n\r]*{[ \t\n\r]*\\([^}]*\\)[ \t\n\r]*}[ \t\n\r]*$" 
                       rule-string)
     (let* ((selector (string-trim (match-string 1 rule-string)))
@@ -77,6 +138,7 @@ RULE-STRING 是形如 \"selector { declarations }\" 的字符串。
       (when (and selector (not (string-empty-p selector)))
         (list :selector selector
               :declarations declarations
+              :specificity (etaf-css-calculate-specificity selector)
               :source 'style-tag)))))
 
 (defun etaf-css-parse-stylesheet (css-string)
@@ -124,6 +186,7 @@ CSS-STRING 是包含多个 CSS 规则的字符串。
                                                (split-string class) "")))))
              (push (list :selector selector
                         :declarations declarations
+                        :specificity '(1 0 0 0)  ; 内联样式最高特异性
                         :source 'inline
                         :node node)
                    rules)))))
@@ -191,22 +254,53 @@ DOM 是根 DOM 节点。
 CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
-返回合并后的样式声明列表 ((property . value) ...)。"
+返回合并后的样式声明列表 ((property . value) ...)。
+使用完整的 CSS 层叠算法，考虑特异性和来源。"
   (let ((rules (etaf-css-get-rules-for-node cssom node dom))
-        (computed-style '()))
-    ;; 按照层叠顺序合并样式（后面的覆盖前面的）
-    ;; 内联样式具有最高优先级
+        (property-rules (make-hash-table :test 'eq)))
+    ;; 为每个属性收集所有声明及其规则信息
     (dolist (rule rules)
-      (let ((declarations (plist-get rule :declarations)))
+      (let ((declarations (plist-get rule :declarations))
+            (specificity (plist-get rule :specificity))
+            (source (plist-get rule :source)))
         (dolist (decl declarations)
           (let ((prop (car decl))
                 (value (cdr decl)))
-            ;; 更新或添加属性
-            (let ((existing (assq prop computed-style)))
-              (if existing
-                  (setcdr existing value)
-                (push decl computed-style)))))))
-    (nreverse computed-style)))
+            ;; 存储：(值 特异性 来源 规则索引)
+            (push (list value specificity source) 
+                  (gethash prop property-rules))))))
+    
+    ;; 对每个属性应用层叠规则
+    (let ((computed-style '()))
+      (maphash
+       (lambda (prop decl-list)
+         ;; 选择优先级最高的声明
+         (let ((winner (car decl-list)))
+           (dolist (decl (cdr decl-list))
+             (when (etaf-css--declaration-has-priority decl winner)
+               (setq winner decl)))
+           ;; 添加到结果
+           (push (cons prop (car winner)) computed-style)))
+       property-rules)
+      (nreverse computed-style))))
+
+(defun etaf-css--declaration-has-priority (decl1 decl2)
+  "判断 decl1 是否比 decl2 有更高优先级。
+每个声明格式: (value specificity source)。
+层叠顺序：inline > 特异性 > 文档顺序。"
+  (let ((spec1 (nth 1 decl1))
+        (spec2 (nth 1 decl2))
+        (source1 (nth 2 decl1))
+        (source2 (nth 2 decl2)))
+    (cond
+     ;; inline 样式优先级最高
+     ((and (eq source1 'inline) (not (eq source2 'inline))) t)
+     ((and (eq source2 'inline) (not (eq source1 'inline))) nil)
+     ;; 比较特异性
+     ((etaf-css-specificity> spec1 spec2) t)
+     ((etaf-css-specificity> spec2 spec1) nil)
+     ;; 特异性相同，后定义的优先（但由于我们是反向遍历，先遇到的是后定义的）
+     (t nil))))
 
 ;;; 辅助函数
 
