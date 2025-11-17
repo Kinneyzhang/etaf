@@ -1,4 +1,5 @@
 (require 'etaf-tml)
+(require 'etaf-dom)
 
 (setq-local lisp-indent-offset 2)
 (setq etaf-dom-tests-dom
@@ -25,7 +26,7 @@
          (a :href "https://tailwindcss.com/docs"
            :class "text-gray-950 dark:text-white" "Read the docs →")))))
 
-(etaf-dom-to-etml etaf-dom-tests-dom)
+(etaf-dom-to-tml etaf-dom-tests-dom)
 (etaf-dom-tag-match-p etaf-dom-tests-dom "div")
 (etaf-dom-class-match-p etaf-dom-tests-dom "p-10")
 (etaf-dom-id-match-p etaf-dom-tests-dom "test-id")

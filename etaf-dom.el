@@ -38,6 +38,7 @@
 
 (require 'cl-lib)
 (require 'dom)
+(require 'etaf-utils)
 
 (defun etaf-dom-to-tml (sexp)
   "Convert S-expression from format 2 (alist) to format 1 (plist).
@@ -52,7 +53,7 @@ Format 1: (tag :attr1 val1 :attr2 val2 child1 child2 ...)"
         (let ((attr-plist (when (listp attr-alist)
                             (etaf-alist-to-plist attr-alist)))
               (processed-children
-               (mapcar #'etaf-dom-to-etml children)))
+               (mapcar #'etaf-dom-to-tml children)))
           (if attr-plist
               (append (list tag) attr-plist processed-children)
             (cons tag processed-children)))))))
@@ -355,6 +356,5 @@ NODE是DOM节点，PROPERTY是CSS属性名（symbol）。"
       (ecss-dom-remove-class node class-name)
     (ecss-dom-add-class node class-name)))
 
-(provide 'ecss-dom)
-
-;;; ecss-dom.el ends here
+(provide 'etaf-dom)
+;;; etaf-dom.el ends here
