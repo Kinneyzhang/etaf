@@ -710,11 +710,10 @@ CSS是输入字符串，START是单词的起始位置。
   ;; (etaf-css-selector-parse "a[href=\"https://..\"]")
   ;; (:type attribute :spaces (:before "" :after "") :attribute "href" :operator "=" :value "https://.." :quote-mark "\"")
   (when (and node (listp node))
-    (let* ((attrs (dom-attributes node))
-           (attr-name (intern (plist-get ast-node :attribute)))
+    (let* ((attr-name (intern (plist-get attr-node :attribute)))
            (operator (plist-get ast-node :operator))
            (expected-value (plist-get ast-node :value))
-           (actual-value (cdr (assq attr-name attrs))))
+           (actual-value (dom-attr node attr-name)))
       (cond
        ;; 仅检查属性存在
        ((null operator) (not (null actual-value)))
@@ -743,6 +742,35 @@ CSS是输入字符串，START是单词的起始位置。
                                   actual-value))))
        (t nil)))))
 
+(defun etaf-css-selector-parse-nth-expression (expr)
+  "解析nth表达式，如 '2n+1', 'odd', 'even', '3'。
+返回 (a . b)，表示 an+b 的形式。"
+  (cond
+   ((string= expr "odd") '(2 . 1))
+   ((string= expr "even") '(2 . 0))
+   ((string-match "^\\([+-]?[0-9]*\\)n\\([+-][0-9]+\\)?$" expr)
+    (let ((a-str (match-string 1 expr))
+          (b-str (match-string 2 expr)))
+      (cons (if (or (string= a-str "") (string= a-str "+"))
+                1
+              (if (string= a-str "-")
+                  -1
+                (string-to-number a-str)))
+            (if b-str (string-to-number b-str) 0))))
+   ((string-match "^\\([+-]?[0-9]+\\)$" expr)
+    (cons 0 (string-to-number expr)))
+   (t nil)))
+
+(defun ecss-css-selector-nth-match-p (index a b)
+  "检查索引INDEX是否匹配 an+b 模式。INDEX从1开始。"
+  (if (= a 0)
+      (= index b)
+    (and (>= index 1)
+         (>= (- index b) 0)
+         (= (mod (- index b) a) 0)
+         ;; 确保 n 是非负整数
+         (>= (/ (- index b) a) 0))))
+
 (defun etaf-css-selector-pseudo-match-p (node pseudo-node)
   "检查DOM节点NODE是否匹配伪类选择器PSEUDO-NODE。
 目前支持基本的结构伪类。"
@@ -751,14 +779,111 @@ CSS是输入字符串，START是单词的起始位置。
       (cond
        ;; :first-child
        ((string= pseudo-value ":first-child")
-        (ecss-dom-is-first-child node))
+        (etaf-dom-is-first-child node))
        ;; :last-child
        ((string= pseudo-value ":last-child")
-        (ecss-dom-is-last-child node))
+        (etaf-dom-is-last-child node))
        ;; :only-child
        ((string= pseudo-value ":only-child")
-        (and (ecss-dom-is-first-child node)
-             (ecss-dom-is-last-child node)))
+        (and (etaf-dom-is-first-child node)
+             (etaf-dom-is-last-child node)))
+       ;; :first-of-type
+       ((string= pseudo-value ":first-of-type")
+        (etaf-dom-is-first-of-type node))
+       ;; :last-of-type
+       ((string= pseudo-value ":last-of-type")
+        (etaf-dom-is-last-of-type node))
+       ;; :only-of-type
+       ((string= pseudo-value ":only-of-type")
+        (etaf-dom-is-only-of-type node))
+       ;; :empty
+       ((string= pseudo-value ":empty")
+        (etaf-dom-is-empty node))
+       ;; :nth-child(an+b)
+       ((string-match "^:nth-child(\\([^)]+\\))$" pseudo-value)
+        (let* ((expr (match-string 1 pseudo-value))
+               (parsed (etaf-css-selector-parse-nth-expression expr))
+               (index (etaf-dom-get-child-index node)))
+          (and parsed index
+               (ecss-css-selector-nth-match-p
+                index (car parsed) (cdr parsed)))))
+       ;; :nth-last-child(an+b)
+       ((string-match "^:nth-last-child(\\([^)]+\\))$" pseudo-value)
+        (let* ((expr (match-string 1 pseudo-value))
+               (parsed (etaf-css-selector-parse-nth-expression expr)))
+          (when (and parsed etaf-dom--query-root)
+            (let* ((parent (etaf-dom-get-parent
+                            node etaf-dom--query-root))
+                   (element-children
+                    (when parent
+                      (etaf-dom-get-element-children parent)))
+                   (total (length element-children))
+                   (index (etaf-dom-get-child-index node)))
+              (and index
+                   (ecss-css-selector-nth-match-p
+                    (- total index -1) (car parsed) (cdr parsed)))))))
+       ;; :nth-of-type(an+b)
+       ((string-match "^:nth-of-type(\\([^)]+\\))$" pseudo-value)
+        (let* ((expr (match-string 1 pseudo-value))
+               (parsed (etaf-css-selector-parse-nth-expression expr)))
+          (when (and parsed etaf-dom--query-root)
+            (let* ((parent (etaf-dom-get-parent
+                            node etaf-dom--query-root))
+                   (node-tag (dom-tag node)))
+              (when parent
+                (let* ((element-children
+                        (etaf-dom-get-element-children parent))
+                       (same-type-children (cl-remove-if-not
+                                            (lambda (child)
+                                              (eq (dom-tag child) node-tag))
+                                            element-children))
+                       (index 0))
+                  (catch 'found
+                    (dolist (child same-type-children)
+                      (cl-incf index)
+                      (when (eq child node)
+                        (throw 'found
+                               (ecss-css-selector-nth-match-p
+                                index (car parsed) (cdr parsed)))))
+                    nil)))))))
+       ;; :nth-last-of-type(an+b)
+       ((string-match "^:nth-last-of-type(\\([^)]+\\))$" pseudo-value)
+        (let* ((expr (match-string 1 pseudo-value))
+               (parsed (etaf-css-selector-parse-nth-expression expr)))
+          (when (and parsed etaf-dom--query-root)
+            (let* ((parent (etaf-dom-get-parent
+                            node etaf-dom--query-root))
+                   (node-tag (dom-tag node)))
+              (when parent
+                (let* ((element-children
+                        (etaf-dom-get-element-children parent))
+                       (same-type-children (cl-remove-if-not
+                                            (lambda (child)
+                                              (eq (dom-tag child) node-tag))
+                                            element-children))
+                       (total (length same-type-children))
+                       (index 0))
+                  (catch 'found
+                    (dolist (child same-type-children)
+                      (cl-incf index)
+                      (when (eq child node)
+                        (throw 'found
+                               (ecss-css-selector-nth-match-p
+                                (- total index -1)
+                                (car parsed)
+                                (cdr parsed)))))
+                    nil)))))))
+       ;; :not(selector) - 简化实现，只支持简单选择器
+       ((string-match "^:not(\\([^)]+\\))$" pseudo-value)
+        (let* ((inner-selector (match-string 1 pseudo-value))
+               (inner-ast (ecss-selector-parse inner-selector)))
+          ;; 检查节点是否不匹配内部选择器
+          (when inner-ast
+            (let ((first-selector (car (plist-get inner-ast :nodes))))
+              (when (and first-selector
+                         (eq (plist-get first-selector :type) 'selector))
+                (not (ecss-dom-node-matches-simple-selector
+                      node first-selector)))))))
        ;; 其他伪类暂不支持，返回t以避免过滤
        (t t)))))
 
@@ -814,94 +939,36 @@ CSS是输入字符串，START是单词的起始位置。
 
 (defun etaf-css-selector-descendant-match-p (node ancestor-nodes dom)
   "检查节点NODE是否有祖先匹配ANCESTOR-NODES（后代组合器）。"
-  (let ((found nil))
-    (etaf-dom-map
+  (catch 'found
+    (dom-search
+     dom
      (lambda (candidate)
-       (when (and (not found)
-                  (etaf-css-selector-part-match-p
+       (when (and (etaf-css-selector-part-match-p
                    candidate ancestor-nodes)
                   (etaf-dom-is-descendant-of node candidate))
-         (setq found t)))
-     dom)
-    found))
+         (throw 'found t))))
+    nil))
 
 (defun etaf-css-selector-child-match-p (node parent-nodes dom)
   "检查节点NODE的直接父节点是否匹配PARENT-NODES（子组合器）。"
   ;; 简化实现：遍历DOM查找包含node作为直接子节点的节点
-  (let ((found nil))
-    (etaf-dom-map
+  (catch 'found
+    (dom-search
+     dom
      (lambda (candidate)
-       (when (and (not found)
-                  (etaf-css-selector-part-match-p
-                   candidate parent-nodes))
+       (when (etaf-css-selector-part-match-p
+              candidate parent-nodes)
          (let ((children (dom-non-text-children candidate)))
            (when (memq node children)
-             (setq found t)))))
-     dom)
-    found))
+             (throw 'found t))))))
+    nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defun etaf-css-selector-get-previous-sibling (node dom)
-  "获取节点NODE的前一个兄弟元素节点（跳过文本节点）。
-返回前一个兄弟节点，如果没有则返回nil。"
-  (let ((parent nil)
-        (found-parent nil))
-    ;; 首先找到包含node的父节点
-    (ecss-dom-walk
-     (lambda (candidate)
-       (when (not found-parent)
-         (let ((children (dom-children candidate)))
-           (when (and (listp children) (memq node children))
-             (setq parent candidate)
-             (setq found-parent t)))))
-     dom)
-    ;; 如果找到父节点，获取node的前一个非文本兄弟节点
-    (when parent
-      (let ((children (dom-children parent))
-            (prev-sibling nil)
-            (found-node nil))
-        (dolist (child children)
-          (cond
-           ((eq child node)
-            (setq found-node t))
-           ((and (not found-node) (listp child))
-            ;; 这是node之前的一个元素节点
-            (setq prev-sibling child))))
-        prev-sibling))))
-
-(defun etaf-css-selector-get-previous-siblings (node dom)
-  "获取节点NODE之前的所有兄弟元素节点（跳过文本节点）。
-返回兄弟节点列表，按文档顺序（最早的在前）。"
-  (let ((parent nil)
-        (found-parent nil))
-    ;; 首先找到包含node的父节点
-    (ecss-dom-walk
-     (lambda (candidate)
-       (when (not found-parent)
-         (let ((children (dom-children candidate)))
-           (when (and (listp children) (memq node children))
-             (setq parent candidate)
-             (setq found-parent t)))))
-     dom)
-    ;; 如果找到父节点，获取node之前的所有非文本兄弟节点
-    (when parent
-      (let ((children (dom-children parent))
-            (prev-siblings '())
-            (found-node nil))
-        (dolist (child children)
-          (cond
-           ((eq child node)
-            (setq found-node t))
-           ((and (not found-node) (listp child))
-            ;; 这是node之前的一个元素节点
-            (push child prev-siblings))))
-        (nreverse prev-siblings)))))
 
 (defun etaf-css-selector-adjacent-sibling-match-p
     (node prev-sibling-nodes dom)
   "检查节点NODE的前一个兄弟节点是否匹配PREV-SIBLING-NODES（相邻兄弟组合器）。"
-  (let ((prev-sibling (etaf-css-selector-get-previous-sibling node dom)))
+  (let ((prev-sibling (etaf-dom-get-previous-sibling node dom)))
     (and prev-sibling
          (etaf-css-selector-part-match-p
           prev-sibling prev-sibling-nodes))))
@@ -909,7 +976,7 @@ CSS是输入字符串，START是单词的起始位置。
 (defun etaf-css-selector-general-sibling-match-p
     (node sibling-nodes dom)
   "检查节点NODE之前的兄弟节点中是否有匹配SIBLING-NODES（通用兄弟组合器）。"
-  (let ((prev-siblings (etaf-css-selector-get-previous-siblings node dom))
+  (let ((prev-siblings (etaf-dom-get-previous-siblings node dom))
         (found nil))
     (dolist (sibling prev-siblings)
       (when (etaf-css-selector-part-match-p sibling sibling-nodes)
@@ -997,34 +1064,32 @@ RIGHTMOST-COMBINATOR是连接node到前一个部分的组合器。"
         (results '()))
     (if (= (length parts) 1)
         ;; 简单选择器，无组合器
-        (etaf-dom-map (lambda (node)
-                        (when (etaf-css-selector-part-match-p
-                               node (caar parts))
-                          (push node results)))
-                      dom)
+        (dom-search dom
+                    (lambda (node)
+                      (etaf-css-selector-part-match-p
+                       node (caar parts))))
       ;; 复杂选择器，有组合器
       ;; 从右到左匹配
       (let* ((rightmost-part (car (last parts)))
              (preceding-parts (butlast parts))
              (rightmost-combinator (cdr rightmost-part)))  
         ;; 首先找到匹配最右侧选择器的节点
-        (etaf-dom-map (lambda (node)
-                        (when (etaf-css-selector-part-match-p
-                               node (car rightmost-part))
-                          ;; 检查是否满足所有组合器关系
-                          (when (etaf-css-selector-combinator-match-p
-                                 node preceding-parts
-                                 rightmost-combinator dom)
-                            (push node results))))
-                      dom)))
-    (nreverse results)))
+        (dom-search
+         dom
+         (lambda (node)
+           (and (etaf-css-selector-part-match-p
+                 node (car rightmost-part))
+                ;; 检查是否满足所有组合器关系
+                (etaf-css-selector-combinator-match-p
+                 node preceding-parts rightmost-combinator dom))))))))
 
 (defun etaf-css-selector-query (dom selector-string)
   "在DOM树中查询所有匹配CSS选择器的节点。DOM是要查询的DOM树，
 SELECTOR-STRING是CSS选择器字符串。返回匹配节点的列表。
 
 示例：(etaf-css-selector-query dom \"div.container p.text\")"
-  (let* ((ast (etaf-css-selector-parse selector-string))
+  (let* ((etaf-dom--query-root dom) ; Set query root for pseudo-class checks
+         (ast (ecss-selector-parse selector-string))
          (root (plist-get ast :type))
          (results '()))
     ;; 处理根节点中的所有选择器（逗号分隔）

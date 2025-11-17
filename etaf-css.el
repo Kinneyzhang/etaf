@@ -28,13 +28,13 @@
            (id-attr (cdr (assq 'id attrs))))
       (and id-attr (string= id-attr id-name)))))
 
-(defun ecss-dom-is-first-child (node)
+(defun etaf-dom-is-first-child (node)
   "检查节点是否是其父节点的第一个子元素。"
   ;; 简化实现：假设我们不保存父节点引用
   ;; 在实际应用中需要遍历时跟踪
   t)
 
-(defun ecss-dom-is-last-child (node)
+(defun etaf-dom-is-last-child (node)
   "检查节点是否是其父节点的最后一个子元素。"
   ;; 简化实现
   t)
