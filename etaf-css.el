@@ -160,8 +160,9 @@ CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
 返回适用的规则列表。"
-  (let ((matching-rules '())
-        (all-rules (plist-get cssom :all-rules)))
+  (let* ((matching-rules '())
+         (all-rules (plist-get cssom :all-rules))
+         (etaf-dom--query-root dom))
     ;; 首先检查内联样式
     (dolist (rule all-rules)
       (cond
@@ -171,8 +172,7 @@ DOM 是根 DOM 节点。
           (push rule matching-rules)))
        ;; 外部样式通过选择器匹配
        ((eq (plist-get rule :source) 'style-tag)
-        (let* ((selector (plist-get rule :selector))
-               (etaf-dom--query-root dom))
+        (let ((selector (plist-get rule :selector)))
           (condition-case nil
               (let ((ast (etaf-css-selector-parse selector)))
                 (when ast
