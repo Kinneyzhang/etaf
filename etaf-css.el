@@ -168,7 +168,8 @@ DOM 是根 DOM 节点。
       (cond
        ;; 内联样式直接匹配节点
        ((eq (plist-get rule :source) 'inline)
-        (when (eq (plist-get rule :node) node)
+        ;; 使用 equal 而不是 eq 来比较节点，更可靠
+        (when (equal (plist-get rule :node) node)
           (push rule matching-rules)))
        ;; 外部样式通过选择器匹配
        ((eq (plist-get rule :source) 'style-tag)
