@@ -293,7 +293,7 @@ DOM 是根 DOM 节点。
            ;; 添加到结果
            (push (cons prop (car winner)) computed-style)))
        property-rules)
-      (nreverse computed-style))))
+      (or (nreverse computed-style) '()))))
 
 (defun etaf-css--declaration-has-priority (decl1 decl2)
   "判断 decl1 是否比 decl2 有更高优先级。

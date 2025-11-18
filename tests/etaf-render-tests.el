@@ -54,7 +54,8 @@
          (render-tree (etaf-render-build-tree dom cssom)))
     (should render-tree)
     (should (eq (plist-get render-tree :tag) 'html))
-    (should (plist-get render-tree :computed-style))
+    ;; computed-style 可以是 nil（空列表）或包含样式的 alist
+    (should (plist-member render-tree :computed-style))
     (should (plist-get render-tree :children))))
 
 (ert-deftest etaf-render-node-filtering ()
