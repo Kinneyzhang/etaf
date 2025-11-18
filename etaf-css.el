@@ -16,12 +16,13 @@
 ;; 将 DOM 中的内联/外部样式解析为 CSSOM (CSS Object Model)
 ;;
 ;; 这是 ETAF CSS 系统的主入口点，整合了以下模块：
-;; - etaf-css-parser: CSS 解析（支持 !important）
+;; - etaf-css-parser: CSS 解析（支持 !important 和 @media）
 ;; - etaf-css-specificity: 选择器特异性计算
 ;; - etaf-css-cascade: 层叠算法（支持 !important）
 ;; - etaf-css-inheritance: 属性继承
 ;; - etaf-css-cache: 计算样式缓存
 ;; - etaf-css-index: 规则索引（性能优化）
+;; - etaf-css-media: 媒体查询支持
 ;;
 ;; CSSOM 结构：
 ;; - inline-rules: 内联样式规则
@@ -29,6 +30,7 @@
 ;; - all-rules: 所有规则（按顺序）
 ;; - rule-index: 规则索引（按标签、类、ID）
 ;; - cache: 计算样式缓存
+;; - media-env: 媒体查询环境
 ;;
 ;; 使用示例：
 ;;
@@ -47,6 +49,7 @@
 (require 'cl-lib)
 (require 'etaf-dom)
 (require 'etaf-css-selector)
+(require 'etaf-css-media)
 (require 'etaf-css-parser)
 (require 'etaf-css-specificity)
 (require 'etaf-css-cascade)
@@ -97,8 +100,10 @@
 
 ;;; CSSOM 构建和查询
 
-(defun etaf-css-build-cssom (dom)
+(defun etaf-css-build-cssom (dom &optional media-env)
   "从 DOM 树构建 CSSOM (CSS Object Model)。
+DOM 是要构建 CSSOM 的 DOM 树。
+MEDIA-ENV 是可选的媒体查询环境 alist。
 返回包含所有 CSS 规则、索引和缓存的 CSSOM 结构。
 
 CSSOM 结构：
@@ -106,26 +111,30 @@ CSSOM 结构：
 - :style-rules - 样式表规则列表
 - :all-rules - 所有规则（按顺序）
 - :rule-index - 规则索引（按标签、类、ID）
-- :cache - 计算样式缓存"
+- :cache - 计算样式缓存
+- :media-env - 媒体查询环境"
   (let* ((inline-rules (etaf-css-extract-inline-styles dom))
          (style-rules (etaf-css-extract-style-tags dom))
          (all-rules (append style-rules inline-rules))
          (rule-index (etaf-css-index-build all-rules))
-         (cache (etaf-css-cache-create)))
+         (cache (etaf-css-cache-create))
+         (env (or media-env etaf-css-media-environment)))
     (list :inline-rules inline-rules
           :style-rules style-rules
           :all-rules all-rules
           :rule-index rule-index
-          :cache cache)))
+          :cache cache
+          :media-env env)))
 
 (defun etaf-css-get-rules-for-node (cssom node dom)
   "从 CSSOM 中获取适用于指定节点的所有规则（使用索引优化）。
 CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
-返回适用的规则列表。"
+返回适用的规则列表，会过滤掉不匹配的媒体查询规则。"
   (let ((matching-rules '())
         (rule-index (plist-get cssom :rule-index))
+        (media-env (plist-get cssom :media-env))
         (etaf-dom--query-root dom))
     
     ;; 1. 首先查询索引获取候选规则（性能优化）
@@ -135,26 +144,31 @@ DOM 是根 DOM 节点。
       
       ;; 2. 对候选规则进行匹配测试
       (dolist (rule candidates)
-        (cond
-         ;; 内联样式直接匹配节点
-         ((eq (plist-get rule :source) 'inline)
-          (let ((rule-node (plist-get rule :node)))
-            (when (or (eq rule-node node)
-                      (and (eq (dom-tag rule-node) (dom-tag node))
-                           (equal (dom-attributes rule-node) (dom-attributes node))))
-              (push rule matching-rules))))
-         ;; 外部样式通过选择器匹配
-         ((eq (plist-get rule :source) 'style-tag)
-          (condition-case nil
-              (let* ((selector (plist-get rule :selector))
-                     (ast (etaf-css-selector-parse selector)))
-                (when ast
-                  (let ((first-selector (car (plist-get ast :nodes))))
-                    (when (and first-selector
-                              (eq (plist-get first-selector :type) 'selector))
-                      (when (etaf-css-selector-basic-match-p node first-selector)
-                        (push rule matching-rules))))))
-            (error nil))))))
+        ;; 2.1 检查媒体查询是否匹配
+        (let ((media-query (plist-get rule :media)))
+          (when (or (null media-query)
+                    (etaf-css-media-match-p media-query media-env))
+            ;; 媒体查询匹配，继续检查选择器
+            (cond
+             ;; 内联样式直接匹配节点
+             ((eq (plist-get rule :source) 'inline)
+              (let ((rule-node (plist-get rule :node)))
+                (when (or (eq rule-node node)
+                          (and (eq (dom-tag rule-node) (dom-tag node))
+                               (equal (dom-attributes rule-node) (dom-attributes node))))
+                  (push rule matching-rules))))
+             ;; 外部样式通过选择器匹配
+             ((eq (plist-get rule :source) 'style-tag)
+              (condition-case nil
+                  (let* ((selector (plist-get rule :selector))
+                         (ast (etaf-css-selector-parse selector)))
+                    (when ast
+                      (let ((first-selector (car (plist-get ast :nodes))))
+                        (when (and first-selector
+                                  (eq (plist-get first-selector :type) 'selector))
+                          (when (etaf-css-selector-basic-match-p node first-selector)
+                            (push rule matching-rules))))))
+                (error nil))))))))
     (nreverse matching-rules)))
 
 (defun etaf-css-get-computed-style (cssom node dom)

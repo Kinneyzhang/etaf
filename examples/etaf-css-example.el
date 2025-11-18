@@ -93,5 +93,59 @@
 ;; 当 DOM 或样式发生变化时，清除缓存
 (etaf-css-clear-cache cssom)
 
+;;; 示例 7: 媒体查询支持
+
+;; 创建带媒体查询的 DOM
+(setq media-dom
+      (etaf-tml-to-dom
+       '(html
+         (head
+          (style "
+            .header { padding: 10px; }
+            @media screen and (min-width: 768px) {
+              .header { padding: 20px; font-size: 18px; }
+              .sidebar { display: block; }
+            }
+            @media screen and (max-width: 767px) {
+              .sidebar { display: none; }
+              .menu { display: block; }
+            }
+          "))
+         (body
+          (div :class "header" "Header")
+          (div :class "sidebar" "Sidebar")
+          (div :class "menu" "Menu")))))
+
+;; 在桌面环境下构建 CSSOM（宽度 1024px）
+(setq desktop-media-cssom 
+      (etaf-css-build-cssom media-dom '((type . screen) (width . 1024) (height . 768))))
+(setq header-desktop (etaf-css-get-computed-style 
+                      desktop-media-cssom 
+                      (dom-by-class media-dom "header")
+                      media-dom))
+;; => padding: 20px, font-size: 18px (来自 min-width: 768px 媒体查询)
+
+;; 在移动环境下构建 CSSOM（宽度 375px）
+(setq mobile-media-cssom
+      (etaf-css-build-cssom media-dom '((type . screen) (width . 375) (height . 667))))
+(setq header-mobile (etaf-css-get-computed-style 
+                     mobile-media-cssom 
+                     (dom-by-class media-dom "header")
+                     media-dom))
+;; => padding: 10px (媒体查询不匹配，使用基础样式)
+
+;; 检查 sidebar 在不同环境下的显示
+(setq sidebar-desktop (etaf-css-get-computed-style 
+                       desktop-media-cssom 
+                       (dom-by-class media-dom "sidebar")
+                       media-dom))
+;; => display: block (桌面环境)
+
+(setq sidebar-mobile (etaf-css-get-computed-style 
+                      mobile-media-cssom 
+                      (dom-by-class media-dom "sidebar")
+                      media-dom))
+;; => display: none (移动环境)
+
 (provide 'etaf-css-example)
 ;;; etaf-css-example.el ends here
