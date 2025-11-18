@@ -87,19 +87,20 @@ NODE 是当前 DOM 节点。
 CSSOM 是 CSS 对象模型。
 ROOT-DOM 是 DOM 树根节点。
 返回渲染节点或 nil（如果节点不可见）。"
-  (when-let* ((tag (dom-tag node))
-              (computed-style (etaf-css-get-computed-style cssom node root-dom)))
-    (when (etaf-render-node-visible-p node computed-style)
-      (let ((render-node (etaf-render-create-node node computed-style)))
-        ;; 递归处理子节点
-        (let ((children '()))
-          (dolist (child (dom-children node))
-            (when (and (consp child) (symbolp (car child)))
-              (when-let ((child-render (etaf-render--build-node child cssom root-dom)))
-                (push child-render children))))
-          ;; 设置子节点（保持原始顺序）
-          (plist-put render-node :children (nreverse children)))
-        render-node))))
+  (when-let ((tag (dom-tag node)))
+    (let ((computed-style (etaf-css-get-computed-style cssom node root-dom)))
+      ;; computed-style can be nil or empty list, both are acceptable
+      (when (etaf-render-node-visible-p node computed-style)
+        (let ((render-node (etaf-render-create-node node computed-style)))
+          ;; 递归处理子节点
+          (let ((children '()))
+            (dolist (child (dom-children node))
+              (when (and (consp child) (symbolp (car child)))
+                (when-let ((child-render (etaf-render--build-node child cssom root-dom)))
+                  (push child-render children))))
+            ;; 设置子节点（保持原始顺序）
+            (plist-put render-node :children (nreverse children)))
+          render-node)))))
 
 ;;; 渲染树查询和遍历
 
