@@ -38,7 +38,20 @@
 
 (require 'cl-lib)
 (require 'dom)
-(require 'etaf-utils)
+
+;;; Utility functions
+
+(defun etaf-alist-to-plist (alist)
+  "Convert an alist to a plist.
+Example: ((class . \"foo\") (id . \"bar\"))
+         => (:class \"foo\" :id \"bar\")"
+  (let ((result nil))
+    (dolist (pair alist)
+      (push (intern (concat ":" (symbol-name (car pair)))) result)
+      (push (cdr pair) result))
+    (nreverse result)))
+
+;;; DOM to TML conversion
 
 (defun etaf-dom-to-tml (sexp)
   "Convert S-expression from format 2 (alist) to format 1 (plist).

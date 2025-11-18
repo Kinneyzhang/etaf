@@ -33,7 +33,7 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'etaf-css-specificity)
+(require 'etaf-css-cascade)
 
 (defun etaf-css-parse-declarations (css-string)
   "解析 CSS 声明字符串为属性列表（支持 !important）。

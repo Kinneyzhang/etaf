@@ -51,7 +51,6 @@
 (require 'etaf-css-selector)
 (require 'etaf-css-media)
 (require 'etaf-css-parser)
-(require 'etaf-css-specificity)
 (require 'etaf-css-cascade)
 (require 'etaf-css-inheritance)
 (require 'etaf-css-cache)
