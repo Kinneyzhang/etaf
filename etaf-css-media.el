@@ -50,8 +50,8 @@
 FEATURE 是特性名（symbol），如 'width、'height。
 ENV 是可选的环境 alist，默认使用 `etaf-css-media-environment'。"
   (let ((environment (or env etaf-css-media-environment)))
-    (alist-get feature environment)))
-
+    (alist-get feature environment))
+)
 (defun etaf-css-media-match-type-p (type &optional env)
   "检查媒体类型是否匹配。
 TYPE 是媒体类型字符串，如 \"screen\"、\"print\"、\"all\"。
@@ -59,8 +59,8 @@ ENV 是可选的环境 alist。"
   (let* ((environment (or env etaf-css-media-environment))
          (current-type (or (alist-get 'type environment) 'screen)))
     (or (string= type "all")
-        (string= type (symbol-name current-type)))))
-
+        (string= type (symbol-name current-type))))
+)
 (defun etaf-css-media-parse-feature (feature-str)
   "解析单个媒体特性表达式。
 FEATURE-STR 是形如 \"min-width: 768px\" 或 \"orientation: landscape\" 的字符串。
@@ -88,7 +88,7 @@ FEATURE-STR 是形如 \"min-width: 768px\" 或 \"orientation: landscape\" 的字
                    (string-to-number value-str))
                   ;; 字符串值
                   (t value-str))))
-      (list base-feature operator value))))
+      (list base-feature operator value)))
 
 (defun etaf-css-media-evaluate-feature (feature operator value &optional env)
   "评估单个媒体特性。
@@ -108,8 +108,8 @@ ENV 是可选的环境 alist。
         (if (numberp value)
             (= current-value value)
           (equal current-value value)))
-       (t nil)))))
-
+       (t nil))))
+)
 (defun etaf-css-media-match-query-p (query-str &optional env)
   "检查媒体查询是否匹配。
 QUERY-STR 是完整的媒体查询字符串，如 \"screen and (min-width: 768px)\"。
@@ -151,7 +151,7 @@ ENV 是可选的环境 alist。
                         (not features-match)
                       features-match))
                 ;; 只有媒体类型，没有特性
-                result))
+                result)))
         ;; 只有特性，没有媒体类型（假设为 "all"）
         (when (string-match "(\\([^)]+\\))" query-str)
           (let* ((feature-expr (match-string 1 query-str))
@@ -160,7 +160,7 @@ ENV 是可选的环境 alist。
               (let ((feature (nth 0 parsed))
                     (operator (nth 1 parsed))
                     (value (nth 2 parsed)))
-                (etaf-css-media-evaluate-feature feature operator value env))))))))
+                (etaf-css-media-evaluate-feature feature operator value env)))))))
 
 (defun etaf-css-media-match-p (query-str &optional env)
   "检查媒体查询是否匹配（简化接口）。
