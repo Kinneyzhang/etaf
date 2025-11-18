@@ -1,4 +1,4 @@
-;;; etaf-css-cache.el --- CSS Computed Style Cache -*- lexical-binding: t; -*-
+;;; etaf-css-cache.el --- CSS Computed Style Cache -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2024
 
