@@ -88,7 +88,7 @@ FEATURE-STR 是形如 \"min-width: 768px\" 或 \"orientation: landscape\" 的字
                    (string-to-number value-str))
                   ;; 字符串值
                   (t value-str))))
-      (list base-feature operator value)))
+      (list base-feature operator value))))
 
 (defun etaf-css-media-evaluate-feature (feature operator value &optional env)
   "评估单个媒体特性。
