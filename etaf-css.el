@@ -146,14 +146,14 @@ RULE-STRING 是形如 \"selector { declarations }\" 的字符串。
 返回 (:selector selector :declarations declarations :specificity ...) 格式的 plist。"
   (when (string-match "^[ \t\n\r]*\\([^{]+\\)[ \t\n\r]*{[ \t\n\r]*\\([^}]*\\)[ \t\n\r]*}[ \t\n\r]*$" 
                       rule-string)
-    (let* ((selector (string-trim (match-string 1 rule-string)))
-           (declarations-str (string-trim (match-string 2 rule-string)))
-           (declarations (etaf-css-parse-declarations declarations-str)))
-      (when (and selector (not (string-empty-p selector)))
-        (list :selector selector
-              :declarations declarations
-              :specificity (etaf-css-calculate-specificity selector)
-              :source 'style-tag)))))
+    (when-let* ((selector (string-trim (match-string 1 rule-string)))
+                (declarations-str (string-trim (match-string 2 rule-string)))
+                (declarations (etaf-css-parse-declarations declarations-str))
+                ((not (string-empty-p selector))))
+      (list :selector selector
+            :declarations declarations
+            :specificity (etaf-css-calculate-specificity selector)
+            :source 'style-tag))))
 
 (defun etaf-css-parse-stylesheet (css-string)
   "解析完整的 CSS 样式表字符串。
@@ -165,17 +165,15 @@ CSS-STRING 是包含多个 CSS 规则的字符串。
           (length (length css-string)))
       ;; 简单的规则提取：查找 { } 配对
       (while (< start length)
-        (let ((open-brace (string-match "{" css-string start)))
-          (if open-brace
-              (let ((close-brace (string-match "}" css-string open-brace)))
-                (if close-brace
-                    (let* ((rule-string (substring css-string start (1+ close-brace)))
-                           (rule (etaf-css-parse-rule rule-string)))
-                      (when rule
-                        (push rule rules))
-                      (setq start (1+ close-brace)))
-                  (setq start length)))
-            (setq start length))))
+        (if-let ((open-brace (string-match "{" css-string start)))
+            (if-let ((close-brace (string-match "}" css-string open-brace)))
+                (let* ((rule-string (substring css-string start (1+ close-brace)))
+                       (rule (etaf-css-parse-rule rule-string)))
+                  (when rule
+                    (push rule rules))
+                  (setq start (1+ close-brace)))
+              (setq start length))
+          (setq start length)))
       (nreverse rules))))
 
 ;;; 从 DOM 提取样式
@@ -214,10 +212,9 @@ CSS-STRING 是包含多个 CSS 规则的字符串。
         (style-nodes (dom-search dom (lambda (node) 
                                        (eq (dom-tag node) 'style)))))
     (dolist (style-node style-nodes)
-      (let ((css-content (dom-texts style-node)))
-        (when css-content
-          (let ((stylesheet-rules (etaf-css-parse-stylesheet css-content)))
-            (setq rules (append rules stylesheet-rules))))))
+      (when-let ((css-content (dom-texts style-node))
+                 (stylesheet-rules (etaf-css-parse-stylesheet css-content)))
+        (setq rules (append rules stylesheet-rules))))
     rules))
 
 ;;; CSSOM 构建和查询
