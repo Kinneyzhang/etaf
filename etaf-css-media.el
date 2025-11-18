@@ -151,7 +151,7 @@ ENV 是可选的环境 alist。
                         (not features-match)
                       features-match))
                 ;; 只有媒体类型，没有特性
-                result)))
+                result))
         ;; 只有特性，没有媒体类型（假设为 "all"）
         (when (string-match "(\\([^)]+\\))" query-str)
           (let* ((feature-expr (match-string 1 query-str))
@@ -160,7 +160,7 @@ ENV 是可选的环境 alist。
               (let ((feature (nth 0 parsed))
                     (operator (nth 1 parsed))
                     (value (nth 2 parsed)))
-                (etaf-css-media-evaluate-feature feature operator value env)))))))
+                (etaf-css-media-evaluate-feature feature operator value env))))))))
 
 (defun etaf-css-media-match-p (query-str &optional env)
   "检查媒体查询是否匹配（简化接口）。
