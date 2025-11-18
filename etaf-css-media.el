@@ -88,7 +88,7 @@ FEATURE-STR 是形如 \"min-width: 768px\" 或 \"orientation: landscape\" 的字
                    (string-to-number value-str))
                   ;; 字符串值
                   (t value-str))))
-      (list base-feature operator value))))
+      (list base-feature operator value)))
 
 (defun etaf-css-media-evaluate-feature (feature operator value &optional env)
   "评估单个媒体特性。
@@ -160,7 +160,7 @@ ENV 是可选的环境 alist。
               (let ((feature (nth 0 parsed))
                     (operator (nth 1 parsed))
                     (value (nth 2 parsed)))
-                (etaf-css-media-evaluate-feature feature operator value env)))))))))
+                (etaf-css-media-evaluate-feature feature operator value env)))))))
 
 (defun etaf-css-media-match-p (query-str &optional env)
   "检查媒体查询是否匹配（简化接口）。
