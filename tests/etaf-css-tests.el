@@ -5,19 +5,19 @@
 (require 'etaf-dom)
 (require 'etaf-ert)
 
-;;; 测试 CSS 声明解析
+;;; 测试 CSS 声明解析（新格式支持 !important）
 
 (should-equal
  (etaf-css-parse-declarations "color: red; font-size: 14px;")
- '((color . "red") (font-size . "14px")))
+ '((color "red" nil) (font-size "14px" nil)))
 
 (should-equal
  (etaf-css-parse-declarations "  color:  red  ;  font-size:  14px  ")
- '((color . "red") (font-size . "14px")))
+ '((color "red" nil) (font-size "14px" nil)))
 
 (should-equal
  (etaf-css-parse-declarations "display: flex;")
- '((display . "flex")))
+ '((display "flex" nil)))
 
 (should-equal
  (etaf-css-parse-declarations "")
@@ -25,14 +25,14 @@
 
 (should-equal
  (etaf-css-parse-declarations "color: blue")
- '((color . "blue")))
+ '((color "blue" nil)))
 
 ;;; 测试 CSS 规则解析
 
 (should
  (let ((rule (etaf-css-parse-rule "div { color: red; }")))
    (and (equal (plist-get rule :selector) "div")
-        (equal (plist-get rule :declarations) '((color . "red")))
+        (equal (plist-get rule :declarations) '((color "red" nil)))
         (eq (plist-get rule :source) 'style-tag))))
 
 (should
@@ -40,7 +40,7 @@
  { background: blue; padding: 10px; }")))
    (and (equal (plist-get rule :selector) ".button")
         (equal (plist-get rule :declarations) 
-               '((background . "blue") (padding . "10px"))))))
+               '((background "blue" nil) (padding "10px" nil))))))
 
 ;;; 测试 CSS 样式表解析
 
@@ -65,7 +65,7 @@
    (and (= (length rules) 2)
         (eq (plist-get (nth 0 rules) :source) 'inline)
         (equal (plist-get (nth 0 rules) :declarations)
-               '((color . "red") (font-size . "14px"))))))
+               '((color "red" nil) (font-size "14px" nil))))))
 
 ;;; 测试 style 标签提取
 
