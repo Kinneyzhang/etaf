@@ -15,28 +15,31 @@
 
 ;; 将 DOM 中的内联/外部样式解析为 CSSOM (CSS Object Model)
 ;;
-;; CSSOM 是一个包含 CSS 规则的数据结构，每个规则包含：
-;; - selector: CSS 选择器字符串
-;; - declarations: CSS 声明列表 ((property . value) ...)
-;; - source: 样式来源 (inline/style-tag)
-;; - specificity: 选择器特异性（用于层叠）
+;; 这是 ETAF CSS 系统的主入口点，整合了以下模块：
+;; - etaf-css-parser: CSS 解析（支持 !important）
+;; - etaf-css-specificity: 选择器特异性计算
+;; - etaf-css-cascade: 层叠算法（支持 !important）
+;; - etaf-css-inheritance: 属性继承
+;; - etaf-css-cache: 计算样式缓存
+;; - etaf-css-index: 规则索引（性能优化）
 ;;
-;; 主要功能：
-;; - 解析 CSS 声明字符串
-;; - 从 DOM 节点的 style 属性提取内联样式
-;; - 从 <style> 标签提取外部样式
-;; - 构建和查询 CSSOM
+;; CSSOM 结构：
+;; - inline-rules: 内联样式规则
+;; - style-rules: 样式表规则
+;; - all-rules: 所有规则（按顺序）
+;; - rule-index: 规则索引（按标签、类、ID）
+;; - cache: 计算样式缓存
 ;;
 ;; 使用示例：
 ;;
 ;;   ;; 从 DOM 构建 CSSOM
 ;;   (etaf-css-build-cssom dom)
 ;;   
-;;   ;; 解析 CSS 声明
-;;   (etaf-css-parse-declarations "color: red; font-size: 14px;")
-;;   ;; => ((color . "red") (font-size . "14px"))
+;;   ;; 解析 CSS 声明（支持 !important）
+;;   (etaf-css-parse-declarations "color: red !important; font-size: 14px;")
+;;   ;; => ((color "red" t) (font-size "14px" nil))
 ;;
-;;   ;; 查询匹配节点的样式
+;;   ;; 查询匹配节点的样式（使用缓存和索引）
 ;;   (etaf-css-get-computed-style cssom node dom)
 
 ;;; Code:
@@ -44,137 +47,12 @@
 (require 'cl-lib)
 (require 'etaf-dom)
 (require 'etaf-css-selector)
-
-;;; CSS 声明解析
-
-(defun etaf-css-parse-declarations (css-string)
-  "解析 CSS 声明字符串为属性列表。
-CSS-STRING 是形如 \"color: red; font-size: 14px\" 的字符串。
-返回 ((property . value) ...) 格式的 alist。"
-  (when (and css-string (not (string-empty-p css-string)))
-    (let ((result '())
-          (declarations (split-string css-string ";" t)))
-      (dolist (decl declarations)
-        (when (string-match "^[ \t\n\r]*\\([^:]+\\)[ \t\n\r]*:[ \t\n\r]*\\(.+\\)[ \t\n\r]*$" decl)
-          (let ((prop (string-trim (match-string 1 decl)))
-                (value (string-trim (match-string 2 decl))))
-            (when (and (not (string-empty-p prop))
-                       (not (string-empty-p value)))
-              (push (cons (intern prop) value) result)))))
-      (nreverse result))))
-
-;;; CSS 特异性计算
-
-(defun etaf-css-calculate-specificity (selector)
-  "计算 CSS 选择器的特异性。
-返回 (id-count class-count type-count) 格式的列表。
-
-例如:
-  'div'          => (0 0 1)
-  '.button'      => (0 1 0)
-  '#main'        => (1 0 0)
-  'div.button'   => (0 1 1)
-  '#main .text'  => (1 1 0)"
-  (let ((id-count 0)
-        (class-count 0)
-        (type-count 0)
-        (selector-str (if (stringp selector)
-                          selector
-                        (plist-get selector :selector))))
-    ;; 计数 ID 选择器 (#id)
-    (let ((pos 0))
-      (while (string-match "#[a-zA-Z][a-zA-Z0-9_-]*" selector-str pos)
-        (cl-incf id-count)
-        (setq pos (match-end 0))))
-    
-    ;; 计数类选择器 (.class)
-    (let ((pos 0))
-      (while (string-match "\\.[a-zA-Z][a-zA-Z0-9_-]*" selector-str pos)
-        (cl-incf class-count)
-        (setq pos (match-end 0))))
-    
-    ;; 计数属性选择器 ([attr])
-    (let ((pos 0))
-      (while (string-match "\\[[^]]+\\]" selector-str pos)
-        (cl-incf class-count)
-        (setq pos (match-end 0))))
-    
-    ;; 计数伪类选择器 (:hover, :not, etc.)  
-    (let ((pos 0))
-      (while (string-match ":[a-zA-Z][a-zA-Z0-9_-]*" selector-str pos)
-        (let ((pseudo (match-string 0 selector-str)))
-          ;; :not 不计入，但其内容计入
-          (unless (string= pseudo ":not")
-            (cl-incf class-count))
-          (setq pos (match-end 0)))))
-    
-    ;; 计数类型选择器（标签名）
-    ;; 策略：移除所有 ID、类、属性、伪类后，剩余的字母开头的词就是标签
-    (let ((cleaned selector-str))
-      ;; 移除 ID
-      (setq cleaned (replace-regexp-in-string "#[a-zA-Z][a-zA-Z0-9_-]*" "" cleaned))
-      ;; 移除类
-      (setq cleaned (replace-regexp-in-string "\\.[a-zA-Z][a-zA-Z0-9_-]*" "" cleaned))
-      ;; 移除属性
-      (setq cleaned (replace-regexp-in-string "\\[[^]]+\\]" "" cleaned))
-      ;; 移除伪类和伪元素
-      (setq cleaned (replace-regexp-in-string ":[a-zA-Z][a-zA-Z0-9_-]*" "" cleaned))
-      ;; 现在计数剩余的标签（字母开头的词）
-      (let ((pos 0))
-        (while (string-match "\\<[a-z][a-z0-9]*\\>" cleaned pos)
-          (cl-incf type-count)
-          (setq pos (match-end 0)))))
-    
-    (list id-count class-count type-count)))
-
-(defun etaf-css-specificity> (spec1 spec2)
-  "比较两个特异性，如果 spec1 > spec2 返回 t。
-特异性格式: (id-count class-count type-count)。
-比较规则：首先比较 ID 数，然后类数，最后标签数。"
-  (or (> (nth 0 spec1) (nth 0 spec2))
-      (and (= (nth 0 spec1) (nth 0 spec2))
-           (> (nth 1 spec1) (nth 1 spec2)))
-      (and (= (nth 0 spec1) (nth 0 spec2))
-           (= (nth 1 spec1) (nth 1 spec2))
-           (> (nth 2 spec1) (nth 2 spec2)))))
-
-;;; CSS 规则解析
-
-(defun etaf-css-parse-rule (rule-string)
-  "解析单个 CSS 规则字符串。
-RULE-STRING 是形如 \"selector { declarations }\" 的字符串。
-返回 (:selector selector :declarations declarations :specificity ...) 格式的 plist。"
-  (when (string-match "^[ \t\n\r]*\\([^{]+\\)[ \t\n\r]*{[ \t\n\r]*\\([^}]*\\)[ \t\n\r]*}[ \t\n\r]*$" 
-                      rule-string)
-    (when-let* ((selector (string-trim (match-string 1 rule-string)))
-                (declarations-str (string-trim (match-string 2 rule-string)))
-                (declarations (etaf-css-parse-declarations declarations-str))
-                ((not (string-empty-p selector))))
-      (list :selector selector
-            :declarations declarations
-            :specificity (etaf-css-calculate-specificity selector)
-            :source 'style-tag))))
-
-(defun etaf-css-parse-stylesheet (css-string)
-  "解析完整的 CSS 样式表字符串。
-CSS-STRING 是包含多个 CSS 规则的字符串。
-返回规则列表。"
-  (when (and css-string (not (string-empty-p css-string)))
-    (let ((rules '())
-          (start 0)
-          (length (length css-string)))
-      ;; 简单的规则提取：查找 { } 配对
-      (while (< start length)
-        (if-let ((open-brace (string-match "{" css-string start)))
-            (if-let ((close-brace (string-match "}" css-string open-brace)))
-                (let* ((rule-string (substring css-string start (1+ close-brace)))
-                       (rule (etaf-css-parse-rule rule-string)))
-                  (when rule
-                    (push rule rules))
-                  (setq start (1+ close-brace)))
-              (setq start length))
-          (setq start length)))
-      (nreverse rules))))
+(require 'etaf-css-parser)
+(require 'etaf-css-specificity)
+(require 'etaf-css-cascade)
+(require 'etaf-css-inheritance)
+(require 'etaf-css-cache)
+(require 'etaf-css-index)
 
 ;;; 从 DOM 提取样式
 
@@ -221,97 +99,95 @@ CSS-STRING 是包含多个 CSS 规则的字符串。
 
 (defun etaf-css-build-cssom (dom)
   "从 DOM 树构建 CSSOM (CSS Object Model)。
-返回包含所有 CSS 规则的 CSSOM 结构。"
-  (let ((inline-rules (etaf-css-extract-inline-styles dom))
-        (style-rules (etaf-css-extract-style-tags dom)))
+返回包含所有 CSS 规则、索引和缓存的 CSSOM 结构。
+
+CSSOM 结构：
+- :inline-rules - 内联样式规则列表
+- :style-rules - 样式表规则列表
+- :all-rules - 所有规则（按顺序）
+- :rule-index - 规则索引（按标签、类、ID）
+- :cache - 计算样式缓存"
+  (let* ((inline-rules (etaf-css-extract-inline-styles dom))
+         (style-rules (etaf-css-extract-style-tags dom))
+         (all-rules (append style-rules inline-rules))
+         (rule-index (etaf-css-index-build all-rules))
+         (cache (etaf-css-cache-create)))
     (list :inline-rules inline-rules
           :style-rules style-rules
-          :all-rules (append style-rules inline-rules))))
+          :all-rules all-rules
+          :rule-index rule-index
+          :cache cache)))
 
 (defun etaf-css-get-rules-for-node (cssom node dom)
-  "从 CSSOM 中获取适用于指定节点的所有规则。
+  "从 CSSOM 中获取适用于指定节点的所有规则（使用索引优化）。
 CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
 返回适用的规则列表。"
   (let ((matching-rules '())
-        (all-rules (plist-get cssom :all-rules))
+        (rule-index (plist-get cssom :rule-index))
         (etaf-dom--query-root dom))
-    (dolist (rule all-rules)
-      (cond
-       ;; 内联样式直接匹配节点
-       ((eq (plist-get rule :source) 'inline)
-        (let ((rule-node (plist-get rule :node)))
-          (when (or (eq rule-node node)
-                    (and (eq (dom-tag rule-node) (dom-tag node))
-                         (equal (dom-attributes rule-node) (dom-attributes node))))
-            (push rule matching-rules))))
-       ;; 外部样式通过选择器匹配
-       ((eq (plist-get rule :source) 'style-tag)
-        (condition-case nil
-            (let* ((selector (plist-get rule :selector))
-                   (ast (etaf-css-selector-parse selector)))
-              (when ast
-                (let ((first-selector (car (plist-get ast :nodes))))
-                  (when (and first-selector
-                            (eq (plist-get first-selector :type) 'selector))
-                    (when (etaf-css-selector-basic-match-p node first-selector)
-                      (push rule matching-rules))))))
-          (error nil)))))
+    
+    ;; 1. 首先查询索引获取候选规则（性能优化）
+    (let ((candidates (if rule-index
+                          (etaf-css-index-query-candidates rule-index node)
+                        (plist-get cssom :all-rules))))
+      
+      ;; 2. 对候选规则进行匹配测试
+      (dolist (rule candidates)
+        (cond
+         ;; 内联样式直接匹配节点
+         ((eq (plist-get rule :source) 'inline)
+          (let ((rule-node (plist-get rule :node)))
+            (when (or (eq rule-node node)
+                      (and (eq (dom-tag rule-node) (dom-tag node))
+                           (equal (dom-attributes rule-node) (dom-attributes node))))
+              (push rule matching-rules))))
+         ;; 外部样式通过选择器匹配
+         ((eq (plist-get rule :source) 'style-tag)
+          (condition-case nil
+              (let* ((selector (plist-get rule :selector))
+                     (ast (etaf-css-selector-parse selector)))
+                (when ast
+                  (let ((first-selector (car (plist-get ast :nodes))))
+                    (when (and first-selector
+                              (eq (plist-get first-selector :type) 'selector))
+                      (when (etaf-css-selector-basic-match-p node first-selector)
+                        (push rule matching-rules))))))
+            (error nil))))))
     (nreverse matching-rules)))
 
 (defun etaf-css-get-computed-style (cssom node dom)
-  "计算指定节点的最终样式（层叠后的样式）。
+  "计算指定节点的最终样式（使用缓存和完整层叠算法）。
 CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
 返回合并后的样式声明列表 ((property . value) ...)。
-使用完整的 CSS 层叠算法，考虑特异性和来源。"
-  (let ((rules (etaf-css-get-rules-for-node cssom node dom))
-        (property-rules (make-hash-table :test 'eq)))
-    ;; 为每个属性收集所有声明及其规则信息
-    (dolist (rule rules)
-      (let ((declarations (plist-get rule :declarations))
-            (specificity (plist-get rule :specificity))
-            (source (plist-get rule :source)))
-        (dolist (decl declarations)
-          (let ((prop (car decl))
-                (value (cdr decl)))
-            ;; 存储：(值 特异性 来源 规则索引)
-            (push (list value specificity source) 
-                  (gethash prop property-rules))))))
-    
-    ;; 对每个属性应用层叠规则
-    (let ((computed-style '()))
-      (maphash
-       (lambda (prop decl-list)
-         ;; 选择优先级最高的声明
-         (let ((winner (car decl-list)))
-           (dolist (decl (cdr decl-list))
-             (when (etaf-css--declaration-has-priority decl winner)
-               (setq winner decl)))
-           ;; 添加到结果
-           (push (cons prop (car winner)) computed-style)))
-       property-rules)
-      (or (nreverse computed-style) '()))))
 
-(defun etaf-css--declaration-has-priority (decl1 decl2)
-  "判断 decl1 是否比 decl2 有更高优先级。
-每个声明格式: (value specificity source)。
-层叠顺序：inline > 特异性 > 文档顺序。"
-  (let ((spec1 (nth 1 decl1))
-        (spec2 (nth 1 decl2))
-        (source1 (nth 2 decl1))
-        (source2 (nth 2 decl2)))
-    (cond
-     ;; inline 样式优先级最高
-     ((and (eq source1 'inline) (not (eq source2 'inline))) t)
-     ((and (eq source2 'inline) (not (eq source1 'inline))) nil)
-     ;; 比较特异性
-     ((etaf-css-specificity> spec1 spec2) t)
-     ((etaf-css-specificity> spec2 spec1) nil)
-     ;; 特异性相同，后定义的优先（但由于我们是反向遍历，先遇到的是后定义的）
-     (t nil))))
+使用完整的 CSS 层叠算法，包括：
+- !important 声明处理
+- 选择器特异性比较
+- 内联样式优先级
+- 文档顺序处理
+- 计算样式缓存
+- 属性继承"
+  (let ((cache (plist-get cssom :cache)))
+    ;; 1. 尝试从缓存获取
+    (or (and cache (etaf-css-cache-get cache node))
+        ;; 2. 缓存未命中，计算新样式
+        (let* ((rules (etaf-css-get-rules-for-node cssom node dom))
+               ;; 3. 使用层叠算法合并规则
+               (computed-style (etaf-css-cascade-merge-rules rules))
+               ;; 4. 应用属性继承（如果有父元素）
+               (parent (dom-parent dom node))
+               (final-style (if parent
+                               (let ((parent-style (etaf-css-get-computed-style cssom parent dom)))
+                                 (etaf-css-apply-inheritance computed-style parent-style))
+                             computed-style)))
+          ;; 5. 存入缓存
+          (when cache
+            (etaf-css-cache-set cache node final-style))
+          final-style))))
 
 ;;; 辅助函数
 
@@ -322,13 +198,25 @@ DOM 是根 DOM 节点。
     (format "%s { %s }"
             selector
             (mapconcat (lambda (decl)
-                        (format "%s: %s" (car decl) (cdr decl)))
+                        (let ((prop (nth 0 decl))
+                              (value (nth 1 decl))
+                              (important (nth 2 decl)))
+                          (format "%s: %s%s" 
+                                 prop 
+                                 value
+                                 (if important " !important" ""))))
                       declarations "; "))))
 
 (defun etaf-css-cssom-to-string (cssom)
   "将 CSSOM 转换为可读的字符串形式。"
   (let ((all-rules (plist-get cssom :all-rules)))
     (mapconcat #'etaf-css-rule-to-string all-rules "\n\n")))
+
+(defun etaf-css-clear-cache (cssom)
+  "清空 CSSOM 的缓存。
+在 DOM 或样式发生变化时应该调用此函数。"
+  (when-let ((cache (plist-get cssom :cache)))
+    (etaf-css-cache-clear cache)))
 
 (provide 'etaf-css)
 ;;; etaf-css.el ends here
