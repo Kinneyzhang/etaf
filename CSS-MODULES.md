@@ -50,6 +50,15 @@ CSS 属性继承：
 - 快速查找候选规则
 - 减少选择器匹配次数
 
+#### etaf-css-media.el
+媒体查询支持：
+- `etaf-css-media-match-p` - 检查媒体查询是否匹配
+- `etaf-css-media-parse-feature` - 解析媒体特性
+- `etaf-css-media-evaluate-feature` - 评估媒体特性
+- 支持常见媒体类型（screen, print, all）
+- 支持基本媒体特性（width, height, min-width, max-width）
+- 可配置的媒体环境
+
 ## 新功能
 
 ### 1. !important 支持
@@ -140,6 +149,32 @@ CSS 属性继承：
 ;; 查询时只检查可能匹配的候选规则，大幅提升性能
 ```
 
+### 6. 媒体查询支持
+
+支持 @media 规则和媒体查询评估：
+
+```elisp
+;; 创建带媒体查询的 DOM
+(setq dom (etaf-tml-to-dom
+           '(html
+             (head (style "
+               .header { padding: 10px; }
+               @media screen and (min-width: 768px) {
+                 .header { padding: 20px; }
+               }
+             ")))))
+
+;; 在桌面环境下构建 CSSOM
+(setq desktop-cssom 
+      (etaf-css-build-cssom dom '((type . screen) (width . 1024))))
+
+;; 在移动环境下构建 CSSOM
+(setq mobile-cssom
+      (etaf-css-build-cssom dom '((type . screen) (width . 375))))
+
+;; 媒体查询会自动应用，不匹配的规则被过滤
+```
+
 ## 数据格式
 
 ### CSS 声明格式（新）
@@ -206,13 +241,13 @@ CSS 属性继承：
 - `tests/etaf-css-cache-tests.el` - 缓存测试
 - `tests/etaf-css-index-tests.el` - 索引测试
 - `tests/etaf-css-inheritance-tests.el` - 继承测试
+- `tests/etaf-css-media-tests.el` - 媒体查询测试
 
 ## 未实现功能
 
 根据需求，以下功能未实现：
 - **实时更新** (Real-time updates) - 明确排除
-- **媒体查询** (Media queries) - 可选/未来功能
-- **@规则** (@rules) - 未来扩展
+- **@规则** (@rules) - 部分支持（@media 已实现）
 
 ## 参考文档
 

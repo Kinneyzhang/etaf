@@ -98,6 +98,37 @@
 
 **性能提升：** 查询时只检查可能匹配的候选规则，大幅减少选择器匹配次数。
 
+### 7. ✅ 媒体查询 (Media Queries)
+
+**模块：** `etaf-css-media.el`
+
+实现了完整的 CSS 媒体查询支持：
+- 解析 @media 规则
+- 评估媒体查询条件（类型和特性）
+- 支持常见媒体类型（screen, print, all）
+- 支持基本媒体特性（width, height, min-width, max-width）
+- 可配置的媒体环境
+
+```elisp
+;; 评估媒体查询
+(etaf-css-media-match-p "screen and (min-width: 768px)" 
+                        '((type . screen) (width . 1024)))
+;; => t
+
+;; 解析带 @media 的样式表
+(etaf-css-parse-stylesheet "
+  .header { padding: 10px; }
+  @media screen and (min-width: 768px) {
+    .header { padding: 20px; }
+  }
+")
+
+;; 在特定媒体环境下构建 CSSOM
+(etaf-css-build-cssom dom '((type . screen) (width . 1024)))
+```
+
+**集成：** 媒体查询在 CSSOM 构建和样式计算时自动应用，不匹配的规则会被过滤。
+
 ## 代码组织结构
 
 ### 旧结构
@@ -107,13 +138,14 @@ etaf-css.el  (所有代码都在一个文件中，约 335 行)
 
 ### 新结构（模块化）
 ```
-etaf-css.el                 (主入口，约 220 行)
-├── etaf-css-parser.el      (CSS 解析，约 95 行)
+etaf-css.el                 (主入口，约 240 行)
+├── etaf-css-parser.el      (CSS 解析，约 185 行，支持 @media)
 ├── etaf-css-specificity.el (特异性计算，约 130 行)
 ├── etaf-css-cascade.el     (层叠算法，约 120 行)
 ├── etaf-css-inheritance.el (属性继承，约 82 行)
 ├── etaf-css-cache.el       (缓存系统，约 70 行)
-└── etaf-css-index.el       (规则索引，约 150 行)
+├── etaf-css-index.el       (规则索引，约 150 行)
+└── etaf-css-media.el       (媒体查询，约 220 行)
 ```
 
 **优势：**
@@ -148,7 +180,8 @@ tests/
 ├── etaf-css-important-tests.el    (新增：!important 和层叠测试)
 ├── etaf-css-cache-tests.el        (新增：缓存测试)
 ├── etaf-css-index-tests.el        (新增：索引测试)
-└── etaf-css-inheritance-tests.el  (新增：继承测试)
+├── etaf-css-inheritance-tests.el  (新增：继承测试)
+└── etaf-css-media-tests.el        (新增：媒体查询测试)
 ```
 
 ## 性能改进
@@ -175,8 +208,8 @@ tests/
 根据需求文档，以下功能明确排除或留待未来：
 
 1. **✗ 实时更新 (Dynamic Updates)** - 明确排除
-2. **○ 媒体查询 (Media Queries)** - 可选/未来功能
-3. **○ @规则 (@rules)** - 未来扩展
+2. **✅ 媒体查询 (Media Queries)** - 已实现
+3. **○ @规则 (@rules)** - 未来扩展（@media 已支持）
 4. **○ CSS 变量** - 未来扩展
 
 ## 总结

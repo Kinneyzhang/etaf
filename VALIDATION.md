@@ -79,11 +79,13 @@
 - **原因：** 问题陈述中明确说明「除了实时更新以外」
 
 #### 8. 媒体查询 (Media Queries)
-- **状态：** ⭕ 未实现（标记为可选）
-- **原因：** CSSOM-COMPARISON.md 中标记为「可选」
+- **状态：** ✅ 已实现
+- **文件：** `etaf-css-media.el`
+- **功能：** 支持 @media 规则解析和评估，支持常见媒体类型和特性
+- **测试：** `tests/etaf-css-media-tests.el`
 
 #### 9. @规则 (@rules)
-- **状态：** ⭕ 未实现（标记为未来扩展）
+- **状态：** ⭕ 部分实现（@media 已支持，其他待扩展）
 - **原因：** CSSOM-COMPARISON.md 中标记为「未来扩展」
 
 ## 代码结构重组验证
@@ -95,13 +97,14 @@ etaf-css.el (单一文件，所有代码约 335 行)
 
 ### ✅ 新结构（模块化）
 ```
-etaf-css.el (220 行)              - 主入口点
-├── etaf-css-parser.el (95 行)    - CSS 解析
+etaf-css.el (240 行)              - 主入口点
+├── etaf-css-parser.el (185 行)   - CSS 解析（支持 @media）
 ├── etaf-css-specificity.el (130) - 特异性计算
 ├── etaf-css-cascade.el (120)     - 层叠算法
 ├── etaf-css-inheritance.el (82)  - 属性继承
 ├── etaf-css-cache.el (70)        - 缓存系统
-└── etaf-css-index.el (150)       - 规则索引
+├── etaf-css-index.el (150)       - 规则索引
+└── etaf-css-media.el (220)       - 媒体查询
 ```
 
 **验证结果：** ✅ 代码已从单一文件重组为清晰的模块化结构
@@ -109,19 +112,19 @@ etaf-css.el (220 行)              - 主入口点
 ## 向后兼容性验证
 
 ### ✅ 公共 API
-- `etaf-css-build-cssom` - ✅ 保持不变
+- `etaf-css-build-cssom` - ✅ 保持兼容（新增可选 media-env 参数）
 - `etaf-css-get-computed-style` - ✅ 保持不变
 - `etaf-css-get-rules-for-node` - ✅ 保持不变
 - 返回格式 `((property . value) ...)` - ✅ 保持兼容
 
 ### ✅ 测试更新
 - `tests/etaf-css-tests.el` - ✅ 已更新以匹配新格式
-- 新增 4 个测试文件 - ✅ 覆盖所有新功能
+- 新增 5 个测试文件 - ✅ 覆盖所有新功能（含媒体查询）
 
 ### ✅ 文档
-- `CSS-MODULES.md` - ✅ 模块架构文档
-- `IMPLEMENTATION-SUMMARY.md` - ✅ 实现总结
-- `examples/etaf-css-example.el` - ✅ 更新示例
+- `CSS-MODULES.md` - ✅ 模块架构文档（已更新）
+- `IMPLEMENTATION-SUMMARY.md` - ✅ 实现总结（已更新）
+- `examples/etaf-css-example.el` - ✅ 更新示例（含媒体查询示例）
 
 ## 性能验证
 
@@ -140,21 +143,22 @@ etaf-css.el (220 行)              - 主入口点
 ### 完成情况统计
 - ✅ 必需功能：3/3 (100%)
 - ✅ 推荐功能：2/2 (100%)
-- ✅ 可选功能：1/3 (33%，继承已实现)
+- ✅ 可选功能：2/3 (67%，继承和媒体查询已实现)
 - ❌ 排除功能：1 (实时更新，按要求)
-- ⭕ 未来功能：2 (媒体查询、@规则)
+- ⭕ 未来功能：1 (@规则的其他类型)
 
 ### 代码统计
-- 新增模块：6 个
-- 新增代码：约 867 行
-- 重构代码：约 220 行（etaf-css.el）
-- 新增测试：4 个文件
-- 新增文档：2 个文件
+- 新增模块：7 个（含媒体查询模块）
+- 新增代码：约 1287 行（+420 行媒体查询相关）
+- 重构代码：约 240 行（etaf-css.el）
+- 新增测试：5 个文件
+- 新增文档：2 个文件（已更新）
 
 ### 质量保证
 - ✅ 所有必需功能已实现
+- ✅ 媒体查询功能已实现
 - ✅ 代码模块化，职责清晰
-- ✅ 向后兼容，API 不变
+- ✅ 向后兼容，API 保持兼容
 - ✅ 测试覆盖全面
 - ✅ 文档详细完整
 
