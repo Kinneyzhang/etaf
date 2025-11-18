@@ -80,17 +80,17 @@ RULE 是要添加的 CSS 规则。"
     ;; 按标签索引
     (dolist (tag (plist-get keys :tags))
       (let ((existing (gethash tag by-tag)))
-        (puthash tag (cons rule existing) by-tag)))
+        (puthash tag (append existing (list rule)) by-tag)))
     
     ;; 按类索引
     (dolist (class (plist-get keys :classes))
       (let ((existing (gethash class by-class)))
-        (puthash class (cons rule existing) by-class)))
+        (puthash class (append existing (list rule)) by-class)))
     
     ;; 按 ID 索引
     (dolist (id (plist-get keys :ids))
       (let ((existing (gethash id by-id)))
-        (puthash id (cons rule existing) by-id)))))
+        (puthash id (append existing (list rule)) by-id)))))
 
 (defun etaf-css-index-build (rules)
   "从规则列表构建索引。
