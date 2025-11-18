@@ -1,6 +1,21 @@
 ;;; 将 etml 转为 dom
 
-(require 'etaf-utils)
+;;; Utility functions
+
+(defun etaf-plist-to-alist (plist)
+  "Convert a plist to an alist.
+Example: (:class \"foo\" :id \"bar\")
+         => ((class . \"foo\") (id . \"bar\"))"
+  (when plist
+    (let ((result nil))
+      (while plist
+        (let ((key (pop plist))
+              (value (pop plist)))
+          (push (cons (intern (substring (symbol-name key) 1)) value)
+                result)))
+      (nreverse result))))
+
+;;; TML to DOM conversion
 
 (defun etaf-tml-to-dom (sexp)
   "Convert S-expression from format 1 (plist) to format 2 (alist).
