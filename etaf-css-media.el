@@ -160,7 +160,7 @@ ENV 是可选的环境 alist。
               (let ((feature (nth 0 parsed))
                     (operator (nth 1 parsed))
                     (value (nth 2 parsed)))
-                (etaf-css-media-evaluate-feature feature operator value env)))))))
+                (etaf-css-media-evaluate-feature feature operator value env))))))))
 
 (defun etaf-css-media-match-p (query-str &optional env)
   "检查媒体查询是否匹配（简化接口）。
