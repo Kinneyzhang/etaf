@@ -23,6 +23,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 - **etaf-css-cache.el** - 计算样式缓存
 - **etaf-css-index.el** - 规则索引优化
 - **etaf-render.el** - 渲染树构建
+- **etaf-layout.el** - 盒模型和布局计算（新增）
 
 ## 文档
 
@@ -68,8 +69,8 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
        '(html
           (head
             (style "
-              .container { width: 800px; padding: 20px; }
-              .box { width: 200px; height: 100px; margin: 10px; }"))
+              .container { width: 800px; padding-left: 20px; padding-right: 20px; }
+              .box { width: 200px; height: 100px; margin-left: 10px; margin-right: 10px; margin-top: 10px; margin-bottom: 10px; }"))
           (body
             (div :class "container"
               (div :class "box" "Box 1")
@@ -81,15 +82,23 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 ;; 3. 构建渲染树
 (setq my-render-tree (etaf-render-build-tree my-dom my-cssom))
 
-;; 4. 查看渲染树结构
-(message "渲染树:\n%s" (etaf-render-to-string my-render-tree))
+;; 4. 构建布局树（新增）
+(setq my-layout-tree (etaf-layout-build-tree my-render-tree '(:width 1024 :height 768)))
 
-;; 5. 查询节点样式
-(etaf-render-walk my-render-tree
+;; 5. 查看布局树结构
+(message "布局树:\n%s" (etaf-layout-to-string my-layout-tree))
+
+;; 6. 查询节点布局信息
+(etaf-layout-walk my-layout-tree
   (lambda (node)
-    (message "Tag: %s, Display: %s"
-             (plist-get node :tag)
-             (plist-get node :display))))
+    (let ((pos (plist-get node :position))
+          (box (plist-get node :box-model)))
+      (message "Tag: %s, Position: (%d,%d), Size: %dx%d"
+               (plist-get (plist-get node :render-node) :tag)
+               (plist-get pos :x)
+               (plist-get pos :y)
+               (etaf-box-model-content-width box)
+               (etaf-box-model-content-height box)))))
 ```
 
 ### 响应式设计（媒体查询）
@@ -136,12 +145,18 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
   - 附加计算后的样式
   - 支持遍历和查询
 
+- ✅ **布局系统**（新实现）
+  - 盒模型计算（content、padding、border、margin）
+  - 块级布局（Block Formatting Context）
+  - width/height 计算（包括 auto 处理）
+  - 位置计算（嵌套元素的精确定位）
+  - plist 基础的清晰数据结构
+
 ### 计划实现功能 📋
 
-- 📋 **布局系统**（参见 BOX-MODEL-LAYOUT.md）
-  - 盒模型计算
-  - 块级布局（Normal Flow）
+- 📋 **布局系统增强**
   - 内联布局和文本换行
+  - 外边距折叠（Margin Collapsing）
   - 定位方案（relative、absolute、fixed）
   - Flexbox 布局
 
@@ -193,12 +208,14 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 - `etaf-css-index-tests.el` - 索引测试
 - `etaf-css-inheritance-tests.el` - 继承测试
 - `etaf-css-media-tests.el` - 媒体查询测试
+- `etaf-layout-tests.el` - 布局系统测试（新增）
 
 ## 示例
 
 查看 `examples/` 目录获取更多示例：
 - `etaf-css-example.el` - CSS 功能演示
 - `etaf-render-example.el` - 渲染树使用示例
+- `etaf-layout-example.el` - 布局系统完整示例（新增）
 
 ## 贡献
 
