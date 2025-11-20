@@ -35,6 +35,8 @@
 (require 'cl-lib)
 (require 'etaf-css-cascade)
 
+(declare-function etaf-css-media-extract-at-media-blocks "etaf-css-media")
+
 (defun etaf-css-parse-declarations (css-string)
   "解析 CSS 声明字符串为属性列表（支持 !important）。
 CSS-STRING 是形如 \"color: red; font-size: 14px\" 的字符串。
@@ -92,34 +94,6 @@ RULE-STRING 是形如 \"selector { declarations }\" 的字符串。
             :specificity (etaf-css-calculate-specificity selector)
             :source 'style-tag))))
 
-(defun etaf-css-parse-stylesheet (css-string &optional media-query)
-  "解析完整的 CSS 样式表字符串。
-CSS-STRING 是包含多个 CSS 规则的字符串。
-MEDIA-QUERY 是可选的媒体查询字符串，会附加到所有规则上。
-返回规则列表。"
-  (when (and css-string (not (string-empty-p css-string)))
-    (let ((rules '())
-          (start 0)
-          (length (length css-string)))
-      ;; 检查是否有 @media 规则
-      (if (string-match "@media" css-string)
-          ;; 有 @media 规则，需要特殊处理
-          (let ((media-blocks (etaf-css-media-extract-at-media-blocks css-string))
-                (regular-css (etaf-css-remove-at-media-blocks css-string)))
-            ;; 首先解析非 @media 规则
-            (when (not (string-empty-p (string-trim regular-css)))
-              (setq rules (etaf-css-parse-stylesheet-simple regular-css media-query)))
-            ;; 然后处理 @media 规则
-            (dolist (block media-blocks)
-              (let ((query (nth 0 block))
-                    (rules-string (nth 1 block)))
-                ;; 递归解析 @media 内的规则，传入媒体查询
-                (let ((media-rules (etaf-css-parse-stylesheet-simple rules-string query)))
-                  (setq rules (append rules media-rules))))))
-        ;; 没有 @media 规则，简单解析
-        (setq rules (etaf-css-parse-stylesheet-simple css-string media-query)))
-      rules)))
-
 (defun etaf-css-parse-stylesheet-simple (css-string &optional media-query)
   "简单解析 CSS 样式表（不处理 @media）。
 CSS-STRING 是包含多个 CSS 规则的字符串。
@@ -173,11 +147,33 @@ CSS-STRING 是 CSS 文本。
     (setq result (concat result (substring css-string start)))
     result))
 
-;; 需要在文件开头声明外部函数，避免编译警告
-(declare-function etaf-css-media-extract-at-media-blocks "etaf-css-media")
-
-(provide 'etaf-css-parser)
-;;; etaf-css-parser.el ends here
+(defun etaf-css-parse-stylesheet (css-string &optional media-query)
+  "解析完整的 CSS 样式表字符串。
+CSS-STRING 是包含多个 CSS 规则的字符串。
+MEDIA-QUERY 是可选的媒体查询字符串，会附加到所有规则上。
+返回规则列表。"
+  (when (and css-string (not (string-empty-p css-string)))
+    (let ((rules '())
+          (start 0)
+          (length (length css-string)))
+      ;; 检查是否有 @media 规则
+      (if (string-match "@media" css-string)
+          ;; 有 @media 规则，需要特殊处理
+          (let ((media-blocks (etaf-css-media-extract-at-media-blocks css-string))
+                (regular-css (etaf-css-remove-at-media-blocks css-string)))
+            ;; 首先解析非 @media 规则
+            (when (not (string-empty-p (string-trim regular-css)))
+              (setq rules (etaf-css-parse-stylesheet-simple regular-css media-query)))
+            ;; 然后处理 @media 规则
+            (dolist (block media-blocks)
+              (let ((query (nth 0 block))
+                    (rules-string (nth 1 block)))
+                ;; 递归解析 @media 内的规则，传入媒体查询
+                (let ((media-rules (etaf-css-parse-stylesheet-simple rules-string query)))
+                  (setq rules (append rules media-rules))))))
+        ;; 没有 @media 规则，简单解析
+        (setq rules (etaf-css-parse-stylesheet-simple css-string media-query)))
+      rules)))
 
 (provide 'etaf-css-parser)
 ;;; etaf-css-parser.el ends here

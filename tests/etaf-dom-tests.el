@@ -13,7 +13,9 @@
              (p :class "ml-3" "Customizing your theme with"
                (code :class "text-gray-950" "@theme")))
            (li :id "2"
-             (p :class "ml-3" "Adding custom utilities with"
+             (p :style "color:red;padding:2"
+               :class "ml-3" :id "test-p"
+               "Adding custom utilities with"
                (code :class "text-gray-950" "@utility")))
            (li :id "3"
              (p :class "ml-3" "Adding custom variants with"

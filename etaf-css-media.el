@@ -145,7 +145,8 @@ ENV 是可选的环境 alist。
                             (let ((feature (nth 0 parsed))
                                   (operator (nth 1 parsed))
                                   (value (nth 2 parsed)))
-                              (unless (etaf-css-media-evaluate-feature feature operator value env)
+                              (unless (etaf-css-media-evaluate-feature
+                                       feature operator value env)
                                 (setq features-match nil)))))))
                     (if (string-prefix-p "not " (string-trim query-str))
                         (not features-match)
