@@ -231,5 +231,42 @@ DOM 是根 DOM 节点。
   (when-let ((cache (plist-get cssom :cache)))
     (etaf-css-cache-clear cache)))
 
+;;; CSSOM DOM 格式转换
+
+(defun etaf-css-cssom-to-dom (cssom)
+  "将 CSSOM 从 plist 格式转换为 DOM 格式。
+CSSOM 是由 etaf-css-build-cssom 生成的 plist 格式的 CSS 对象模型。
+返回 DOM 格式: (cssom ((inline-rules . ...) (style-rules . ...) ...) children)
+
+DOM 格式使 CSSOM 可以像 DOM 树一样被遍历和操作。"
+  (let ((inline-rules (plist-get cssom :inline-rules))
+        (style-rules (plist-get cssom :style-rules))
+        (all-rules (plist-get cssom :all-rules))
+        (rule-index (plist-get cssom :rule-index))
+        (cache (plist-get cssom :cache))
+        (media-env (plist-get cssom :media-env)))
+    (list 'cssom
+          (list (cons 'inline-rules inline-rules)
+                (cons 'style-rules style-rules)
+                (cons 'all-rules all-rules)
+                (cons 'rule-index rule-index)
+                (cons 'cache cache)
+                (cons 'media-env media-env)))))
+
+(defun etaf-css-cssom-from-dom (cssom-dom)
+  "将 CSSOM 从 DOM 格式转换回 plist 格式。
+CSSOM-DOM 是 DOM 格式的 CSSOM: (cssom ((inline-rules . ...) ...) children)
+返回 plist 格式的 CSSOM。
+
+此函数与 etaf-css-cssom-to-dom 配对使用。"
+  (when (and cssom-dom (eq (car cssom-dom) 'cssom))
+    (let ((attrs (cadr cssom-dom)))
+      (list :inline-rules (cdr (assq 'inline-rules attrs))
+            :style-rules (cdr (assq 'style-rules attrs))
+            :all-rules (cdr (assq 'all-rules attrs))
+            :rule-index (cdr (assq 'rule-index attrs))
+            :cache (cdr (assq 'cache attrs))
+            :media-env (cdr (assq 'media-env attrs))))))
+
 (provide 'etaf-css)
 ;;; etaf-css.el ends here

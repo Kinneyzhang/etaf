@@ -194,5 +194,50 @@ RENDER-TREE 是渲染树根节点。
             :max-depth max-depth
             :display-types (nreverse display-alist)))))
 
+;;; 渲染树 DOM 格式转换
+
+(defun etaf-render-to-dom (render-tree)
+  "将渲染树从 plist 格式转换为 DOM 格式。
+RENDER-TREE 是 plist 格式的渲染树节点。
+返回 DOM 格式: (render-node ((tag . div) (display . block) ...) children)
+
+DOM 格式使渲染树可以像 DOM 树一样被遍历和操作。"
+  (when render-tree
+    (let* ((node (plist-get render-tree :node))
+           (tag (plist-get render-tree :tag))
+           (computed-style (plist-get render-tree :computed-style))
+           (display (plist-get render-tree :display))
+           (children (plist-get render-tree :children))
+           ;; 转换属性为 alist
+           (attrs (list (cons 'tag tag)
+                       (cons 'display display)
+                       (cons 'computed-style computed-style)
+                       (cons 'node node)))
+           ;; 递归转换子节点
+           (children-dom (mapcar #'etaf-render-to-dom children)))
+      ;; 构建 DOM 格式: (render-node attrs . children)
+      (cons 'render-node (cons attrs children-dom)))))
+
+(defun etaf-render-from-dom (render-dom)
+  "将渲染树从 DOM 格式转换回 plist 格式。
+RENDER-DOM 是 DOM 格式的渲染树: (render-node ((tag . ...) ...) children)
+返回 plist 格式的渲染树。
+
+此函数与 etaf-render-to-dom 配对使用。"
+  (when (and render-dom (eq (car render-dom) 'render-node))
+    (let* ((attrs (cadr render-dom))
+           (children-dom (cddr render-dom))
+           (tag (cdr (assq 'tag attrs)))
+           (display (cdr (assq 'display attrs)))
+           (computed-style (cdr (assq 'computed-style attrs)))
+           (node (cdr (assq 'node attrs)))
+           ;; 递归转换子节点
+           (children (mapcar #'etaf-render-from-dom children-dom)))
+      (list :node node
+            :tag tag
+            :computed-style computed-style
+            :display display
+            :children children))))
+
 (provide 'etaf-render)
 ;;; etaf-render.el ends here

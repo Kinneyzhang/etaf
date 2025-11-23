@@ -416,5 +416,54 @@ INDENT 是缩进级别（可选）。
                                   (etaf-layout-to-string child (1+ indent)))
                                 children "\n"))))))
 
+;;; 布局树 DOM 格式转换
+
+(defun etaf-layout-to-dom (layout-tree)
+  "将布局树从 plist 格式转换为 DOM 格式。
+LAYOUT-TREE 是 plist 格式的布局树节点。
+返回 DOM 格式: (layout-node ((position . ...) (box-model . ...) ...) children)
+
+DOM 格式使布局树可以像 DOM 树一样被遍历和操作。"
+  (when layout-tree
+    (let* ((render-node (plist-get layout-tree :render-node))
+           (box-model (plist-get layout-tree :box-model))
+           (position (plist-get layout-tree :position))
+           (bounds (plist-get layout-tree :bounds))
+           (content-box (plist-get layout-tree :content-box))
+           (children (plist-get layout-tree :children))
+           ;; 转换属性为 alist
+           (attrs (list (cons 'render-node render-node)
+                       (cons 'box-model box-model)
+                       (cons 'position position)
+                       (cons 'bounds bounds)
+                       (cons 'content-box content-box)))
+           ;; 递归转换子节点
+           (children-dom (mapcar #'etaf-layout-to-dom children)))
+      ;; 构建 DOM 格式: (layout-node attrs . children)
+      (cons 'layout-node (cons attrs children-dom)))))
+
+(defun etaf-layout-from-dom (layout-dom)
+  "将布局树从 DOM 格式转换回 plist 格式。
+LAYOUT-DOM 是 DOM 格式的布局树: (layout-node ((position . ...) ...) children)
+返回 plist 格式的布局树。
+
+此函数与 etaf-layout-to-dom 配对使用。"
+  (when (and layout-dom (eq (car layout-dom) 'layout-node))
+    (let* ((attrs (cadr layout-dom))
+           (children-dom (cddr layout-dom))
+           (render-node (cdr (assq 'render-node attrs)))
+           (box-model (cdr (assq 'box-model attrs)))
+           (position (cdr (assq 'position attrs)))
+           (bounds (cdr (assq 'bounds attrs)))
+           (content-box (cdr (assq 'content-box attrs)))
+           ;; 递归转换子节点
+           (children (mapcar #'etaf-layout-from-dom children-dom)))
+      (list :render-node render-node
+            :box-model box-model
+            :position position
+            :bounds bounds
+            :content-box content-box
+            :children children))))
+
 (provide 'etaf-layout)
 ;;; etaf-layout.el ends here
