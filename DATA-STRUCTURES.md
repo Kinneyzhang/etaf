@@ -6,11 +6,12 @@
 
 1. [概述](#概述)
 2. [核心数据结构](#核心数据结构)
-3. [数据结构间的关系](#数据结构间的关系)
-4. [盒模型渲染的数据流](#盒模型渲染的数据流)
-5. [布局算法的实现指南](#布局算法的实现指南)
-6. [实际使用示例](#实际使用示例)
-7. [性能优化建议](#性能优化建议)
+3. [DOM 格式表示](#dom-格式表示)
+4. [数据结构间的关系](#数据结构间的关系)
+5. [盒模型渲染的数据流](#盒模型渲染的数据流)
+6. [布局算法的实现指南](#布局算法的实现指南)
+7. [实际使用示例](#实际使用示例)
+8. [性能优化建议](#性能优化建议)
 
 ---
 
@@ -23,6 +24,15 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 ```
 
 每个阶段都有特定的数据结构，本文档将详细介绍这些结构及其用途。
+
+### 统一的 DOM 格式表示
+
+**重要更新**: CSSOM、渲染树和布局树现在都支持统一的 DOM 格式表示 `(tag ((attr . val) ...) children...)`，使得所有数据结构可以用一致的方式进行遍历和操作。这提供了：
+
+- 统一的数据访问接口
+- 一致的树遍历模式
+- 更好的互操作性
+- 简化的工具函数开发
 
 ---
 
@@ -87,11 +97,122 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ---
 
+## DOM 格式表示
+
+**新特性**: CSSOM、渲染树和布局树现在支持统一的 DOM 格式表示。
+
+### 为什么需要 DOM 格式？
+
+内部数据结构使用 plist 格式（`:key value ...`）进行存储和处理，这是高效的。但 DOM 格式（`(tag ((attr . val) ...) children...)`）提供了：
+
+1. **统一的接口**: 所有数据结构使用相同的访问模式
+2. **一致的遍历**: 可以使用相同的代码遍历不同的数据结构
+3. **更好的互操作性**: 与 DOM 操作函数兼容
+4. **简化工具开发**: 编写通用的工具函数更容易
+
+### DOM 格式转换函数
+
+每个数据结构都提供了转换函数：
+
+#### CSSOM DOM 格式
+
+```elisp
+;; Plist → DOM 格式
+(etaf-css-cssom-to-dom cssom)
+;; => (cssom ((inline-rules . ...) (style-rules . ...) (all-rules . ...) 
+;;            (rule-index . ...) (cache . ...) (media-env . ...)))
+
+;; DOM 格式 → Plist
+(etaf-css-cssom-from-dom cssom-dom)
+;; => (:inline-rules ... :style-rules ... :all-rules ...)
+```
+
+**示例**:
+```elisp
+(let* ((dom (etaf-tml-to-dom '(html (body (div "Text")))))
+       (cssom (etaf-css-build-cssom dom))
+       (cssom-dom (etaf-css-cssom-to-dom cssom)))
+  ;; 访问 DOM 格式的属性
+  (let ((attrs (cadr cssom-dom)))
+    (cdr (assq 'all-rules attrs))))  ; 获取所有规则
+```
+
+#### 渲染树 DOM 格式
+
+```elisp
+;; Plist → DOM 格式
+(etaf-render-to-dom render-tree)
+;; => (render-node ((tag . div) (display . "block") 
+;;                  (computed-style . ...) (node . ...))
+;;     child1 child2 ...)
+
+;; DOM 格式 → Plist
+(etaf-render-from-dom render-dom)
+;; => (:node ... :tag ... :computed-style ... :display ... :children ...)
+```
+
+**示例**:
+```elisp
+(let* ((render-tree (etaf-render-build-tree dom cssom))
+       (render-dom (etaf-render-to-dom render-tree)))
+  ;; 遍历 DOM 格式的渲染树
+  (cl-labels ((walk (node)
+                (when (eq (car node) 'render-node)
+                  (let ((attrs (cadr node)))
+                    (message "Tag: %s" (cdr (assq 'tag attrs))))
+                  (dolist (child (cddr node))
+                    (walk child)))))
+    (walk render-dom)))
+```
+
+#### 布局树 DOM 格式
+
+```elisp
+;; Plist → DOM 格式
+(etaf-layout-to-dom layout-tree)
+;; => (layout-node ((position . ...) (box-model . ...) 
+;;                  (render-node . ...) (bounds . ...) (content-box . ...))
+;;     child1 child2 ...)
+
+;; DOM 格式 → Plist
+(etaf-layout-from-dom layout-dom)
+;; => (:render-node ... :box-model ... :position ... :children ...)
+```
+
+**示例**:
+```elisp
+(let* ((layout-tree (etaf-layout-build-tree render-tree viewport))
+       (layout-dom (etaf-layout-to-dom layout-tree)))
+  ;; 访问盒模型信息
+  (let* ((attrs (cadr layout-dom))
+         (box-model (cdr (assq 'box-model attrs)))
+         (position (cdr (assq 'position attrs))))
+    (message "Position: (%d,%d)" 
+             (plist-get position :x) 
+             (plist-get position :y))))
+```
+
+### 何时使用 DOM 格式？
+
+- **内部处理**: 使用 plist 格式（性能更好）
+- **外部接口**: 可以转换为 DOM 格式（更易使用）
+- **工具开发**: 使用 DOM 格式（统一接口）
+- **调试/可视化**: 使用 DOM 格式（更直观）
+
+### 性能考虑
+
+- 转换操作很轻量（仅重组数据结构）
+- 可以按需转换（不需要一直保持 DOM 格式）
+- Round-trip 转换不会丢失数据
+- 缓存和索引在转换中保持引用
+
+---
+
 ### 3. CSSOM (CSS Object Model)
 
 **定义位置**: `etaf-css.el`
 
-**格式**:
+**内部格式** (Plist):
 ```elisp
 (:inline-rules (...)
  :style-rules (...)
@@ -99,6 +220,16 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
  :rule-index (...)
  :cache <hash-table>
  :media-env ((type . screen) (width . 1024) ...))
+```
+
+**DOM 格式**:
+```elisp
+(cssom ((inline-rules . (...))
+        (style-rules . (...))
+        (all-rules . (...))
+        (rule-index . (...))
+        (cache . <hash-table>)
+        (media-env . ((type . screen) (width . 1024) ...))))
 ```
 
 **详细结构**:
@@ -165,13 +296,23 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 **定义位置**: `etaf-render.el`
 
-**格式**:
+**内部格式** (Plist):
 ```elisp
 (:node <dom-node>
  :tag symbol
  :computed-style ((property . value) ...)
  :display "block"|"inline"|"inline-block"|...
  :children (render-node1 render-node2 ...))
+```
+
+**DOM 格式**:
+```elisp
+(render-node ((tag . div)
+              (display . "block")
+              (computed-style . ((color . "red") ...))
+              (node . <dom-node>))
+  child-render-node1
+  child-render-node2)
 ```
 
 **字段说明**:
@@ -208,16 +349,33 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ---
 
-### 5. 布局树 (Layout Tree) - 未来实现
+### 5. 布局树 (Layout Tree)
 
-**建议格式**:
+**定义位置**: `etaf-layout.el`
+
+**内部格式** (Plist):
 ```elisp
 (:render-node <render-node>
- :box-model (:content (x y width height)
-             :padding (top right bottom left)
-             :border (top right bottom left)
-             :margin (top right bottom left))
- :position (:x x :y y :width width :height height)
+ :box-model (:content (:width w :height h)
+             :padding (:top t :right r :bottom b :left l)
+             :border (:top-width t :right-width r ...)
+             :margin (:top t :right r :bottom b :left l))
+ :position (:x x :y y)
+ :bounds (:x x :y y :width w :height h)
+ :content-box (:x x :y y :width w :height h)
+ :children (layout-node1 layout-node2 ...))
+```
+
+**DOM 格式**:
+```elisp
+(layout-node ((render-node . <render-node>)
+              (box-model . (:content ... :padding ... :border ... :margin ...))
+              (position . (:x 0 :y 0))
+              (bounds . (:x 0 :y 0 :width 200 :height 100))
+              (content-box . (:x 10 :y 10 :width 180 :height 80)))
+  child-layout-node1
+  child-layout-node2)
+```
  :children (layout-node1 layout-node2 ...))
 ```
 
