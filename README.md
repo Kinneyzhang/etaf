@@ -10,6 +10,28 @@ ETAF 实现了完整的 CSS 样式计算管线：
 TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 ```
 
+### 🆕 统一的 DOM 格式表示
+
+**新特性**: CSSOM、渲染树和布局树现在都支持统一的 DOM 格式表示 `(tag ((attr . val) ...) children...)`，提供：
+
+- 统一的数据访问接口
+- 一致的树遍历模式  
+- 更好的互操作性
+- 简化的工具函数开发
+
+```elisp
+;; 将数据结构转换为 DOM 格式
+(setq cssom-dom (etaf-css-cssom-to-dom my-cssom))
+(setq render-dom (etaf-render-to-dom my-render-tree))
+(setq layout-dom (etaf-layout-to-dom my-layout-tree))
+
+;; 统一的访问方式
+(let ((attrs (cadr cssom-dom)))
+  (cdr (assq 'all-rules attrs)))  ; 访问 CSSOM 属性
+```
+
+详见 [examples/etaf-dom-format-example.el](examples/etaf-dom-format-example.el)
+
 ## 核心模块
 
 - **etaf-tml.el** - TML (Template Markup Language) 到 DOM 的转换
@@ -208,14 +230,16 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 - `etaf-css-index-tests.el` - 索引测试
 - `etaf-css-inheritance-tests.el` - 继承测试
 - `etaf-css-media-tests.el` - 媒体查询测试
-- `etaf-layout-tests.el` - 布局系统测试（新增）
+- `etaf-layout-tests.el` - 布局系统测试
+- `etaf-dom-format-tests.el` - DOM 格式转换测试（新增）
 
 ## 示例
 
 查看 `examples/` 目录获取更多示例：
 - `etaf-css-example.el` - CSS 功能演示
 - `etaf-render-example.el` - 渲染树使用示例
-- `etaf-layout-example.el` - 布局系统完整示例（新增）
+- `etaf-layout-example.el` - 布局系统完整示例
+- `etaf-dom-format-example.el` - DOM 格式转换和操作示例（新增）
 
 ## 贡献
 
