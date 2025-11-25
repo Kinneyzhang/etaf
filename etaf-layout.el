@@ -55,6 +55,8 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'dom)
+(require 'etaf-render)
 
 ;;; 辅助函数：CSS 值解析
 
@@ -165,7 +167,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
   :content-width  - 可用内容宽度
   :content-height - 可用内容高度
 返回盒模型 plist。"
-  (let* ((style (plist-get render-node :computed-style))
+  (let* ((style (etaf-render-get-computed-style render-node))
          (parent-width (plist-get parent-context :content-width))
          (parent-height (plist-get parent-context :content-height))
          
@@ -313,7 +315,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                            :children '())))
     
     ;; 递归布局子元素
-    (let ((children (plist-get render-node :children)))
+    (let ((children (dom-non-text-children render-node)))
       (when children
         (let ((child-context (list :content-width content-width
                                   :content-height content-height
@@ -349,8 +351,8 @@ RENDER-NODE 是渲染节点。
 PARENT-CONTEXT 是父容器上下文。
 返回布局节点或 nil。"
   (when render-node
-    (let* ((display (plist-get render-node :display))
-           (style (plist-get render-node :computed-style))
+    (let* ((display (etaf-render-get-display render-node))
+           (style (etaf-render-get-computed-style render-node))
            (position (etaf-layout-get-style-value style 'position "static")))
       
       (cond
@@ -398,7 +400,7 @@ INDENT 是缩进级别（可选）。
   (setq indent (or indent 0))
   (let* ((indent-str (make-string (* indent 2) ?\s))
          (render-node (plist-get layout-tree :render-node))
-         (tag (plist-get render-node :tag))
+         (tag (dom-tag render-node))
          (position (plist-get layout-tree :position))
          (box-model (plist-get layout-tree :box-model))
          (content (plist-get box-model :content))

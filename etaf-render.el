@@ -15,11 +15,24 @@
 
 ;; 从 DOM 和 CSSOM 构建渲染树 (Render Tree)
 ;;
-;; 渲染树是 DOM 和计算样式的结合，每个渲染节点包含：
-;; - node: 对应的 DOM 节点
-;; - computed-style: 计算后的样式 ((property . value) ...)
-;; - children: 子渲染节点列表
-;; - display: 显示类型（从样式中提取，如 "block", "inline", "none"）
+;; 渲染树使用 DOM 格式表示，保留原本的 DOM 结构，附加的渲染信息用属性表示：
+;; - render-computed-style: 计算后的样式 ((property . value) ...)
+;; - render-display: 显示类型（如 "block", "inline", "none"）
+;; - render-dom-node: 对应的原始 DOM 节点引用
+;;
+;; 渲染树结构：
+;; (tag ((render-computed-style . ((color . "red") ...))
+;;       (render-display . "block")
+;;       (render-dom-node . <dom-node-ref>)
+;;       (class . "foo")  ;; 原始 DOM 属性
+;;       (id . "bar"))    ;; 原始 DOM 属性
+;;   child1 child2 ...)   ;; 子渲染节点
+;;
+;; 这种结构可以直接使用 etaf-dom.el 中的函数，如：
+;; - (dom-tag render-node) => 'tag
+;; - (dom-attr render-node 'render-display) => "block"
+;; - (dom-children render-node) => (child1 child2 ...)
+;; - etaf-dom-map, etaf-dom-get-parent 等
 ;;
 ;; 渲染树与 DOM 的区别：
 ;; 1. 不包含不可见元素（display: none, <head>, <script> 等）
@@ -31,12 +44,13 @@
 ;;   ;; 构建渲染树
 ;;   (setq render-tree (etaf-render-build-tree dom cssom))
 ;;
-;;   ;; 遍历渲染树
-;;   (etaf-render-walk render-tree
+;;   ;; 遍历渲染树 - 可以直接使用 etaf-dom-map
+;;   (etaf-dom-map
 ;;     (lambda (render-node)
 ;;       (message "Node: %s, Display: %s"
-;;                (plist-get render-node :tag)
-;;                (plist-get render-node :display))))
+;;                (dom-tag render-node)
+;;                (dom-attr render-node 'render-display)))
+;;     render-tree)
 ;;
 ;;   ;; 查询渲染节点的样式
 ;;   (etaf-render-get-style render-node 'color)
@@ -50,17 +64,24 @@
 ;;; 渲染节点结构
 
 (defun etaf-render-create-node (dom-node computed-style)
-  "创建渲染节点。
+  "创建渲染节点（使用 DOM 格式）。
 DOM-NODE 是 DOM 节点。
 COMPUTED-STYLE 是计算后的样式 alist。
-返回渲染节点 plist。"
+返回 DOM 格式的渲染节点：(tag ((attrs...) children...)
+其中 attrs 包含：
+- render-computed-style: 计算样式
+- render-display: 显示类型
+- render-dom-node: 原始 DOM 节点引用
+- 以及原始 DOM 属性"
   (let* ((display (or (cdr (assq 'display computed-style)) "inline"))
-         (tag (dom-tag dom-node)))
-    (list :node dom-node
-          :tag tag
-          :computed-style computed-style
-          :display display
-          :children '())))
+         (tag (dom-tag dom-node))
+         (orig-attrs (dom-attributes dom-node))
+         ;; 构建新的属性 alist，添加渲染信息
+         (render-attrs (list (cons 'render-computed-style computed-style)
+                             (cons 'render-display display)
+                             (cons 'render-dom-node dom-node))))
+    ;; 合并原始属性和渲染属性
+    (list tag (append render-attrs orig-attrs))))
 
 (defun etaf-render-node-visible-p (dom-node computed-style)
   "判断 DOM 节点是否应该在渲染树中显示。
@@ -98,8 +119,9 @@ ROOT-DOM 是 DOM 树根节点。
               (when (and (consp child) (symbolp (car child)))
                 (when-let ((child-render (etaf-render--build-node child cssom root-dom)))
                   (push child-render children))))
-            ;; 设置子节点（保持原始顺序）
-            (plist-put render-node :children (nreverse children)))
+            ;; 将子节点添加到渲染节点（DOM 格式）
+            ;; render-node 是 (tag (attrs...))，需要添加子节点
+            (setcdr (cdr render-node) (nreverse children)))
           render-node)))))
 
 ;;; 渲染树查询和遍历
@@ -107,18 +129,34 @@ ROOT-DOM 是 DOM 树根节点。
 (defun etaf-render-walk (render-tree func)
   "遍历渲染树，对每个节点调用 FUNC。
 RENDER-TREE 是渲染树根节点。
-FUNC 是接受一个渲染节点参数的函数。"
-  (when render-tree
-    (funcall func render-tree)
-    (dolist (child (plist-get render-tree :children))
-      (etaf-render-walk child func))))
+FUNC 是接受一个渲染节点参数的函数。
+注意：可以直接使用 etaf-dom-map 实现相同功能。"
+  (etaf-dom-map func render-tree))
 
 (defun etaf-render-get-style (render-node property)
   "从渲染节点获取指定样式属性的值。
 RENDER-NODE 是渲染节点。
 PROPERTY 是样式属性名（symbol）。
 返回属性值字符串或 nil。"
-  (cdr (assq property (plist-get render-node :computed-style))))
+  (cdr (assq property (dom-attr render-node 'render-computed-style))))
+
+(defun etaf-render-get-display (render-node)
+  "从渲染节点获取 display 类型。
+RENDER-NODE 是渲染节点。
+返回 display 字符串。"
+  (dom-attr render-node 'render-display))
+
+(defun etaf-render-get-dom-node (render-node)
+  "从渲染节点获取原始 DOM 节点。
+RENDER-NODE 是渲染节点。
+返回原始 DOM 节点。"
+  (dom-attr render-node 'render-dom-node))
+
+(defun etaf-render-get-computed-style (render-node)
+  "从渲染节点获取完整的计算样式 alist。
+RENDER-NODE 是渲染节点。
+返回计算样式 alist。"
+  (dom-attr render-node 'render-computed-style))
 
 (defun etaf-render-find-by-tag (render-tree tag)
   "在渲染树中查找指定标签的所有节点。
@@ -128,7 +166,7 @@ TAG 是要查找的标签名（symbol）。
   (let ((result '()))
     (etaf-render-walk render-tree
       (lambda (node)
-        (when (eq (plist-get node :tag) tag)
+        (when (eq (dom-tag node) tag)
           (push node result))))
     (nreverse result)))
 
@@ -140,7 +178,7 @@ DISPLAY 是显示类型字符串（如 \"block\", \"inline\"）。
   (let ((result '()))
     (etaf-render-walk render-tree
       (lambda (node)
-        (when (string= (plist-get node :display) display)
+        (when (string= (etaf-render-get-display node) display)
           (push node result))))
     (nreverse result)))
 
@@ -153,18 +191,20 @@ INDENT 是缩进级别（可选）。
 返回格式化的字符串。"
   (setq indent (or indent 0))
   (let ((indent-str (make-string (* indent 2) ?\s))
-        (tag (plist-get render-tree :tag))
-        (display (plist-get render-tree :display))
-        (style-count (length (plist-get render-tree :computed-style)))
-        (children (plist-get render-tree :children)))
-    (concat indent-str
-            (format "<%s> [display: %s, %d styles]"
-                    tag display style-count)
-            (when children
-              (concat "\n"
-                      (mapconcat (lambda (child)
-                                  (etaf-render-to-string child (1+ indent)))
-                                children "\n"))))))
+        (tag (dom-tag render-tree))
+        (display (etaf-render-get-display render-tree))
+        (style-count (length (etaf-render-get-computed-style render-tree)))
+        (children (dom-children render-tree)))
+    ;; 过滤出元素子节点（排除文本节点）
+    (let ((element-children (seq-filter #'listp children)))
+      (concat indent-str
+              (format "<%s> [display: %s, %d styles]"
+                      tag display style-count)
+              (when element-children
+                (concat "\n"
+                        (mapconcat (lambda (child)
+                                    (etaf-render-to-string child (1+ indent)))
+                                  element-children "\n")))))))
 
 (defun etaf-render-stats (render-tree)
   "计算渲染树的统计信息。
@@ -180,11 +220,13 @@ RENDER-TREE 是渲染树根节点。
                   (when node
                     (cl-incf node-count)
                     (setq max-depth (max max-depth depth))
-                    (let ((display (plist-get node :display)))
+                    (let ((display (etaf-render-get-display node)))
                       (puthash display (1+ (gethash display display-types 0))
                               display-types))
-                    (dolist (child (plist-get node :children))
-                      (count-nodes child (1+ depth))))))
+                    ;; 遍历子节点（过滤出元素子节点）
+                    (dolist (child (dom-children node))
+                      (when (listp child)
+                        (count-nodes child (1+ depth)))))))
       (count-nodes render-tree 0))
     ;; 转换 hash-table 为 alist
     (let ((display-alist '()))
