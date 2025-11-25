@@ -53,10 +53,10 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom)))
     (should render-tree)
-    (should (eq (plist-get render-tree :tag) 'html))
+    (should (eq (dom-tag render-tree) 'html))
     ;; computed-style 可以是 nil（空列表）或包含样式的 alist
-    (should (plist-member render-tree :computed-style))
-    (should (plist-get render-tree :children))))
+    (should (assq 'render-computed-style (dom-attributes render-tree)))
+    (should (dom-children render-tree))))
 
 (ert-deftest etaf-render-node-filtering ()
   "测试渲染树过滤不可见节点。"
@@ -67,7 +67,7 @@
     ;; 收集所有标签
     (etaf-render-walk render-tree
       (lambda (node)
-        (push (plist-get node :tag) all-tags)))
+        (push (dom-tag node) all-tags)))
     ;; head, script, style 等应该被过滤掉
     (should-not (memq 'head all-tags))
     (should-not (memq 'style all-tags))
@@ -84,11 +84,11 @@
     ;; 找到所有 div 渲染节点
     (etaf-render-walk render-tree
       (lambda (node)
-        (when (eq (plist-get node :tag) 'div)
+        (when (eq (dom-tag node) 'div)
           (push node div-nodes))))
     ;; 应该只有一个可见的 div（.hidden 被过滤）
     (should (= (length div-nodes) 1))
-    (should-not (string= (plist-get (car div-nodes) :display) "none"))))
+    (should-not (string= (etaf-render-get-display (car div-nodes)) "none"))))
 
 (ert-deftest etaf-render-get-style ()
   "测试从渲染节点获取样式。"
@@ -99,7 +99,7 @@
     ;; 找到 div 节点
     (etaf-render-walk render-tree
       (lambda (node)
-        (when (and (null div-node) (eq (plist-get node :tag) 'div))
+        (when (and (null div-node) (eq (dom-tag node) 'div))
           (setq div-node node))))
     (should div-node)
     (should (equal (etaf-render-get-style div-node 'color) "blue"))
@@ -113,7 +113,7 @@
          (spans (etaf-render-find-by-tag render-tree 'span)))
     (should (= (length spans) 2))
     (should (cl-every (lambda (node)
-                       (eq (plist-get node :tag) 'span))
+                       (eq (dom-tag node) 'span))
                      spans))))
 
 (ert-deftest etaf-render-find-by-display ()
@@ -126,10 +126,10 @@
     (should (> (length block-nodes) 0))
     (should (> (length inline-nodes) 0))
     (should (cl-every (lambda (node)
-                       (string= (plist-get node :display) "block"))
+                       (string= (etaf-render-get-display node) "block"))
                      block-nodes))
     (should (cl-every (lambda (node)
-                       (string= (plist-get node :display) "inline"))
+                       (string= (etaf-render-get-display node) "inline"))
                      inline-nodes))))
 
 (ert-deftest etaf-render-walk ()
@@ -181,8 +181,8 @@
     ;; 找到 #main 节点
     (etaf-render-walk render-tree
       (lambda (node)
-        (when (and (null main-node) (eq (plist-get node :tag) 'div))
-          (let ((dom-node (plist-get node :node)))
+        (when (and (null main-node) (eq (dom-tag node) 'div))
+          (let ((dom-node (etaf-render-get-dom-node node)))
             (when (string= (dom-attr dom-node 'id) "main")
               (setq main-node node))))))
     (should main-node)
