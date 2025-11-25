@@ -52,8 +52,8 @@
 (message "\nVisible nodes in render tree:")
 (etaf-render-walk hidden-render-tree
   (lambda (node)
-    (when (eq (plist-get node :tag) 'div)
-      (message "  <div> display: %s" (plist-get node :display)))))
+    (when (eq (dom-tag node) 'div)
+      (message "  <div> display: %s" (etaf-render-get-display node)))))
 
 ;;; Example 3: Querying computed styles
 
@@ -130,11 +130,11 @@
 
 (message "\nAll block-level elements:")
 (dolist (node (etaf-render-find-by-display search-render-tree "block"))
-  (message "  <%s>" (plist-get node :tag)))
+  (message "  <%s>" (dom-tag node)))
 
 (message "\nAll inline elements:")
 (dolist (node (etaf-render-find-by-display search-render-tree "inline"))
-  (message "  <%s>" (plist-get node :tag)))
+  (message "  <%s>" (dom-tag node)))
 
 (message "\n=== Examples Complete ===")
 
