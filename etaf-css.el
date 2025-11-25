@@ -193,10 +193,13 @@ DOM 是根 DOM 节点。
                (computed-style (etaf-css-cascade-merge-rules rules))
                ;; 4. 应用属性继承（如果有父元素）
                (parent (dom-parent dom node))
-               (final-style (if parent
-                               (let ((parent-style (etaf-css-get-computed-style cssom parent dom)))
-                                 (etaf-css-apply-inheritance computed-style parent-style))
-                             computed-style)))
+               (final-style
+                (if parent
+                    (let ((parent-style (etaf-css-get-computed-style
+                                         cssom parent dom)))
+                      (etaf-css-apply-inheritance
+                       computed-style parent-style))
+                  computed-style)))
           ;; 5. 存入缓存
           (when cache
             (etaf-css-cache-set cache node final-style))
