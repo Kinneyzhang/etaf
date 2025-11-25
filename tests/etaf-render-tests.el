@@ -55,7 +55,7 @@
     (should render-tree)
     (should (eq (dom-tag render-tree) 'html))
     ;; computed-style 可以是 nil（空列表）或包含样式的 alist
-    (should (assq 'render-computed-style (dom-attributes render-tree)))
+    (should (assq 'render-style (dom-attributes render-tree)))
     (should (dom-children render-tree))))
 
 (ert-deftest etaf-render-node-filtering ()
@@ -178,13 +178,12 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (main-node nil))
-    ;; 找到 #main 节点
+    ;; 找到 #main 节点 - 渲染节点保留了原始 DOM 属性
     (etaf-render-walk render-tree
       (lambda (node)
         (when (and (null main-node) (eq (dom-tag node) 'div))
-          (let ((dom-node (etaf-render-get-dom-node node)))
-            (when (string= (dom-attr dom-node 'id) "main")
-              (setq main-node node))))))
+          (when (string= (dom-attr node 'id) "main")
+            (setq main-node node)))))
     (should main-node)
     ;; 验证层叠：#main 的 color 应该是 red（覆盖 div 的 blue）
     (should (equal (etaf-render-get-style main-node 'color) "red"))

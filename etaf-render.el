@@ -16,14 +16,12 @@
 ;; 从 DOM 和 CSSOM 构建渲染树 (Render Tree)
 ;;
 ;; 渲染树使用 DOM 格式表示，保留原本的 DOM 结构，附加的渲染信息用属性表示：
-;; - render-computed-style: 计算后的样式 ((property . value) ...)
+;; - render-style: 计算后的样式 ((property . value) ...)
 ;; - render-display: 显示类型（如 "block", "inline", "none"）
-;; - render-dom-node: 对应的原始 DOM 节点引用
 ;;
 ;; 渲染树结构：
-;; (tag ((render-computed-style . ((color . "red") ...))
+;; (tag ((render-style . ((color . "red") ...))
 ;;       (render-display . "block")
-;;       (render-dom-node . <dom-node-ref>)
 ;;       (class . "foo")  ;; 原始 DOM 属性
 ;;       (id . "bar"))    ;; 原始 DOM 属性
 ;;   child1 child2 ...)   ;; 子渲染节点
@@ -69,17 +67,15 @@ DOM-NODE 是 DOM 节点。
 COMPUTED-STYLE 是计算后的样式 alist。
 返回 DOM 格式的渲染节点：(tag ((attrs...) children...)
 其中 attrs 包含：
-- render-computed-style: 计算样式
+- render-style: 计算样式
 - render-display: 显示类型
-- render-dom-node: 原始 DOM 节点引用
 - 以及原始 DOM 属性"
   (let* ((display (or (cdr (assq 'display computed-style)) "inline"))
          (tag (dom-tag dom-node))
          (orig-attrs (dom-attributes dom-node))
          ;; 构建新的属性 alist，添加渲染信息
-         (render-attrs (list (cons 'render-computed-style computed-style)
-                             (cons 'render-display display)
-                             (cons 'render-dom-node dom-node))))
+         (render-attrs (list (cons 'render-style computed-style)
+                             (cons 'render-display display))))
     ;; 合并原始属性和渲染属性
     (list tag (append render-attrs orig-attrs))))
 
@@ -138,7 +134,7 @@ FUNC 是接受一个渲染节点参数的函数。
 RENDER-NODE 是渲染节点。
 PROPERTY 是样式属性名（symbol）。
 返回属性值字符串或 nil。"
-  (cdr (assq property (dom-attr render-node 'render-computed-style))))
+  (cdr (assq property (dom-attr render-node 'render-style))))
 
 (defun etaf-render-get-display (render-node)
   "从渲染节点获取 display 类型。
@@ -146,17 +142,11 @@ RENDER-NODE 是渲染节点。
 返回 display 字符串。"
   (dom-attr render-node 'render-display))
 
-(defun etaf-render-get-dom-node (render-node)
-  "从渲染节点获取原始 DOM 节点。
-RENDER-NODE 是渲染节点。
-返回原始 DOM 节点。"
-  (dom-attr render-node 'render-dom-node))
-
 (defun etaf-render-get-computed-style (render-node)
   "从渲染节点获取完整的计算样式 alist。
 RENDER-NODE 是渲染节点。
 返回计算样式 alist。"
-  (dom-attr render-node 'render-computed-style))
+  (dom-attr render-node 'render-style))
 
 (defun etaf-render-find-by-tag (render-tree tag)
   "在渲染树中查找指定标签的所有节点。
