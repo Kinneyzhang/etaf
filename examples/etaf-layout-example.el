@@ -83,7 +83,7 @@
     (etaf-layout-walk simple-layout-tree
       (lambda (node)
         (let* ((render-node (plist-get node :render-node))
-               (tag (plist-get render-node :tag))
+               (tag (dom-tag render-node))
                (box-model (plist-get node :box-model))
                (position (plist-get node :position))
                (content (plist-get box-model :content))
