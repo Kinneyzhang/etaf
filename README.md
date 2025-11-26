@@ -231,7 +231,6 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 - `etaf-render-example.el` - 渲染树使用示例
 - `etaf-layout-example.el` - 布局系统完整示例
 - `etaf-layout-buffer-string-example.el` - 布局字符串生成示例（新增）
-- `etaf-layout-example.el` - 布局系统完整示例（新增）
 
 ## 贡献
 
