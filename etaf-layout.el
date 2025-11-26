@@ -358,7 +358,8 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                              :width content-width
                              :height content-height))))
     
-    ;; 递归布局子元素和保留文本节点
+    ;; 递归布局子元素并保留文本节点
+    ;; 注意：与之前版本不同，现在保留文本节点以便在渲染时显示文本内容
     (let ((children (dom-children render-node)))
       (when children
         (let ((child-context (list :content-width content-width
@@ -381,7 +382,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                   ;; 更新下一个子元素的 Y 坐标
                   (plist-put child-context :current-y 
                             (+ content-y accumulated-height)))))
-             ;; 文本节点：直接保留
+             ;; 文本节点：直接保留（不需要布局计算，仅传递给父节点）
              ((stringp child)
               (push child child-layouts))))
           
