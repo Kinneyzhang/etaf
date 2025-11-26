@@ -82,10 +82,9 @@
     (message "\n元素盒模型详情：")
     (etaf-layout-walk simple-layout-tree
       (lambda (node)
-        (let* ((render-node (plist-get node :render-node))
-               (tag (dom-tag render-node))
-               (box-model (plist-get node :box-model))
-               (position (plist-get node :position))
+        (let* ((tag (dom-tag node))
+               (box-model (etaf-layout-get-box-model node))
+               (position (etaf-layout-get-position node))
                (content (plist-get box-model :content))
                (padding (plist-get box-model :padding))
                (border (plist-get box-model :border))
