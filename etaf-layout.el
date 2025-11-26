@@ -472,7 +472,6 @@ LAYOUT-NODE 是布局节点。
 
 这个函数将盒模型的各个部分拼接成最终的布局字符串，
 而不是使用 x,y 坐标定位（适用于 Emacs buffer 渲染）。"
-  (require 'etaf-utils)
   (let* ((box-model (etaf-layout-get-box-model layout-node))
          (content-box (etaf-layout-get-content-box layout-node))
          (content-width (or (plist-get content-box :width) 0))
