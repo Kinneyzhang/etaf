@@ -112,9 +112,14 @@ ROOT-DOM 是 DOM 树根节点。
           ;; 递归处理子节点
           (let ((children '()))
             (dolist (child (dom-children node))
-              (when (and (consp child) (symbolp (car child)))
+              (cond
+               ;; 元素节点：递归构建渲染节点
+               ((and (consp child) (symbolp (car child)))
                 (when-let ((child-render (etaf-render--build-node child cssom root-dom)))
-                  (push child-render children))))
+                  (push child-render children)))
+               ;; 文本节点：直接保留
+               ((stringp child)
+                (push child children))))
             ;; 将子节点添加到渲染节点（DOM 格式）
             ;; render-node 是 (tag (attrs...))，需要添加子节点
             (setcdr (cdr render-node) (nreverse children)))
