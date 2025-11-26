@@ -1,4 +1,4 @@
-# ETAF - Emacs Template and Framework
+# ETAF - Emacs Text-based Application Framework
 
 ETAF 是一个在 Emacs Lisp 中实现的类浏览器渲染系统，包含 DOM 树、CSS 对象模型（CSSOM）、渲染树和布局引擎。
 
