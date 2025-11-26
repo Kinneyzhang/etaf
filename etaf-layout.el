@@ -470,22 +470,22 @@ INDENT 是缩进级别（可选）。
 LAYOUT-NODE 是布局节点。
 返回拼接好的字符串，包含 margin、border、padding 和内容。
 
-这个函数将盒模型的各个部分拼接成最终的布局字符串，
-而不是使用 x,y 坐标定位（适用于 Emacs buffer 渲染）。"
+这个函数使用后序遍历（post-order traversal）从叶子节点开始构建整个结构的文本。
+在 Emacs 中，高度使用行数（lines）而不是像素值。"
   (let* ((box-model (etaf-layout-get-box-model layout-node))
          (content-box (etaf-layout-get-content-box layout-node))
          (content-width (or (plist-get content-box :width) 0))
-         (content-height (or (plist-get content-box :height) 0))
+         (content-height-px (or (plist-get content-box :height) 0))
          
          ;; 获取盒模型各部分
          (padding (plist-get box-model :padding))
          (border (plist-get box-model :border))
          (margin (plist-get box-model :margin))
          
-         ;; 提取各边的值
-         (padding-top (or (plist-get padding :top) 0))
+         ;; 提取各边的值（padding 和 margin 的垂直方向使用行数）
+         (padding-top (floor (or (plist-get padding :top) 0)))
          (padding-right (or (plist-get padding :right) 0))
-         (padding-bottom (or (plist-get padding :bottom) 0))
+         (padding-bottom (floor (or (plist-get padding :bottom) 0)))
          (padding-left (or (plist-get padding :left) 0))
          
          (border-top (or (plist-get border :top-width) 0))
@@ -495,44 +495,49 @@ LAYOUT-NODE 是布局节点。
          (border-left-color (or (plist-get border :left-color) "black"))
          (border-right-color (or (plist-get border :right-color) "black"))
          
-         (margin-top (or (plist-get margin :top) 0))
+         (margin-top (floor (or (plist-get margin :top) 0)))
          (margin-right (or (plist-get margin :right) 0))
-         (margin-bottom (or (plist-get margin :bottom) 0))
+         (margin-bottom (floor (or (plist-get margin :bottom) 0)))
          (margin-left (or (plist-get margin :left) 0))
          
-         ;; 获取文本内容（从原始 DOM 节点）
-         (text-children (seq-filter #'stringp (dom-children layout-node)))
-         (content-text (if text-children
-                          (string-join text-children " ")
-                        ""))
-         
-         ;; 递归处理子元素
+         ;; 后序遍历：先递归处理所有子元素
          (children (dom-children layout-node))
          (child-strings (mapcar (lambda (child)
-                                 (if (listp child)
-                                     (etaf-layout-node-to-buffer-string child)
-                                   ""))
+                                 (cond
+                                  ;; 元素节点：递归调用
+                                  ((listp child)
+                                   (etaf-layout-node-to-buffer-string child))
+                                  ;; 文本节点：直接返回
+                                  ((stringp child)
+                                   child)
+                                  (t "")))
                                children))
+         ;; 合并所有子节点的字符串（垂直堆叠）
          (children-text (string-join (seq-filter (lambda (s) (> (length s) 0))
                                                  child-strings)
-                                    "\n")))
+                                    "\n"))
+         
+         ;; 内容：如果有子元素则使用子元素的字符串，否则为空
+         (inner-content children-text)
+         
+         ;; 计算内容高度（行数）
+         (content-height (if (> (length inner-content) 0)
+                            (etaf-string-linum inner-content)
+                          (if (> content-height-px 0) 1 0))))
     
     ;; 如果内容宽度或高度为 0，返回空字符串
     (if (or (<= content-width 0) (<= content-height 0))
         ""
       ;; 构建最终内容
-      (let* ((inner-content (if (> (length children-text) 0)
-                               children-text
-                             content-text))
+      (let* (;; 1. 确保内容符合指定的宽度（使用 etaf-lines-justify）
+             (sized-content (if (> (length inner-content) 0)
+                               (condition-case nil
+                                   (etaf-lines-justify inner-content content-width)
+                                 (error inner-content))
+                             ;; 如果没有内容，创建空白内容
+                             (etaf-pixel-blank content-width content-height)))
              
-             ;; 1. 确保内容符合指定的宽度和高度
-             (sized-content (condition-case nil
-                               (etaf-lines-justify
-                                (etaf-lines-align inner-content content-height)
-                                content-width)
-                             (error inner-content)))
-             
-             ;; 计算 border 以内的高度
+             ;; 计算 border 以内的高度（行数）
              (inner-height (+ content-height padding-top padding-bottom))
              
              ;; 2. 添加 padding（垂直方向）
@@ -589,7 +594,7 @@ LAYOUT-NODE 是布局节点。
              ;; 更新总像素宽度（包含 margin）
              (total-width (+ total-pixel margin-left margin-right))
              
-             ;; 6. 添加 margin（垂直方向）
+             ;; 6. 添加 margin（垂直方向，使用行数）
              (final-string (if (and (> total-width 0)
                                    (or (> margin-top 0) (> margin-bottom 0)))
                               (etaf-lines-stack
