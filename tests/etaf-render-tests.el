@@ -98,9 +98,9 @@
          (div-node nil))
     ;; 找到 div 节点
     (etaf-render-walk render-tree
-      (lambda (node)
-        (when (and (null div-node) (eq (dom-tag node) 'div))
-          (setq div-node node))))
+                      (lambda (node)
+                        (when (and (null div-node) (eq (dom-tag node) 'div))
+                          (setq div-node node))))
     (should div-node)
     (should (equal (etaf-render-get-style div-node 'color) "blue"))
     (should (equal (etaf-render-get-style div-node 'display) "block"))))
