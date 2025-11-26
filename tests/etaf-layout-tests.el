@@ -85,9 +85,9 @@
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     (should layout-tree)
-    (should (plist-get layout-tree :box-model))
-    (should (plist-get layout-tree :position))
-    (should (plist-get layout-tree :children))))
+    (should (etaf-layout-get-box-model layout-tree))
+    (should (etaf-layout-get-position layout-tree))
+    (should (dom-children layout-tree))))
 
 (ert-deftest etaf-layout-test-nested-blocks ()
   "Test nested block layout."
@@ -108,19 +108,19 @@
     
     ;; 检查布局树结构
     (should layout-tree)
-    (let* ((body-node (car (plist-get layout-tree :children)))
-           (outer-node (car (plist-get body-node :children)))
-           (inner-nodes (plist-get outer-node :children)))
+    (let* ((body-node (car (dom-non-text-children layout-tree)))
+           (outer-node (car (dom-non-text-children body-node)))
+           (inner-nodes (dom-non-text-children outer-node)))
       
       (should outer-node)
       (should-equal (length inner-nodes) 2)
       
       ;; 检查外层盒子
-      (let ((outer-box (plist-get outer-node :box-model)))
+      (let ((outer-box (etaf-layout-get-box-model outer-node)))
         (should-equal (etaf-box-model-content-width outer-box) 400))
       
       ;; 检查内层盒子
-      (let ((inner1-box (plist-get (car inner-nodes) :box-model)))
+      (let ((inner1-box (etaf-layout-get-box-model (car inner-nodes))))
         (should-equal (etaf-box-model-content-width inner1-box) 200)
         (should-equal (etaf-box-model-content-height inner1-box) 100)))))
 
@@ -140,14 +140,14 @@
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
-    (let* ((body-node (car (plist-get layout-tree :children)))
-           (container-node (car (plist-get body-node :children)))
-           (box-node (car (plist-get container-node :children)))
-           (box-model (plist-get box-node :box-model)))
+    (let* ((body-node (car (dom-non-text-children layout-tree)))
+           (container-node (car (dom-non-text-children body-node)))
+           (box-node (car (dom-non-text-children container-node)))
+           (box-model (etaf-layout-get-box-model box-node)))
       
       ;; 容器宽度应该是 800px
       (should-equal (etaf-box-model-content-width 
-                    (plist-get container-node :box-model)) 800)
+                    (etaf-layout-get-box-model container-node)) 800)
       
       ;; 盒子宽度应该自动填充容器内容宽度 - margin：800 - 10*2 (margin) = 780
       (should-equal (etaf-box-model-content-width box-model) 780))))
@@ -180,9 +180,9 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
-         (body-node (car (plist-get layout-tree :children)))
-         (div-node (car (plist-get body-node :children)))
-         (box-model (plist-get div-node :box-model))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (div-node (car (dom-non-text-children body-node)))
+         (box-model (etaf-layout-get-box-model div-node))
          (padding (plist-get box-model :padding))
          (border (plist-get box-model :border))
          (margin (plist-get box-model :margin)))
@@ -222,9 +222,9 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
-         (body-node (car (plist-get layout-tree :children)))
-         (container-node (car (plist-get body-node :children)))
-         (container-box (plist-get container-node :box-model)))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (container-node (car (dom-non-text-children body-node)))
+         (container-box (etaf-layout-get-box-model container-node)))
     
     ;; 容器高度应该是所有子元素高度之和: 3 * (50 + 10) = 180
     (should-equal (etaf-box-model-content-height container-box) 180)))
@@ -244,12 +244,12 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
-         (body-node (car (plist-get layout-tree :children)))
-         (outer-node (car (plist-get body-node :children)))
-         (inner-node (car (plist-get outer-node :children)))
-         (body-pos (plist-get body-node :position))
-         (outer-pos (plist-get outer-node :position))
-         (inner-pos (plist-get inner-node :position)))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (outer-node (car (dom-non-text-children body-node)))
+         (inner-node (car (dom-non-text-children outer-node)))
+         (body-pos (etaf-layout-get-position body-node))
+         (outer-pos (etaf-layout-get-position outer-node))
+         (inner-pos (etaf-layout-get-position inner-node)))
     
     ;; body 位置从 (0, 0) 开始
     (should-equal (plist-get body-pos :x) 0)
@@ -326,14 +326,14 @@
     (should layout-tree)
     
     ;; 验证布局树有子节点
-    (should (plist-get layout-tree :children))
+    (should (dom-children layout-tree))
     
     ;; 验证每个节点都有必要的属性
     (etaf-layout-walk layout-tree
       (lambda (node)
-        (should (plist-get node :render-node))
-        (should (plist-get node :box-model))
-        (should (plist-get node :position))))))
+        (should (dom-tag node))
+        (should (etaf-layout-get-box-model node))
+        (should (etaf-layout-get-position node))))))
 
 (provide 'etaf-layout-tests)
 ;;; etaf-layout-tests.el ends here

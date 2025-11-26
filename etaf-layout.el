@@ -20,7 +20,19 @@
 ;; - 位置（x, y 坐标）
 ;; - 尺寸（width, height）
 ;;
-;; 数据结构说明：
+;; 布局树使用 DOM 格式表示，保留渲染树的 DOM 结构，附加的布局信息用属性表示：
+;; - layout-box-model: 盒模型信息
+;; - layout-position: 位置信息
+;; - layout-content-box: 内容区域信息
+;;
+;; 布局树结构：
+;; (tag ((layout-box-model . <box-model>)
+;;       (layout-position . (:x <n> :y <n>))
+;;       (layout-content-box . (:x <n> :y <n> :width <n> :height <n>))
+;;       (render-style . ((color . "red") ...))  ;; 从渲染树继承
+;;       (render-display . "block")              ;; 从渲染树继承
+;;       (class . "foo"))                        ;; 原始 DOM 属性
+;;   child1 child2 ...)
 ;;
 ;; 盒模型 (Box Model):
 ;;   (:box-sizing "content-box"|"border-box"
@@ -30,27 +42,22 @@
 ;;             :top-color <color> :right-color <color> :bottom-color <color> :left-color <color>)
 ;;    :margin (:top <n> :right <n> :bottom <n> :left <n>))
 ;;
-;; 布局节点 (Layout Node):
-;;   (:render-node <render-node>
-;;    :box-model <box-model>
-;;    :position (:x <number> :y <number>)
-;;    :bounds (:x <n> :y <n> :width <n> :height <n>)
-;;    :content-box (:x <n> :y <n> :width <n> :height <n>)
-;;    :children (<layout-node> ...))
-;;
 ;; 使用示例：
 ;;
 ;;   ;; 构建布局树
 ;;   (setq layout-tree (etaf-layout-build-tree render-tree viewport))
 ;;
-;;   ;; 遍历布局树
-;;   (etaf-layout-walk layout-tree
+;;   ;; 遍历布局树 - 可以直接使用 etaf-dom-map
+;;   (etaf-dom-map
 ;;     (lambda (node)
-;;       (message "Position: (%d,%d) Size: %dx%d"
-;;                (plist-get (plist-get node :position) :x)
-;;                (plist-get (plist-get node :position) :y)
-;;                (plist-get (plist-get node :box-model) :width)
-;;                (plist-get (plist-get node :box-model) :height))))
+;;       (let ((pos (etaf-layout-get-position node))
+;;             (box (etaf-layout-get-box-model node)))
+;;         (message "Position: (%d,%d) Size: %dx%d"
+;;                  (plist-get pos :x)
+;;                  (plist-get pos :y)
+;;                  (plist-get (plist-get box :content) :width)
+;;                  (plist-get (plist-get box :content) :height))))
+;;     layout-tree)
 
 ;;; Code:
 
@@ -159,6 +166,42 @@ DEFAULT 是默认值（可选）。"
      (etaf-box-model-margin-height box-model)))
 
 ;;; 盒模型计算
+
+;;; 布局树辅助函数
+
+(defun etaf-layout-get-box-model (layout-node)
+  "从布局节点获取盒模型。
+LAYOUT-NODE 是布局节点。
+返回盒模型 plist。"
+  (dom-attr layout-node 'layout-box-model))
+
+(defun etaf-layout-get-position (layout-node)
+  "从布局节点获取位置。
+LAYOUT-NODE 是布局节点。
+返回位置 plist (:x <n> :y <n>)。"
+  (dom-attr layout-node 'layout-position))
+
+(defun etaf-layout-get-content-box (layout-node)
+  "从布局节点获取内容区域。
+LAYOUT-NODE 是布局节点。
+返回内容区域 plist (:x <n> :y <n> :width <n> :height <n>)。"
+  (dom-attr layout-node 'layout-content-box))
+
+(defun etaf-layout-create-node (render-node box-model position content-box)
+  "创建布局节点（使用 DOM 格式）。
+RENDER-NODE 是渲染节点。
+BOX-MODEL 是盒模型 plist。
+POSITION 是位置 plist。
+CONTENT-BOX 是内容区域 plist。
+返回 DOM 格式的布局节点，保留渲染节点的结构并添加布局信息。"
+  (let* ((tag (dom-tag render-node))
+         (render-attrs (dom-attributes render-node))
+         ;; 构建布局属性
+         (layout-attrs (list (cons 'layout-box-model box-model)
+                             (cons 'layout-position position)
+                             (cons 'layout-content-box content-box))))
+    ;; 合并布局属性和渲染属性
+    (list tag (append layout-attrs render-attrs))))
 
 (defun etaf-layout-compute-box-model (render-node parent-context)
   "从渲染节点计算盒模型。
@@ -305,14 +348,14 @@ PARENT-CONTEXT 包含父容器的上下文信息。
          (content-height (etaf-box-model-content-height box-model))
          
          ;; 创建布局节点
-         (layout-node (list :render-node render-node
-                           :box-model box-model
-                           :position (list :x x :y y)
-                           :content-box (list :x content-x 
-                                            :y content-y
-                                            :width content-width
-                                            :height content-height)
-                           :children '())))
+         (layout-node (etaf-layout-create-node 
+                       render-node
+                       box-model
+                       (list :x x :y y)
+                       (list :x content-x 
+                             :y content-y
+                             :width content-width
+                             :height content-height))))
     
     ;; 递归布局子元素
     (let ((children (dom-non-text-children render-node)))
@@ -329,19 +372,21 @@ PARENT-CONTEXT 包含父容器的上下文信息。
               (push child-layout child-layouts)
               ;; 累积子元素高度
               (let ((child-total-height (etaf-box-model-total-height 
-                                        (plist-get child-layout :box-model))))
+                                        (etaf-layout-get-box-model child-layout))))
                 (setq accumulated-height (+ accumulated-height child-total-height))
                 ;; 更新下一个子元素的 Y 坐标
                 (plist-put child-context :current-y 
                           (+ content-y accumulated-height)))))
           
-          ;; 设置子节点（保持原始顺序）
-          (plist-put layout-node :children (nreverse child-layouts))
+          ;; 将子节点添加到布局节点（DOM 格式）
+          (setcdr (cdr layout-node) (nreverse child-layouts))
           
           ;; 如果高度为 auto，根据子元素设置高度
           (when (= content-height 0)
-            (plist-put (plist-get box-model :content) :height accumulated-height)
-            (plist-put (plist-get layout-node :content-box) :height accumulated-height)))))
+            (let ((box (etaf-layout-get-box-model layout-node))
+                  (cbox (etaf-layout-get-content-box layout-node)))
+              (plist-put (plist-get box :content) :height accumulated-height)
+              (plist-put cbox :height accumulated-height))))))
     
     layout-node))
 
@@ -386,11 +431,9 @@ VIEWPORT 是视口大小 (:width w :height h)。
 (defun etaf-layout-walk (layout-tree func)
   "遍历布局树，对每个节点调用 FUNC。
 LAYOUT-TREE 是布局树根节点。
-FUNC 是接受一个布局节点参数的函数。"
-  (when layout-tree
-    (funcall func layout-tree)
-    (dolist (child (plist-get layout-tree :children))
-      (etaf-layout-walk child func))))
+FUNC 是接受一个布局节点参数的函数。
+注意：可以直接使用 etaf-dom-map 实现相同功能。"
+  (etaf-dom-map func layout-tree))
 
 (defun etaf-layout-to-string (layout-tree &optional indent)
   "将布局树转换为可读的字符串形式。
@@ -399,24 +442,25 @@ INDENT 是缩进级别（可选）。
 返回格式化的字符串。"
   (setq indent (or indent 0))
   (let* ((indent-str (make-string (* indent 2) ?\s))
-         (render-node (plist-get layout-tree :render-node))
-         (tag (dom-tag render-node))
-         (position (plist-get layout-tree :position))
-         (box-model (plist-get layout-tree :box-model))
+         (tag (dom-tag layout-tree))
+         (position (etaf-layout-get-position layout-tree))
+         (box-model (etaf-layout-get-box-model layout-tree))
          (content (plist-get box-model :content))
-         (children (plist-get layout-tree :children)))
-    (concat indent-str
-            (format "<%s> pos=(%d,%d) size=%dx%d"
-                    tag
-                    (plist-get position :x)
-                    (plist-get position :y)
-                    (plist-get content :width)
-                    (plist-get content :height))
-            (when children
-              (concat "\n"
-                      (mapconcat (lambda (child)
-                                  (etaf-layout-to-string child (1+ indent)))
-                                children "\n"))))))
+         (children (dom-children layout-tree)))
+    ;; 过滤出元素子节点（排除文本节点）
+    (let ((element-children (seq-filter #'listp children)))
+      (concat indent-str
+              (format "<%s> pos=(%d,%d) size=%dx%d"
+                      tag
+                      (plist-get position :x)
+                      (plist-get position :y)
+                      (plist-get content :width)
+                      (plist-get content :height))
+              (when element-children
+                (concat "\n"
+                        (mapconcat (lambda (child)
+                                    (etaf-layout-to-string child (1+ indent)))
+                                  element-children "\n")))))))
 
 (provide 'etaf-layout)
 ;;; etaf-layout.el ends here
