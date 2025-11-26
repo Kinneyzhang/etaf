@@ -41,6 +41,11 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
   - 定位方案（static、relative、absolute、fixed）
   - 完整的实现代码示例
 
+- **[LAYOUT-BUFFER-STRING.md](LAYOUT-BUFFER-STRING.md)** - 🎨 布局字符串生成功能（新增）
+  - 将布局树转换为可插入 buffer 的字符串
+  - 适合 Emacs 渲染的文本拼接方式
+  - 使用示例和实现细节
+
 ### 架构文档
 
 - **[MODULE-STRUCTURE-CN.md](MODULE-STRUCTURE-CN.md)** - 模块结构说明（中文）
@@ -88,7 +93,14 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 ;; 5. 查看布局树结构
 (message "布局树:\n%s" (etaf-layout-to-string my-layout-tree))
 
-;; 6. 查询节点布局信息
+;; 6. 生成可插入 buffer 的布局字符串（Emacs 渲染方式）
+(setq buffer-string (etaf-layout-to-buffer-string my-layout-tree))
+(with-current-buffer (get-buffer-create "*ETAF Layout*")
+  (erase-buffer)
+  (insert buffer-string)
+  (display-buffer (current-buffer)))
+
+;; 7. 查询节点布局信息
 (etaf-layout-walk my-layout-tree
   (lambda (node)
     (let ((pos (plist-get node :position))
@@ -151,6 +163,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
   - width/height 计算（包括 auto 处理）
   - 位置计算（嵌套元素的精确定位）
   - plist 基础的清晰数据结构
+  - **布局字符串生成**（新增）：将布局树转换为可插入 Emacs buffer 的字符串，通过文本拼接而非坐标定位实现渲染
 
 ### 计划实现功能 📋
 
@@ -208,13 +221,16 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 - `etaf-css-index-tests.el` - 索引测试
 - `etaf-css-inheritance-tests.el` - 继承测试
 - `etaf-css-media-tests.el` - 媒体查询测试
-- `etaf-layout-tests.el` - 布局系统测试（新增）
+- `etaf-layout-tests.el` - 布局系统测试
+- `etaf-layout-buffer-string-tests.el` - 布局字符串生成测试（新增）
 
 ## 示例
 
 查看 `examples/` 目录获取更多示例：
 - `etaf-css-example.el` - CSS 功能演示
 - `etaf-render-example.el` - 渲染树使用示例
+- `etaf-layout-example.el` - 布局系统完整示例
+- `etaf-layout-buffer-string-example.el` - 布局字符串生成示例（新增）
 - `etaf-layout-example.el` - 布局系统完整示例（新增）
 
 ## 贡献
