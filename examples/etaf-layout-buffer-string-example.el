@@ -18,30 +18,31 @@
 ;;; 示例 1: 简单的布局字符串生成
 
 (defun etaf-layout-buffer-string-example-simple ()
-  "简单的布局字符串生成示例。"
+  "简单的布局字符串生成示例，展示文本内容的正确渲染。"
   (interactive)
   (message "=== 简单布局字符串生成示例 ===\n")
   
-  ;; 1. 创建 TML 结构
+  ;; 1. 创建 TML 结构 - 注意：不指定固定高度，让内容自动确定高度
   (let* ((simple-dom
           (etaf-tml-to-dom
            '(html
              (head
               (style "
                 body { 
-                  width: 300px; 
-                  height: 100px; 
+                  width: 400px; 
                   padding-left: 20px; 
                   padding-right: 20px; 
-                  padding-top: 10px; 
-                  padding-bottom: 10px; 
+                  padding-top: 2px; 
+                  padding-bottom: 2px; 
                   margin-left: 10px;
                   margin-right: 10px;
+                  margin-top: 1px;
+                  margin-bottom: 1px;
                   border-left-width: 2px;
                   border-right-width: 2px;
                 }
               "))
-             (body "Hello, ETAF!"))))
+             (body "Hello, ETAF! This is a text rendering example."))))
          
          ;; 2. 构建 CSSOM
          (simple-cssom (etaf-css-build-cssom simple-dom))
@@ -60,6 +61,14 @@
     ;; 6. 在新 buffer 中显示结果
     (with-current-buffer (get-buffer-create "*ETAF Layout Example*")
       (erase-buffer)
+      (insert "=== ETAF Layout Rendering Example ===\n\n")
+      (insert "This demonstrates text content rendering with box model:\n")
+      (insert "- Text content: \"Hello, ETAF! This is a text rendering example.\"\n")
+      (insert "- Width: 400px\n")
+      (insert "- Padding: 20px left/right, 2px top/bottom\n")
+      (insert "- Margin: 10px left/right, 1px top/bottom\n")
+      (insert "- Border: 2px left/right\n\n")
+      (insert "--- Rendered Output Below ---\n\n")
       (insert buffer-string)
       (goto-char (point-min))
       (display-buffer (current-buffer)))
@@ -69,7 +78,7 @@
 ;;; 示例 2: 嵌套布局的字符串生成
 
 (defun etaf-layout-buffer-string-example-nested ()
-  "嵌套布局的字符串生成示例。"
+  "嵌套布局的字符串生成示例，展示多个元素和文本内容。"
   (interactive)
   (message "\n\n=== 嵌套布局字符串生成示例 ===\n")
   
@@ -80,36 +89,37 @@
              (head
               (style "
                 body { 
-                  width: 400px; 
+                  width: 500px; 
                   padding-left: 20px; 
                   padding-right: 20px; 
-                  padding-top: 20px;
-                  padding-bottom: 20px;
+                  padding-top: 2px;
+                  padding-bottom: 2px;
                 }
                 .container { 
                   width: 100%;
                   padding-left: 10px;
                   padding-right: 10px;
-                  padding-top: 10px;
-                  padding-bottom: 10px;
-                  margin-bottom: 20px;
+                  padding-top: 1px;
+                  padding-bottom: 1px;
+                  margin-bottom: 1px;
                   border-left-width: 1px;
                   border-right-width: 1px;
                 }
                 .box { 
                   width: 100%; 
-                  height: 50px; 
                   padding-left: 10px;
                   padding-right: 10px;
-                  margin-bottom: 10px;
+                  padding-top: 1px;
+                  padding-bottom: 1px;
+                  margin-bottom: 1px;
                   border-left-width: 2px;
                 }
               "))
              (body
               (div :class "container"
-                   (div :class "box" "Box 1")
-                   (div :class "box" "Box 2")
-                   (div :class "box" "Box 3"))))))
+                   (div :class "box" "First box with text content")
+                   (div :class "box" "Second box with more text")
+                   (div :class "box" "Third box demonstrates nesting"))))))
          
          ;; 2. 构建 CSSOM
          (nested-cssom (etaf-css-build-cssom nested-dom))
@@ -128,6 +138,12 @@
     ;; 6. 在新 buffer 中显示结果
     (with-current-buffer (get-buffer-create "*ETAF Nested Layout Example*")
       (erase-buffer)
+      (insert "=== ETAF Nested Layout Example ===\n\n")
+      (insert "This demonstrates nested elements with text content:\n")
+      (insert "- Container with 3 nested boxes\n")
+      (insert "- Each box has its own text content\n")
+      (insert "- Proper padding, margin, and border rendering\n\n")
+      (insert "--- Rendered Output Below ---\n\n")
       (insert buffer-string)
       (goto-char (point-min))
       (display-buffer (current-buffer)))
