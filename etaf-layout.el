@@ -358,8 +358,8 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                              :width content-width
                              :height content-height))))
     
-    ;; 递归布局子元素
-    (let ((children (dom-non-text-children render-node)))
+    ;; 递归布局子元素和保留文本节点
+    (let ((children (dom-children render-node)))
       (when children
         (let ((child-context (list :content-width content-width
                                   :content-height content-height
@@ -369,15 +369,21 @@ PARENT-CONTEXT 包含父容器的上下文信息。
               (accumulated-height 0))
           
           (dolist (child children)
-            (when-let ((child-layout (etaf-layout-node child child-context)))
-              (push child-layout child-layouts)
-              ;; 累积子元素高度
-              (let ((child-total-height (etaf-box-model-total-height 
-                                        (etaf-layout-get-box-model child-layout))))
-                (setq accumulated-height (+ accumulated-height child-total-height))
-                ;; 更新下一个子元素的 Y 坐标
-                (plist-put child-context :current-y 
-                          (+ content-y accumulated-height)))))
+            (cond
+             ;; 元素节点：递归布局
+             ((and (consp child) (symbolp (car child)))
+              (when-let ((child-layout (etaf-layout-node child child-context)))
+                (push child-layout child-layouts)
+                ;; 累积子元素高度
+                (let ((child-total-height (etaf-box-model-total-height 
+                                          (etaf-layout-get-box-model child-layout))))
+                  (setq accumulated-height (+ accumulated-height child-total-height))
+                  ;; 更新下一个子元素的 Y 坐标
+                  (plist-put child-context :current-y 
+                            (+ content-y accumulated-height)))))
+             ;; 文本节点：直接保留
+             ((stringp child)
+              (push child child-layouts))))
           
           ;; 将子节点添加到布局节点（DOM 格式）
           (setcdr (cdr layout-node) (nreverse child-layouts))
@@ -492,8 +498,10 @@ LAYOUT-NODE 是布局节点。
          (border-right (or (plist-get border :right-width) 0))
          (border-bottom (or (plist-get border :bottom-width) 0))
          (border-left (or (plist-get border :left-width) 0))
-         (border-left-color (or (plist-get border :left-color) "black"))
-         (border-right-color (or (plist-get border :right-color) "black"))
+         (border-left-color (or (plist-get border :left-color) 
+                                (face-attribute 'default :foreground)))
+         (border-right-color (or (plist-get border :right-color) 
+                                 (face-attribute 'default :foreground)))
          
          (margin-top (floor (or (plist-get margin :top) 0)))
          (margin-right (or (plist-get margin :right) 0))
