@@ -567,7 +567,8 @@ SHOULD-WRAP indicates whether wrapping is enabled."
       (dom-set-attribute layout-node 'layout-flex-total-grow total-flex-grow)
       
       ;; 根据 justify-content 计算主轴分布
-      (when (and (> free-space 0) (> items-count 0))
+      ;; Always compute space distribution, even when free-space is 0
+      (when (> items-count 0)
         (let ((space-distribution
                (etaf-layout-flex-justify-space
                 justify-content free-space items-count main-gap)))
