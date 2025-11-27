@@ -758,7 +758,7 @@ CONTAINER-HEIGHT is the container's content height for column layouts (optional)
                            (max 0 (- container-main-size actual-total-size total-gap))
                          0))
            ;; Recalculate space distribution based on actual sizes
-           (space-distribution (when (> items-count 0)
+           (space-distribution (when valid-strings
                                  (etaf-layout-flex-justify-space
                                   justify-content free-space items-count main-gap)))
            ;; Get space distribution
