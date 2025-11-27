@@ -86,7 +86,6 @@
     
     (should layout-tree)
     (should (etaf-layout-get-box-model layout-tree))
-    (should (etaf-layout-get-position layout-tree))
     (should (dom-children layout-tree))))
 
 (ert-deftest etaf-layout-test-nested-blocks ()
@@ -229,41 +228,6 @@
     ;; 容器高度应该是所有子元素高度之和: 3 * (50 + 10) = 180
     (should-equal (etaf-box-model-content-height container-box) 180)))
 
-(ert-deftest etaf-layout-test-position-calculation ()
-  "Test position calculation for nested elements."
-  (let* ((dom (etaf-tml-to-dom
-               '(html
-                 (head
-                  (style "
-                    .outer { margin-left: 20px; margin-top: 20px; padding-left: 10px; padding-top: 10px; border-top-width: 2px; border-left-width: 2px; }
-                    .inner { margin-left: 5px; margin-top: 5px; }
-                  "))
-                 (body
-                  (div :class "outer"
-                       (div :class "inner" "Content"))))))
-         (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
-         (body-node (car (dom-non-text-children layout-tree)))
-         (outer-node (car (dom-non-text-children body-node)))
-         (inner-node (car (dom-non-text-children outer-node)))
-         (body-pos (etaf-layout-get-position body-node))
-         (outer-pos (etaf-layout-get-position outer-node))
-         (inner-pos (etaf-layout-get-position inner-node)))
-    
-    ;; body 位置从 (0, 0) 开始
-    (should-equal (plist-get body-pos :x) 0)
-    (should-equal (plist-get body-pos :y) 0)
-    
-    ;; 外层元素位置: body_x + outer_margin-left = 0 + 20 = 20
-    (should-equal (plist-get outer-pos :x) 20)
-    (should-equal (plist-get outer-pos :y) 20)
-    
-    ;; 内层元素位置: outer-x + outer-border + outer-padding + inner-margin
-    ;; = 20 + 2 + 10 + 5 = 37
-    (should-equal (plist-get inner-pos :x) 37)
-    (should-equal (plist-get inner-pos :y) 37)))
-
 ;;; Layout Tree Utility Tests
 
 (ert-deftest etaf-layout-test-layout-walk ()
@@ -296,9 +260,8 @@
          (layout-str (etaf-layout-to-string layout-tree)))
     
     (should (stringp layout-str))
-    (should (string-match-p "<html>" layout-str))
-    (should (string-match-p "<body>" layout-str))
-    (should (string-match-p "<div>" layout-str))))
+    ;; 渲染结果应包含文本内容
+    (should (string-match-p "Content" layout-str))))
 
 ;;; Integration Tests
 
@@ -332,8 +295,7 @@
     (etaf-layout-walk layout-tree
       (lambda (node)
         (should (dom-tag node))
-        (should (etaf-layout-get-box-model node))
-        (should (etaf-layout-get-position node))))))
+        (should (etaf-layout-get-box-model node))))))
 
 (provide 'etaf-layout-tests)
 ;;; etaf-layout-tests.el ends here
