@@ -698,7 +698,9 @@ Consecutive inline elements are grouped together, then combined with block eleme
               (when inline-group
                 ;; Use etaf-lines-concat to properly join inline elements
                 ;; This treats each element as a complete unit with its borders intact
-                (push (etaf-lines-concat (nreverse inline-group)) result-parts)
+                (push (etaf-lines-concat
+                       (nreverse inline-group))
+                      result-parts)
                 (setq inline-group nil))
               (push str result-parts)))))
       ;; Handle remaining inline group
@@ -706,6 +708,10 @@ Consecutive inline elements are grouped together, then combined with block eleme
         ;; Use etaf-lines-concat to properly join inline elements
         (push (etaf-lines-concat (nreverse inline-group)) result-parts))
       ;; Vertically combine all parts
+      ;; (message "inline-group:%S" inline-group)
+      (message "result-parts:%S" result-parts)
+      ;; FIXME: total width of inline elements should not more than the width of parent container.
+      (message "res:%S" (string-join (nreverse result-parts) "\n"))
       (string-join (nreverse result-parts) "\n"))))
 
 (defun etaf-layout--merge-flex-children (child-strings flex-direction
