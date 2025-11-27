@@ -599,30 +599,29 @@ LAYOUT-NODE 是布局节点。
                              border-left border-right))
              
              ;; 4.5 添加 border（垂直方向）- 上下边框
-             ;; 上下边框需要在左右边框添加之后，作为水平线条
+             ;; 使用 overline 和 underline 属性实现上下边框（参考 etaf-box.el）
              (with-v-border (if (or (> border-top 0) (> border-bottom 0))
-                                (etaf-lines-stack
-                                 (list (when (> border-top 0)
-                                         (etaf-pixel-border total-pixel border-top
-                                                            border-top-color))
-                                       with-border
-                                       (when (> border-bottom 0)
-                                         (etaf-pixel-border total-pixel border-bottom
-                                                            border-bottom-color))))
+                                (let ((lines (split-string with-border "\n" t)))
+                                  (when (> border-top 0)
+                                    (setf (car lines)
+                                          (etaf-propertize-overline (car lines) border-top-color)))
+                                  (when (> border-bottom 0)
+                                    (setf (car (last lines))
+                                          (etaf-propertize-underline (car (last lines))
+                                                                     border-bottom-color)))
+                                  (string-join lines "\n"))
                               with-border))
              
-             ;; 更新高度（包含上下边框）
-             (total-border-height (+ inner-height border-top border-bottom))
-             
              ;; 5. 添加 margin（水平方向）
-             (with-h-margin (if (and (> total-border-height 0)
+             ;; 注意：上下边框使用 overline/underline，不增加额外高度
+             (with-h-margin (if (and (> inner-height 0)
                                      (or (> margin-left 0) (> margin-right 0)))
                                 (etaf-lines-concat
                                  (list (when (> margin-left 0)
-                                         (etaf-pixel-blank margin-left total-border-height))
+                                         (etaf-pixel-blank margin-left inner-height))
                                        with-v-border
                                        (when (> margin-right 0)
-                                         (etaf-pixel-blank margin-right total-border-height))))
+                                         (etaf-pixel-blank margin-right inner-height))))
                               with-v-border))
              
              ;; 更新总像素宽度（包含 margin）
