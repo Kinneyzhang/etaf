@@ -430,9 +430,9 @@ LAYOUT-NODE 是布局节点。
 在 Emacs 中，高度使用行数（lines）而不是像素值。"
   (let* ((box-model (or (etaf-layout-get-box-model layout-node)
                         (etaf-box-model-create)))  ;; 使用默认盒模型避免 nil
-         (content (plist-get box-model :content))
-         (content-width (or (plist-get content :width) 0))
-         (content-height-px (or (plist-get content :height) 0))
+         ;; 使用辅助函数获取内容宽高，确保一致性
+         (content-width (or (etaf-box-model-content-width box-model) 0))
+         (content-height-px (or (etaf-box-model-content-height box-model) 0))
          
          ;; 获取盒模型各部分
          (padding (or (plist-get box-model :padding) '(:top 0 :right 0 :bottom 0 :left 0)))
@@ -491,32 +491,39 @@ LAYOUT-NODE 是布局节点。
          ;; 计算内容高度（行数）
          (content-height (if (> (length inner-content) 0)
                              (etaf-string-linum inner-content)
-                           (if (> content-height-px 0) 1 0))))
+                           (if (> content-height-px 0) 1 0)))
+         
+         ;; 如果有实际内容但宽度为 0，使用内容的最大行宽度作为默认宽度
+         (effective-width (if (and (> (length inner-content) 0) (<= content-width 0))
+                              (string-pixel-width 
+                               (car (sort (split-string inner-content "\n") 
+                                         (lambda (a b) (> (length a) (length b))))))
+                            content-width)))
     
-    ;; 如果内容宽度或高度为 0，返回空字符串
-    (if (or (<= content-width 0) (<= content-height 0))
+    ;; 如果内容宽度和高度都为 0 且没有实际内容，返回空字符串
+    (if (and (<= effective-width 0) (<= content-height 0))
         ""
       ;; 构建最终内容
       (let* (;; 1. 确保内容符合指定的宽度（使用 etaf-lines-justify）
              (sized-content (if (> (length inner-content) 0)
                                 (condition-case nil
-                                    (etaf-lines-justify inner-content content-width)
+                                    (etaf-lines-justify inner-content effective-width)
                                   (error inner-content))
                               ;; 如果没有内容，创建空白内容
-                              (etaf-pixel-blank content-width content-height)))
+                              (etaf-pixel-blank effective-width content-height)))
              
              ;; 计算 border 以内的高度（行数）
              (inner-height (+ content-height padding-top padding-bottom))
              
              ;; 2. 添加 padding（垂直方向）
-             (with-padding (if (and (> content-width 0)
+             (with-padding (if (and (> effective-width 0)
                                     (or (> padding-top 0) (> padding-bottom 0)))
                                (etaf-lines-stack
                                 (list (when (> padding-top 0)
-                                        (etaf-pixel-blank content-width padding-top))
+                                        (etaf-pixel-blank effective-width padding-top))
                                       sized-content
                                       (when (> padding-bottom 0)
-                                        (etaf-pixel-blank content-width padding-bottom))))
+                                        (etaf-pixel-blank effective-width padding-bottom))))
                              sized-content))
              
              ;; 3. 添加 padding（水平方向）
@@ -544,7 +551,7 @@ LAYOUT-NODE 是布局节点。
                             with-h-padding))
              
              ;; 计算添加 margin 前的总像素宽度（包含左右边框）
-             (total-pixel (+ content-width
+             (total-pixel (+ effective-width
                              padding-left padding-right
                              border-left border-right))
              
