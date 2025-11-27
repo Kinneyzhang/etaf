@@ -1,7 +1,7 @@
 ;;; etaf-layout-buffer-string-tests.el --- Tests for layout buffer string generation -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Tests for the etaf-layout-to-buffer-string function
+;; Tests for the etaf-layout-to-string function
 
 ;;; Code:
 
@@ -25,7 +25,7 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
-         (buffer-string (etaf-layout-to-buffer-string layout-tree)))
+         (buffer-string (etaf-layout-to-string layout-tree)))
     
     ;; 验证返回的是字符串
     (should (stringp buffer-string))
@@ -48,7 +48,7 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
-         (buffer-string (etaf-layout-to-buffer-string layout-tree)))
+         (buffer-string (etaf-layout-to-string layout-tree)))
     
     (should (stringp buffer-string))
     (should (> (length buffer-string) 0))
@@ -72,7 +72,7 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
-         (buffer-string (etaf-layout-to-buffer-string layout-tree)))
+         (buffer-string (etaf-layout-to-string layout-tree)))
     
     (should (stringp buffer-string))
     (should (> (length buffer-string) 0))
@@ -104,7 +104,7 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
-         (buffer-string (etaf-layout-to-buffer-string layout-tree)))
+         (buffer-string (etaf-layout-to-string layout-tree)))
     
     (should (stringp buffer-string))
     (should (> (length buffer-string) 0))

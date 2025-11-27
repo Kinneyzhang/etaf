@@ -2,7 +2,7 @@
 
 ## 概述
 
-新增的 `etaf-layout-to-buffer-string` 函数提供了一种适合 Emacs buffer 渲染的布局方式。与浏览器渲染需要精确的 x,y 坐标不同，这个函数通过文本拼接的方式生成最终的布局字符串，可以直接插入到 buffer 中显示。
+新增的 `etaf-layout-to-string` 函数提供了一种适合 Emacs buffer 渲染的布局方式。与浏览器渲染需要精确的 x,y 坐标不同，这个函数通过文本拼接的方式生成最终的布局字符串，可以直接插入到 buffer 中显示。
 
 ## 设计理念
 
@@ -15,15 +15,15 @@
 
 **Emacs 渲染方式**：
 - 通过文本拼接生成最终布局
-- 使用 `etaf-layout-to-buffer-string` 函数生成可插入的字符串
+- 使用 `etaf-layout-to-string` 函数生成可插入的字符串
 - 适用于实际在 Emacs buffer 中显示内容
 
 ## 核心函数
 
-### `etaf-layout-to-buffer-string`
+### `etaf-layout-to-string`
 
 ```elisp
-(etaf-layout-to-buffer-string layout-tree)
+(etaf-layout-to-string layout-tree)
 ```
 
 **参数**：
@@ -63,7 +63,7 @@
        (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
        
        ;; 5. 生成 buffer 字符串
-       (buffer-string (etaf-layout-to-buffer-string layout-tree)))
+       (buffer-string (etaf-layout-to-string layout-tree)))
   
   ;; 6. 在 buffer 中显示
   (with-current-buffer (get-buffer-create "*ETAF Demo*")
@@ -89,7 +89,7 @@
        (cssom (etaf-css-build-cssom dom))
        (render-tree (etaf-render-build-tree dom cssom))
        (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
-       (buffer-string (etaf-layout-to-buffer-string layout-tree)))
+       (buffer-string (etaf-layout-to-string layout-tree)))
   
   ;; 显示结果
   (with-current-buffer (get-buffer-create "*ETAF Nested Demo*")

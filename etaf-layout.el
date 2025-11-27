@@ -443,36 +443,36 @@ FUNC 是接受一个布局节点参数的函数。
 注意：可以直接使用 etaf-dom-map 实现相同功能。"
   (etaf-dom-map func layout-tree))
 
-(defun etaf-layout-to-string (layout-tree &optional indent)
-  "将布局树转换为可读的字符串形式。
-LAYOUT-TREE 是布局树根节点。
-INDENT 是缩进级别（可选）。
-返回格式化的字符串。"
-  (setq indent (or indent 0))
-  (let* ((indent-str (make-string (* indent 2) ?\s))
-         (tag (dom-tag layout-tree))
-         (position (etaf-layout-get-position layout-tree))
-         (box-model (etaf-layout-get-box-model layout-tree))
-         (content (plist-get box-model :content))
-         (children (dom-children layout-tree)))
-    ;; 过滤出元素子节点（排除文本节点）
-    (let ((element-children (seq-filter #'listp children)))
-      (concat indent-str
-              (format "<%s> pos=(%d,%d) size=%dx%d"
-                      tag
-                      (plist-get position :x)
-                      (plist-get position :y)
-                      (plist-get content :width)
-                      (plist-get content :height))
-              (when element-children
-                (concat "\n"
-                        (mapconcat (lambda (child)
-                                    (etaf-layout-to-string child (1+ indent)))
-                                  element-children "\n")))))))
+;; (defun etaf-layout-to-string (layout-tree &optional indent)
+;;   "将布局树转换为可读的字符串形式。
+;; LAYOUT-TREE 是布局树根节点。
+;; INDENT 是缩进级别（可选）。
+;; 返回格式化的字符串。"
+;;   (setq indent (or indent 0))
+;;   (let* ((indent-str (make-string (* indent 2) ?\s))
+;;          (tag (dom-tag layout-tree))
+;;          (position (etaf-layout-get-position layout-tree))
+;;          (box-model (etaf-layout-get-box-model layout-tree))
+;;          (content (plist-get box-model :content))
+;;          (children (dom-children layout-tree)))
+;;     ;; 过滤出元素子节点（排除文本节点）
+;;     (let ((element-children (seq-filter #'listp children)))
+;;       (concat indent-str
+;;               (format "<%s> pos=(%d,%d) size=%dx%d"
+;;                       tag
+;;                       (plist-get position :x)
+;;                       (plist-get position :y)
+;;                       (plist-get content :width)
+;;                       (plist-get content :height))
+;;               (when element-children
+;;                 (concat "\n"
+;;                         (mapconcat (lambda (child)
+;;                                      (etaf-layout-to-string child (1+ indent)))
+;;                                    element-children "\n")))))))
 
 ;;; 布局字符串生成（用于 Emacs buffer 渲染）
 
-(defun etaf-layout-node-to-buffer-string (layout-node)
+(defun etaf-layout-node-string (layout-node)
   "将布局节点转换为可插入 buffer 的字符串。
 LAYOUT-NODE 是布局节点。
 返回拼接好的字符串，包含 margin、border、padding 和内容。
@@ -512,27 +512,27 @@ LAYOUT-NODE 是布局节点。
          ;; 后序遍历：先递归处理所有子元素
          (children (dom-children layout-node))
          (child-strings (mapcar (lambda (child)
-                                 (cond
-                                  ;; 元素节点：递归调用
-                                  ((listp child)
-                                   (etaf-layout-node-to-buffer-string child))
-                                  ;; 文本节点：直接返回
-                                  ((stringp child)
-                                   child)
-                                  (t "")))
-                               children))
+                                  (cond
+                                   ;; 元素节点：递归调用
+                                   ((listp child)
+                                    (etaf-layout-node-string child))
+                                   ;; 文本节点：直接返回
+                                   ((stringp child)
+                                    child)
+                                   (t "")))
+                                children))
          ;; 合并所有子节点的字符串（垂直堆叠）
          (children-text (string-join (seq-filter (lambda (s) (> (length s) 0))
                                                  child-strings)
-                                    "\n"))
+                                     "\n"))
          
          ;; 内容：如果有子元素则使用子元素的字符串，否则为空
          (inner-content children-text)
          
          ;; 计算内容高度（行数）
          (content-height (if (> (length inner-content) 0)
-                            (etaf-string-linum inner-content)
-                          (if (> content-height-px 0) 1 0))))
+                             (etaf-string-linum inner-content)
+                           (if (> content-height-px 0) 1 0))))
     
     ;; 如果内容宽度或高度为 0，返回空字符串
     (if (or (<= content-width 0) (<= content-height 0))
@@ -540,90 +540,90 @@ LAYOUT-NODE 是布局节点。
       ;; 构建最终内容
       (let* (;; 1. 确保内容符合指定的宽度（使用 etaf-lines-justify）
              (sized-content (if (> (length inner-content) 0)
-                               (condition-case nil
-                                   (etaf-lines-justify inner-content content-width)
-                                 (error inner-content))
-                             ;; 如果没有内容，创建空白内容
-                             (etaf-pixel-blank content-width content-height)))
+                                (condition-case nil
+                                    (etaf-lines-justify inner-content content-width)
+                                  (error inner-content))
+                              ;; 如果没有内容，创建空白内容
+                              (etaf-pixel-blank content-width content-height)))
              
              ;; 计算 border 以内的高度（行数）
              (inner-height (+ content-height padding-top padding-bottom))
              
              ;; 2. 添加 padding（垂直方向）
              (with-padding (if (and (> content-width 0)
-                                   (or (> padding-top 0) (> padding-bottom 0)))
-                              (etaf-lines-stack
-                               (list (when (> padding-top 0)
-                                       (etaf-pixel-blank content-width padding-top))
-                                     sized-content
-                                     (when (> padding-bottom 0)
-                                       (etaf-pixel-blank content-width padding-bottom))))
-                            sized-content))
+                                    (or (> padding-top 0) (> padding-bottom 0)))
+                               (etaf-lines-stack
+                                (list (when (> padding-top 0)
+                                        (etaf-pixel-blank content-width padding-top))
+                                      sized-content
+                                      (when (> padding-bottom 0)
+                                        (etaf-pixel-blank content-width padding-bottom))))
+                             sized-content))
              
              ;; 3. 添加 padding（水平方向）
              (with-h-padding (if (and (> inner-height 0)
-                                     (or (> padding-left 0) (> padding-right 0)))
-                                (etaf-lines-concat
-                                 (list (when (> padding-left 0)
-                                         (etaf-pixel-blank padding-left inner-height))
-                                       with-padding
-                                       (when (> padding-right 0)
-                                         (etaf-pixel-blank padding-right inner-height))))
-                              with-padding))
+                                      (or (> padding-left 0) (> padding-right 0)))
+                                 (etaf-lines-concat
+                                  (list (when (> padding-left 0)
+                                          (etaf-pixel-blank padding-left inner-height))
+                                        with-padding
+                                        (when (> padding-right 0)
+                                          (etaf-pixel-blank padding-right inner-height))))
+                               with-padding))
              
              ;; 4. 添加 border（水平方向）
              (with-border (if (and (> inner-height 0)
-                                  (or (> border-left 0) (> border-right 0)))
-                             (etaf-lines-concat
-                              (list (when (> border-left 0)
-                                      (etaf-pixel-border border-left inner-height
-                                                        border-left-color))
-                                    with-h-padding
-                                    (when (> border-right 0)
-                                      (etaf-pixel-border border-right inner-height
-                                                        border-right-color))))
-                           with-h-padding))
+                                   (or (> border-left 0) (> border-right 0)))
+                              (etaf-lines-concat
+                               (list (when (> border-left 0)
+                                       (etaf-pixel-border border-left inner-height
+                                                          border-left-color))
+                                     with-h-padding
+                                     (when (> border-right 0)
+                                       (etaf-pixel-border border-right inner-height
+                                                          border-right-color))))
+                            with-h-padding))
              
              ;; 计算添加 margin 前的总像素宽度
              (total-pixel (+ content-width
-                            padding-left padding-right
-                            border-left border-right))
+                             padding-left padding-right
+                             border-left border-right))
              
              ;; 5. 添加 margin（水平方向）
              (with-h-margin (if (and (> inner-height 0)
-                                    (or (> margin-left 0) (> margin-right 0)))
-                               (etaf-lines-concat
-                                (list (when (> margin-left 0)
-                                        (etaf-pixel-blank margin-left inner-height))
-                                      with-border
-                                      (when (> margin-right 0)
-                                        (etaf-pixel-blank margin-right inner-height))))
-                             with-border))
+                                     (or (> margin-left 0) (> margin-right 0)))
+                                (etaf-lines-concat
+                                 (list (when (> margin-left 0)
+                                         (etaf-pixel-blank margin-left inner-height))
+                                       with-border
+                                       (when (> margin-right 0)
+                                         (etaf-pixel-blank margin-right inner-height))))
+                              with-border))
              
              ;; 更新总像素宽度（包含 margin）
              (total-width (+ total-pixel margin-left margin-right))
              
              ;; 6. 添加 margin（垂直方向，使用行数）
              (final-string (if (and (> total-width 0)
-                                   (or (> margin-top 0) (> margin-bottom 0)))
-                              (etaf-lines-stack
-                               (list (when (> margin-top 0)
-                                       (etaf-pixel-blank total-width margin-top))
-                                     with-h-margin
-                                     (when (> margin-bottom 0)
-                                       (etaf-pixel-blank total-width margin-bottom))))
-                            with-h-margin)))
+                                    (or (> margin-top 0) (> margin-bottom 0)))
+                               (etaf-lines-stack
+                                (list (when (> margin-top 0)
+                                        (etaf-pixel-blank total-width margin-top))
+                                      with-h-margin
+                                      (when (> margin-bottom 0)
+                                        (etaf-pixel-blank total-width margin-bottom))))
+                             with-h-margin)))
         
         final-string))))
 
-(defun etaf-layout-to-buffer-string (layout-tree)
+(defun etaf-layout-to-string (layout-tree)
   "将布局树转换为可插入 Emacs buffer 的字符串。
 LAYOUT-TREE 是布局树根节点。
 返回拼接好的布局字符串，可以直接插入到 buffer 中显示。
 
 这种方式通过文本拼接来生成最终的布局，而不是使用精确的 x,y 坐标，
 更适合在 Emacs buffer 中进行渲染。"
-  (etaf-layout-node-to-buffer-string layout-tree))
+  (etaf-layout-node-string layout-tree))
 
 (provide 'etaf-layout)
 ;;; etaf-layout.el ends here

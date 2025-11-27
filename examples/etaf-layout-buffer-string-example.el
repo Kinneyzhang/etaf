@@ -2,7 +2,7 @@
 
 ;;; Commentary:
 ;; 
-;; 这个示例展示了如何使用 etaf-layout-to-buffer-string 函数
+;; 这个示例展示了如何使用 etaf-layout-to-string 函数
 ;; 将布局树转换为可直接插入 Emacs buffer 的字符串。
 ;;
 ;; 这种方式通过文本拼接来生成最终的布局，而不是使用精确的 x,y 坐标，
@@ -56,7 +56,7 @@
                              '(:width 1024 :height 768)))
          
          ;; 5. 生成 buffer 字符串
-         (buffer-string (etaf-layout-to-buffer-string simple-layout-tree)))
+         (buffer-string (etaf-layout-to-string simple-layout-tree)))
     
     ;; 6. 在新 buffer 中显示结果
     (with-current-buffer (get-buffer-create "*ETAF Layout Example*")
@@ -133,7 +133,7 @@
                              '(:width 1024 :height 768)))
          
          ;; 5. 生成 buffer 字符串
-         (buffer-string (etaf-layout-to-buffer-string nested-layout-tree)))
+         (buffer-string (etaf-layout-to-string nested-layout-tree)))
     
     ;; 6. 在新 buffer 中显示结果
     (with-current-buffer (get-buffer-create "*ETAF Nested Layout Example*")
@@ -153,7 +153,7 @@
 ;;; 示例 3: 对比坐标方式和字符串拼接方式
 
 (defun etaf-layout-buffer-string-example-comparison ()
-  "对比坐标方式（etaf-layout-to-string）和字符串拼接方式（etaf-layout-to-buffer-string）。"
+  "对比坐标方式（etaf-layout-to-string）和字符串拼接方式（etaf-layout-to-string）。"
   (interactive)
   (message "\n\n=== 坐标方式 vs 字符串拼接方式 ===\n")
   
@@ -177,7 +177,7 @@
              (etaf-layout-to-string layout-tree))
     
     ;; 2. 字符串拼接方式 - 实际渲染
-    (let ((buffer-string (etaf-layout-to-buffer-string layout-tree)))
+    (let ((buffer-string (etaf-layout-to-string layout-tree)))
       (message "字符串拼接方式（用于 Emacs buffer 渲染）：")
       (message "生成的字符串长度: %d 字符" (length buffer-string))
       (message "生成的字符串行数: %d 行" 
