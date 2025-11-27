@@ -601,11 +601,11 @@ LAYOUT-NODE 是布局节点。
              ;; 4.5 添加 border（垂直方向）- 上下边框
              ;; 使用 overline 和 underline 属性实现上下边框（参考 etaf-box.el）
              (with-v-border (if (or (> border-top 0) (> border-bottom 0))
-                                (let ((lines (split-string with-border "\n" t)))
-                                  (when (> border-top 0)
+                                (let ((lines (split-string with-border "\n")))
+                                  (when (and lines (> border-top 0))
                                     (setf (car lines)
                                           (etaf-propertize-overline (car lines) border-top-color)))
-                                  (when (> border-bottom 0)
+                                  (when (and lines (> border-bottom 0))
                                     (setf (car (last lines))
                                           (etaf-propertize-underline (car (last lines))
                                                                      border-bottom-color)))
