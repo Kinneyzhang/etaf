@@ -539,8 +539,13 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                                  (etaf-css-apply-face-to-string sized-content computed-style)
                                sized-content))
              
-             ;; 计算 border 以内的高度（行数）
-             (inner-height (+ content-height padding-top padding-bottom))
+             ;; 重新计算内容高度（行数），因为 etaf-lines-justify 可能导致换行
+             (actual-content-height (if (> (length styled-content) 0)
+                                        (etaf-string-linum styled-content)
+                                      content-height))
+             
+             ;; 计算 border 以内的高度（行数）- 使用实际内容高度
+             (inner-height (+ actual-content-height padding-top padding-bottom))
              
              ;; 2. 添加 padding（垂直方向）
              (with-padding (if (and (> effective-width 0)
