@@ -17,18 +17,13 @@
 ;;
 ;; 本模块负责从渲染树构建布局树，计算每个元素的：
 ;; - 盒模型（content, padding, border, margin）
-;; - 位置（x, y 坐标）
 ;; - 尺寸（width, height）
 ;;
 ;; 布局树使用 DOM 格式表示，保留渲染树的 DOM 结构，附加的布局信息用属性表示：
 ;; - layout-box-model: 盒模型信息
-;; - layout-position: 位置信息
-;; - layout-content-box: 内容区域信息
 ;;
 ;; 布局树结构：
 ;; (tag ((layout-box-model . <box-model>)
-;;       (layout-position . (:x <n> :y <n>))
-;;       (layout-content-box . (:x <n> :y <n> :width <n> :height <n>))
 ;;       (render-style . ((color . "red") ...))  ;; 从渲染树继承
 ;;       (render-display . "block")              ;; 从渲染树继承
 ;;       (class . "foo"))                        ;; 原始 DOM 属性
@@ -42,6 +37,10 @@
 ;;             :top-color <color> :right-color <color> :bottom-color <color> :left-color <color>)
 ;;    :margin (:top <n> :right <n> :bottom <n> :left <n>))
 ;;
+;; 渲染方式：
+;; 使用后序遍历（post-order traversal）从叶子节点开始构建字符串，
+;; 通过文本拼接生成最终布局，不使用位置坐标。
+;;
 ;; 使用示例：
 ;;
 ;;   ;; 构建布局树
@@ -50,11 +49,8 @@
 ;;   ;; 遍历布局树 - 可以直接使用 etaf-dom-map
 ;;   (etaf-dom-map
 ;;     (lambda (node)
-;;       (let ((pos (etaf-layout-get-position node))
-;;             (box (etaf-layout-get-box-model node)))
-;;         (message "Position: (%d,%d) Size: %dx%d"
-;;                  (plist-get pos :x)
-;;                  (plist-get pos :y)
+;;       (let ((box (etaf-layout-get-box-model node)))
+;;         (message "Size: %dx%d"
 ;;                  (plist-get (plist-get box :content) :width)
 ;;                  (plist-get (plist-get box :content) :height))))
 ;;     layout-tree)
@@ -176,31 +172,15 @@ LAYOUT-NODE 是布局节点。
 返回盒模型 plist。"
   (dom-attr layout-node 'layout-box-model))
 
-(defun etaf-layout-get-position (layout-node)
-  "从布局节点获取位置。
-LAYOUT-NODE 是布局节点。
-返回位置 plist (:x <n> :y <n>)。"
-  (dom-attr layout-node 'layout-position))
-
-(defun etaf-layout-get-content-box (layout-node)
-  "从布局节点获取内容区域。
-LAYOUT-NODE 是布局节点。
-返回内容区域 plist (:x <n> :y <n> :width <n> :height <n>)。"
-  (dom-attr layout-node 'layout-content-box))
-
-(defun etaf-layout-create-node (render-node box-model position content-box)
+(defun etaf-layout-create-node (render-node box-model)
   "创建布局节点（使用 DOM 格式）。
 RENDER-NODE 是渲染节点。
 BOX-MODEL 是盒模型 plist。
-POSITION 是位置 plist。
-CONTENT-BOX 是内容区域 plist。
 返回 DOM 格式的布局节点，保留渲染节点的结构并添加布局信息。"
   (let* ((tag (dom-tag render-node))
          (render-attrs (dom-attributes render-node))
          ;; 构建布局属性
-         (layout-attrs (list (cons 'layout-box-model box-model)
-                             (cons 'layout-position position)
-                             (cons 'layout-content-box content-box))))
+         (layout-attrs (list (cons 'layout-box-model box-model))))
     ;; 合并布局属性和渲染属性
     (list tag (append layout-attrs render-attrs))))
 
@@ -331,41 +311,18 @@ RENDER-NODE 是要布局的渲染节点。
 PARENT-CONTEXT 包含父容器的上下文信息。
 返回布局节点。"
   (let* ((box-model (etaf-layout-compute-box-model render-node parent-context))
-         
-         ;; 计算位置
-         (margin (plist-get box-model :margin))
-         (border (plist-get box-model :border))
-         (padding (plist-get box-model :padding))
-         
-         (x (+ (plist-get parent-context :x-offset)
-               (plist-get margin :left)))
-         (y (+ (plist-get parent-context :current-y)
-               (plist-get margin :top)))
-         
-         ;; 计算内容区域位置
-         (content-x (+ x (plist-get border :left-width) (plist-get padding :left)))
-         (content-y (+ y (plist-get border :top-width) (plist-get padding :top)))
          (content-width (etaf-box-model-content-width box-model))
          (content-height (etaf-box-model-content-height box-model))
          
-         ;; 创建布局节点
-         (layout-node (etaf-layout-create-node 
-                       render-node
-                       box-model
-                       (list :x x :y y)
-                       (list :x content-x 
-                             :y content-y
-                             :width content-width
-                             :height content-height))))
+         ;; 创建布局节点（不再需要位置信息）
+         (layout-node (etaf-layout-create-node render-node box-model)))
     
     ;; 递归布局子元素并保留文本节点
     ;; 注意：与之前版本不同，现在保留文本节点以便在渲染时显示文本内容
     (let ((children (dom-children render-node)))
       (when children
         (let ((child-context (list :content-width content-width
-                                  :content-height content-height
-                                  :current-y content-y
-                                  :x-offset content-x))
+                                  :content-height content-height))
               (child-layouts '())
               (accumulated-height 0))
           
@@ -378,10 +335,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                 ;; 累积子元素高度
                 (let ((child-total-height (etaf-box-model-total-height 
                                           (etaf-layout-get-box-model child-layout))))
-                  (setq accumulated-height (+ accumulated-height child-total-height))
-                  ;; 更新下一个子元素的 Y 坐标
-                  (plist-put child-context :current-y 
-                            (+ content-y accumulated-height)))))
+                  (setq accumulated-height (+ accumulated-height child-total-height)))))
              ;; 文本节点：直接保留（不需要布局计算，仅传递给父节点）
              ((stringp child)
               (push child child-layouts))))
@@ -391,10 +345,8 @@ PARENT-CONTEXT 包含父容器的上下文信息。
           
           ;; 如果高度为 auto，根据子元素设置高度
           (when (= content-height 0)
-            (let ((box (etaf-layout-get-box-model layout-node))
-                  (cbox (etaf-layout-get-content-box layout-node)))
-              (plist-put (plist-get box :content) :height accumulated-height)
-              (plist-put cbox :height accumulated-height))))))
+            (let ((box (etaf-layout-get-box-model layout-node)))
+              (plist-put (plist-get box :content) :height accumulated-height))))))
     
     layout-node))
 
@@ -404,9 +356,7 @@ RENDER-NODE 是渲染节点。
 PARENT-CONTEXT 是父容器上下文。
 返回布局节点或 nil。"
   (when render-node
-    (let* ((display (etaf-render-get-display render-node))
-           (style (etaf-render-get-computed-style render-node))
-           (position (etaf-layout-get-style-value style 'position "static")))
+    (let ((display (etaf-render-get-display render-node)))
       
       (cond
        ;; 块级元素
@@ -429,9 +379,7 @@ RENDER-TREE 是渲染树根节点。
 VIEWPORT 是视口大小 (:width w :height h)。
 返回布局树根节点。"
   (let ((root-context (list :content-width (plist-get viewport :width)
-                           :content-height (plist-get viewport :height)
-                           :current-y 0
-                           :x-offset 0)))
+                           :content-height (plist-get viewport :height))))
     (etaf-layout-node render-tree root-context)))
 
 ;;; 布局树遍历和查询
@@ -481,9 +429,9 @@ LAYOUT-NODE 是布局节点。
 这个函数使用后序遍历（post-order traversal）从叶子节点开始构建整个结构的文本。
 在 Emacs 中，高度使用行数（lines）而不是像素值。"
   (let* ((box-model (etaf-layout-get-box-model layout-node))
-         (content-box (etaf-layout-get-content-box layout-node))
-         (content-width (or (plist-get content-box :width) 0))
-         (content-height-px (or (plist-get content-box :height) 0))
+         (content (plist-get box-model :content))
+         (content-width (or (plist-get content :width) 0))
+         (content-height-px (or (plist-get content :height) 0))
          
          ;; 获取盒模型各部分
          (padding (plist-get box-model :padding))
