@@ -61,6 +61,23 @@
 
 ;;; 渲染节点结构
 
+;; HTML 块级元素列表
+(defconst etaf-render-block-level-tags
+  '(div p h1 h2 h3 h4 h5 h6 ul ol li dl dt dd
+    article aside section nav header footer main
+    blockquote pre address figure figcaption
+    form fieldset table thead tbody tfoot tr th td
+    hr html body)
+  "HTML 块级元素标签列表。这些元素默认 display 为 block。")
+
+(defun etaf-render--get-default-display (tag)
+  "根据元素标签返回默认的 display 值。
+TAG 是元素标签名（symbol）。
+块级元素返回 \"block\"，其他返回 \"inline\"。"
+  (if (memq tag etaf-render-block-level-tags)
+      "block"
+    "inline"))
+
 (defun etaf-render-create-node (dom-node computed-style)
   "创建渲染节点（使用 DOM 格式）。
 DOM-NODE 是 DOM 节点。
@@ -70,8 +87,10 @@ COMPUTED-STYLE 是计算后的样式 alist。
 - render-style: 计算样式
 - render-display: 显示类型
 - 以及原始 DOM 属性"
-  (let* ((display (or (cdr (assq 'display computed-style)) "inline"))
-         (tag (dom-tag dom-node))
+  (let* ((tag (dom-tag dom-node))
+         ;; 从 computed-style 获取 display，如果没有则根据标签类型使用默认值
+         (display (or (cdr (assq 'display computed-style))
+                      (etaf-render--get-default-display tag)))
          (orig-attrs (dom-attributes dom-node))
          ;; 构建新的属性 alist，添加渲染信息
          (render-attrs (list (cons 'render-style computed-style)
