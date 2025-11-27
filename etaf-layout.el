@@ -520,9 +520,10 @@ LAYOUT-NODE 是布局节点。
          (child-infos (mapcar (lambda (child)
                                 (cond
                                  ;; 元素节点：递归调用，并获取 display 类型
+                                 ;; 如果没有 render-display 属性，默认为 "inline"
                                  ((listp child)
                                   (cons (etaf-layout-node-string child)
-                                        (dom-attr child 'render-display)))
+                                        (or (dom-attr child 'render-display) "inline")))
                                  ;; 文本节点：视为 inline
                                  ((stringp child)
                                   (cons child "inline"))
