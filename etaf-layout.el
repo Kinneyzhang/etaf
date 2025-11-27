@@ -61,6 +61,7 @@
 (require 'dom)
 (require 'etaf-render)
 (require 'etaf-utils)
+(require 'etaf-css-face)
 
 ;;; 辅助函数：CSS 值解析
 
@@ -427,9 +428,12 @@ LAYOUT-NODE 是布局节点。
 返回拼接好的字符串，包含 margin、border、padding 和内容。
 
 这个函数使用后序遍历（post-order traversal）从叶子节点开始构建整个结构的文本。
-在 Emacs 中，高度使用行数（lines）而不是像素值。"
+在 Emacs 中，高度使用行数（lines）而不是像素值。
+CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应用到文本上。"
   (let* ((box-model (or (etaf-layout-get-box-model layout-node)
                         (etaf-box-model-create)))  ;; 使用默认盒模型避免 nil
+         ;; 获取计算样式（用于应用 face 属性）
+         (computed-style (dom-attr layout-node 'render-style))
          ;; 使用辅助函数获取内容宽高，确保一致性
          (content-width (or (etaf-box-model-content-width box-model) 0))
          (content-height-px (or (etaf-box-model-content-height box-model) 0))
@@ -513,6 +517,11 @@ LAYOUT-NODE 是布局节点。
                               ;; 如果没有内容，创建空白内容
                               (etaf-pixel-blank effective-width content-height)))
              
+             ;; 1.5 应用 CSS 文本样式到内容（转换为 Emacs face 属性）
+             (styled-content (if (and computed-style (> (length sized-content) 0))
+                                 (etaf-css-apply-face-to-string sized-content computed-style)
+                               sized-content))
+             
              ;; 计算 border 以内的高度（行数）
              (inner-height (+ content-height padding-top padding-bottom))
              
@@ -522,10 +531,10 @@ LAYOUT-NODE 是布局节点。
                                (etaf-lines-stack
                                 (list (when (> padding-top 0)
                                         (etaf-pixel-blank effective-width padding-top))
-                                      sized-content
+                                      styled-content
                                       (when (> padding-bottom 0)
                                         (etaf-pixel-blank effective-width padding-bottom))))
-                             sized-content))
+                             styled-content))
              
              ;; 3. 添加 padding（水平方向）
              (with-h-padding (if (and (> inner-height 0)
