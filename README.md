@@ -94,7 +94,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 (message "布局树:\n%s" (etaf-layout-to-string my-layout-tree))
 
 ;; 6. 生成可插入 buffer 的布局字符串（Emacs 渲染方式）
-(setq buffer-string (etaf-layout-to-buffer-string my-layout-tree))
+(setq buffer-string (etaf-layout-to-string my-layout-tree))
 (with-current-buffer (get-buffer-create "*ETAF Layout*")
   (erase-buffer)
   (insert buffer-string)
