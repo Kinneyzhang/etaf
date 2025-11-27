@@ -287,12 +287,20 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (margin-bottom-val (if (eq margin-bottom 'auto) 0 margin-bottom))
          (margin-left-val (if (eq margin-left 'auto) 0 margin-left))
          
+         ;; 获取 display 类型用于宽度计算
+         (display (etaf-render-get-display render-node))
+         (is-inline (string= display "inline"))
+         
          ;; 计算内容宽度
+         ;; 对于内联元素，width:auto 时宽度应该为 0，让后续根据实际内容计算
+         ;; 对于块级元素，width:auto 时宽度应该填充父容器
          (content-width (if (eq width-value 'auto)
-                            (max 0 (- parent-width
-                                      padding-left-val padding-right-val
-                                      border-left-val border-right-val
-                                      margin-left-val margin-right-val))
+                            (if is-inline
+                                0  ; 内联元素：宽度由内容决定，在渲染时计算
+                              (max 0 (- parent-width
+                                        padding-left-val padding-right-val
+                                        border-left-val border-right-val
+                                        margin-left-val margin-right-val)))
                           width-value))
          
          ;; 计算内容高度（如果指定）
@@ -708,11 +716,8 @@ Consecutive inline elements are grouped together, then combined with block eleme
         ;; Use etaf-lines-concat to properly join inline elements
         (push (etaf-lines-concat (nreverse inline-group)) result-parts))
       ;; Vertically combine all parts
-      ;; (message "inline-group:%S" inline-group)
-      (message "result-parts:%S" result-parts)
-      ;; FIXME: total width of inline elements should not more than the width of parent container.
-      (message "res:%S" (string-join (nreverse result-parts) "\n"))
-      (string-join (nreverse result-parts) "\n"))))
+      ;; Use reverse instead of nreverse to avoid destructive modification
+      (string-join (reverse result-parts) "\n"))))
 
 (defun etaf-layout--merge-flex-children (child-strings flex-direction
                                                       row-gap column-gap
