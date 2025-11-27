@@ -34,18 +34,21 @@
 
 (require 'cl-lib)
 (require 'etaf-css-cascade)
+(require 'etaf-css-shorthand)
 
 (declare-function etaf-css-media-extract-at-media-blocks "etaf-css-media")
 
 (defun etaf-css-parse-declarations (css-string)
-  "解析 CSS 声明字符串为属性列表（支持 !important）。
+  "解析 CSS 声明字符串为属性列表（支持 !important 和复合属性展开）。
 CSS-STRING 是形如 \"color: red; font-size: 14px\" 的字符串。
 返回 ((property value important) ...) 格式的列表。
 
 每个声明元素是一个列表：(property value important)
 - property: 属性名（symbol）
 - value: 属性值（string）
-- important: 是否标记为 !important（boolean）"
+- important: 是否标记为 !important（boolean）
+
+复合属性（如 border, margin, padding）会自动展开为具体属性。"
   (when (and css-string (not (string-empty-p css-string)))
     (let ((result '())
           (declarations (split-string css-string ";" t)))
@@ -61,7 +64,14 @@ CSS-STRING 是形如 \"color: red; font-size: 14px\" 的字符串。
                     important t))
             (when (and (not (string-empty-p prop))
                        (not (string-empty-p value)))
-              (push (list (intern prop) value important) result)))))
+              (let* ((prop-sym (intern prop))
+                     (expanded (etaf-css-expand-shorthand prop-sym value important)))
+                (if expanded
+                    ;; 复合属性，添加展开后的声明
+                    (dolist (exp-decl expanded)
+                      (push exp-decl result))
+                  ;; 非复合属性，直接添加
+                  (push (list prop-sym value important) result)))))))
       (nreverse result))))
 
 (defun etaf-css-parse-declarations-compat (css-string)
