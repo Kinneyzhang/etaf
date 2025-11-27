@@ -445,6 +445,34 @@ FUNC 是接受一个布局节点参数的函数。
 
 ;;; 布局字符串生成（用于 Emacs buffer 渲染）
 
+(defun etaf-layout--merge-children-by-display (child-infos)
+  "根据子元素的 display 类型合并字符串。
+CHILD-INFOS 是 ((string . display-type) ...) 格式的列表。
+inline 元素水平拼接，block 元素垂直堆叠。
+连续的 inline 元素会被组合在一起，然后与 block 元素垂直组合。"
+  (if (null child-infos)
+      ""
+    (let ((result-parts '())  ;; 最终垂直组合的部分
+          (inline-group '())) ;; 当前累积的 inline 元素组
+      ;; 遍历所有子元素
+      (dolist (info child-infos)
+        (let ((str (car info))
+              (display (cdr info)))
+          (when (> (length str) 0)
+            (if (string= display "inline")
+                ;; inline 元素：加入当前 inline 组
+                (push str inline-group)
+              ;; block 元素：先处理之前累积的 inline 组，再添加当前 block
+              (when inline-group
+                (push (string-join (nreverse inline-group) "") result-parts)
+                (setq inline-group nil))
+              (push str result-parts)))))
+      ;; 处理最后剩余的 inline 组
+      (when inline-group
+        (push (string-join (nreverse inline-group) "") result-parts))
+      ;; 垂直组合所有部分
+      (string-join (nreverse result-parts) "\n"))))
+
 (defun etaf-layout-node-string (layout-node)
   "将布局节点转换为可插入 buffer 的字符串。
 LAYOUT-NODE 是布局节点。
@@ -472,10 +500,14 @@ LAYOUT-NODE 是布局节点。
          (border-right (or (plist-get border :right-width) 0))
          (border-bottom (or (plist-get border :bottom-width) 0))
          (border-left (or (plist-get border :left-width) 0))
-         (border-left-color (or (plist-get border :left-color) 
-                                (face-attribute 'default :foreground)))
+         (border-top-color (or (plist-get border :top-color) 
+                               (face-attribute 'default :foreground)))
          (border-right-color (or (plist-get border :right-color) 
                                  (face-attribute 'default :foreground)))
+         (border-bottom-color (or (plist-get border :bottom-color) 
+                                  (face-attribute 'default :foreground)))
+         (border-left-color (or (plist-get border :left-color) 
+                                (face-attribute 'default :foreground)))
          
          (margin-top (floor (or (plist-get margin :top) 0)))
          (margin-right (or (plist-get margin :right) 0))
@@ -483,21 +515,24 @@ LAYOUT-NODE 是布局节点。
          (margin-left (or (plist-get margin :left) 0))
          
          ;; 后序遍历：先递归处理所有子元素
+         ;; 对于每个子元素，我们需要知道它的 display 类型和内容字符串
          (children (dom-children layout-node))
-         (child-strings (mapcar (lambda (child)
-                                  (cond
-                                   ;; 元素节点：递归调用
-                                   ((listp child)
-                                    (etaf-layout-node-string child))
-                                   ;; 文本节点：直接返回
-                                   ((stringp child)
-                                    child)
-                                   (t "")))
-                                children))
-         ;; 合并所有子节点的字符串（垂直堆叠）
-         (children-text (string-join (seq-filter (lambda (s) (> (length s) 0))
-                                                 child-strings)
-                                     "\n"))
+         (child-infos (mapcar (lambda (child)
+                                (cond
+                                 ;; 元素节点：递归调用，并获取 display 类型
+                                 ((listp child)
+                                  (cons (etaf-layout-node-string child)
+                                        (dom-attr child 'render-display)))
+                                 ;; 文本节点：视为 inline
+                                 ((stringp child)
+                                  (cons child "inline"))
+                                 (t (cons "" "inline"))))
+                              children))
+         ;; 根据 display 类型合并子节点：
+         ;; - inline 元素应该水平拼接
+         ;; - block 元素应该垂直堆叠
+         ;; 策略：将连续的 inline 元素组合在一起水平拼接，然后与 block 元素垂直堆叠
+         (children-text (etaf-layout--merge-children-by-display child-infos))
          
          ;; 内容：如果有子元素则使用子元素的字符串，否则为空
          (inner-content children-text)
@@ -544,7 +579,7 @@ LAYOUT-NODE 是布局节点。
                                           (etaf-pixel-blank padding-right inner-height))))
                                with-padding))
              
-             ;; 4. 添加 border（水平方向）
+             ;; 4. 添加 border（水平方向）- 左右边框
              (with-border (if (and (> inner-height 0)
                                    (or (> border-left 0) (> border-right 0)))
                               (etaf-lines-concat
@@ -557,21 +592,37 @@ LAYOUT-NODE 是布局节点。
                                                           border-right-color))))
                             with-h-padding))
              
-             ;; 计算添加 margin 前的总像素宽度
+             ;; 计算添加 margin 前的总像素宽度（包含左右边框）
              (total-pixel (+ content-width
                              padding-left padding-right
                              border-left border-right))
              
+             ;; 4.5 添加 border（垂直方向）- 上下边框
+             ;; 上下边框需要在左右边框添加之后，作为水平线条
+             (with-v-border (if (or (> border-top 0) (> border-bottom 0))
+                                (etaf-lines-stack
+                                 (list (when (> border-top 0)
+                                         (etaf-pixel-border total-pixel border-top
+                                                            border-top-color))
+                                       with-border
+                                       (when (> border-bottom 0)
+                                         (etaf-pixel-border total-pixel border-bottom
+                                                            border-bottom-color))))
+                              with-border))
+             
+             ;; 更新高度（包含上下边框）
+             (total-border-height (+ inner-height border-top border-bottom))
+             
              ;; 5. 添加 margin（水平方向）
-             (with-h-margin (if (and (> inner-height 0)
+             (with-h-margin (if (and (> total-border-height 0)
                                      (or (> margin-left 0) (> margin-right 0)))
                                 (etaf-lines-concat
                                  (list (when (> margin-left 0)
-                                         (etaf-pixel-blank margin-left inner-height))
-                                       with-border
+                                         (etaf-pixel-blank margin-left total-border-height))
+                                       with-v-border
                                        (when (> margin-right 0)
-                                         (etaf-pixel-blank margin-right inner-height))))
-                              with-border))
+                                         (etaf-pixel-blank margin-right total-border-height))))
+                              with-v-border))
              
              ;; 更新总像素宽度（包含 margin）
              (total-width (+ total-pixel margin-left margin-right))
