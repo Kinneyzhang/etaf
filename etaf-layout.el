@@ -922,8 +922,7 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                           (etaf-layout--merge-flex-children
                            child-strings flex-direction row-gap column-gap
                            justify-content content-width content-height-px)))
-                ;; FIXME: 当多个item处于一行时，它们的总宽度应该等于前面的 content-width
-                ;; 目前是每个 item 的宽度都等于 content-width 了。
+                ;; FIXME: 当多个item处于一行时，它们的总宽度应该等于前面的 content-width。目前的实现是每个 item 的宽度都等于 content-width 了。div 虽然是块级元素，但是它的宽度不是在所有时候都必须等于父容器的宽度的。当处于 flex 布局之下的时候，位于一行的多个块元素需要根据 grow, shrink, basis 和 gap 等灵活计算其宽度。
                 (etaf-layout--merge-flex-children
                  child-strings flex-direction row-gap column-gap
                  justify-content content-width content-height-px))
