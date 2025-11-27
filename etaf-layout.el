@@ -677,30 +677,34 @@ FUNC 是接受一个布局节点参数的函数。
 ;;; 布局字符串生成（用于 Emacs buffer 渲染）
 
 (defun etaf-layout--merge-children-by-display (child-infos)
-  "根据子元素的 display 类型合并字符串。
-CHILD-INFOS 是 ((string . display-type) ...) 格式的列表。
-inline 元素水平拼接，block 元素垂直堆叠。
-连续的 inline 元素会被组合在一起，然后与 block 元素垂直组合。"
+  "Merge child element strings by display type.
+CHILD-INFOS is a list of ((string . display-type) ...).
+Inline elements are concatenated horizontally using etaf-lines-concat.
+Block elements are stacked vertically.
+Consecutive inline elements are grouped together, then combined with block elements."
   (if (null child-infos)
       ""
-    (let ((result-parts '())  ;; 最终垂直组合的部分
-          (inline-group '())) ;; 当前累积的 inline 元素组
-      ;; 遍历所有子元素
+    (let ((result-parts '())  ;; Final vertically combined parts
+          (inline-group '())) ;; Current accumulated inline element group
+      ;; Iterate through all child elements
       (dolist (info child-infos)
         (let ((str (car info))
               (display (cdr info)))
           (when (> (length str) 0)
             (if (string= display "inline")
-                ;; inline 元素：加入当前 inline 组
+                ;; Inline element: add to current inline group
                 (push str inline-group)
-              ;; block 元素：先处理之前累积的 inline 组，再添加当前 block
+              ;; Block element: first process accumulated inline group, then add block
               (when inline-group
-                (push (string-join (nreverse inline-group) "") result-parts)
+                ;; Use etaf-lines-concat to properly join inline elements
+                ;; This treats each element as a complete unit with its borders intact
+                (push (etaf-lines-concat (nreverse inline-group)) result-parts)
                 (setq inline-group nil))
               (push str result-parts)))))
       ;; Handle remaining inline group
       (when inline-group
-        (push (string-join (nreverse inline-group) "") result-parts))
+        ;; Use etaf-lines-concat to properly join inline elements
+        (push (etaf-lines-concat (nreverse inline-group)) result-parts))
       ;; Vertically combine all parts
       (string-join (nreverse result-parts) "\n"))))
 
