@@ -70,7 +70,7 @@
     hr html body)
   "HTML 块级元素标签列表。这些元素默认 display 为 block。")
 
-(defun etaf-render--get-default-display (tag)
+(defun etaf-render-get-default-display (tag)
   "根据元素标签返回默认的 display 值。
 TAG 是元素标签名（symbol）。
 块级元素返回 \"block\"，其他返回 \"inline\"。"
@@ -90,7 +90,7 @@ COMPUTED-STYLE 是计算后的样式 alist。
   (let* ((tag (dom-tag dom-node))
          ;; 从 computed-style 获取 display，如果没有则根据标签类型使用默认值
          (display (or (cdr (assq 'display computed-style))
-                      (etaf-render--get-default-display tag)))
+                      (etaf-render-get-default-display tag)))
          (orig-attrs (dom-attributes dom-node))
          ;; 构建新的属性 alist，添加渲染信息
          (render-attrs (list (cons 'render-style computed-style)

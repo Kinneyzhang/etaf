@@ -473,7 +473,7 @@ LAYOUT-NODE 是布局节点。
                                  ((listp child)
                                   (cons (etaf-layout-node-string child)
                                         (or (dom-attr child 'render-display)
-                                            (etaf-render--get-default-display (dom-tag child)))))
+                                            (etaf-render-get-default-display (dom-tag child)))))
                                  ;; 文本节点：视为 inline
                                  ((stringp child)
                                   (cons child "inline"))
