@@ -251,7 +251,7 @@ CSS-STRING 是 CSS 样式表字符串，如 \".box { border: 1px solid red; }\"�
   (when (and css-string (not (string-empty-p css-string)))
     (let* ((new-rules (etaf-css-parse-stylesheet css-string))
            (old-all-rules (plist-get cssom :all-rules))
-           ;; 将新规则添加到现有规则之前（样式表规则）
+           ;; 新规则添加到现有规则前面，优先级更高
            (all-rules (append new-rules old-all-rules))
            ;; 重建索引
            (rule-index (etaf-css-index-build all-rules)))
