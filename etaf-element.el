@@ -223,11 +223,11 @@
 ;;; built-in elememts
 
 (etaf-element-define headline text (height bold)
-                     :fmtstr "{1}"
-                     :data `(:1 (,text))
-                     :style `(:1 (face ( :height ,height
-                                         ,@(when bold '(:weight bold)))))
-                     :type 'block)
+  :fmtstr "{1}"
+  :data `(:1 (,text))
+  :style `(:1 (face ( :height ,height
+                      ,@(when bold '(:weight bold)))))
+  :type 'block)
 
 (etaf-element-define h1 text ((height 2.2) (bold t))
   :inherit (headline text :height height :bold bold))
@@ -285,18 +285,18 @@
                               (style `(:style ,style))))))))
 
 (etaf-element-define b text ()
-                     :inherit (inline text :style `(face (:weight bold))))
+  :inherit (inline text :style `(face (:weight bold))))
 
 (etaf-element-define del text (color)
-                     :inherit (inline text :style
-                                      `(face (:strike-through ,(or color t)))))
+  :inherit (inline text :style
+                   `(face (:strike-through ,(or color t)))))
 
 ;; input elememts
 
 (etaf-element-define base-input value ( name (size 20) max-length
                                         disabled readonly autofocus
                                         placeholder pattern required)
-                     "VALUE: the value of input area. SIZE: specifies the visible width\
+  "VALUE: the value of input area. SIZE: specifies the visible width\
  of input area, the default value is 20.
 
 MAX-LENGTH: specifies the maximum number of characters\
@@ -312,41 +312,41 @@ NAME: field name used to submit. PATTERN: specifies a regular expression that\
  text, date, search, url, tel, email, and password.
 
 REQUIRED: specifies that an input field must be filled out before submitting the form"
-                     :fmtstr "{1}"
-                     :data `(:1 (,(concat
-                                   (etaf-input-text (or value placeholder) size))))
-                     :style `(:1 (face ,(if disabled
-                                            'input-disabled
-                                          (if (and (null value) placeholder)
-                                              '(input-normal :foreground "grey")
-                                            'input-normal))
-                                       ,@(when (or disabled readonly)
-                                           '(read-only t))
-                                       etaf-element base-input)))
+  :fmtstr "{1}"
+  :data `(:1 (,(concat
+                (etaf-input-text (or value placeholder) size))))
+  :style `(:1 (face ,(if disabled
+                         'input-disabled
+                       (if (and (null value) placeholder)
+                           '(input-normal :foreground "grey")
+                         'input-normal))
+                    ,@(when (or disabled readonly)
+                        '(read-only t))
+                    etaf-element base-input)))
 
 (etaf-element-define base-list list (prefix orderp)
-                     "LIST is a list of string, PREFIX is prefix of each item in LIST,
+  "LIST is a list of string, PREFIX is prefix of each item in LIST,
  IDX-FUNC is a funtion applied to PREFIX."
-                     :fmtstr "{1}"
-                     :separator "\n"
-                     :type 'block
-                     :data `(:1 (seq-map-indexed
-                                 (lambda (elt idx)
-                                   (concat (if ,orderp
-                                               (concat (number-to-string (1+ idx))
-                                                       ".")
-                                             ,prefix)
-                                           elt))
-                                 (etaf-value ',list))))
+  :fmtstr "{1}"
+  :separator "\n"
+  :type 'block
+  :data `(:1 (seq-map-indexed
+              (lambda (elt idx)
+                (concat (if ,orderp
+                            (concat (number-to-string (1+ idx))
+                                    ".")
+                          ,prefix)
+                        elt))
+              (etaf-value ',list))))
 
 (etaf-element-define ul list nil
-                     :inherit (base-list list :prefix "• "))
+  :inherit (base-list list :prefix "• "))
 
 (etaf-element-define ol list nil
-                     :inherit (base-list list :orderp t))
+  :inherit (base-list list :orderp t))
 
 (etaf-element-define checklist list nil
-                     "checklist"
-                     :inherit (base-list list :prefix "□ "))
+  "checklist"
+  :inherit (base-list list :prefix "□ "))
 
 (provide 'etaf-element)
