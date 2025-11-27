@@ -234,5 +234,34 @@ DOM 是根 DOM 节点。
   (when-let ((cache (plist-get cssom :cache)))
     (etaf-css-cache-clear cache)))
 
+(defun etaf-css-add-stylesheet (cssom css-string)
+  "向 CSSOM 添加外部 CSS 样式表。
+CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
+CSS-STRING 是 CSS 样式表字符串，如 \".box { border: 1px solid red; }\"。
+返回更新后的 CSSOM。
+
+使用示例：
+  (let* ((dom (etaf-tml-to-dom '(div :class \"box\" \"hello\")))
+         (cssom (etaf-css-build-cssom dom))
+         (cssom (etaf-css-add-stylesheet cssom \".box { color: red; }\")))
+    ;; 现在 .box 元素会有红色文字
+    ...)
+
+注意：添加样式表后会清空缓存，以确保新样式能够生效。"
+  (when (and css-string (not (string-empty-p css-string)))
+    (let* ((new-rules (etaf-css-parse-stylesheet css-string))
+           (old-all-rules (plist-get cssom :all-rules))
+           ;; 新规则添加到现有规则前面，优先级更高
+           (all-rules (append new-rules old-all-rules))
+           ;; 重建索引
+           (rule-index (etaf-css-index-build all-rules)))
+      ;; 更新 CSSOM
+      (setq cssom (plist-put cssom :all-rules all-rules))
+      (setq cssom (plist-put cssom :style-rules (append new-rules (plist-get cssom :style-rules))))
+      (setq cssom (plist-put cssom :rule-index rule-index))
+      ;; 清空缓存以使新样式生效
+      (etaf-css-clear-cache cssom)))
+  cssom)
+
 (provide 'etaf-css)
 ;;; etaf-css.el ends here
