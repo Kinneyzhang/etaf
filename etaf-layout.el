@@ -722,18 +722,45 @@ Consecutive inline elements are grouped together, then combined with block eleme
 (defun etaf-layout--merge-flex-children (child-strings flex-direction
                                                        row-gap column-gap
                                                        justify-content
-                                                       space-distribution)
+                                                       container-width
+                                                       &optional container-height)
   "Merge child element strings according to flex layout properties.
 CHILD-STRINGS is list of child element strings.
 FLEX-DIRECTION is main axis direction (row/row-reverse/column/column-reverse).
 ROW-GAP/COLUMN-GAP are row/column gaps.
 JUSTIFY-CONTENT is main axis alignment.
-SPACE-DISTRIBUTION is space distribution (start-space between-space end-space)."
+CONTAINER-WIDTH is the container's content width for row layouts.
+CONTAINER-HEIGHT is the container's content height for column layouts (optional)."
   (if (null child-strings)
       ""
     (let* ((is-row (or (string= flex-direction "row")
                        (string= flex-direction "row-reverse")))
            (main-gap (if is-row column-gap row-gap))
+           ;; Filter out empty strings
+           (valid-strings (seq-filter (lambda (s) (> (length s) 0))
+                                      child-strings))
+           (items-count (length valid-strings))
+           ;; Calculate actual total size from string dimensions
+           ;; For row: sum of pixel widths; for column: sum of line counts
+           (actual-total-size (if valid-strings
+                                  (if is-row
+                                      (apply #'+ (mapcar #'string-pixel-width valid-strings))
+                                    (apply #'+ (mapcar #'etaf-string-linum valid-strings)))
+                                0))
+           ;; Calculate total gap
+           (total-gap (* main-gap (max 0 (1- items-count))))
+           ;; Get container main axis size
+           (container-main-size (if is-row
+                                    (or container-width 0)
+                                  (or container-height 0)))
+           ;; Calculate free space based on actual sizes
+           (free-space (if (> container-main-size 0)
+                           (max 0 (- container-main-size actual-total-size total-gap))
+                         0))
+           ;; Recalculate space distribution based on actual sizes
+           (space-distribution (when (> items-count 0)
+                                 (etaf-layout-flex-justify-space
+                                  justify-content free-space items-count main-gap)))
            ;; Get space distribution
            (start-space (if space-distribution
                             (floor (nth 0 space-distribution))
@@ -743,10 +770,7 @@ SPACE-DISTRIBUTION is space distribution (start-space between-space end-space)."
                             (floor main-gap)))
            (end-space (if space-distribution
                           (floor (nth 2 space-distribution))
-                        0))
-           ;; Filter out empty strings
-           (valid-strings (seq-filter (lambda (s) (> (length s) 0))
-                                      child-strings)))
+                        0)))
       (if (null valid-strings)
           ""
         (if is-row
@@ -882,17 +906,10 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                     (row-gap (or (dom-attr layout-node 'layout-row-gap) 0))
                     (column-gap (or (dom-attr layout-node 'layout-column-gap) 0))
                     (justify-content (dom-attr layout-node 'layout-justify-content))
-                    (space-distribution (dom-attr
-                                         layout-node 'layout-flex-space-distribution))
                     (child-strings (mapcar #'car child-infos)))
-                ;; FIXME: total width of flex items in a line is more than the width of container
-                (message "res:%S"
-                         (etaf-layout--merge-flex-children
-                          child-strings flex-direction row-gap column-gap
-                          justify-content space-distribution))
                 (etaf-layout--merge-flex-children
                  child-strings flex-direction row-gap column-gap
-                 justify-content space-distribution))
+                 justify-content content-width content-height-px))
             ;; 非 flex 容器：使用原有的 display 类型合并逻辑
             ;; - inline 元素应该水平拼接
             ;; - block 元素应该垂直堆叠
