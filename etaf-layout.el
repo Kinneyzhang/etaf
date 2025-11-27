@@ -368,6 +368,266 @@ PARENT-CONTEXT 包含父容器的上下文信息。
     
     layout-node))
 
+;;; Flex 布局支持
+
+(defun etaf-layout-flex-formatting-context (render-node parent-context)
+  "在 flex 格式化上下文中布局节点。
+RENDER-NODE 是要布局的渲染节点（display: flex）。
+PARENT-CONTEXT 包含父容器的上下文信息。
+返回布局节点。
+
+支持的 flex 容器属性：
+- flex-direction: row | row-reverse | column | column-reverse
+- flex-wrap: nowrap | wrap | wrap-reverse
+- justify-content: flex-start | flex-end | center | space-between | space-around | space-evenly
+- align-items: stretch | flex-start | flex-end | center | baseline
+- align-content: stretch | flex-start | flex-end | center | space-between | space-around
+- gap, row-gap, column-gap
+
+支持的 flex 项目属性：
+- order
+- flex-grow
+- flex-shrink
+- flex-basis
+- align-self"
+  (let* ((box-model (etaf-layout-compute-box-model render-node parent-context))
+         (computed-style (etaf-render-get-computed-style render-node))
+         (content-width (etaf-box-model-content-width box-model))
+         (content-height (etaf-box-model-content-height box-model))
+         
+         ;; Flex 容器属性
+         (flex-direction (or (etaf-layout-get-style-value computed-style 'flex-direction)
+                            "row"))
+         (flex-wrap (or (etaf-layout-get-style-value computed-style 'flex-wrap)
+                       "nowrap"))
+         (justify-content (or (etaf-layout-get-style-value computed-style 'justify-content)
+                             "flex-start"))
+         (align-items (or (etaf-layout-get-style-value computed-style 'align-items)
+                         "stretch"))
+         (align-content (or (etaf-layout-get-style-value computed-style 'align-content)
+                           "stretch"))
+         (row-gap-str (etaf-layout-get-style-value computed-style 'row-gap "0"))
+         (column-gap-str (etaf-layout-get-style-value computed-style 'column-gap "0"))
+         (row-gap (etaf-layout-parse-length row-gap-str content-width))
+         (column-gap (etaf-layout-parse-length column-gap-str content-width))
+         (row-gap (if (eq row-gap 'auto) 0 row-gap))
+         (column-gap (if (eq column-gap 'auto) 0 column-gap))
+         
+         ;; 主轴是否为水平方向
+         (is-row-direction (or (string= flex-direction "row")
+                              (string= flex-direction "row-reverse")))
+         ;; 主轴是否反向
+         (is-reversed (or (string= flex-direction "row-reverse")
+                         (string= flex-direction "column-reverse")))
+         ;; 是否换行
+         (should-wrap (not (string= flex-wrap "nowrap")))
+         ;; 换行是否反向
+         (wrap-reversed (string= flex-wrap "wrap-reverse"))
+         
+         ;; 创建布局节点
+         (layout-node (etaf-layout-create-node render-node box-model)))
+    
+    ;; 添加 flex 相关属性到布局节点
+    (dom-set-attribute layout-node 'layout-flex-direction flex-direction)
+    (dom-set-attribute layout-node 'layout-flex-wrap flex-wrap)
+    (dom-set-attribute layout-node 'layout-justify-content justify-content)
+    (dom-set-attribute layout-node 'layout-align-items align-items)
+    (dom-set-attribute layout-node 'layout-align-content align-content)
+    (dom-set-attribute layout-node 'layout-row-gap row-gap)
+    (dom-set-attribute layout-node 'layout-column-gap column-gap)
+    
+    ;; 布局子元素
+    (let ((children (dom-children render-node)))
+      (when children
+        (let ((child-context (list :content-width content-width
+                                  :content-height content-height
+                                  :flex-container t
+                                  :flex-direction flex-direction
+                                  :align-items align-items))
+              (child-layouts '())
+              (flex-items '()))
+          
+          ;; 首先递归布局所有子元素
+          (dolist (child children)
+            (cond
+             ;; 元素节点
+             ((and (consp child) (symbolp (car child)))
+              (when-let ((child-layout (etaf-layout-node child child-context)))
+                (push child-layout child-layouts)
+                ;; 收集 flex item 信息
+                (let* ((child-style (etaf-render-get-computed-style child))
+                       (order (or (etaf-layout-parse-flex-number
+                                  (etaf-layout-get-style-value child-style 'order))
+                                 0))
+                       (flex-grow (or (etaf-layout-parse-flex-number
+                                      (etaf-layout-get-style-value child-style 'flex-grow))
+                                     0))
+                       (flex-shrink (or (etaf-layout-parse-flex-number
+                                        (etaf-layout-get-style-value child-style 'flex-shrink))
+                                       1))
+                       (flex-basis (etaf-layout-get-style-value child-style 'flex-basis "auto"))
+                       (align-self (etaf-layout-get-style-value child-style 'align-self)))
+                  ;; 添加 flex item 属性到子布局节点
+                  (dom-set-attribute child-layout 'layout-order order)
+                  (dom-set-attribute child-layout 'layout-flex-grow flex-grow)
+                  (dom-set-attribute child-layout 'layout-flex-shrink flex-shrink)
+                  (dom-set-attribute child-layout 'layout-flex-basis flex-basis)
+                  (when align-self
+                    (dom-set-attribute child-layout 'layout-align-self align-self))
+                  (push (list :layout child-layout
+                             :order order
+                             :flex-grow flex-grow
+                             :flex-shrink flex-shrink
+                             :flex-basis flex-basis)
+                        flex-items))))
+             ;; 文本节点：直接保留
+             ((stringp child)
+              (push child child-layouts))))
+          
+          ;; 按 order 排序 flex items
+          (setq flex-items (sort (nreverse flex-items)
+                                (lambda (a b)
+                                  (< (plist-get a :order)
+                                     (plist-get b :order)))))
+          
+          ;; 根据排序结果重新排列子节点
+          (let ((sorted-children '()))
+            (dolist (item flex-items)
+              (push (plist-get item :layout) sorted-children))
+            ;; 添加文本节点
+            (dolist (child child-layouts)
+              (when (stringp child)
+                (push child sorted-children)))
+            (when is-reversed
+              (setq sorted-children (nreverse sorted-children)))
+            ;; 将排序后的子节点添加到布局节点
+            (setcdr (cdr layout-node) (nreverse sorted-children)))
+          
+          ;; 计算 flex 布局（主轴分配）
+          (etaf-layout-flex-compute-main-axis
+           layout-node flex-items content-width content-height
+           flex-direction justify-content row-gap column-gap should-wrap)
+          
+          ;; 计算交叉轴对齐
+          (etaf-layout-flex-compute-cross-axis
+           layout-node flex-items content-width content-height
+           flex-direction align-items align-content))))
+    
+    layout-node))
+
+(defun etaf-layout-parse-flex-number (value)
+  "解析 flex-grow/flex-shrink/order 等数值属性。
+VALUE 可以是字符串或数字。
+返回数字或 nil。"
+  (cond
+   ((numberp value) value)
+   ((and (stringp value) (string-match "^-?[0-9]+\\(\\.[0-9]+\\)?$" value))
+    (string-to-number value))
+   (t nil)))
+
+(defun etaf-layout-flex-compute-main-axis (layout-node flex-items
+                                           container-width container-height
+                                           direction justify-content
+                                           row-gap column-gap should-wrap)
+  "计算 flex 布局的主轴分配。
+LAYOUT-NODE 是 flex 容器布局节点。
+FLEX-ITEMS 是 flex 项目列表。
+CONTAINER-WIDTH/HEIGHT 是容器尺寸。
+DIRECTION 是 flex-direction。
+JUSTIFY-CONTENT 是主轴对齐方式。
+ROW-GAP/COLUMN-GAP 是间隙。
+SHOULD-WRAP 是否换行。"
+  (let* ((is-row (or (string= direction "row")
+                    (string= direction "row-reverse")))
+         (main-size (if is-row container-width container-height))
+         (main-gap (if is-row column-gap row-gap))
+         (items-count (length flex-items))
+         (total-flex-basis 0)
+         (total-flex-grow 0)
+         (total-flex-shrink 0))
+    
+    ;; 计算总的 flex-basis、flex-grow 和 flex-shrink
+    (dolist (item flex-items)
+      (let* ((layout (plist-get item :layout))
+             (box-model (etaf-layout-get-box-model layout))
+             (item-main-size (if is-row
+                                (etaf-box-model-total-width box-model)
+                              (etaf-box-model-total-height box-model))))
+        (setq total-flex-basis (+ total-flex-basis item-main-size))
+        (setq total-flex-grow (+ total-flex-grow (plist-get item :flex-grow)))
+        (setq total-flex-shrink (+ total-flex-shrink (plist-get item :flex-shrink)))))
+    
+    ;; 计算总 gap
+    (let* ((total-gap (* main-gap (max 0 (1- items-count))))
+           (available-space (- main-size total-flex-basis total-gap))
+           (free-space (max 0 available-space)))
+      
+      ;; 存储计算结果
+      (dom-set-attribute layout-node 'layout-flex-free-space free-space)
+      (dom-set-attribute layout-node 'layout-flex-total-grow total-flex-grow)
+      
+      ;; 根据 justify-content 计算主轴分布
+      (when (and (> free-space 0) (> items-count 0))
+        (let ((space-distribution
+               (etaf-layout-flex-justify-space
+                justify-content free-space items-count main-gap)))
+          (dom-set-attribute layout-node 'layout-flex-space-distribution
+                            space-distribution))))))
+
+(defun etaf-layout-flex-justify-space (justify-content free-space items-count gap)
+  "计算 justify-content 的空间分配。
+JUSTIFY-CONTENT 是对齐方式。
+FREE-SPACE 是剩余空间。
+ITEMS-COUNT 是项目数量。
+GAP 是项目间隙。
+返回 (start-space between-space end-space) 列表。"
+  (pcase justify-content
+    ("flex-start"
+     (list 0 gap free-space))
+    ("flex-end"
+     (list free-space gap 0))
+    ("center"
+     (let ((side-space (/ free-space 2.0)))
+       (list side-space gap side-space)))
+    ("space-between"
+     (if (<= items-count 1)
+         (list 0 0 0)
+       (let ((between (/ (+ free-space (* gap (1- items-count)))
+                        (1- items-count))))
+         (list 0 between 0))))
+    ("space-around"
+     (if (<= items-count 0)
+         (list 0 0 0)
+       (let* ((unit-space (/ free-space (* 2.0 items-count)))
+              (between (+ (* 2 unit-space) gap)))
+         (list unit-space between unit-space))))
+    ("space-evenly"
+     (if (<= items-count 0)
+         (list 0 0 0)
+       (let ((space (/ free-space (1+ items-count))))
+         (list space (+ space gap) space))))
+    (_
+     (list 0 gap free-space))))
+
+(defun etaf-layout-flex-compute-cross-axis (layout-node flex-items
+                                            container-width container-height
+                                            direction align-items align-content)
+  "计算 flex 布局的交叉轴对齐。
+LAYOUT-NODE 是 flex 容器布局节点。
+FLEX-ITEMS 是 flex 项目列表。
+CONTAINER-WIDTH/HEIGHT 是容器尺寸。
+DIRECTION 是 flex-direction。
+ALIGN-ITEMS 是交叉轴对齐方式。
+ALIGN-CONTENT 是多行对齐方式。"
+  (let* ((is-row (or (string= direction "row")
+                    (string= direction "row-reverse")))
+         (cross-size (if is-row container-height container-width)))
+    
+    ;; 存储交叉轴对齐信息
+    (dom-set-attribute layout-node 'layout-flex-align-items align-items)
+    (dom-set-attribute layout-node 'layout-flex-align-content align-content)
+    (dom-set-attribute layout-node 'layout-flex-cross-size cross-size)))
+
 (defun etaf-layout-node (render-node parent-context)
   "递归布局渲染节点。
 RENDER-NODE 是渲染节点。
@@ -377,6 +637,10 @@ PARENT-CONTEXT 是父容器上下文。
     (let ((display (etaf-render-get-display render-node)))
       
       (cond
+       ;; Flex 布局
+       ((string= display "flex")
+        (etaf-layout-flex-formatting-context render-node parent-context))
+       
        ;; 块级元素
        ((or (string= display "block")
             (null display))
@@ -439,6 +703,97 @@ inline 元素水平拼接，block 元素垂直堆叠。
       ;; 垂直组合所有部分
       (string-join (nreverse result-parts) "\n"))))
 
+(defun etaf-layout--merge-flex-children (child-strings flex-direction
+                                                      row-gap column-gap
+                                                      justify-content
+                                                      space-distribution)
+  "根据 flex 布局属性合并子元素字符串。
+CHILD-STRINGS 是子元素字符串列表。
+FLEX-DIRECTION 是主轴方向 (row/row-reverse/column/column-reverse)。
+ROW-GAP/COLUMN-GAP 是行/列间隙。
+JUSTIFY-CONTENT 是主轴对齐方式。
+SPACE-DISTRIBUTION 是空间分配 (start-space between-space end-space)。"
+  (if (null child-strings)
+      ""
+    (let* ((is-row (or (string= flex-direction "row")
+                      (string= flex-direction "row-reverse")))
+           (main-gap (if is-row column-gap row-gap))
+           ;; 从 space-distribution 获取空间分配
+           (start-space (if space-distribution
+                           (floor (nth 0 space-distribution))
+                         0))
+           (between-space (if space-distribution
+                             (floor (nth 1 space-distribution))
+                           (floor main-gap)))
+           (end-space (if space-distribution
+                         (floor (nth 2 space-distribution))
+                       0))
+           ;; 过滤掉空字符串
+           (valid-strings (seq-filter (lambda (s) (> (length s) 0))
+                                     child-strings)))
+      (if (null valid-strings)
+          ""
+        (if is-row
+            ;; 水平排列 (row/row-reverse)
+            (etaf-layout--flex-concat-horizontal
+             valid-strings start-space between-space end-space)
+          ;; 垂直排列 (column/column-reverse)
+          (etaf-layout--flex-stack-vertical
+           valid-strings start-space between-space end-space))))))
+
+(defun etaf-layout--flex-concat-horizontal (strings start-space between-space end-space)
+  "水平拼接 flex 子元素字符串。
+STRINGS 是子元素字符串列表。
+START-SPACE 是起始空间（像素）。
+BETWEEN-SPACE 是元素间空间（像素）。
+END-SPACE 是结束空间（像素）。"
+  (let* ((count (length strings))
+         (parts '()))
+    ;; 添加起始空间
+    (when (and start-space (> start-space 0))
+      (push (etaf-pixel-spacing start-space) parts))
+    ;; 添加子元素和间隙
+    (dotimes (i count)
+      (push (nth i strings) parts)
+      (when (< i (1- count))
+        (when (> between-space 0)
+          (push (etaf-pixel-spacing between-space) parts))))
+    ;; 添加结束空间
+    (when (and end-space (> end-space 0))
+      (push (etaf-pixel-spacing end-space) parts))
+    ;; 水平拼接所有部分
+    (if parts
+        (etaf-lines-concat (nreverse parts))
+      "")))
+
+(defun etaf-layout--flex-stack-vertical (strings start-space between-space end-space)
+  "垂直堆叠 flex 子元素字符串。
+STRINGS 是子元素字符串列表。
+START-SPACE 是起始空间（行数）。
+BETWEEN-SPACE 是元素间空间（行数）。
+END-SPACE 是结束空间（行数）。"
+  (let* ((count (length strings))
+         (parts '())
+         ;; 获取最大宽度以创建一致的空白行
+         (max-width (if strings
+                       (apply #'max (mapcar #'string-pixel-width strings))
+                     0)))
+    ;; 添加起始空间
+    (when (and start-space (> start-space 0) (> max-width 0))
+      (push (etaf-pixel-blank max-width start-space) parts))
+    ;; 添加子元素和间隙
+    (dotimes (i count)
+      (push (nth i strings) parts)
+      (when (and (< i (1- count)) (> between-space 0) (> max-width 0))
+        (push (etaf-pixel-blank max-width between-space) parts)))
+    ;; 添加结束空间
+    (when (and end-space (> end-space 0) (> max-width 0))
+      (push (etaf-pixel-blank max-width end-space) parts))
+    ;; 垂直堆叠所有部分
+    (if parts
+        (etaf-lines-stack (nreverse parts))
+      "")))
+
 (defun etaf-layout-node-string (layout-node)
   "将布局节点转换为可插入 buffer 的字符串。
 LAYOUT-NODE 是布局节点。
@@ -487,6 +842,8 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
          ;; 后序遍历：先递归处理所有子元素
          ;; 对于每个子元素，我们需要知道它的 display 类型和内容字符串
          (children (dom-children layout-node))
+         ;; 检查当前节点是否是 flex 容器
+         (is-flex-container (dom-attr layout-node 'layout-flex-direction))
          (child-infos (mapcar (lambda (child)
                                 (cond
                                  ;; 元素节点：递归调用，并获取 display 类型
@@ -500,11 +857,25 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                                   (cons child "inline"))
                                  (t (cons "" "inline"))))
                               children))
-         ;; 根据 display 类型合并子节点：
-         ;; - inline 元素应该水平拼接
-         ;; - block 元素应该垂直堆叠
-         ;; 策略：将连续的 inline 元素组合在一起水平拼接，然后与 block 元素垂直堆叠
-         (children-text (etaf-layout--merge-children-by-display child-infos))
+         ;; 根据 display 类型合并子节点
+         ;; flex 容器使用 flex 特定的合并逻辑
+         (children-text
+          (if is-flex-container
+              ;; Flex 容器：使用 flex 布局合并
+              (let ((flex-direction (dom-attr layout-node 'layout-flex-direction))
+                    (row-gap (or (dom-attr layout-node 'layout-row-gap) 0))
+                    (column-gap (or (dom-attr layout-node 'layout-column-gap) 0))
+                    (justify-content (dom-attr layout-node 'layout-justify-content))
+                    (space-distribution (dom-attr layout-node 'layout-flex-space-distribution))
+                    (child-strings (mapcar #'car child-infos)))
+                (etaf-layout--merge-flex-children
+                 child-strings flex-direction row-gap column-gap
+                 justify-content space-distribution))
+            ;; 非 flex 容器：使用原有的 display 类型合并逻辑
+            ;; - inline 元素应该水平拼接
+            ;; - block 元素应该垂直堆叠
+            ;; 策略：将连续的 inline 元素组合在一起水平拼接，然后与 block 元素垂直堆叠
+            (etaf-layout--merge-children-by-display child-infos)))
          
          ;; 内容：如果有子元素则使用子元素的字符串，否则为空
          (inner-content children-text)
