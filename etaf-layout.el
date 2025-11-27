@@ -348,7 +348,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
     (let ((children (dom-children render-node)))
       (when children
         (let ((child-context (list :content-width content-width
-                                  :content-height content-height))
+                                   :content-height content-height))
               (child-layouts '())
               (accumulated-height 0))
           
@@ -360,7 +360,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                 (push child-layout child-layouts)
                 ;; 累积子元素高度
                 (let ((child-total-height (etaf-box-model-total-height 
-                                          (etaf-layout-get-box-model child-layout))))
+                                           (etaf-layout-get-box-model child-layout))))
                   (setq accumulated-height (+ accumulated-height child-total-height)))))
              ;; 文本节点：直接保留（不需要布局计算，仅传递给父节点）
              ((stringp child)
@@ -405,15 +405,15 @@ Supported flex item properties:
          
          ;; Flex 容器属性
          (flex-direction (or (etaf-layout-get-style-value computed-style 'flex-direction)
-                            "row"))
+                             "row"))
          (flex-wrap (or (etaf-layout-get-style-value computed-style 'flex-wrap)
-                       "nowrap"))
+                        "nowrap"))
          (justify-content (or (etaf-layout-get-style-value computed-style 'justify-content)
-                             "flex-start"))
+                              "flex-start"))
          (align-items (or (etaf-layout-get-style-value computed-style 'align-items)
-                         "stretch"))
+                          "stretch"))
          (align-content (or (etaf-layout-get-style-value computed-style 'align-content)
-                           "stretch"))
+                            "stretch"))
          (row-gap-str (etaf-layout-get-style-value computed-style 'row-gap "0"))
          (column-gap-str (etaf-layout-get-style-value computed-style 'column-gap "0"))
          (row-gap-parsed (etaf-layout-parse-length row-gap-str content-width))
@@ -423,10 +423,10 @@ Supported flex item properties:
          
          ;; Main axis is horizontal
          (is-row-direction (or (string= flex-direction "row")
-                              (string= flex-direction "row-reverse")))
+                               (string= flex-direction "row-reverse")))
          ;; Main axis is reversed
          (is-reversed (or (string= flex-direction "row-reverse")
-                         (string= flex-direction "column-reverse")))
+                          (string= flex-direction "column-reverse")))
          ;; Whether to wrap
          (should-wrap (not (string= flex-wrap "nowrap")))
          ;; Wrap is reversed
@@ -448,10 +448,10 @@ Supported flex item properties:
     (let ((children (dom-children render-node)))
       (when children
         (let ((child-context (list :content-width content-width
-                                  :content-height content-height
-                                  :flex-container t
-                                  :flex-direction flex-direction
-                                  :align-items align-items))
+                                   :content-height content-height
+                                   :flex-container t
+                                   :flex-direction flex-direction
+                                   :align-items align-items))
               (child-layouts '())
               (flex-items '()))
           
@@ -465,14 +465,14 @@ Supported flex item properties:
                 ;; 收集 flex item 信息
                 (let* ((child-style (etaf-render-get-computed-style child))
                        (order (or (etaf-layout-parse-flex-number
-                                  (etaf-layout-get-style-value child-style 'order))
-                                 0))
+                                   (etaf-layout-get-style-value child-style 'order))
+                                  0))
                        (flex-grow (or (etaf-layout-parse-flex-number
-                                      (etaf-layout-get-style-value child-style 'flex-grow))
-                                     0))
+                                       (etaf-layout-get-style-value child-style 'flex-grow))
+                                      0))
                        (flex-shrink (or (etaf-layout-parse-flex-number
-                                        (etaf-layout-get-style-value child-style 'flex-shrink))
-                                       1))
+                                         (etaf-layout-get-style-value child-style 'flex-shrink))
+                                        1))
                        (flex-basis (etaf-layout-get-style-value child-style 'flex-basis "auto"))
                        (align-self (etaf-layout-get-style-value child-style 'align-self)))
                   ;; 添加 flex item 属性到子布局节点
@@ -483,10 +483,10 @@ Supported flex item properties:
                   (when align-self
                     (dom-set-attribute child-layout 'layout-align-self align-self))
                   (push (list :layout child-layout
-                             :order order
-                             :flex-grow flex-grow
-                             :flex-shrink flex-shrink
-                             :flex-basis flex-basis)
+                              :order order
+                              :flex-grow flex-grow
+                              :flex-shrink flex-shrink
+                              :flex-basis flex-basis)
                         flex-items))))
              ;; 文本节点：直接保留
              ((stringp child)
@@ -494,9 +494,9 @@ Supported flex item properties:
           
           ;; 按 order 排序 flex items
           (setq flex-items (sort (nreverse flex-items)
-                                (lambda (a b)
-                                  (< (plist-get a :order)
-                                     (plist-get b :order)))))
+                                 (lambda (a b)
+                                   (< (plist-get a :order)
+                                      (plist-get b :order)))))
           
           ;; 根据排序结果重新排列子节点
           (let ((sorted-children '()))
@@ -534,9 +534,9 @@ Returns number or nil."
    (t nil)))
 
 (defun etaf-layout-flex-compute-main-axis (layout-node flex-items
-                                           container-width container-height
-                                           direction justify-content
-                                           row-gap column-gap should-wrap)
+                                                       container-width container-height
+                                                       direction justify-content
+                                                       row-gap column-gap should-wrap)
   "Compute flex layout main axis distribution.
 LAYOUT-NODE is the flex container layout node.
 FLEX-ITEMS is the list of flex items.
@@ -546,7 +546,7 @@ JUSTIFY-CONTENT is main axis alignment.
 ROW-GAP/COLUMN-GAP are gap values.
 SHOULD-WRAP indicates whether wrapping is enabled."
   (let* ((is-row (or (string= direction "row")
-                    (string= direction "row-reverse")))
+                     (string= direction "row-reverse")))
          (main-size (if is-row container-width container-height))
          (main-gap (if is-row column-gap row-gap))
          (items-count (length flex-items))
@@ -559,8 +559,8 @@ SHOULD-WRAP indicates whether wrapping is enabled."
       (let* ((layout (plist-get item :layout))
              (box-model (etaf-layout-get-box-model layout))
              (item-main-size (if is-row
-                                (etaf-box-model-total-width box-model)
-                              (etaf-box-model-total-height box-model))))
+                                 (etaf-box-model-total-width box-model)
+                               (etaf-box-model-total-height box-model))))
         (setq total-flex-basis (+ total-flex-basis item-main-size))
         (setq total-flex-grow (+ total-flex-grow (plist-get item :flex-grow)))
         (setq total-flex-shrink (+ total-flex-shrink (plist-get item :flex-shrink)))))
@@ -581,7 +581,7 @@ SHOULD-WRAP indicates whether wrapping is enabled."
                (etaf-layout-flex-justify-space
                 justify-content free-space items-count main-gap)))
           (dom-set-attribute layout-node 'layout-flex-space-distribution
-                            space-distribution))))))
+                             space-distribution))))))
 
 (defun etaf-layout-flex-justify-space (justify-content free-space items-count gap)
   "Calculate justify-content space distribution.
@@ -602,7 +602,7 @@ Returns (start-space between-space end-space) list."
      (if (<= items-count 1)
          (list 0 0 0)
        (let ((between (/ (+ free-space (* gap (1- items-count)))
-                        (1- items-count))))
+                         (1- items-count))))
          (list 0 between 0))))
     ("space-around"
      (if (<= items-count 0)
@@ -619,8 +619,8 @@ Returns (start-space between-space end-space) list."
      (list 0 gap free-space))))
 
 (defun etaf-layout-flex-compute-cross-axis (layout-node flex-items
-                                            container-width container-height
-                                            direction align-items align-content)
+                                                        container-width container-height
+                                                        direction align-items align-content)
   "Compute flex layout cross axis alignment.
 LAYOUT-NODE is the flex container layout node.
 FLEX-ITEMS is the list of flex items.
@@ -629,7 +629,7 @@ DIRECTION is flex-direction.
 ALIGN-ITEMS is cross axis alignment.
 ALIGN-CONTENT is multi-line alignment."
   (let* ((is-row (or (string= direction "row")
-                    (string= direction "row-reverse")))
+                     (string= direction "row-reverse")))
          (cross-size (if is-row container-height container-width)))
     
     ;; Store cross axis alignment info
@@ -670,7 +670,7 @@ RENDER-TREE 是渲染树根节点。
 VIEWPORT 是视口大小 (:width w :height h)。
 返回布局树根节点。"
   (let ((root-context (list :content-width (plist-get viewport :width)
-                           :content-height (plist-get viewport :height))))
+                            :content-height (plist-get viewport :height))))
     (etaf-layout-node render-tree root-context)))
 
 ;;; 布局树遍历和查询
@@ -720,9 +720,9 @@ Consecutive inline elements are grouped together, then combined with block eleme
       (string-join (reverse result-parts) "\n"))))
 
 (defun etaf-layout--merge-flex-children (child-strings flex-direction
-                                                      row-gap column-gap
-                                                      justify-content
-                                                      space-distribution)
+                                                       row-gap column-gap
+                                                       justify-content
+                                                       space-distribution)
   "Merge child element strings according to flex layout properties.
 CHILD-STRINGS is list of child element strings.
 FLEX-DIRECTION is main axis direction (row/row-reverse/column/column-reverse).
@@ -732,21 +732,21 @@ SPACE-DISTRIBUTION is space distribution (start-space between-space end-space)."
   (if (null child-strings)
       ""
     (let* ((is-row (or (string= flex-direction "row")
-                      (string= flex-direction "row-reverse")))
+                       (string= flex-direction "row-reverse")))
            (main-gap (if is-row column-gap row-gap))
            ;; Get space distribution
            (start-space (if space-distribution
-                           (floor (nth 0 space-distribution))
-                         0))
+                            (floor (nth 0 space-distribution))
+                          0))
            (between-space (if space-distribution
-                             (floor (nth 1 space-distribution))
-                           (floor main-gap)))
+                              (floor (nth 1 space-distribution))
+                            (floor main-gap)))
            (end-space (if space-distribution
-                         (floor (nth 2 space-distribution))
-                       0))
+                          (floor (nth 2 space-distribution))
+                        0))
            ;; Filter out empty strings
            (valid-strings (seq-filter (lambda (s) (> (length s) 0))
-                                     child-strings)))
+                                      child-strings)))
       (if (null valid-strings)
           ""
         (if is-row
@@ -792,8 +792,8 @@ END-SPACE is ending space (lines)."
          (parts '())
          ;; Get max width to create consistent blank lines
          (max-width (if strings
-                       (apply #'max (mapcar #'string-pixel-width strings))
-                     0)))
+                        (apply #'max (mapcar #'string-pixel-width strings))
+                      0)))
     ;; Add starting space
     (when (and start-space (> start-space 0) (> max-width 0))
       (push (etaf-pixel-blank max-width start-space) parts))
@@ -882,8 +882,14 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                     (row-gap (or (dom-attr layout-node 'layout-row-gap) 0))
                     (column-gap (or (dom-attr layout-node 'layout-column-gap) 0))
                     (justify-content (dom-attr layout-node 'layout-justify-content))
-                    (space-distribution (dom-attr layout-node 'layout-flex-space-distribution))
+                    (space-distribution (dom-attr
+                                         layout-node 'layout-flex-space-distribution))
                     (child-strings (mapcar #'car child-infos)))
+                ;; FIXME: total width of flex items in a line is more than the width of container
+                (message "res:%S"
+                         (etaf-layout--merge-flex-children
+                          child-strings flex-direction row-gap column-gap
+                          justify-content space-distribution))
                 (etaf-layout--merge-flex-children
                  child-strings flex-direction row-gap column-gap
                  justify-content space-distribution))
