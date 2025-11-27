@@ -111,5 +111,73 @@
     ;; 验证包含文本内容
     (should (string-match-p "Content with padding and border" buffer-string))))
 
+;;; Test: Inline elements should render on the same line
+
+(ert-deftest etaf-layout-test-inline-elements-same-line ()
+  "测试 inline 元素（如 span）应该渲染在同一行。"
+  (let* ((dom (etaf-tml-to-dom
+               '(div
+                 (div :class "box"
+                      (span "First Span") (span "Second Span")))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 410)))
+         (buffer-string (etaf-layout-to-string layout-tree)))
+    
+    (should (stringp buffer-string))
+    (should (> (length buffer-string) 0))
+    ;; 验证两个 span 内容都存在
+    (should (string-match-p "First Span" buffer-string))
+    (should (string-match-p "Second Span" buffer-string))
+    ;; 验证两个 span 在同一行（它们之间没有换行符）
+    ;; 通过检查 "First Span" 和 "Second Span" 之间没有换行符来验证
+    (should (string-match-p "First Span.*Second Span" buffer-string))))
+
+;;; Test: Inline styles should be applied correctly
+
+(ert-deftest etaf-layout-test-inline-style-border-top ()
+  "测试内联样式 border-top-width 应该正确应用到盒模型。"
+  (let* ((dom (etaf-tml-to-dom
+               '(div :style "border-top-width: 5px; border-bottom-width: 3px;"
+                     "Content with top/bottom border")))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 410)))
+         (box-model (etaf-layout-get-box-model layout-tree))
+         (border (plist-get box-model :border)))
+    
+    ;; 验证 border-top-width 正确解析
+    (should (= (plist-get border :top-width) 5))
+    ;; 验证 border-bottom-width 正确解析
+    (should (= (plist-get border :bottom-width) 3))))
+
+;;; Test: Mixed inline and block elements
+
+(ert-deftest etaf-layout-test-mixed-inline-block-elements ()
+  "测试混合的 inline 和 block 元素布局。"
+  (let* ((dom (etaf-tml-to-dom
+               '(html
+                 (head
+                  (style "div { display: block; } span { display: inline; }"))
+                 (body
+                  (div
+                   (span "Inline 1")
+                   (span "Inline 2")
+                   (div "Block Element")
+                   (span "Inline 3"))))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 800)))
+         (buffer-string (etaf-layout-to-string layout-tree)))
+    
+    (should (stringp buffer-string))
+    ;; 验证所有内容存在
+    (should (string-match-p "Inline 1" buffer-string))
+    (should (string-match-p "Inline 2" buffer-string))
+    (should (string-match-p "Block Element" buffer-string))
+    (should (string-match-p "Inline 3" buffer-string))
+    ;; 验证前两个 inline 元素在同一行
+    (should (string-match-p "Inline 1.*Inline 2" buffer-string))))
+
 (provide 'etaf-layout-buffer-string-tests)
 ;;; etaf-layout-buffer-string-tests.el ends here
