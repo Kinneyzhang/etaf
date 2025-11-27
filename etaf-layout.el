@@ -493,11 +493,12 @@ LAYOUT-NODE 是布局节点。
                              (etaf-string-linum inner-content)
                            (if (> content-height-px 0) 1 0)))
          
-         ;; 如果有实际内容但宽度为 0，使用内容的最大行宽度作为默认宽度
+         ;; 如果有实际内容但宽度为 0，使用内容的最大行像素宽度作为默认宽度
          (effective-width (if (and (> (length inner-content) 0) (<= content-width 0))
-                              (string-pixel-width 
-                               (car (sort (split-string inner-content "\n") 
-                                         (lambda (a b) (> (length a) (length b))))))
+                              (let ((lines (split-string inner-content "\n")))
+                                (if lines
+                                    (apply #'max (mapcar #'string-pixel-width lines))
+                                  (string-pixel-width inner-content)))
                             content-width)))
     
     ;; 如果内容宽度和高度都为 0 且没有实际内容，返回空字符串
