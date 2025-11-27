@@ -104,8 +104,10 @@ DEFAULT 是默认值（可选）。"
         :content (list :width 0 :height 0)
         :padding (list :top 0 :right 0 :bottom 0 :left 0)
         :border (list :top-width 0 :right-width 0 :bottom-width 0 :left-width 0
-                     :top-color "black" :right-color "black" 
-                     :bottom-color "black" :left-color "black")
+                      :top-color (face-attribute 'default :foreground)
+                      :right-color (face-attribute 'default :foreground)
+                      :bottom-color (face-attribute 'default :foreground)
+                      :left-color (face-attribute 'default :foreground))
         :margin (list :top 0 :right 0 :bottom 0 :left 0)))
 
 (defun etaf-box-model-content-width (box-model)
@@ -216,62 +218,77 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (parent-height (plist-get parent-context :content-height))
          
          ;; 提取样式值
-         (box-sizing (etaf-layout-get-style-value style 'box-sizing "content-box"))
+         (box-sizing (etaf-layout-get-style-value
+                      style 'box-sizing "content-box"))
          
          ;; Padding
          (padding-top (etaf-layout-parse-length 
-                      (etaf-layout-get-style-value style 'padding-top "0") 
-                      parent-width))
-         (padding-right (etaf-layout-parse-length 
-                        (etaf-layout-get-style-value style 'padding-right "0") 
-                        parent-width))
-         (padding-bottom (etaf-layout-parse-length 
-                         (etaf-layout-get-style-value style 'padding-bottom "0") 
-                         parent-width))
-         (padding-left (etaf-layout-parse-length 
-                       (etaf-layout-get-style-value style 'padding-left "0") 
+                       (etaf-layout-get-style-value
+                        style 'padding-top "0") 
                        parent-width))
+         (padding-right (etaf-layout-parse-length 
+                         (etaf-layout-get-style-value
+                          style 'padding-right "0") 
+                         parent-width))
+         (padding-bottom (etaf-layout-parse-length 
+                          (etaf-layout-get-style-value
+                           style 'padding-bottom "0") 
+                          parent-width))
+         (padding-left (etaf-layout-parse-length 
+                        (etaf-layout-get-style-value style 'padding-left "0") 
+                        parent-width))
          
          ;; Border
          (border-top (etaf-layout-parse-length 
-                     (etaf-layout-get-style-value style 'border-top-width "0") 
-                     parent-width))
-         (border-right (etaf-layout-parse-length 
-                       (etaf-layout-get-style-value style 'border-right-width "0") 
-                       parent-width))
-         (border-bottom (etaf-layout-parse-length 
-                        (etaf-layout-get-style-value style 'border-bottom-width "0") 
-                        parent-width))
-         (border-left (etaf-layout-parse-length 
-                      (etaf-layout-get-style-value style 'border-left-width "0") 
+                      (etaf-layout-get-style-value style 'border-top-width "0") 
                       parent-width))
+         (border-right (etaf-layout-parse-length 
+                        (etaf-layout-get-style-value
+                         style 'border-right-width "0") 
+                        parent-width))
+         (border-bottom (etaf-layout-parse-length 
+                         (etaf-layout-get-style-value
+                          style 'border-bottom-width "0") 
+                         parent-width))
+         (border-left (etaf-layout-parse-length 
+                       (etaf-layout-get-style-value
+                        style 'border-left-width "0") 
+                       parent-width))
          
-         (border-top-color (etaf-layout-get-style-value style 'border-top-color "black"))
-         (border-right-color (etaf-layout-get-style-value style 'border-right-color "black"))
-         (border-bottom-color (etaf-layout-get-style-value style 'border-bottom-color "black"))
-         (border-left-color (etaf-layout-get-style-value style 'border-left-color "black"))
+         (border-top-color (etaf-layout-get-style-value
+                            style 'border-top-color
+                            (face-attribute 'default :foreground)))
+         (border-right-color (etaf-layout-get-style-value
+                              style 'border-right-color
+                              (face-attribute 'default :foreground)))
+         (border-bottom-color (etaf-layout-get-style-value
+                               style 'border-bottom-color
+                               (face-attribute 'default :foreground)))
+         (border-left-color (etaf-layout-get-style-value
+                             style 'border-left-color
+                             (face-attribute 'default :foreground)))
          
          ;; Margin
          (margin-top (etaf-layout-parse-length 
-                     (etaf-layout-get-style-value style 'margin-top "0") 
-                     parent-width))
-         (margin-right (etaf-layout-parse-length 
-                       (etaf-layout-get-style-value style 'margin-right "0") 
-                       parent-width))
-         (margin-bottom (etaf-layout-parse-length 
-                        (etaf-layout-get-style-value style 'margin-bottom "0") 
-                        parent-width))
-         (margin-left (etaf-layout-parse-length 
-                      (etaf-layout-get-style-value style 'margin-left "0") 
+                      (etaf-layout-get-style-value style 'margin-top "0") 
                       parent-width))
+         (margin-right (etaf-layout-parse-length 
+                        (etaf-layout-get-style-value style 'margin-right "0") 
+                        parent-width))
+         (margin-bottom (etaf-layout-parse-length 
+                         (etaf-layout-get-style-value style 'margin-bottom "0") 
+                         parent-width))
+         (margin-left (etaf-layout-parse-length 
+                       (etaf-layout-get-style-value style 'margin-left "0") 
+                       parent-width))
          
          ;; Width and Height
          (width-value (etaf-layout-parse-length 
-                      (etaf-layout-get-style-value style 'width "auto") 
-                      parent-width))
+                       (etaf-layout-get-style-value style 'width "auto") 
+                       parent-width))
          (height-value (etaf-layout-parse-length 
-                       (etaf-layout-get-style-value style 'height "auto") 
-                       parent-height))
+                        (etaf-layout-get-style-value style 'height "auto") 
+                        parent-height))
          
          ;; 处理 auto 值
          (padding-top-val (if (eq padding-top 'auto) 0 padding-top))
@@ -291,37 +308,37 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          
          ;; 计算内容宽度
          (content-width (if (eq width-value 'auto)
-                           (max 0 (- parent-width
-                                    padding-left-val padding-right-val
-                                    border-left-val border-right-val
-                                    margin-left-val margin-right-val))
-                         width-value))
+                            (max 0 (- parent-width
+                                      padding-left-val padding-right-val
+                                      border-left-val border-right-val
+                                      margin-left-val margin-right-val))
+                          width-value))
          
          ;; 计算内容高度（如果指定）
          (content-height (if (eq height-value 'auto)
-                            0  ; 将在后续根据子元素计算
-                          height-value)))
+                             0  ; 将在后续根据子元素计算
+                           height-value)))
     
     ;; 构建盒模型
     (list :box-sizing box-sizing
           :content (list :width content-width
-                        :height content-height)
+                         :height content-height)
           :padding (list :top padding-top-val
-                        :right padding-right-val
-                        :bottom padding-bottom-val
-                        :left padding-left-val)
+                         :right padding-right-val
+                         :bottom padding-bottom-val
+                         :left padding-left-val)
           :border (list :top-width border-top-val
-                       :right-width border-right-val
-                       :bottom-width border-bottom-val
-                       :left-width border-left-val
-                       :top-color border-top-color
-                       :right-color border-right-color
-                       :bottom-color border-bottom-color
-                       :left-color border-left-color)
+                        :right-width border-right-val
+                        :bottom-width border-bottom-val
+                        :left-width border-left-val
+                        :top-color border-top-color
+                        :right-color border-right-color
+                        :bottom-color border-bottom-color
+                        :left-color border-left-color)
           :margin (list :top margin-top-val
-                       :right margin-right-val
-                       :bottom margin-bottom-val
-                       :left margin-left-val))))
+                        :right margin-right-val
+                        :bottom margin-bottom-val
+                        :left margin-left-val))))
 
 ;;; 布局算法
 
