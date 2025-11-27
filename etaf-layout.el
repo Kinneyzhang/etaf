@@ -428,15 +428,16 @@ LAYOUT-NODE 是布局节点。
 
 这个函数使用后序遍历（post-order traversal）从叶子节点开始构建整个结构的文本。
 在 Emacs 中，高度使用行数（lines）而不是像素值。"
-  (let* ((box-model (etaf-layout-get-box-model layout-node))
+  (let* ((box-model (or (etaf-layout-get-box-model layout-node)
+                        (etaf-box-model-create)))  ;; 使用默认盒模型避免 nil
          (content (plist-get box-model :content))
          (content-width (or (plist-get content :width) 0))
          (content-height-px (or (plist-get content :height) 0))
          
          ;; 获取盒模型各部分
-         (padding (plist-get box-model :padding))
-         (border (plist-get box-model :border))
-         (margin (plist-get box-model :margin))
+         (padding (or (plist-get box-model :padding) '(:top 0 :right 0 :bottom 0 :left 0)))
+         (border (or (plist-get box-model :border) '(:top-width 0 :right-width 0 :bottom-width 0 :left-width 0)))
+         (margin (or (plist-get box-model :margin) '(:top 0 :right 0 :bottom 0 :left 0)))
          
          ;; 提取各边的值（padding 和 margin 的垂直方向使用行数）
          (padding-top (floor (or (plist-get padding :top) 0)))
@@ -468,10 +469,11 @@ LAYOUT-NODE 是布局节点。
          (child-infos (mapcar (lambda (child)
                                 (cond
                                  ;; 元素节点：递归调用，并获取 display 类型
-                                 ;; 如果没有 render-display 属性，默认为 "inline"
+                                 ;; 如果没有 render-display 属性，根据标签类型使用默认值
                                  ((listp child)
                                   (cons (etaf-layout-node-string child)
-                                        (or (dom-attr child 'render-display) "inline")))
+                                        (or (dom-attr child 'render-display)
+                                            (etaf-render--get-default-display (dom-tag child)))))
                                  ;; 文本节点：视为 inline
                                  ((stringp child)
                                   (cons child "inline"))
