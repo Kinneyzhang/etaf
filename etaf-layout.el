@@ -467,14 +467,18 @@ Supported flex item properties:
                        (order (or (etaf-layout-parse-flex-number
                                    (etaf-layout-get-style-value child-style 'order))
                                   0))
-                       (flex-grow (or (etaf-layout-parse-flex-number
-                                       (etaf-layout-get-style-value child-style 'flex-grow))
-                                      0))
-                       (flex-shrink (or (etaf-layout-parse-flex-number
-                                         (etaf-layout-get-style-value child-style 'flex-shrink))
-                                        1))
-                       (flex-basis (etaf-layout-get-style-value child-style 'flex-basis "auto"))
-                       (align-self (etaf-layout-get-style-value child-style 'align-self)))
+                       (flex-grow
+                        (or (etaf-layout-parse-flex-number
+                             (etaf-layout-get-style-value child-style 'flex-grow))
+                            0))
+                       (flex-shrink
+                        (or (etaf-layout-parse-flex-number
+                             (etaf-layout-get-style-value child-style 'flex-shrink))
+                            1))
+                       (flex-basis (etaf-layout-get-style-value
+                                    child-style 'flex-basis "auto"))
+                       (align-self
+                        (etaf-layout-get-style-value child-style 'align-self)))
                   ;; 添加 flex item 属性到子布局节点
                   (dom-set-attribute child-layout 'layout-order order)
                   (dom-set-attribute child-layout 'layout-flex-grow flex-grow)
@@ -742,11 +746,12 @@ CONTAINER-HEIGHT is the container's content height for column layouts (optional)
            (items-count (length valid-strings))
            ;; Calculate actual total size from string dimensions
            ;; For row: sum of pixel widths; for column: sum of line counts
-           (actual-total-size (if valid-strings
-                                  (if is-row
-                                      (apply #'+ (mapcar #'string-pixel-width valid-strings))
-                                    (apply #'+ (mapcar #'etaf-string-linum valid-strings)))
-                                0))
+           (actual-total-size
+            (if valid-strings
+                (if is-row
+                    (apply #'+ (mapcar #'string-pixel-width valid-strings))
+                  (apply #'+ (mapcar #'etaf-string-linum valid-strings)))
+              0))
            ;; Calculate total gap
            (total-gap (* main-gap (max 0 (1- items-count))))
            ;; Get container main axis size
@@ -851,9 +856,12 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
          (content-height-px (or (etaf-box-model-content-height box-model) 0))
          
          ;; 获取盒模型各部分
-         (padding (or (plist-get box-model :padding) '(:top 0 :right 0 :bottom 0 :left 0)))
-         (border (or (plist-get box-model :border) '(:top-width 0 :right-width 0 :bottom-width 0 :left-width 0)))
-         (margin (or (plist-get box-model :margin) '(:top 0 :right 0 :bottom 0 :left 0)))
+         (padding (or (plist-get box-model :padding)
+                      '(:top 0 :right 0 :bottom 0 :left 0)))
+         (border (or (plist-get box-model :border)
+                     '(:top-width 0 :right-width 0 :bottom-width 0 :left-width 0)))
+         (margin (or (plist-get box-model :margin)
+                     '(:top 0 :right 0 :bottom 0 :left 0)))
          
          ;; 提取各边的值（padding 和 margin 的垂直方向使用行数）
          (padding-top (floor (or (plist-get padding :top) 0)))
@@ -884,21 +892,23 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
          (children (dom-children layout-node))
          ;; 检查当前节点是否是 flex 容器
          (is-flex-container (dom-attr layout-node 'layout-flex-direction))
-         (child-infos (mapcar (lambda (child)
-                                (cond
-                                 ;; 元素节点：递归调用，并获取 display 类型
-                                 ;; 如果没有 render-display 属性，根据标签类型使用默认值
-                                 ((listp child)
-                                  (cons (etaf-layout-node-string child)
-                                        (or (dom-attr child 'render-display)
-                                            (etaf-render-get-default-display (dom-tag child)))))
-                                 ;; 文本节点：视为 inline
-                                 ((stringp child)
-                                  (cons child "inline"))
-                                 (t (cons "" "inline"))))
-                              children))
+         (child-infos
+          (mapcar (lambda (child)
+                    (cond
+                     ;; 元素节点：递归调用，并获取 display 类型
+                     ;; 如果没有 render-display 属性，根据标签类型使用默认值
+                     ((listp child)
+                      (cons (etaf-layout-node-string child)
+                            (or (dom-attr child 'render-display)
+                                (etaf-render-get-default-display (dom-tag child)))))
+                     ;; 文本节点：视为 inline
+                     ((stringp child)
+                      (cons child "inline"))
+                     (t (cons "" "inline"))))
+                  children))
          ;; 根据 display 类型合并子节点
          ;; flex 容器使用 flex 特定的合并逻辑
+         (_ (message "content-width:%S" content-width))
          (children-text
           (if is-flex-container
               ;; Flex 容器：使用 flex 布局合并
@@ -907,6 +917,13 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                     (column-gap (or (dom-attr layout-node 'layout-column-gap) 0))
                     (justify-content (dom-attr layout-node 'layout-justify-content))
                     (child-strings (mapcar #'car child-infos)))
+                (message "total-width: %S"
+                         (string-pixel-width
+                          (etaf-layout--merge-flex-children
+                           child-strings flex-direction row-gap column-gap
+                           justify-content content-width content-height-px)))
+                ;; FIXME: 当多个item处于一行时，它们的总宽度应该等于前面的 content-width
+                ;; 目前是每个 item 的宽度都等于 content-width 了。
                 (etaf-layout--merge-flex-children
                  child-strings flex-direction row-gap column-gap
                  justify-content content-width content-height-px))
