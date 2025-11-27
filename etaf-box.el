@@ -554,19 +554,8 @@
       (etaf-box-caches-init buffer)
       (insert (etaf-box-string box)))))
 
-;; ;;;###autoload
-;; (defun etaf-render (buffer-or-name &rest kvs)
-;;   "将 box 的内容渲染到 BUFFER-OR-NAME 的 buffer 中"
-;;   (declare (indent 1))
-;;   (etaf-box-render buffer-or-name
-;;                    (apply #'etaf-box kvs)))
-
-;; ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;; ;; etaf block scroll
-
 (defvar etaf-box-scroll-down-keys '("n" [wheel-down]))
 (defvar etaf-box-scroll-up-keys '("p" [wheel-up]))
-;; (defvar etaf-box-redraw-keys '("g"))
 
 (defun etaf-box-scroll-map ()
   (let ((map (make-sparse-keymap)))
@@ -788,34 +777,5 @@
 (defun etaf-box-scroll-down ()
   (interactive)
   (etaf-box-scroll 'down))
-
-;;; 通用的界面增量更新的方法
-
-(defun etaf-box-buffer-update (property value predicate function)
-  (save-excursion
-    (goto-char (point-min))
-    (while-let ((match (text-property-search-forward
-                        property uuid t))
-                (match-start (prop-match-beginning match))
-                (match-end (prop-match-end match)))
-      (funcall function match-start match-end)
-      (add-text-properties
-       thumb-head-start thumb-head-end
-       `( etaf-v-scroll-thumb-head nil
-          face ,(etaf-scroll-bar-track-face v-scroll-bar)))
-      ;; 继续搜索下一个可滚动位置，设置 etaf-v-scroll-thumb-head 属性
-      (goto-char thumb-head-end)
-      (when-let* ((match (text-property-search-forward
-                          'etaf-v-scroll-area uuid t))
-                  (new-thumb-head-start (prop-match-beginning match))
-                  (new-thumb-head-end (prop-match-end match)))
-        (elog-debug etaf-box-logger
-          "find and set new thumb head region (%s %s)" start end)
-        (add-text-properties
-         new-thumb-head-start new-thumb-head-end
-         `(etaf-v-scroll-thumb-head uuid)))
-      (goto-char thumb-head-start))
-    )
-  )
 
 (provide 'etaf-box)

@@ -443,33 +443,6 @@ FUNC 是接受一个布局节点参数的函数。
 注意：可以直接使用 etaf-dom-map 实现相同功能。"
   (etaf-dom-map func layout-tree))
 
-;; (defun etaf-layout-to-string (layout-tree &optional indent)
-;;   "将布局树转换为可读的字符串形式。
-;; LAYOUT-TREE 是布局树根节点。
-;; INDENT 是缩进级别（可选）。
-;; 返回格式化的字符串。"
-;;   (setq indent (or indent 0))
-;;   (let* ((indent-str (make-string (* indent 2) ?\s))
-;;          (tag (dom-tag layout-tree))
-;;          (position (etaf-layout-get-position layout-tree))
-;;          (box-model (etaf-layout-get-box-model layout-tree))
-;;          (content (plist-get box-model :content))
-;;          (children (dom-children layout-tree)))
-;;     ;; 过滤出元素子节点（排除文本节点）
-;;     (let ((element-children (seq-filter #'listp children)))
-;;       (concat indent-str
-;;               (format "<%s> pos=(%d,%d) size=%dx%d"
-;;                       tag
-;;                       (plist-get position :x)
-;;                       (plist-get position :y)
-;;                       (plist-get content :width)
-;;                       (plist-get content :height))
-;;               (when element-children
-;;                 (concat "\n"
-;;                         (mapconcat (lambda (child)
-;;                                      (etaf-layout-to-string child (1+ indent)))
-;;                                    element-children "\n")))))))
-
 ;;; 布局字符串生成（用于 Emacs buffer 渲染）
 
 (defun etaf-layout-node-string (layout-node)
