@@ -368,15 +368,15 @@ PARENT-CONTEXT 包含父容器的上下文信息。
     
     layout-node))
 
-;;; Flex 布局支持
+;;; Flex Layout Support
 
 (defun etaf-layout-flex-formatting-context (render-node parent-context)
-  "在 flex 格式化上下文中布局节点。
-RENDER-NODE 是要布局的渲染节点（display: flex）。
-PARENT-CONTEXT 包含父容器的上下文信息。
-返回布局节点。
+  "Layout node in flex formatting context.
+RENDER-NODE is the render node to layout (display: flex).
+PARENT-CONTEXT contains parent container context information.
+Returns the layout node.
 
-支持的 flex 容器属性：
+Supported flex container properties:
 - flex-direction: row | row-reverse | column | column-reverse
 - flex-wrap: nowrap | wrap | wrap-reverse
 - justify-content: flex-start | flex-end | center | space-between | space-around | space-evenly
@@ -384,7 +384,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
 - align-content: stretch | flex-start | flex-end | center | space-between | space-around
 - gap, row-gap, column-gap
 
-支持的 flex 项目属性：
+Supported flex item properties:
 - order
 - flex-grow
 - flex-shrink
@@ -408,23 +408,23 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                            "stretch"))
          (row-gap-str (etaf-layout-get-style-value computed-style 'row-gap "0"))
          (column-gap-str (etaf-layout-get-style-value computed-style 'column-gap "0"))
-         (row-gap (etaf-layout-parse-length row-gap-str content-width))
-         (column-gap (etaf-layout-parse-length column-gap-str content-width))
-         (row-gap (if (eq row-gap 'auto) 0 row-gap))
-         (column-gap (if (eq column-gap 'auto) 0 column-gap))
+         (row-gap-parsed (etaf-layout-parse-length row-gap-str content-width))
+         (column-gap-parsed (etaf-layout-parse-length column-gap-str content-width))
+         (row-gap (if (eq row-gap-parsed 'auto) 0 row-gap-parsed))
+         (column-gap (if (eq column-gap-parsed 'auto) 0 column-gap-parsed))
          
-         ;; 主轴是否为水平方向
+         ;; Main axis is horizontal
          (is-row-direction (or (string= flex-direction "row")
                               (string= flex-direction "row-reverse")))
-         ;; 主轴是否反向
+         ;; Main axis is reversed
          (is-reversed (or (string= flex-direction "row-reverse")
                          (string= flex-direction "column-reverse")))
-         ;; 是否换行
+         ;; Whether to wrap
          (should-wrap (not (string= flex-wrap "nowrap")))
-         ;; 换行是否反向
+         ;; Wrap is reversed
          (wrap-reversed (string= flex-wrap "wrap-reverse"))
          
-         ;; 创建布局节点
+         ;; Create layout node
          (layout-node (etaf-layout-create-node render-node box-model)))
     
     ;; 添加 flex 相关属性到布局节点
@@ -516,9 +516,9 @@ PARENT-CONTEXT 包含父容器的上下文信息。
     layout-node))
 
 (defun etaf-layout-parse-flex-number (value)
-  "解析 flex-grow/flex-shrink/order 等数值属性。
-VALUE 可以是字符串或数字。
-返回数字或 nil。"
+  "Parse flex-grow/flex-shrink/order numeric properties.
+VALUE can be a string or number.
+Returns number or nil."
   (cond
    ((numberp value) value)
    ((and (stringp value) (string-match "^-?[0-9]+\\(\\.[0-9]+\\)?$" value))
@@ -529,14 +529,14 @@ VALUE 可以是字符串或数字。
                                            container-width container-height
                                            direction justify-content
                                            row-gap column-gap should-wrap)
-  "计算 flex 布局的主轴分配。
-LAYOUT-NODE 是 flex 容器布局节点。
-FLEX-ITEMS 是 flex 项目列表。
-CONTAINER-WIDTH/HEIGHT 是容器尺寸。
-DIRECTION 是 flex-direction。
-JUSTIFY-CONTENT 是主轴对齐方式。
-ROW-GAP/COLUMN-GAP 是间隙。
-SHOULD-WRAP 是否换行。"
+  "Compute flex layout main axis distribution.
+LAYOUT-NODE is the flex container layout node.
+FLEX-ITEMS is the list of flex items.
+CONTAINER-WIDTH/HEIGHT are container dimensions.
+DIRECTION is flex-direction.
+JUSTIFY-CONTENT is main axis alignment.
+ROW-GAP/COLUMN-GAP are gap values.
+SHOULD-WRAP indicates whether wrapping is enabled."
   (let* ((is-row (or (string= direction "row")
                     (string= direction "row-reverse")))
          (main-size (if is-row container-width container-height))
@@ -575,12 +575,12 @@ SHOULD-WRAP 是否换行。"
                             space-distribution))))))
 
 (defun etaf-layout-flex-justify-space (justify-content free-space items-count gap)
-  "计算 justify-content 的空间分配。
-JUSTIFY-CONTENT 是对齐方式。
-FREE-SPACE 是剩余空间。
-ITEMS-COUNT 是项目数量。
-GAP 是项目间隙。
-返回 (start-space between-space end-space) 列表。"
+  "Calculate justify-content space distribution.
+JUSTIFY-CONTENT is the alignment method.
+FREE-SPACE is the remaining space.
+ITEMS-COUNT is the number of items.
+GAP is the gap between items.
+Returns (start-space between-space end-space) list."
   (pcase justify-content
     ("flex-start"
      (list 0 gap free-space))
@@ -612,32 +612,32 @@ GAP 是项目间隙。
 (defun etaf-layout-flex-compute-cross-axis (layout-node flex-items
                                             container-width container-height
                                             direction align-items align-content)
-  "计算 flex 布局的交叉轴对齐。
-LAYOUT-NODE 是 flex 容器布局节点。
-FLEX-ITEMS 是 flex 项目列表。
-CONTAINER-WIDTH/HEIGHT 是容器尺寸。
-DIRECTION 是 flex-direction。
-ALIGN-ITEMS 是交叉轴对齐方式。
-ALIGN-CONTENT 是多行对齐方式。"
+  "Compute flex layout cross axis alignment.
+LAYOUT-NODE is the flex container layout node.
+FLEX-ITEMS is the list of flex items.
+CONTAINER-WIDTH/HEIGHT are container dimensions.
+DIRECTION is flex-direction.
+ALIGN-ITEMS is cross axis alignment.
+ALIGN-CONTENT is multi-line alignment."
   (let* ((is-row (or (string= direction "row")
                     (string= direction "row-reverse")))
          (cross-size (if is-row container-height container-width)))
     
-    ;; 存储交叉轴对齐信息
+    ;; Store cross axis alignment info
     (dom-set-attribute layout-node 'layout-flex-align-items align-items)
     (dom-set-attribute layout-node 'layout-flex-align-content align-content)
     (dom-set-attribute layout-node 'layout-flex-cross-size cross-size)))
 
 (defun etaf-layout-node (render-node parent-context)
-  "递归布局渲染节点。
-RENDER-NODE 是渲染节点。
-PARENT-CONTEXT 是父容器上下文。
-返回布局节点或 nil。"
+  "Recursively layout render node.
+RENDER-NODE is the render node.
+PARENT-CONTEXT is parent container context.
+Returns layout node or nil."
   (when render-node
     (let ((display (etaf-render-get-display render-node)))
       
       (cond
-       ;; Flex 布局
+       ;; Flex layout
        ((string= display "flex")
         (etaf-layout-flex-formatting-context render-node parent-context))
        
@@ -697,28 +697,28 @@ inline 元素水平拼接，block 元素垂直堆叠。
                 (push (string-join (nreverse inline-group) "") result-parts)
                 (setq inline-group nil))
               (push str result-parts)))))
-      ;; 处理最后剩余的 inline 组
+      ;; Handle remaining inline group
       (when inline-group
         (push (string-join (nreverse inline-group) "") result-parts))
-      ;; 垂直组合所有部分
+      ;; Vertically combine all parts
       (string-join (nreverse result-parts) "\n"))))
 
 (defun etaf-layout--merge-flex-children (child-strings flex-direction
                                                       row-gap column-gap
                                                       justify-content
                                                       space-distribution)
-  "根据 flex 布局属性合并子元素字符串。
-CHILD-STRINGS 是子元素字符串列表。
-FLEX-DIRECTION 是主轴方向 (row/row-reverse/column/column-reverse)。
-ROW-GAP/COLUMN-GAP 是行/列间隙。
-JUSTIFY-CONTENT 是主轴对齐方式。
-SPACE-DISTRIBUTION 是空间分配 (start-space between-space end-space)。"
+  "Merge child element strings according to flex layout properties.
+CHILD-STRINGS is list of child element strings.
+FLEX-DIRECTION is main axis direction (row/row-reverse/column/column-reverse).
+ROW-GAP/COLUMN-GAP are row/column gaps.
+JUSTIFY-CONTENT is main axis alignment.
+SPACE-DISTRIBUTION is space distribution (start-space between-space end-space)."
   (if (null child-strings)
       ""
     (let* ((is-row (or (string= flex-direction "row")
                       (string= flex-direction "row-reverse")))
            (main-gap (if is-row column-gap row-gap))
-           ;; 从 space-distribution 获取空间分配
+           ;; Get space distribution
            (start-space (if space-distribution
                            (floor (nth 0 space-distribution))
                          0))
@@ -728,25 +728,25 @@ SPACE-DISTRIBUTION 是空间分配 (start-space between-space end-space)。"
            (end-space (if space-distribution
                          (floor (nth 2 space-distribution))
                        0))
-           ;; 过滤掉空字符串
+           ;; Filter out empty strings
            (valid-strings (seq-filter (lambda (s) (> (length s) 0))
                                      child-strings)))
       (if (null valid-strings)
           ""
         (if is-row
-            ;; 水平排列 (row/row-reverse)
+            ;; Horizontal layout (row/row-reverse)
             (etaf-layout--flex-concat-horizontal
              valid-strings start-space between-space end-space)
-          ;; 垂直排列 (column/column-reverse)
+          ;; Vertical layout (column/column-reverse)
           (etaf-layout--flex-stack-vertical
            valid-strings start-space between-space end-space))))))
 
 (defun etaf-layout--flex-concat-horizontal (strings start-space between-space end-space)
-  "水平拼接 flex 子元素字符串。
-STRINGS 是子元素字符串列表。
-START-SPACE 是起始空间（像素）。
-BETWEEN-SPACE 是元素间空间（像素）。
-END-SPACE 是结束空间（像素）。"
+  "Horizontally concatenate flex child element strings.
+STRINGS is list of child element strings.
+START-SPACE is starting space (pixels).
+BETWEEN-SPACE is space between elements (pixels).
+END-SPACE is ending space (pixels)."
   (let* ((count (length strings))
          (parts '()))
     ;; 添加起始空间
@@ -767,29 +767,29 @@ END-SPACE 是结束空间（像素）。"
       "")))
 
 (defun etaf-layout--flex-stack-vertical (strings start-space between-space end-space)
-  "垂直堆叠 flex 子元素字符串。
-STRINGS 是子元素字符串列表。
-START-SPACE 是起始空间（行数）。
-BETWEEN-SPACE 是元素间空间（行数）。
-END-SPACE 是结束空间（行数）。"
+  "Vertically stack flex child element strings.
+STRINGS is list of child element strings.
+START-SPACE is starting space (lines).
+BETWEEN-SPACE is space between elements (lines).
+END-SPACE is ending space (lines)."
   (let* ((count (length strings))
          (parts '())
-         ;; 获取最大宽度以创建一致的空白行
+         ;; Get max width to create consistent blank lines
          (max-width (if strings
                        (apply #'max (mapcar #'string-pixel-width strings))
                      0)))
-    ;; 添加起始空间
+    ;; Add starting space
     (when (and start-space (> start-space 0) (> max-width 0))
       (push (etaf-pixel-blank max-width start-space) parts))
-    ;; 添加子元素和间隙
+    ;; Add child elements and gaps
     (dotimes (i count)
       (push (nth i strings) parts)
       (when (and (< i (1- count)) (> between-space 0) (> max-width 0))
         (push (etaf-pixel-blank max-width between-space) parts)))
-    ;; 添加结束空间
+    ;; Add ending space
     (when (and end-space (> end-space 0) (> max-width 0))
       (push (etaf-pixel-blank max-width end-space) parts))
-    ;; 垂直堆叠所有部分
+    ;; Vertically stack all parts
     (if parts
         (etaf-lines-stack (nreverse parts))
       "")))
