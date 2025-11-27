@@ -86,6 +86,21 @@
            (string= value "medium")
            (string= value "thick"))))
 
+(defun etaf-css--is-flex-basis-p (value)
+  "检查 VALUE 是否是有效的 flex-basis 值（带单位的长度或关键字）。
+无单位的数字不应被视为 flex-basis。"
+  (and (stringp value)
+       (or ;; 带单位的长度值
+           (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|em\\|rem\\|%\\|pt\\|cm\\|mm\\|in\\|vh\\|vw\\|vmin\\|vmax\\|ex\\|ch\\)$" value)
+           ;; 0 可以是 flex-basis
+           (string= value "0")
+           ;; 关键字
+           (string= value "auto")
+           (string= value "content")
+           (string= value "max-content")
+           (string= value "min-content")
+           (string= value "fit-content"))))
+
 (defun etaf-css--is-color-p (value)
   "检查 VALUE 是否是 CSS 颜色值。"
   (and (stringp value)
@@ -247,6 +262,112 @@ IMPORTANT 是否为 !important。
           (list 'padding-bottom bottom important)
           (list 'padding-left left important))))
 
+;;; flex 相关的复合属性
+
+(defconst etaf-css-flex-direction-keywords
+  '("row" "row-reverse" "column" "column-reverse")
+  "CSS flex-direction 关键字列表。")
+
+(defconst etaf-css-flex-wrap-keywords
+  '("nowrap" "wrap" "wrap-reverse")
+  "CSS flex-wrap 关键字列表。")
+
+(defun etaf-css--is-flex-direction-p (value)
+  "检查 VALUE 是否是 flex-direction 值。"
+  (and (stringp value)
+       (member (downcase value) etaf-css-flex-direction-keywords)))
+
+(defun etaf-css--is-flex-wrap-p (value)
+  "检查 VALUE 是否是 flex-wrap 值。"
+  (and (stringp value)
+       (member (downcase value) etaf-css-flex-wrap-keywords)))
+
+(defun etaf-css--expand-flex (value important)
+  "展开 flex 属性。
+VALUE 是形如 \"1\" 或 \"1 1\" 或 \"1 1 auto\" 或 \"none\" 或 \"auto\" 的字符串。
+IMPORTANT 是否为 !important。
+返回展开后的声明列表：flex-grow, flex-shrink, flex-basis。"
+  (let* ((parts (split-string value "[ \t]+" t))
+         (grow "0")
+         (shrink "1")
+         (basis "auto"))
+    (pcase (length parts)
+      ;; flex: none => 0 0 auto
+      ;; flex: auto => 1 1 auto
+      ;; flex: <number> => <number> 1 0
+      ;; flex: <basis> => 1 1 <basis>
+      (1
+       (let ((v (car parts)))
+         (cond
+          ((string= v "none")
+           (setq grow "0" shrink "0" basis "auto"))
+          ((string= v "auto")
+           (setq grow "1" shrink "1" basis "auto"))
+          ((string= v "initial")
+           (setq grow "0" shrink "1" basis "auto"))
+          ;; 使用更严格的 flex-basis 检查，排除无单位数字
+          ((etaf-css--is-flex-basis-p v)
+           ;; flex: <basis> (带单位或关键字)
+           (setq grow "1" shrink "1" basis v))
+          (t
+           ;; flex: <grow> (无单位数字)
+           (setq grow v shrink "1" basis "0")))))
+      ;; flex: <grow> <shrink> or flex: <grow> <basis>
+      (2
+       (let ((v1 (nth 0 parts))
+             (v2 (nth 1 parts)))
+         (setq grow v1)
+         (if (etaf-css--is-flex-basis-p v2)
+             (setq shrink "1" basis v2)
+           (setq shrink v2 basis "0"))))
+      ;; flex: <grow> <shrink> <basis>
+      (_
+       (setq grow (nth 0 parts)
+             shrink (nth 1 parts)
+             basis (nth 2 parts))))
+    (list (list 'flex-grow grow important)
+          (list 'flex-shrink shrink important)
+          (list 'flex-basis basis important))))
+
+(defun etaf-css--expand-flex-flow (value important)
+  "展开 flex-flow 属性。
+VALUE 是形如 \"row\" 或 \"wrap\" 或 \"row wrap\" 的字符串。
+IMPORTANT 是否为 !important。
+返回展开后的声明列表：flex-direction, flex-wrap。"
+  (let* ((parts (split-string value "[ \t]+" t))
+         (direction nil)
+         (wrap nil))
+    (dolist (part parts)
+      (cond
+       ((and (not direction) (etaf-css--is-flex-direction-p part))
+        (setq direction part))
+       ((and (not wrap) (etaf-css--is-flex-wrap-p part))
+        (setq wrap part))))
+    (let ((result '()))
+      (when direction
+        (push (list 'flex-direction direction important) result))
+      (when wrap
+        (push (list 'flex-wrap wrap important) result))
+      (nreverse result))))
+
+(defun etaf-css--expand-gap (value important)
+  "展开 gap 属性。
+VALUE 是形如 \"10px\" 或 \"10px 20px\" 的字符串。
+IMPORTANT 是否为 !important。
+返回展开后的声明列表：row-gap, column-gap。"
+  (let* ((parts (split-string value "[ \t]+" t))
+         (row-gap nil)
+         (column-gap nil))
+    (pcase (length parts)
+      (1
+       (setq row-gap (nth 0 parts)
+             column-gap (nth 0 parts)))
+      (_
+       (setq row-gap (nth 0 parts)
+             column-gap (nth 1 parts))))
+    (list (list 'row-gap row-gap important)
+          (list 'column-gap column-gap important))))
+
 ;;; 主展开函数
 
 (defun etaf-css-expand-shorthand (prop value important)
@@ -269,6 +390,10 @@ IMPORTANT 是否为 !important。
     ;; margin/padding 复合属性
     ('margin (etaf-css--expand-margin value important))
     ('padding (etaf-css--expand-padding value important))
+    ;; flex 复合属性
+    ('flex (etaf-css--expand-flex value important))
+    ('flex-flow (etaf-css--expand-flex-flow value important))
+    ('gap (etaf-css--expand-gap value important))
     ;; 非复合属性
     (_ nil)))
 
