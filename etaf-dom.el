@@ -243,17 +243,6 @@ DOM是要遍历的DOM节点，FUNC是对每个节点调用的函数。"
                            (string-match-p "^[ \t\n\r]*$" child)))
                     children)))))
 
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-;; (defun ecss-dom-query-selector (dom selector-string)
-;;   "在DOM树中查询第一个匹配CSS选择器的节点。
-;; DOM是要查询的DOM树，SELECTOR-STRING是CSS选择器字符串。
-;; 返回第一个匹配的节点，如果没有匹配则返回nil。
-
-;; 示例：
-;;   (ecss-dom-query-selector dom \"#header\")"
-;;   (car (ecss-dom-query-selector-all dom selector-string)))
-
 ;;; style 样式应用
 
 (defun ecss-dom-set-styles (node styles)

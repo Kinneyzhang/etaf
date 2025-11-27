@@ -102,15 +102,6 @@ region1 和 region2 不允许有交叉范围 且 region1 在 region2 前面"
      (funcall function (buffer-substring start end) idx))
    property value predicate))
 
-;; (let ((inhibit-read-only 1))
-;;   (etaf-property-map-regions
-;;    (lambda (start end idx)
-;;      (etaf-region-replace "xxxx" start end))
-;;    'etaf-content-line
-;;    "294e93cf-7568-4e61-ae2e-a6c17de990d4" t))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
 (defun etaf-symbol->keyword (symbol)
   (etaf-string-to-keyword (symbol-name symbol)))
 
@@ -302,29 +293,6 @@ FROM-TAIL 为 t 表示优先从尾部加上多余的部分。"
         (add-text-properties
          start end
          `(face ,(append not-kv-faces face-properties)))))))
-
-;; (defun etaf-add-text-properties (start end properties)
-;;   "前提是 start 和 end 之间的所有文本属性相同，支持将属性的中属性值清空。
-;; 比如 '(face (:inverse-video nil :foreground nil))"
-;;   (while properties
-;;     (let ((prop (pop properties))
-;;           (value (pop properties)))
-;;       (let ((ori-value (get-text-property start prop)))
-;;         ;; 去除前面的非 plist 属性部分
-;;         ;; value 和 ori-values 比对合并
-;;         (if (consp ori-props)
-;;             (seq-mapcat (lambda (elem)
-;;                           (if (consp elem)
-;;                               elem
-;;                             (list elem)))
-;;                         ori-props)
-;;           ori-value)
-;;         value
-;;         )
-;;       (cond
-;;        ((eq prop 'face))
-;;        )
-;;       )))
 
 (defun etaf-width-pixel (width &optional content)
   "Return the pixel of etaf width. If WIDTH is a cons-cell,

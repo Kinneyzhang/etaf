@@ -951,11 +951,6 @@ CSS是输入字符串，START是单词的起始位置。返回单词的结束位
        ;; 其他伪类暂不支持，返回t以避免过滤
        (t t)))))
 
-(defun etaf-css-selector-node-append (container node)
-  "将节点NODE添加到容器CONTAINER的子节点列表中。"
-  (let ((nodes (plist-get container :nodes)))
-    (plist-put container :nodes (append nodes (list node)))))
-
 (defun etaf-css-selector-part-match-p (node selector-nodes)
   "检查DOM节点是否匹配选择器节点列表 SELECTOR-NODES。"
   (let ((matches t)

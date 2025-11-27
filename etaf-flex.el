@@ -114,31 +114,6 @@
     (oset item content content)
     pixel))
 
-;; (defun etaf-flex-item-total-height (item)
-;;   (let ((string (etaf-box-string (oref item content))))
-;;     (oset item content string)
-;;     (etaf-box-total-height item)))
-
-;; (defun etaf-flex-item-side-pixel (item)
-;;   (let ((string (etaf-box-string (oref item content))))
-;;     (oset item content string)
-;;     (etaf-box-side-pixel item)))
-
-;; (defun etaf-flex-item-side-height (item)
-;;   (let ((string (etaf-box-string (oref item content))))
-;;     (oset item content string)
-;;     (etaf-box-side-height item)))
-
-;; (defun etaf-flex-item-content-pixel (item)
-;;   (let ((string (etaf-box-string (oref item content))))
-;;     (oset item content string)
-;;     (etaf-box-content-pixel item)))
-
-;; (defun etaf-flex-item-content-height (item)
-;;   (let ((string (etaf-box-string (oref item content))))
-;;     (oset item content string)
-;;     (etaf-box-content-height item)))
-
 (defun etaf-flex-item-total-height (item)
   (let* ((content (oref item content))
          (string (etaf-flex-item-string item))
@@ -342,9 +317,6 @@
                      (etaf-flex-item-side-height item)))))))
      grows)))
 
-;; 当前最新的总宽度
-;; (etaf-flex-items-main-units items)
-
 (defun etaf-flex-items-shrink (items-plists flex-units gaps-units direction)
   "按照 shrink 缩减并设置子项长度"
   (let* ((items (etaf-plists-get items-plists :item))
@@ -485,17 +457,6 @@
     ((or 'column 'column-reverse)
      (seq-max (mapcar #'etaf-flex-item-total-pixel items)))))
 
-;; (defun etaf-flex-items-cross-units ()
-;;   (pcase direction
-;;     ((or 'row 'row-reverse)
-;;      ;; flex height or max height in items
-;;      (or (oref flex height)
-;;          (seq-max (mapcar #'etaf-flex-item-total-height items))))
-;;     ((or 'column 'column-reverse)
-;;      ;; flex width or max width in items
-;;      (or (oref flex width)
-;;          (seq-max (mapcar #'etaf-flex-item-total-pixel items))))))
-
 (defun etaf-flex-content-justify
     (items-num rest-units content-justify gap)
   (pcase content-justify
@@ -557,14 +518,6 @@
                end-units)))
     ('space-evenly
      (etaf-split-size rest-units (1+ items-num) gap 1 items-num))))
-
-;; (defun etaf-flex-item-render (item)
-;;   (let ((block (oref item content)))
-;;     (oset block width
-;;           (list (- (etaf-flex-item-content-pixel item)
-;;                    (etaf-box-side-pixel block))))
-;;     (oset item content (etaf-box-string block))
-;;     (etaf-box-string item)))
 
 (defun etaf-flex-item-render (item)
   (let ((string (etaf-flex-item-string item)))

@@ -136,9 +136,6 @@
     (push (list name inner key value) etaf-element-definitions))
   etaf-element-definitions)
 
-;; (defun etaf-element--get (name key)
-;;   (plist-get (cdr (assoc name etaf-element-definitions)) key))
-
 ;;;###autoload
 (cl-defmacro etaf-element-define (name inner keys &rest body)
   (declare (indent defun))

@@ -99,16 +99,4 @@
                   :light (:foreground "#aaa" :ov-box (:color "#000"))
                   :dark (:foreground "#ccc" :ov-box (:color "#fff")))
 
-;; (:color "#fff")
-
-;; (define-etaf-face input-normal
-;;   :light (:ov-box (:color "#000"))
-;;   :dark (:ov-box (:color "#fff")))
-
-;; (etaf-property-face 'input-disabled)
-;; (etaf-overlay-face 'input-disable)
-
-;; (etaf-property-face 'input-normal)
-;; (etaf-overlay-face 'input-normal)
-
 (provide 'etaf-face)

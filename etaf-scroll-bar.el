@@ -1,5 +1,4 @@
 (require 'etaf-utils)
-;; (require 'etaf-box)
 
 (defvar etaf-scroll-bar-alist nil
   "存储不同风格滚动栏的定义的 alist，car 是滚动栏的名称，cdr 是滚动栏的kv列表")
