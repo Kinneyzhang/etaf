@@ -78,7 +78,8 @@
 (defun etaf-css--is-length-p (value)
   "检查 VALUE 是否是 CSS 长度值。"
   (and (stringp value)
-       (or (string-match-p "^[0-9.]+\\(px\\|em\\|rem\\|%\\|pt\\|cm\\|mm\\|in\\|vh\\|vw\\|vmin\\|vmax\\|ex\\|ch\\)?$" value)
+       (or ;; Number with optional decimal and optional unit
+           (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|em\\|rem\\|%\\|pt\\|cm\\|mm\\|in\\|vh\\|vw\\|vmin\\|vmax\\|ex\\|ch\\)?$" value)
            (string= value "0")
            (string= value "auto")
            (string= value "thin")
@@ -89,11 +90,13 @@
   "检查 VALUE 是否是 CSS 颜色值。"
   (and (stringp value)
        (or (member (downcase value) etaf-css-color-keywords)
-           (string-match-p "^#[0-9a-fA-F]\\{3,8\\}$" value)
-           (string-match-p "^rgb(" value)
-           (string-match-p "^rgba(" value)
-           (string-match-p "^hsl(" value)
-           (string-match-p "^hsla(" value))))
+           ;; Hex colors: #RGB, #RGBA, #RRGGBB, #RRGGBBAA
+           (string-match-p "^#\\([0-9a-fA-F]\\{3\\}\\|[0-9a-fA-F]\\{4\\}\\|[0-9a-fA-F]\\{6\\}\\|[0-9a-fA-F]\\{8\\}\\)$" value)
+           ;; CSS color functions
+           (string-match-p "^rgb([^)]+)$" value)
+           (string-match-p "^rgba([^)]+)$" value)
+           (string-match-p "^hsl([^)]+)$" value)
+           (string-match-p "^hsla([^)]+)$" value))))
 
 (defun etaf-css--is-border-style-p (value)
   "检查 VALUE 是否是 CSS 边框样式。"
@@ -152,7 +155,7 @@ IMPORTANT 是否为 !important。
 
 (defun etaf-css--expand-border-side (side value important)
   "展开 border-SIDE 属性（如 border-top, border-left 等）。
-SIDE 是 'top, 'right, 'bottom, 或 'left。
+SIDE 是边的字符串名称，如 \"top\", \"right\", \"bottom\", 或 \"left\"。
 VALUE 是形如 \"1px solid red\" 的字符串。
 IMPORTANT 是否为 !important。
 返回展开后的声明列表。"
