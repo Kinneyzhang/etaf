@@ -55,6 +55,7 @@
 (require 'etaf-css-inheritance)
 (require 'etaf-css-cache)
 (require 'etaf-css-index)
+(require 'etaf-tailwind)
 
 ;;; 从 DOM 提取样式
 
@@ -185,7 +186,8 @@ DOM 是根 DOM 节点。
 - 内联样式优先级
 - 文档顺序处理
 - 计算样式缓存
-- 属性继承"
+- 属性继承
+- Tailwind CSS 类名转换"
   (let ((cache (plist-get cssom :cache)))
     ;; 1. 尝试从缓存获取
     (or (and cache (etaf-css-cache-get cache node))
@@ -193,21 +195,45 @@ DOM 是根 DOM 节点。
         (let* ((rules (etaf-css-get-rules-for-node cssom node dom))
                ;; 3. 使用层叠算法合并规则
                (computed-style (etaf-css-cascade-merge-rules rules))
-               ;; 4. 应用属性继承（如果有父元素）
+               ;; 4. 处理 Tailwind CSS 类名
+               (class-attr (dom-attr node 'class))
+               (tailwind-style (when class-attr
+                                 (etaf-tailwind-classes-to-css class-attr)))
+               ;; 5. 合并 Tailwind 样式到计算样式
+               ;; Tailwind 类的优先级介于普通 CSS 规则和内联样式之间
+               (computed-with-tailwind
+                (if tailwind-style
+                    (etaf-css--merge-style-alists computed-style tailwind-style)
+                  computed-style))
+               ;; 6. 应用属性继承（如果有父元素）
                (parent (dom-parent dom node))
                (final-style
                 (if parent
                     (let ((parent-style (etaf-css-get-computed-style
                                          cssom parent dom)))
                       (etaf-css-apply-inheritance
-                       computed-style parent-style))
-                  computed-style)))
-          ;; 5. 存入缓存
+                       computed-with-tailwind parent-style))
+                  computed-with-tailwind)))
+          ;; 7. 存入缓存
           (when cache
             (etaf-css-cache-set cache node final-style))
           final-style))))
 
 ;;; 辅助函数
+
+(defun etaf-css--merge-style-alists (base-style additional-style)
+  "合并两个样式 alist，后者覆盖前者的同名属性。
+BASE-STYLE 是基础样式 alist ((property . value) ...)。
+ADDITIONAL-STYLE 是要合并的样式 alist。
+返回合并后的样式 alist。"
+  (let ((result (copy-alist base-style)))
+    (dolist (prop additional-style)
+      (let ((key (car prop)))
+        ;; 删除已存在的同名属性
+        (setq result (assq-delete-all key result))
+        ;; 追加到末尾
+        (setq result (append result (list prop)))))
+    result))
 
 (defun etaf-css-rule-to-string (rule)
   "将 CSS 规则转换为字符串形式。"
