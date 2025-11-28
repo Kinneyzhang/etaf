@@ -388,9 +388,9 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          
          ;; 应用 min-width, max-width 约束
          ;; 参考 etaf-box.el 中的 etaf-box-content-pixel 函数
+         ;; min-width-val 经过上面处理后保证为 0 或正数，max-width-val 为 nil 或正数
          (content-width (min (or max-width-val most-positive-fixnum)
-                             (max (or min-width-val 0)
-                                  base-content-width)))
+                             (max min-width-val base-content-width)))
          
          ;; 计算内容高度（如果指定）
          (base-content-height (if (eq height-value 'auto)
@@ -399,9 +399,9 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          
          ;; 应用 min-height, max-height 约束
          ;; 参考 etaf-box.el 中的 etaf-box-content-height 函数
+         ;; min-height-val 经过上面处理后保证为 0 或正数，max-height-val 为 nil 或正数
          (content-height (min (or max-height-val most-positive-fixnum)
-                              (max (or min-height-val 0)
-                                   base-content-height))))
+                              (max min-height-val base-content-height))))
     
     ;; 构建盒模型
     (list :box-sizing box-sizing
