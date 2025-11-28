@@ -1220,9 +1220,14 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
          (inner-content children-text)
          
          ;; 计算内容高度（行数）
-         (content-height (if (> (length inner-content) 0)
-                             (etaf-string-linum inner-content)
-                           (if (> content-height-px 0) 1 0)))
+         ;; 如果 CSS 明确设置了 height（content-height-px > 0），则使用 CSS 指定的高度
+         ;; 否则根据实际内容行数计算
+         (natural-content-height (if (> (length inner-content) 0)
+                                     (etaf-string-linum inner-content)
+                                   0))
+         (content-height (if (> content-height-px 0)
+                             content-height-px
+                           (max natural-content-height 0)))
          
          ;; 如果有实际内容但宽度为 0，使用内容的最大行像素宽度作为默认宽度
          (effective-width (if (and (> (length inner-content) 0) (<= content-width 0))
@@ -1254,12 +1259,25 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                                  (etaf-css-apply-face-to-string sized-content text-style)
                                sized-content))
              
-             ;; 重新计算内容高度（行数），因为 etaf-lines-justify 可能导致换行
-             (actual-content-height (if (> (length styled-content) 0)
+             ;; 计算实际渲染高度（行数）
+             ;; 如果 CSS 明确设置了 height，使用 CSS 高度来约束内容
+             ;; 否则使用实际内容行数
+             (styled-content-height (if (> (length styled-content) 0)
                                         (etaf-string-linum styled-content)
-                                      content-height))
+                                      0))
+             (actual-content-height (if (> content-height-px 0)
+                                        content-height-px
+                                      (max styled-content-height content-height)))
              
-             ;; 计算 border 以内的高度（行数）- 使用实际内容高度
+             ;; 当 CSS 指定了高度时，使用 etaf-lines-align 来约束内容到指定高度
+             (height-constrained-content
+              (if (and (> content-height-px 0)
+                       (> (length styled-content) 0)
+                       (/= styled-content-height content-height-px))
+                  (etaf-lines-align styled-content content-height-px)
+                styled-content))
+             
+             ;; 计算 border 以内的高度（行数）- 使用指定高度
              (inner-height (+ actual-content-height padding-top padding-bottom))
              
              ;; 2. 添加 padding（垂直方向）
@@ -1268,10 +1286,10 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                                (etaf-lines-stack
                                 (list (when (> padding-top 0)
                                         (etaf-pixel-blank effective-width padding-top))
-                                      styled-content
+                                      height-constrained-content
                                       (when (> padding-bottom 0)
                                         (etaf-pixel-blank effective-width padding-bottom))))
-                             styled-content))
+                             height-constrained-content))
              
              ;; 3. 添加 padding（水平方向）
              (with-h-padding (if (and (> inner-height 0)
