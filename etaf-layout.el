@@ -810,13 +810,13 @@ Returns (start-space between-space end-space) list."
                          (1- lines-count))))
          (list 0 between 0))))
     ("space-around"
-     (if (<= lines-count 0)
+     (if (<= lines-count 1)
          (list 0 0 0)
        (let* ((unit-space (/ free-space (* 2.0 lines-count)))
               (between (+ (* 2 unit-space) gap)))
          (list unit-space between unit-space))))
     ("space-evenly"
-     (if (<= lines-count 0)
+     (if (<= lines-count 1)
          (list 0 0 0)
        (let ((space (/ free-space (1+ lines-count))))
          (list space (+ space gap) space))))
@@ -1298,25 +1298,21 @@ IS-ROW is t for row direction (cross-axis is vertical), nil for column."
                ;; Row: add padding at bottom
                (etaf-lines-stack
                 (list string
-                      (when (> rest-units 0)
-                        (etaf-pixel-blank (string-pixel-width string) rest-units))))
+                      (etaf-pixel-blank (string-pixel-width string) rest-units)))
              ;; Column: add padding at right
              (etaf-lines-concat
               (list string
-                    (when (> rest-units 0)
-                      (etaf-pixel-blank rest-units (etaf-string-linum string)))))))
+                    (etaf-pixel-blank rest-units (etaf-string-linum string))))))
           ("flex-end"
            ;; Align to end of cross axis
            (if is-row
                ;; Row: add padding at top
                (etaf-lines-stack
-                (list (when (> rest-units 0)
-                        (etaf-pixel-blank (string-pixel-width string) rest-units))
+                (list (etaf-pixel-blank (string-pixel-width string) rest-units)
                       string))
              ;; Column: add padding at left
              (etaf-lines-concat
-              (list (when (> rest-units 0)
-                      (etaf-pixel-blank rest-units (etaf-string-linum string)))
+              (list (etaf-pixel-blank rest-units (etaf-string-linum string))
                     string))))
           ("center"
            ;; Center in cross axis
