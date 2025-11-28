@@ -355,6 +355,8 @@ If NUM is greater than all elements, return (1+ (length PREFIXS))."
 FLEX-UNITS 是容器最大宽度，ITEMS-UNITS-LST 是项目宽度列表，
 GAP 是项目之间的固定间隙（单位与项目宽度相同）。
 返回每行元素个数的列表（按行顺序排列）。"
+  (message "flex-units:%S; items-units-lst:%S; gap:%S"
+           flex-units items-units-lst gap)
   (let ((current-sum 0)       ; 当前行累计宽度
         (current-count 0)     ; 当前行项目计数
         (result '())           ; 结果列表（逆序存储）

@@ -895,7 +895,7 @@ This function follows the same wrapping strategy as etaf-flex.el:
 4. Handle wrap-reverse mode by reversing the lines order"
   (if (null child-strings)
       ""
-    (message "child-strings:%S" child-strings)
+    ;; (message "child-strings:%S" child-strings)
     (let* ((is-row (or (string= flex-direction "row")
                        (string= flex-direction "row-reverse")))
            (main-gap (if is-row column-gap row-gap))
@@ -922,15 +922,21 @@ This function follows the same wrapping strategy as etaf-flex.el:
                          0))
            ;; Determine wrap-lst following etaf-flex.el strategy (lines 744-763)
            ;; wrap-lst records the number of items on each line
+           (_ (message "flex-wrap:%S" flex-wrap))
+           (_ (message "items-count:%S" items-count))
+           (_ (message "container-main-size:%S" container-main-size))
+           (_ (message "rest-units:%S" rest-units))
            (wrap-lst
             (if (and (not (string= flex-wrap "nowrap"))
                      (> items-count 1)
                      (> container-main-size 0)
                      (< rest-units 0))  ;; items overflow
                 ;; Use etaf-flex-line-breaks to calculate line breaks
-                (etaf-flex-line-breaks container-main-size items-units-lst main-gap)
+                (etaf-flex-line-breaks container-main-size
+                                       items-units-lst main-gap)
               ;; No wrapping - all items on single line
               (list items-count))))
+      (message "wrap-lst:%S" wrap-lst)
       (if (null valid-strings)
           ""
         ;; Process each line following etaf-flex.el strategy (lines 766-803)
