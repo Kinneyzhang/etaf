@@ -206,6 +206,32 @@ Vue 模板 → 渲染后的 TML → DOM 树 → ...
 
 ### Tailwind CSS 支持（新增）
 
+Tailwind CSS 类名现在可以直接在 TML 中使用，会被自动解析到 CSSOM 并正确渲染：
+
+```elisp
+(require 'etaf)
+
+;; 直接在 TML 中使用 Tailwind 类
+(setq dom (etaf-tml-to-dom
+           '(div :class "flex items-center justify-between bg-white rounded-lg shadow-md p-4"
+              (h1 :class "text-lg font-bold text-gray-900" "Title")
+              (button :class "bg-blue-500 text-white px-4 py-2 rounded" "Click me"))))
+
+;; 构建 CSSOM - Tailwind 类会自动转换为 CSS 属性
+(setq cssom (etaf-css-build-cssom dom))
+
+;; 获取计算样式 - 包含 Tailwind 转换后的 CSS
+(etaf-css-get-computed-style cssom dom dom)
+;; => ((display . "flex") (align-items . "center") (justify-content . "space-between")
+;;     (background-color . "#ffffff") (border-radius . "0.5rem")
+;;     (box-shadow . "0 4px 6px -1px rgb(0 0 0 / 0.1), ...") (padding . "1rem"))
+
+;; 构建渲染树 - 样式会正确应用
+(setq render-tree (etaf-render-build-tree dom cssom))
+```
+
+#### 手动使用 Tailwind 工具函数
+
 ```elisp
 (require 'etaf-tailwind)
 
@@ -276,6 +302,8 @@ Vue 模板 → 渲染后的 TML → DOM 树 → ...
   - 任意值语法支持
   - Tailwind 到 CSS 属性转换
   - DOM 集成操作（添加、移除、切换类）
+  - **CSSOM 集成**：TML 中的 Tailwind 类自动解析到计算样式
+  - **渲染树集成**：正确渲染为最终样式
 
 - ✅ **完整的 CSS 选择器支持**
   - 标签、类、ID、属性选择器

@@ -216,6 +216,38 @@
       (should (string-match "display: flex" str))
       (should (string-match "padding: 1rem" str)))))
 
+;;; CSSOM 集成测试
+
+(ert-deftest etaf-tailwind-test-cssom-integration ()
+  "测试 Tailwind 类在 CSSOM 中的正确解析。"
+  (require 'etaf-tml)
+  (require 'etaf-css)
+  (let* ((dom (etaf-tml-to-dom
+               '(div :class "flex bg-red-500 p-4"
+                  (span :class "text-lg" "Hello"))))
+         (cssom (etaf-css-build-cssom dom))
+         (div-style (etaf-css-get-computed-style cssom dom dom)))
+    ;; 验证 div 的 Tailwind 样式被正确解析
+    (should (equal (cdr (assq 'display div-style)) "flex"))
+    (should (equal (cdr (assq 'background-color div-style)) "#ef4444"))
+    (should (equal (cdr (assq 'padding div-style)) "1rem"))))
+
+(ert-deftest etaf-tailwind-test-render-tree-integration ()
+  "测试 Tailwind 类在渲染树中的正确应用。"
+  (require 'etaf-tml)
+  (require 'etaf-css)
+  (require 'etaf-render)
+  (let* ((dom (etaf-tml-to-dom
+               '(div :class "flex items-center justify-center"
+                  (span :class "text-lg font-bold" "Title"))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom)))
+    ;; 验证渲染树包含正确的 Tailwind 样式
+    (let ((render-style (dom-attr render-tree 'render-style)))
+      (should (equal (cdr (assq 'display render-style)) "flex"))
+      (should (equal (cdr (assq 'align-items render-style)) "center"))
+      (should (equal (cdr (assq 'justify-content render-style)) "center")))))
+
 (provide 'etaf-tailwind-tests)
 
 ;;; etaf-tailwind-tests.el ends here
