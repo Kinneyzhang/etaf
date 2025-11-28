@@ -595,7 +595,8 @@ SHOULD-WRAP indicates whether wrapping is enabled."
     (let* ((total-gap (* main-gap (max 0 (1- items-count))))
            (available-space (- main-size total-flex-basis total-gap))
            (free-space (max 0 available-space))
-           (overflow-space (max 0 (- available-space))))
+           ;; Fix: Calculate overflow-space correctly as the amount content exceeds container
+           (overflow-space (max 0 (- (+ total-flex-basis total-gap) main-size))))
       
       ;; Apply flex-grow when there's free space and total-flex-grow > 0
       (when (and (> free-space 0) (> total-flex-grow 0) (> main-size 0))
@@ -610,10 +611,11 @@ SHOULD-WRAP indicates whether wrapping is enabled."
                    (side-size (plist-get item-info :side-size))
                    (flex-grow (plist-get item :flex-grow)))
               (when (> flex-grow 0)
-                (let* ((grow-amount (if (= i (1- (length flex-items)))
-                                        ;; Last item gets remaining space to avoid rounding errors
-                                        (- free-space distributed)
-                                      (floor (* grow-unit flex-grow))))
+                (let* ((grow-amount (max 0  ;; Fix: Ensure grow-amount is never negative
+                                         (if (= i (1- (length flex-items)))
+                                             ;; Last item gets remaining space to avoid rounding errors
+                                             (- free-space distributed)
+                                           (floor (* grow-unit flex-grow)))))
                        (new-content-size (+ content-size grow-amount)))
                   (setq distributed (+ distributed grow-amount))
                   ;; Update box-model content width/height
@@ -634,10 +636,12 @@ SHOULD-WRAP indicates whether wrapping is enabled."
                    (side-size (plist-get item-info :side-size))
                    (flex-shrink (plist-get item :flex-shrink)))
               (when (> flex-shrink 0)
-                (let* ((shrink-amount (if (= i (1- (length flex-items)))
-                                          ;; Last item gets remaining space to avoid rounding errors
-                                          (- overflow-space distributed)
-                                        (floor (* shrink-unit flex-shrink))))
+                ;; Fix: Ensure shrink-amount is never negative
+                (let* ((shrink-amount (max 0
+                                           (if (= i (1- (length flex-items)))
+                                               ;; Last item gets remaining space to avoid rounding errors
+                                               (- overflow-space distributed)
+                                             (floor (* shrink-unit flex-shrink)))))
                        ;; Don't shrink below 0
                        (new-content-size (max 0 (- content-size shrink-amount))))
                   (setq distributed (+ distributed shrink-amount))

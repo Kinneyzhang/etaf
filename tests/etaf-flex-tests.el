@@ -261,8 +261,8 @@ An item with flex-grow: 2 should grow twice as much as one with flex-grow: 1."
          (flex-container (car (dom-non-text-children body-node)))
          (flex-items (dom-non-text-children flex-container)))
     ;; Total initial width: 200px, free space: 700px
-    ;; item1 gets 700/3 = 233px extra, item2 gets 2*700/3 = 466px extra
-    ;; Final: item1 = 333px, item2 = 566px (approximately)
+    ;; item1 gets 700/3 ≈ 233.33px extra, item2 gets 2*700/3 ≈ 466.67px extra
+    ;; Final: item1 ≈ 333.33px, item2 ≈ 566.67px
     (let* ((item1-box (etaf-layout-get-box-model (nth 0 flex-items)))
            (item2-box (etaf-layout-get-box-model (nth 1 flex-items)))
            (item1-width (etaf-box-model-content-width item1-box))
