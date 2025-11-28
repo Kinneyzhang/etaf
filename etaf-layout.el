@@ -59,6 +59,7 @@
 
 (require 'cl-lib)
 (require 'dom)
+(require 'seq)
 (require 'etaf-render)
 (require 'etaf-utils)
 (require 'etaf-css-face)
@@ -84,6 +85,39 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算）。
    ((string-match "\\`\\([0-9.]+\\)em\\'" value)
     ;; 简化：假设 1em = 16px
     (* (string-to-number (match-string 1 value)) 16))
+   ((string-match "\\`\\([0-9.]+\\)lh\\'" value)
+    ;; lh 单位：行高单位，直接返回行数
+    (string-to-number (match-string 1 value)))
+   (t 'auto)))
+
+(defun etaf-layout-parse-height (value reference-height)
+  "解析 CSS 高度值。
+VALUE 是 CSS 值字符串。
+REFERENCE-HEIGHT 是参考高度（用于百分比计算）。
+在 Emacs 中，高度默认使用行数（lh）作为单位。
+返回行数或 'auto。"
+  (cond
+   ((null value) 'auto)
+   ((eq value 'auto) 'auto)
+   ((numberp value) value)  ; 数字直接作为行数
+   ((string= value "auto") 'auto)
+   ((string= value "0") 0)
+   ;; lh 单位：行高单位，直接返回行数
+   ((string-match "\\`\\([0-9.]+\\)lh\\'" value)
+    (string-to-number (match-string 1 value)))
+   ;; 纯数字（无单位）：作为行数
+   ((string-match "\\`\\([0-9.]+\\)\\'" value)
+    (string-to-number (match-string 1 value)))
+   ;; 百分比：相对于参考高度
+   ((string-match "\\`\\([0-9.]+\\)%\\'" value)
+    (* (/ (string-to-number (match-string 1 value)) 100.0)
+       reference-height))
+   ;; px 单位：简化处理，假设 1 行 = 20px
+   ((string-match "\\`\\([0-9.]+\\)px\\'" value)
+    (ceiling (/ (string-to-number (match-string 1 value)) 20.0)))
+   ;; em 单位：简化处理，假设 1em = 1 行
+   ((string-match "\\`\\([0-9.]+\\)em\\'" value)
+    (string-to-number (match-string 1 value)))
    (t 'auto)))
 
 (defun etaf-layout-get-style-value (computed-style property &optional default)
@@ -264,10 +298,12 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                        parent-width))
          
          ;; Width and Height
+         ;; 宽度使用 etaf-layout-parse-length（像素单位）
          (width-value (etaf-layout-parse-length 
                        (etaf-layout-get-style-value style 'width "auto") 
                        parent-width))
-         (height-value (etaf-layout-parse-length 
+         ;; 高度使用 etaf-layout-parse-height（行数单位）
+         (height-value (etaf-layout-parse-height 
                         (etaf-layout-get-style-value style 'height "auto") 
                         parent-height))
          
@@ -1070,9 +1106,14 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                               ;; 如果没有内容，创建空白内容
                               (etaf-pixel-blank effective-width content-height)))
              
-             ;; 1.5 应用 CSS 文本样式到内容（转换为 Emacs face 属性）
-             (styled-content (if (and computed-style (> (length sized-content) 0))
-                                 (etaf-css-apply-face-to-string sized-content computed-style)
+             ;; 1.5 应用 CSS 文本样式到内容（不包括 background-color，因为背景需要覆盖 padding 区域）
+             ;; 创建不含 background-color 的样式用于文本
+             (text-style (when computed-style
+                           (seq-filter (lambda (pair)
+                                         (not (eq (car pair) 'background-color)))
+                                       computed-style)))
+             (styled-content (if (and text-style (> (length sized-content) 0))
+                                 (etaf-css-apply-face-to-string sized-content text-style)
                                sized-content))
              
              ;; 重新计算内容高度（行数），因为 etaf-lines-justify 可能导致换行
@@ -1105,6 +1146,21 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                                           (etaf-pixel-blank padding-right inner-height))))
                                with-padding))
              
+             ;; 3.5 应用 background-color 到 content + padding 区域
+             ;; 背景色应该覆盖 content 和 padding 区域，不包括 border 和 margin
+             (bgcolor (when computed-style
+                        (cdr (assq 'background-color computed-style))))
+             (with-bgcolor (if (and bgcolor (> (length with-h-padding) 0))
+                               (let ((emacs-color (etaf-css-color-to-emacs bgcolor)))
+                                 (if emacs-color
+                                     (let ((result (copy-sequence with-h-padding)))
+                                       (add-face-text-property 0 (length result)
+                                                               `(:background ,emacs-color)
+                                                               t result)
+                                       result)
+                                   with-h-padding))
+                             with-h-padding))
+             
              ;; 4. 添加 border（水平方向）- 左右边框
              (with-border (if (and (> inner-height 0)
                                    (or (> border-left 0) (> border-right 0)))
@@ -1112,11 +1168,11 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                                (list (when (> border-left 0)
                                        (etaf-pixel-border border-left inner-height
                                                           border-left-color))
-                                     with-h-padding
+                                     with-bgcolor
                                      (when (> border-right 0)
                                        (etaf-pixel-border border-right inner-height
                                                           border-right-color))))
-                            with-h-padding))
+                            with-bgcolor))
              
              ;; 计算添加 margin 前的总像素宽度（包含左右边框）
              (total-pixel (+ effective-width
