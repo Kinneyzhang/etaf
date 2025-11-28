@@ -55,6 +55,7 @@
 (require 'etaf-css-inheritance)
 (require 'etaf-css-cache)
 (require 'etaf-css-index)
+(require 'etaf-css-shorthand)
 (require 'etaf-tailwind)
 
 ;;; 从 DOM 提取样式
@@ -187,7 +188,8 @@ DOM 是根 DOM 节点。
 - 文档顺序处理
 - 计算样式缓存
 - 属性继承
-- Tailwind CSS 类名转换"
+- Tailwind CSS 类名转换
+- Tailwind CSS 复合属性展开"
   (let ((cache (plist-get cssom :cache)))
     ;; 1. 尝试从缓存获取
     (or (and cache (etaf-css-cache-get cache node))
@@ -197,8 +199,11 @@ DOM 是根 DOM 节点。
                (computed-style (etaf-css-cascade-merge-rules rules))
                ;; 4. 处理 Tailwind CSS 类名
                (class-attr (dom-attr node 'class))
-               (tailwind-style (when class-attr
-                                 (etaf-tailwind-classes-to-css class-attr)))
+               (tailwind-style-raw (when class-attr
+                                     (etaf-tailwind-classes-to-css class-attr)))
+               ;; 4.5 展开 Tailwind CSS 复合属性（如 border-width -> border-top-width 等）
+               (tailwind-style (when tailwind-style-raw
+                                 (etaf-css--expand-tailwind-shorthand tailwind-style-raw)))
                ;; 5. 合并 Tailwind 样式到计算样式
                ;; Tailwind 类的优先级介于普通 CSS 规则和内联样式之间
                (computed-with-tailwind
@@ -220,6 +225,27 @@ DOM 是根 DOM 节点。
           final-style))))
 
 ;;; 辅助函数
+
+(defun etaf-css--expand-tailwind-shorthand (style-alist)
+  "展开 Tailwind CSS 样式 alist 中的复合属性。
+STYLE-ALIST 是 ((property . value) ...) 格式的样式 alist。
+返回展开后的样式 alist，其中复合属性（如 border-width、border-color）
+会被展开为长形属性（如 border-top-width、border-right-width 等）。"
+  (let ((result '()))
+    (dolist (prop style-alist)
+      (let* ((prop-name (car prop))
+             (prop-value (cdr prop))
+             ;; 尝试展开复合属性（使用 nil 作为 important 标记）
+             (expanded (etaf-css-expand-shorthand prop-name prop-value nil)))
+        (if expanded
+            ;; 复合属性，添加展开后的声明
+            (dolist (exp-decl expanded)
+              ;; exp-decl 格式为 (prop-name value important)
+              ;; 转换为 (prop-name . value) 格式
+              (push (cons (nth 0 exp-decl) (nth 1 exp-decl)) result))
+          ;; 非复合属性，直接添加
+          (push prop result))))
+    (nreverse result)))
 
 (defun etaf-css--merge-style-alists (base-style additional-style)
   "合并两个样式 alist，后者覆盖前者的同名属性。
