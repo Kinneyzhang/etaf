@@ -59,10 +59,13 @@
 
 (require 'cl-lib)
 (require 'dom)
-(require 'seq)
 (require 'etaf-render)
 (require 'etaf-utils)
 (require 'etaf-css-face)
+
+;; 像素到行数的转换系数（假设默认行高约为 20 像素）
+(defconst etaf-layout-pixels-per-line 20
+  "每行的像素数，用于将 px 单位转换为行数。")
 
 ;;; 辅助函数：CSS 值解析
 
@@ -112,9 +115,10 @@ REFERENCE-HEIGHT 是参考高度（用于百分比计算）。
    ((string-match "\\`\\([0-9.]+\\)%\\'" value)
     (* (/ (string-to-number (match-string 1 value)) 100.0)
        reference-height))
-   ;; px 单位：简化处理，假设 1 行 = 20px
+   ;; px 单位：使用配置的像素/行转换系数
    ((string-match "\\`\\([0-9.]+\\)px\\'" value)
-    (ceiling (/ (string-to-number (match-string 1 value)) 20.0)))
+    (ceiling (/ (string-to-number (match-string 1 value))
+                (float etaf-layout-pixels-per-line))))
    ;; em 单位：简化处理，假设 1em = 1 行
    ((string-match "\\`\\([0-9.]+\\)em\\'" value)
     (string-to-number (match-string 1 value)))
@@ -1107,11 +1111,11 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                               (etaf-pixel-blank effective-width content-height)))
              
              ;; 1.5 应用 CSS 文本样式到内容（不包括 background-color，因为背景需要覆盖 padding 区域）
-             ;; 创建不含 background-color 的样式用于文本
+             ;; 使用 cl-remove-if 过滤掉 background-color
              (text-style (when computed-style
-                           (seq-filter (lambda (pair)
-                                         (not (eq (car pair) 'background-color)))
-                                       computed-style)))
+                           (cl-remove-if (lambda (pair)
+                                           (eq (car pair) 'background-color))
+                                         computed-style)))
              (styled-content (if (and text-style (> (length sized-content) 0))
                                  (etaf-css-apply-face-to-string sized-content text-style)
                                sized-content))
