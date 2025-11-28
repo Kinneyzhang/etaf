@@ -1274,7 +1274,7 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
               (if (and (> content-height-px 0)
                        (> (length styled-content) 0)
                        (/= styled-content-height content-height-px))
-                  (etaf-lines-align styled-content content-height-px)
+                  (etaf-lines-align styled-content content-height-px 'top)
                 styled-content))
              
              ;; 计算 border 以内的高度（行数）- 使用指定高度
