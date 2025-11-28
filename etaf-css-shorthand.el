@@ -368,64 +368,70 @@ IMPORTANT 是否为 !important。
     (list (list 'row-gap row-gap important)
           (list 'column-gap column-gap important))))
 
+(defun etaf-css--expand-place-property (value important align-prop justify-prop)
+  "Helper function to expand place-* shorthand properties.
+VALUE is a string like \"center\" or \"center space-between\".
+IMPORTANT is whether this is !important.
+ALIGN-PROP is the align property symbol (e.g., 'align-content).
+JUSTIFY-PROP is the justify property symbol (e.g., 'justify-content).
+Returns expanded declaration list.
+
+辅助函数用于展开 place-* 复合属性。"
+  (let* ((parts (split-string value "[ \t]+" t))
+         (align-value (nth 0 parts))
+         (justify-value (if (> (length parts) 1)
+                            (nth 1 parts)
+                          (nth 0 parts))))
+    (list (list align-prop align-value important)
+          (list justify-prop justify-value important))))
+
 (defun etaf-css--expand-place-content (value important)
-  "展开 place-content 属性。
+  "Expand place-content shorthand property.
+VALUE is a string like \"center\" or \"center space-between\".
+IMPORTANT is whether this is !important.
+Returns expanded declaration list: align-content, justify-content.
+
+展开 place-content 属性。
 VALUE 是形如 \"center\" 或 \"center space-between\" 的字符串。
 IMPORTANT 是否为 !important。
 返回展开后的声明列表：align-content, justify-content。"
-  (let* ((parts (split-string value "[ \t]+" t))
-         (align-content nil)
-         (justify-content nil))
-    (pcase (length parts)
-      (1
-       (setq align-content (nth 0 parts)
-             justify-content (nth 0 parts)))
-      (_
-       (setq align-content (nth 0 parts)
-             justify-content (nth 1 parts))))
-    (list (list 'align-content align-content important)
-          (list 'justify-content justify-content important))))
+  (etaf-css--expand-place-property value important 'align-content 'justify-content))
 
 (defun etaf-css--expand-place-items (value important)
-  "展开 place-items 属性。
+  "Expand place-items shorthand property.
+VALUE is a string like \"center\" or \"center start\".
+IMPORTANT is whether this is !important.
+Returns expanded declaration list: align-items, justify-items.
+
+展开 place-items 属性。
 VALUE 是形如 \"center\" 或 \"center start\" 的字符串。
 IMPORTANT 是否为 !important。
 返回展开后的声明列表：align-items, justify-items。"
-  (let* ((parts (split-string value "[ \t]+" t))
-         (align-items nil)
-         (justify-items nil))
-    (pcase (length parts)
-      (1
-       (setq align-items (nth 0 parts)
-             justify-items (nth 0 parts)))
-      (_
-       (setq align-items (nth 0 parts)
-             justify-items (nth 1 parts))))
-    (list (list 'align-items align-items important)
-          (list 'justify-items justify-items important))))
+  (etaf-css--expand-place-property value important 'align-items 'justify-items))
 
 (defun etaf-css--expand-place-self (value important)
-  "展开 place-self 属性。
+  "Expand place-self shorthand property.
+VALUE is a string like \"center\" or \"center start\".
+IMPORTANT is whether this is !important.
+Returns expanded declaration list: align-self, justify-self.
+
+展开 place-self 属性。
 VALUE 是形如 \"center\" 或 \"center start\" 的字符串。
 IMPORTANT 是否为 !important。
 返回展开后的声明列表：align-self, justify-self。"
-  (let* ((parts (split-string value "[ \t]+" t))
-         (align-self nil)
-         (justify-self nil))
-    (pcase (length parts)
-      (1
-       (setq align-self (nth 0 parts)
-             justify-self (nth 0 parts)))
-      (_
-       (setq align-self (nth 0 parts)
-             justify-self (nth 1 parts))))
-    (list (list 'align-self align-self important)
-          (list 'justify-self justify-self important))))
+  (etaf-css--expand-place-property value important 'align-self 'justify-self))
 
 ;;; 主展开函数
 
 (defun etaf-css-expand-shorthand (prop value important)
-  "展开 CSS 复合属性。
+  "Expand CSS shorthand properties.
+PROP is the property name (symbol).
+VALUE is the property value (string).
+IMPORTANT is whether this is !important.
+If it's a shorthand property, returns expanded declaration list ((prop value important) ...).
+If not a shorthand property, returns nil.
+
+展开 CSS 复合属性。
 PROP 是属性名（symbol）。
 VALUE 是属性值（string）。
 IMPORTANT 是否为 !important。

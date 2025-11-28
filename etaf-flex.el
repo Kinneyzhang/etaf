@@ -155,7 +155,11 @@
     height))
 
 (defun etaf-flex-side-pixel (flex)
-  "计算 flex 容器的 side pixel（不含内容区域的两侧像素宽度）。
+  "Calculate total side pixels for a flex container (excluding content area).
+Returns the sum of left and right side pixels (padding, border, margin).
+This is used for nested flex container calculations.
+
+计算 flex 容器的 side pixel（不含内容区域的两侧像素宽度之和）。
 用于嵌套 flex 容器的计算。"
   (etaf-box-side-pixel flex))
 
@@ -324,7 +328,16 @@
      grows)))
 
 (defun etaf-flex-items-shrink (items-plists flex-units gaps-units direction)
-  "按照 shrink 缩减并设置子项长度。
+  "Shrink flex items according to their shrink factors.
+When some items reach their minimum size, remaining shrink space
+is redistributed to other items that can still shrink.
+
+ITEMS-PLISTS is the list of item property lists.
+FLEX-UNITS is the container's main axis size.
+GAPS-UNITS is the total gap space.
+DIRECTION is the flex direction.
+
+按照 shrink 缩减并设置子项长度。
 当某些 items 达到最小长度时，会重新分配剩余的缩减空间给其他 items。"
   (let* ((items (etaf-plists-get items-plists :item))
          (items-units-lst (etaf-plists-get items-plists :base-units))
