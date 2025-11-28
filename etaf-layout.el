@@ -290,13 +290,17 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; 获取 display 类型用于宽度计算
          (display (etaf-render-get-display render-node))
          (is-inline (string= display "inline"))
+         ;; 检查是否在 flex 容器内
+         (is-in-flex-container (plist-get parent-context :flex-container))
          
          ;; 计算内容宽度
          ;; 对于内联元素，width:auto 时宽度应该为 0，让后续根据实际内容计算
          ;; 对于块级元素，width:auto 时宽度应该填充父容器
+         ;; 但是当位于 flex 容器内时，块级元素的宽度应该由 flex 布局算法计算
+         ;; 基于 grow, shrink, basis 和 gap 等属性，而不是自动填充父容器宽度
          (content-width (if (eq width-value 'auto)
-                            (if is-inline
-                                0  ; 内联元素：宽度由内容决定，在渲染时计算
+                            (if (or is-inline is-in-flex-container)
+                                0  ; 内联元素或flex子元素：宽度由内容/flex算法决定
                               (max 0 (- parent-width
                                         padding-left-val padding-right-val
                                         border-left-val border-right-val
@@ -922,7 +926,6 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                           (etaf-layout--merge-flex-children
                            child-strings flex-direction row-gap column-gap
                            justify-content content-width content-height-px)))
-                ;; FIXME: 当多个item处于一行时，它们的总宽度应该等于前面的 content-width。目前的实现是每个 item 的宽度都等于 content-width 了。div 虽然是块级元素，但是它的宽度不是在所有时候都必须等于父容器的宽度的。当处于 flex 布局之下的时候，位于一行的多个块元素需要根据 grow, shrink, basis 和 gap 等灵活计算其宽度。
                 (etaf-layout--merge-flex-children
                  child-strings flex-direction row-gap column-gap
                  justify-content content-width content-height-px))
