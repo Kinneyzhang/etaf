@@ -1081,6 +1081,27 @@ RIGHTMOST-COMBINATOR是连接node到前一个部分的组合器。"
       (push (cons (nreverse current-nodes) current-combinator) parts))
     (nreverse parts)))
 
+(defun etaf-css-selector-node-matches-p (node dom selector-ast)
+  "检查节点 NODE 是否匹配选择器 SELECTOR-AST（支持组合器）。
+NODE 是要检查的 DOM 节点。
+DOM 是完整的 DOM 树根节点，用于查找父节点和兄弟节点。
+SELECTOR-AST 是通过 etaf-css-selector-parse 解析得到的选择器 AST。
+返回 t 如果节点匹配选择器，否则返回 nil。"
+  (let ((parts (etaf-css-selector-split-by-combinators selector-ast)))
+    (if (= (length parts) 1)
+        ;; 简单选择器，无组合器
+        (etaf-css-selector-part-match-p node (caar parts))
+      ;; 复杂选择器，有组合器
+      ;; 从右到左匹配
+      (let* ((rightmost-part (car (last parts)))
+             (preceding-parts (butlast parts))
+             (rightmost-combinator (cdr rightmost-part)))
+        ;; 首先检查节点是否匹配最右侧选择器
+        (and (etaf-css-selector-part-match-p node (car rightmost-part))
+             ;; 检查是否满足所有组合器关系
+             (etaf-css-selector-combinator-match-p
+              node preceding-parts rightmost-combinator dom))))))
+
 (defun etaf-css-selector-query-by-ast (dom selector-ast)
   "使用复杂选择器（包含组合器）查询DOM，返回所有匹配的节点列表。"
   (let ((parts (etaf-css-selector-split-by-combinators selector-ast))
