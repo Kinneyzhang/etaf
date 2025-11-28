@@ -19,8 +19,9 @@ Vue 模板 → 渲染后的 TML → DOM 树 → ...
 ## 核心模块
 
 - **etaf-tml.el** - TML (Template Markup Language) 到 DOM 的转换
-- **etaf-template.el** - Vue.js 风格的模板语法支持（新增）
+- **etaf-template.el** - Vue.js 风格的模板语法支持
 - **etaf-dom.el** - DOM 操作、查询和遍历
+- **etaf-tailwind.el** - Tailwind CSS 支持（新增）
 - **etaf-css.el** - CSS 对象模型（CSSOM）主入口
 - **etaf-css-parser.el** - CSS 解析器（支持 !important 和 @media）
 - **etaf-css-selector.el** - CSS 选择器解析和匹配
@@ -30,7 +31,7 @@ Vue 模板 → 渲染后的 TML → DOM 树 → ...
 - **etaf-css-cache.el** - 计算样式缓存
 - **etaf-css-index.el** - 规则索引优化
 - **etaf-render.el** - 渲染树构建
-- **etaf-layout.el** - 盒模型和布局计算（新增）
+- **etaf-layout.el** - 盒模型和布局计算
 
 ## 文档
 
@@ -203,6 +204,59 @@ Vue 模板 → 渲染后的 TML → DOM 树 → ...
 (etaf-template-set reactive :count 5) ;; 触发 watcher
 ```
 
+### Tailwind CSS 支持（新增）
+
+```elisp
+(require 'etaf-tailwind)
+
+;; 1. 解析 Tailwind 类名
+(etaf-tailwind-parse-class "md:hover:bg-red-500")
+;; => (:variants ("md" "hover") :utility "bg-red-500" :property "bg" :value "red-500")
+
+;; 2. 验证 Tailwind 类名
+(etaf-tailwind-class-p "bg-red-500")   ;; => t
+(etaf-tailwind-class-p "hover:text-lg") ;; => t
+(etaf-tailwind-class-p "invalid-xyz")   ;; => nil
+
+;; 3. 将 Tailwind 类转换为 CSS
+(etaf-tailwind-to-css "bg-red-500")
+;; => ((background-color . "#ef4444"))
+
+(etaf-tailwind-to-css "p-4")
+;; => ((padding . "1rem"))
+
+(etaf-tailwind-to-css "flex")
+;; => ((display . "flex"))
+
+;; 4. 多个类转换为 CSS
+(etaf-tailwind-classes-to-css "flex items-center bg-white p-4")
+;; => ((display . "flex") (align-items . "center") 
+;;     (background-color . "#ffffff") (padding . "1rem"))
+
+;; 5. DOM 集成
+(setq node '(div ((class . "container")) "Hello"))
+(etaf-tailwind-add-class node "flex")
+(etaf-tailwind-add-class node "bg-blue-500")
+;; node => (div ((class . "container flex bg-blue-500")) "Hello")
+
+;; 6. 查询 DOM 中的 Tailwind 类
+(etaf-dom-query-tailwind dom "flex")  ;; 查找所有 flex 类节点
+(etaf-dom-query-tailwind-pattern dom "^bg-")  ;; 查找所有背景类节点
+```
+
+#### 支持的 Tailwind 功能
+
+| 功能 | 说明 | 示例 |
+|------|------|------|
+| 响应式前缀 | sm, md, lg, xl, 2xl | `md:flex` |
+| 状态变体 | hover, focus, active 等 | `hover:bg-blue-500` |
+| 任意值 | 方括号语法 | `bg-[#1da1f2]` |
+| 颜色 | 完整的 Tailwind 调色板 | `bg-red-500`, `text-gray-700` |
+| 间距 | padding, margin | `p-4`, `mx-auto`, `mt-2` |
+| Flexbox | 弹性布局 | `flex`, `justify-center`, `items-center` |
+| 圆角 | border-radius | `rounded-lg`, `rounded-full` |
+| 阴影 | box-shadow | `shadow-md`, `shadow-lg` |
+
 ## 功能特性
 
 ### 已实现功能 ✅
@@ -214,6 +268,14 @@ Vue 模板 → 渲染后的 TML → DOM 树 → ...
   - 显示控制 `v-show`
   - 文本指令 `v-text`
   - 响应式数据系统
+
+- ✅ **Tailwind CSS 支持**（新增）
+  - 类名解析和验证
+  - 响应式前缀支持（sm、md、lg、xl、2xl）
+  - 状态变体支持（hover、focus、active 等）
+  - 任意值语法支持
+  - Tailwind 到 CSS 属性转换
+  - DOM 集成操作（添加、移除、切换类）
 
 - ✅ **完整的 CSS 选择器支持**
   - 标签、类、ID、属性选择器
@@ -303,7 +365,8 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 ```
 
 测试文件：
-- `etaf-template-tests.el` - Vue.js 风格模板语法测试（新增）
+- `etaf-template-tests.el` - Vue.js 风格模板语法测试
+- `etaf-tailwind-tests.el` - Tailwind CSS 支持测试（新增）
 - `etaf-css-tests.el` - CSS 主功能测试
 - `etaf-css-important-tests.el` - !important 和层叠测试
 - `etaf-css-cache-tests.el` - 缓存测试
@@ -311,16 +374,17 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 - `etaf-css-inheritance-tests.el` - 继承测试
 - `etaf-css-media-tests.el` - 媒体查询测试
 - `etaf-layout-tests.el` - 布局系统测试
-- `etaf-layout-buffer-string-tests.el` - 布局字符串生成测试（新增）
+- `etaf-layout-buffer-string-tests.el` - 布局字符串生成测试
 
 ## 示例
 
 查看 `examples/` 目录获取更多示例：
-- `etaf-template-example.el` - Vue.js 风格模板语法示例（新增）
+- `etaf-template-example.el` - Vue.js 风格模板语法示例
+- `etaf-tailwind-example.el` - Tailwind CSS 功能示例（新增）
 - `etaf-css-example.el` - CSS 功能演示
 - `etaf-render-example.el` - 渲染树使用示例
 - `etaf-layout-example.el` - 布局系统完整示例
-- `etaf-layout-buffer-string-example.el` - 布局字符串生成示例（新增）
+- `etaf-layout-buffer-string-example.el` - 布局字符串生成示例
 
 ## 贡献
 
