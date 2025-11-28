@@ -889,6 +889,7 @@ CONTAINER-HEIGHT is the container's content height for column layouts (optional)
 FLEX-WRAP is wrap mode (nowrap/wrap/wrap-reverse, default nowrap)."
   (if (null child-strings)
       ""
+    (message "child-strings:%S" child-strings)
     (let* ((is-row (or (string= flex-direction "row")
                        (string= flex-direction "row-reverse")))
            (main-gap (if is-row column-gap row-gap))
@@ -916,11 +917,15 @@ FLEX-WRAP is wrap mode (nowrap/wrap/wrap-reverse, default nowrap)."
                (needs-wrap (and should-wrap
                                 (> container-main-size 0)
                                 (> (+ actual-total-size total-gap) container-main-size))))
+          (message "(+ actual-total-size total-gap):%S" (+ actual-total-size total-gap))
+          (message "container-main-size:%S" container-main-size)
+          (message "needs-wrap:%S" needs-wrap)
           (if needs-wrap
               ;; Wrapping needed - split items into multiple lines
               (let* ((line-breaks (etaf-flex-line-breaks container-main-size item-sizes main-gap))
                      (lines '())
                      (idx 0))
+                (message "line-breaks" line-breaks)
                 ;; Process each line
                 (dolist (count line-breaks)
                   ;; Skip empty lines
@@ -968,7 +973,7 @@ FLEX-WRAP is wrap mode (nowrap/wrap/wrap-reverse, default nowrap)."
                   (etaf-layout--flex-concat-horizontal
                    valid-strings start-space between-space end-space)
                 (etaf-layout--flex-stack-vertical
-                 valid-strings start-space between-space end-space))))))))))
+                 valid-strings start-space between-space end-space)))))))))
 
 (defun etaf-layout--flex-concat-horizontal (strings start-space between-space end-space)
   "Horizontally concatenate flex child element strings.
