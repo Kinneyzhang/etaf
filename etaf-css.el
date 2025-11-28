@@ -197,13 +197,11 @@ DOM 是根 DOM 节点。
         (let* ((rules (etaf-css-get-rules-for-node cssom node dom))
                ;; 3. 使用层叠算法合并规则
                (computed-style (etaf-css-cascade-merge-rules rules))
-               ;; 4. 处理 Tailwind CSS 类名
-               (class-attr (dom-attr node 'class))
-               (tailwind-style-raw (when class-attr
-                                     (etaf-tailwind-classes-to-css class-attr)))
-               ;; 4.5 展开 Tailwind CSS 复合属性（如 border-width -> border-top-width 等）
-               (tailwind-style (when tailwind-style-raw
-                                 (etaf-css--expand-tailwind-shorthand tailwind-style-raw)))
+               ;; 4. 处理 Tailwind CSS 类名并展开复合属性
+               ;; 使用 when-let* 组合条件，避免不必要的中间变量
+               (tailwind-style (when-let* ((class-attr (dom-attr node 'class))
+                                           (tailwind-raw (etaf-tailwind-classes-to-css class-attr)))
+                                 (etaf-css--expand-tailwind-shorthand tailwind-raw)))
                ;; 5. 合并 Tailwind 样式到计算样式
                ;; Tailwind 类的优先级介于普通 CSS 规则和内联样式之间
                (computed-with-tailwind
@@ -239,10 +237,9 @@ STYLE-ALIST 是 ((property . value) ...) 格式的样式 alist。
              (expanded (etaf-css-expand-shorthand prop-name prop-value nil)))
         (if expanded
             ;; 复合属性，添加展开后的声明
+            ;; exp-decl 格式为 (prop-name value important)，使用 car/cadr 提取
             (dolist (exp-decl expanded)
-              ;; exp-decl 格式为 (prop-name value important)
-              ;; 转换为 (prop-name . value) 格式
-              (push (cons (nth 0 exp-decl) (nth 1 exp-decl)) result))
+              (push (cons (car exp-decl) (cadr exp-decl)) result))
           ;; 非复合属性，直接添加
           (push prop result))))
     (nreverse result)))
