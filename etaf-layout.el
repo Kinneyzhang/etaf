@@ -561,7 +561,9 @@ SHOULD-WRAP indicates whether wrapping is enabled."
          (items-count (length flex-items))
          (total-flex-basis 0)
          (total-flex-grow 0)
-         (total-flex-shrink 0))
+         (total-flex-shrink 0)
+         ;; Collect item sizes for grow/shrink calculation
+         (item-sizes '()))
     
     ;; 计算总的 flex-basis、flex-grow 和 flex-shrink
     (dolist (item flex-items)
@@ -569,15 +571,80 @@ SHOULD-WRAP indicates whether wrapping is enabled."
              (box-model (etaf-layout-get-box-model layout))
              (item-main-size (if is-row
                                  (etaf-box-model-total-width box-model)
-                               (etaf-box-model-total-height box-model))))
+                               (etaf-box-model-total-height box-model)))
+             (item-content-size (if is-row
+                                    (etaf-box-model-content-width box-model)
+                                  (etaf-box-model-content-height box-model)))
+             ;; Calculate side size (padding + border + margin)
+             (item-side-size (- item-main-size item-content-size)))
+        (push (list :item item
+                    :layout layout
+                    :box-model box-model
+                    :main-size item-main-size
+                    :content-size item-content-size
+                    :side-size item-side-size)
+              item-sizes)
         (setq total-flex-basis (+ total-flex-basis item-main-size))
         (setq total-flex-grow (+ total-flex-grow (plist-get item :flex-grow)))
         (setq total-flex-shrink (+ total-flex-shrink (plist-get item :flex-shrink)))))
     
+    ;; Reverse to maintain original order
+    (setq item-sizes (nreverse item-sizes))
+    
     ;; 计算总 gap
     (let* ((total-gap (* main-gap (max 0 (1- items-count))))
            (available-space (- main-size total-flex-basis total-gap))
-           (free-space (max 0 available-space)))
+           (free-space (max 0 available-space))
+           (overflow-space (max 0 (- available-space))))
+      
+      ;; Apply flex-grow when there's free space and total-flex-grow > 0
+      (when (and (> free-space 0) (> total-flex-grow 0) (> main-size 0))
+        (let* ((grow-unit (/ (float free-space) total-flex-grow))
+               (distributed 0))
+          (dotimes (i (length flex-items))
+            (let* ((item-info (nth i item-sizes))
+                   (item (plist-get item-info :item))
+                   (layout (plist-get item-info :layout))
+                   (box-model (plist-get item-info :box-model))
+                   (content-size (plist-get item-info :content-size))
+                   (side-size (plist-get item-info :side-size))
+                   (flex-grow (plist-get item :flex-grow)))
+              (when (> flex-grow 0)
+                (let* ((grow-amount (if (= i (1- (length flex-items)))
+                                        ;; Last item gets remaining space to avoid rounding errors
+                                        (- free-space distributed)
+                                      (floor (* grow-unit flex-grow))))
+                       (new-content-size (+ content-size grow-amount)))
+                  (setq distributed (+ distributed grow-amount))
+                  ;; Update box-model content width/height
+                  (if is-row
+                      (plist-put (plist-get box-model :content) :width new-content-size)
+                    (plist-put (plist-get box-model :content) :height new-content-size))))))))
+      
+      ;; Apply flex-shrink when there's overflow and total-flex-shrink > 0
+      (when (and (> overflow-space 0) (> total-flex-shrink 0) (> main-size 0))
+        (let* ((shrink-unit (/ (float overflow-space) total-flex-shrink))
+               (distributed 0))
+          (dotimes (i (length flex-items))
+            (let* ((item-info (nth i item-sizes))
+                   (item (plist-get item-info :item))
+                   (layout (plist-get item-info :layout))
+                   (box-model (plist-get item-info :box-model))
+                   (content-size (plist-get item-info :content-size))
+                   (side-size (plist-get item-info :side-size))
+                   (flex-shrink (plist-get item :flex-shrink)))
+              (when (> flex-shrink 0)
+                (let* ((shrink-amount (if (= i (1- (length flex-items)))
+                                          ;; Last item gets remaining space to avoid rounding errors
+                                          (- overflow-space distributed)
+                                        (floor (* shrink-unit flex-shrink))))
+                       ;; Don't shrink below 0
+                       (new-content-size (max 0 (- content-size shrink-amount))))
+                  (setq distributed (+ distributed shrink-amount))
+                  ;; Update box-model content width/height
+                  (if is-row
+                      (plist-put (plist-get box-model :content) :width new-content-size)
+                    (plist-put (plist-get box-model :content) :height new-content-size))))))))
       
       ;; 存储计算结果
       (dom-set-attribute layout-node 'layout-flex-free-space free-space)

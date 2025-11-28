@@ -173,5 +173,198 @@ the container's content-width, not each item filling the entire parent width."
     ;; as flex algorithm will distribute space based on grow/shrink
     (should (<= total-items-width container-width))))
 
+;;; Flex-grow and Flex-shrink Tests
+
+(ert-deftest etaf-layout-test-flex-grow-stretches-items ()
+  "Test that flex-grow > 0 properly stretches items to fill container.
+When container width is greater than the total width of child elements,
+children with flex-grow > 0 should be stretched proportionally."
+  (require 'etaf-layout)
+  (require 'etaf-render)
+  (require 'etaf-css)
+  (require 'etaf-tml)
+  (let* ((dom (etaf-tml-to-dom
+               '(html
+                 (head
+                  (style "
+                    .flex-container {
+                      display: flex;
+                      width: 800px;
+                    }
+                    .flex-item {
+                      width: 100px;
+                      height: 50px;
+                      flex-grow: 1;
+                    }
+                  "))
+                 (body
+                  (div :class "flex-container"
+                       (div :class "flex-item" "A")
+                       (div :class "flex-item" "B"))))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (flex-container (car (dom-non-text-children body-node)))
+         (flex-items (dom-non-text-children flex-container))
+         (container-box (etaf-layout-get-box-model flex-container))
+         (container-width (etaf-box-model-content-width container-box)))
+    ;; Container should have width 800
+    (should (equal container-width 800))
+    ;; Each item should be stretched from 100px to about 400px (800/2 items)
+    ;; because both items have equal flex-grow: 1
+    (let* ((item1-box (etaf-layout-get-box-model (nth 0 flex-items)))
+           (item2-box (etaf-layout-get-box-model (nth 1 flex-items)))
+           (item1-width (etaf-box-model-content-width item1-box))
+           (item2-width (etaf-box-model-content-width item2-box)))
+      ;; Each item should be stretched beyond original 100px width
+      ;; With equal flex-grow, they should each get 400px (half of 800px)
+      (should (> item1-width 100))
+      (should (> item2-width 100))
+      ;; Total width should equal container width
+      (should (= (+ (etaf-box-model-total-width item1-box)
+                    (etaf-box-model-total-width item2-box))
+                 container-width)))))
+
+(ert-deftest etaf-layout-test-flex-grow-proportional ()
+  "Test that flex-grow distributes space proportionally.
+An item with flex-grow: 2 should grow twice as much as one with flex-grow: 1."
+  (require 'etaf-layout)
+  (require 'etaf-render)
+  (require 'etaf-css)
+  (require 'etaf-tml)
+  (let* ((dom (etaf-tml-to-dom
+               '(html
+                 (head
+                  (style "
+                    .flex-container {
+                      display: flex;
+                      width: 900px;
+                    }
+                    .item1 {
+                      width: 100px;
+                      flex-grow: 1;
+                    }
+                    .item2 {
+                      width: 100px;
+                      flex-grow: 2;
+                    }
+                  "))
+                 (body
+                  (div :class "flex-container"
+                       (div :class "item1" "A")
+                       (div :class "item2" "B"))))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (flex-container (car (dom-non-text-children body-node)))
+         (flex-items (dom-non-text-children flex-container)))
+    ;; Total initial width: 200px, free space: 700px
+    ;; item1 gets 700/3 = 233px extra, item2 gets 2*700/3 = 466px extra
+    ;; Final: item1 = 333px, item2 = 566px (approximately)
+    (let* ((item1-box (etaf-layout-get-box-model (nth 0 flex-items)))
+           (item2-box (etaf-layout-get-box-model (nth 1 flex-items)))
+           (item1-width (etaf-box-model-content-width item1-box))
+           (item2-width (etaf-box-model-content-width item2-box)))
+      ;; Both should be stretched beyond original 100px
+      (should (> item1-width 100))
+      (should (> item2-width 100))
+      ;; item2 should have gotten more grow space than item1 (roughly 2x)
+      ;; Growth amount: item1 grew by (item1-width - 100), item2 grew by (item2-width - 100)
+      (let ((item1-growth (- item1-width 100))
+            (item2-growth (- item2-width 100)))
+        ;; item2 growth should be approximately 2x item1 growth
+        ;; Allow some tolerance for rounding
+        (should (> item2-growth (* 1.5 item1-growth)))))))
+
+(ert-deftest etaf-layout-test-flex-shrink-reduces-items ()
+  "Test that flex-shrink > 0 properly shrinks items when overflow occurs.
+When container width is less than the total width of child elements,
+children with flex-shrink > 0 should be reduced proportionally."
+  (require 'etaf-layout)
+  (require 'etaf-render)
+  (require 'etaf-css)
+  (require 'etaf-tml)
+  (let* ((dom (etaf-tml-to-dom
+               '(html
+                 (head
+                  (style "
+                    .flex-container {
+                      display: flex;
+                      width: 300px;
+                    }
+                    .flex-item {
+                      width: 200px;
+                      height: 50px;
+                      flex-shrink: 1;
+                    }
+                  "))
+                 (body
+                  (div :class "flex-container"
+                       (div :class "flex-item" "A")
+                       (div :class "flex-item" "B"))))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (flex-container (car (dom-non-text-children body-node)))
+         (flex-items (dom-non-text-children flex-container)))
+    ;; Total initial width: 400px, container: 300px, overflow: 100px
+    ;; Each item should shrink by 50px to fit (200 - 50 = 150px each)
+    (let* ((item1-box (etaf-layout-get-box-model (nth 0 flex-items)))
+           (item2-box (etaf-layout-get-box-model (nth 1 flex-items)))
+           (item1-width (etaf-box-model-content-width item1-box))
+           (item2-width (etaf-box-model-content-width item2-box)))
+      ;; Each item should be shrunk below original 200px width
+      (should (< item1-width 200))
+      (should (< item2-width 200))
+      ;; Total width should equal container width
+      (should (= (+ (etaf-box-model-total-width item1-box)
+                    (etaf-box-model-total-width item2-box))
+                 300)))))
+
+(ert-deftest etaf-layout-test-flex-grow-zero-no-stretch ()
+  "Test that flex-grow: 0 items don't stretch."
+  (require 'etaf-layout)
+  (require 'etaf-render)
+  (require 'etaf-css)
+  (require 'etaf-tml)
+  (let* ((dom (etaf-tml-to-dom
+               '(html
+                 (head
+                  (style "
+                    .flex-container {
+                      display: flex;
+                      width: 800px;
+                    }
+                    .no-grow {
+                      width: 100px;
+                      flex-grow: 0;
+                    }
+                    .grow {
+                      width: 100px;
+                      flex-grow: 1;
+                    }
+                  "))
+                 (body
+                  (div :class "flex-container"
+                       (div :class "no-grow" "A")
+                       (div :class "grow" "B"))))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (flex-container (car (dom-non-text-children body-node)))
+         (flex-items (dom-non-text-children flex-container)))
+    (let* ((no-grow-box (etaf-layout-get-box-model (nth 0 flex-items)))
+           (grow-box (etaf-layout-get-box-model (nth 1 flex-items)))
+           (no-grow-width (etaf-box-model-content-width no-grow-box))
+           (grow-width (etaf-box-model-content-width grow-box)))
+      ;; no-grow item should stay at 100px
+      (should (= no-grow-width 100))
+      ;; grow item should expand to fill remaining space (700px)
+      (should (= grow-width 700)))))
+
 (provide 'etaf-flex-tests)
 ;;; etaf-flex-tests.el ends here
