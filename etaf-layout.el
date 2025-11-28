@@ -1220,9 +1220,12 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
          (inner-content children-text)
          
          ;; 计算内容高度（行数）
-         (content-height (if (> (length inner-content) 0)
-                             (etaf-string-linum inner-content)
-                           (if (> content-height-px 0) 1 0)))
+         ;; 优先使用 CSS 设置的高度，如果未设置（为 0）则根据内容计算
+         (content-height (if (> content-height-px 0)
+                             content-height-px
+                           (if (> (length inner-content) 0)
+                               (etaf-string-linum inner-content)
+                             0)))
          
          ;; 如果有实际内容但宽度为 0，使用内容的最大行像素宽度作为默认宽度
          (effective-width (if (and (> (length inner-content) 0) (<= content-width 0))
