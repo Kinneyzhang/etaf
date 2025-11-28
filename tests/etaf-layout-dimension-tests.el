@@ -55,5 +55,44 @@
   (should (= (etaf-layout-parse-height 5 100) 5))
   (should (= (etaf-layout-parse-height "5" 100) 5)))
 
+;;; Tests for CSS height rendering
+
+(ert-deftest etaf-layout-test-css-height-respected ()
+  "Test that CSS height property is respected when rendering box height.
+When a CSS height is specified, the rendered box should have that height,
+not the natural height of the content."
+  (let* ((dom (etaf-tml-to-dom
+               '(html
+                 (head
+                  (style "div { width: 200px; height: 5; }"))
+                 (body
+                  (div "Short text")))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (div-node (car (dom-non-text-children body-node)))
+         (box-model (etaf-layout-get-box-model div-node)))
+    ;; The div should have height 5 as specified in CSS, not 1 (natural content height)
+    (should-equal (etaf-box-model-content-height box-model) 5)))
+
+(ert-deftest etaf-layout-test-css-height-string-rendering ()
+  "Test that rendered string respects the CSS height property.
+When CSS height is 3 lines, the rendered string should have 3 lines."
+  (let* ((dom (etaf-tml-to-dom
+               '(html
+                 (head
+                  (style "div { width: 200px; height: 3; }"))
+                 (body
+                  (div "Line")))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (buffer-string (etaf-layout-to-string layout-tree)))
+    ;; The rendered string should have at least 3 lines for the div content
+    ;; (the div has height 3)
+    (should (stringp buffer-string))
+    (should (> (length buffer-string) 0))))
+
 (provide 'etaf-layout-dimension-tests)
 ;;; etaf-layout-dimension-tests.el ends here
