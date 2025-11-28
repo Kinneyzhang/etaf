@@ -154,6 +154,11 @@
     (oset item content content)
     height))
 
+(defun etaf-flex-side-pixel (flex)
+  "计算 flex 容器的 side pixel（不含内容区域的两侧像素宽度）。
+用于嵌套 flex 容器的计算。"
+  (etaf-box-side-pixel flex))
+
 (defun etaf-flex-parse-basis (item flex)
   ;; 对于左右方向排列的文本，宽度会影响高度，但是高度不会影响宽度
   ;; min(max)-width 优先级比 min(max)-content 高
@@ -171,8 +176,9 @@
             ((pred etaf-box-p)
              (etaf-flex-item-side-pixel content))
             ((pred stringp) 0)
-            ;; FIXME: cal etaf-flex side pixel
-            ((pred etaf-flex-p) 0)
+            ((pred etaf-flex-p)
+             ;; 嵌套的 flex 容器，计算其 side pixel
+             (etaf-flex-side-pixel content))
             (_ (error "Invalid type %s of content in item."
                       (type-of content)))))
          curr-units min-units max-units)
@@ -247,12 +253,10 @@
              (etaf-flex-item-total-pixel item)))))
     (pcase align
       ((or 'stretch 'normal)
-       ;; FIXME: 这个实现是错的！
-       ;; 需要调整交叉内容的长度
-       (let* ((rest-units (- items-cross-max-units item-cross-units))
-              (start-units (/ rest-units 2))
-              (end-units (- rest-units start-units)))
-         (cons start-units end-units)))
+       ;; stretch 模式下，item 应该拉伸填充交叉轴空间
+       ;; 这里返回 (0 . 0) 表示不需要额外的填充
+       ;; 实际的拉伸在 etaf-item-set-cross-units 中处理
+       (cons 0 0))
       ('center
        (let* ((rest-units (- items-cross-max-units item-cross-units))
               (start-units (/ rest-units 2))
@@ -262,12 +266,14 @@
        (cons 0 (- items-cross-max-units item-cross-units)))
       ('flex-end
        (cons (- items-cross-max-units item-cross-units) 0))
-      ;; ('baseline
-      ;;  ;; FIXME: 暂不支持，后续优化
-      ;;  ;; 项目的第一行文本基线与容器中所有其他项目的基线对齐。
-      ;;  ;; 若项目无文本，则以其底部边缘为基线。
-      ;;  )
-      )))
+      ('baseline
+       ;; baseline 对齐：项目的第一行文本基线与容器中所有其他项目的基线对齐
+       ;; 简化实现：将 item 对齐到底部（与 flex-end 相同）
+       ;; 因为文本基线通常在底部附近
+       (cons (- items-cross-max-units item-cross-units) 0))
+      (_
+       ;; 默认使用 flex-start
+       (cons 0 (- items-cross-max-units item-cross-units))))))
 
 ;; basis 决定 items 的基础宽度
 ;; grow or shrink
@@ -318,54 +324,71 @@
      grows)))
 
 (defun etaf-flex-items-shrink (items-plists flex-units gaps-units direction)
-  "按照 shrink 缩减并设置子项长度"
+  "按照 shrink 缩减并设置子项长度。
+当某些 items 达到最小长度时，会重新分配剩余的缩减空间给其他 items。"
   (let* ((items (etaf-plists-get items-plists :item))
          (items-units-lst (etaf-plists-get items-plists :base-units))
          (items-units (apply #'+ items-units-lst))
          ;; shrink 后不能小于 最小宽度 或 最小高度(1)
-         (rest-units (abs (- flex-units items-units gaps-units)))
+         (overflow-units (- items-units flex-units gaps-units))
          (min-units-lst (etaf-plists-get items-plists :min-units))
          (shrinks (etaf-plists-get items-plists :shrink))
-         (shrinks-sum (apply '+ shrinks))
-         (average-shrink (if (> shrinks-sum 0)
-                             (/ rest-units shrinks-sum)
-                           0))
-         (rest-num (if (> shrinks-sum 0)
-                       (% rest-units shrinks-sum)
-                     0))
-         (rest-idx 0))
-    ;; (elog-debug "rest-units:%S" rest-units)
-    (seq-map-indexed
-     (lambda (shrink idx)
-       (let* ((base-units (nth idx items-units-lst))
-              (item (nth idx items))
-              (min-units (nth idx min-units-lst))
-              final-units)
-         (if (= shrink 0)
-             ;; shrink=0 不缩减
-             (setq final-units base-units)
-           ;; shrink>0 按比例缩减，但不能小于最小长度
-           (setq final-units
-                 ;; FIXME: 当缩减后小于最小长度时，
-                 ;; 其余 items 重新分配这未能被缩减的长度
-                 (max min-units
-                      (- (- base-units (* shrink average-shrink))
-                         (if (< rest-idx rest-num) 1 0))))
-           (cl-incf rest-idx 1))
-         ;; (elog-debug "shrink:%s" final-units)
-         (pcase direction
-           ;; 关键点:
-           ;; 1. basis units 是 item block 总长度
-           ;; 2. item block 的 width/height 属性是内容的长度
-           ((or 'row 'row-reverse)
-            (oset item width
-                  (list (- final-units
-                           (etaf-flex-item-side-pixel item)))))
-           ((or 'column 'column-reverse)
-            (oset item height
-                  (- final-units
-                     (etaf-flex-item-side-height item)))))))
-     shrinks)))
+         ;; 计算每个 item 可以缩减的最大量（base - min）
+         (max-shrink-lst (cl-mapcar (lambda (base min)
+                                      (max 0 (- base min)))
+                                    items-units-lst min-units-lst))
+         ;; 追踪还需要缩减的空间和哪些 items 还可以缩减
+         (remaining-overflow overflow-units)
+         (final-units-lst (copy-sequence items-units-lst))
+         (can-shrink-lst (make-list (length items) t)))
+    ;; 迭代缩减，直到没有溢出或没有 item 可以继续缩减
+    (while (and (> remaining-overflow 0)
+                (cl-some #'identity can-shrink-lst))
+      (let* (;; 计算可以参与本轮缩减的 items 的 shrink 总和
+             (active-shrinks-sum
+              (cl-reduce #'+ (cl-mapcar (lambda (shrink can)
+                                          (if can shrink 0))
+                                        shrinks can-shrink-lst)))
+             (shrink-unit (if (> active-shrinks-sum 0)
+                              (/ (float remaining-overflow) active-shrinks-sum)
+                            0))
+             (actually-shrunk 0))
+        (dotimes (idx (length items))
+          (when (nth idx can-shrink-lst)
+            (let* ((shrink (nth idx shrinks))
+                   (current-units (nth idx final-units-lst))
+                   (min-units (nth idx min-units-lst))
+                   (max-shrink (nth idx max-shrink-lst))
+                   (proposed-shrink (min max-shrink (* shrink shrink-unit)))
+                   (new-units (max min-units (- current-units proposed-shrink))))
+              ;; 更新 final-units
+              (setf (nth idx final-units-lst) new-units)
+              ;; 记录实际缩减量
+              (setq actually-shrunk (+ actually-shrunk (- current-units new-units)))
+              ;; 如果达到最小值，标记为不可继续缩减
+              (when (<= new-units min-units)
+                (setf (nth idx can-shrink-lst) nil)))))
+        ;; 更新剩余需要缩减的空间
+        (setq remaining-overflow (max 0 (- remaining-overflow actually-shrunk)))
+        ;; 如果这轮没有实际缩减，退出循环避免无限循环
+        (when (<= actually-shrunk 0)
+          (setq remaining-overflow 0))))
+    ;; 将计算结果应用到 items
+    (dotimes (idx (length items))
+      (let* ((item (nth idx items))
+             (final-units (floor (nth idx final-units-lst))))
+        (pcase direction
+          ;; 关键点:
+          ;; 1. basis units 是 item block 总长度
+          ;; 2. item block 的 width/height 属性是内容的长度
+          ((or 'row 'row-reverse)
+           (oset item width
+                 (list (- final-units
+                          (etaf-flex-item-side-pixel item)))))
+          ((or 'column 'column-reverse)
+           (oset item height
+                 (- final-units
+                    (etaf-flex-item-side-height item)))))))))
 
 (defun etaf-flex-main-gap-units (flex)
   "返回主轴方向的 gap 长度"
@@ -707,7 +730,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
 
             ;; 缩减之后非 nowrap，items 个数大于1且超过容器长度的
             ;; 多个 items 换行后，重新计算
-            (when (and (not (eq 'nowarp (oref flex wrap)))
+            (when (and (not (eq 'nowrap (oref flex wrap)))
                        (> (length items-plists) 1))
               (let ((items-units
                      (etaf-flex-items-main-units items-plists flex)))
@@ -771,7 +794,8 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
           ;; 重置默认值为 nil
           (setq items-plists-lst nil)
           (setq cross-items-pads-lst nil)
-          (let ((prev 0) (idx 0))
+          (let ((prev 0) (idx 0)
+                (items-align (oref flex items-align)))
             (dolist (num wrap-lst)
               (let* ((sub-items-plists
                       (seq-subseq items-plists
@@ -782,6 +806,17 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                      ;; 用于计算 items-align, cross-align
                      (items-cross-max-units (nth idx cross-max-units-lst)))
                 (push sub-items-plists items-plists-lst)
+                ;; 对于 stretch 对齐，设置 item 的交叉轴长度为最大长度
+                (when (or (eq items-align 'stretch)
+                          (eq items-align 'normal))
+                  (dolist (item items)
+                    (let ((item-align (oref item cross-align)))
+                      ;; 只有当 item 自身没有设置 align 或设置为 auto/stretch 时才拉伸
+                      (when (or (null item-align)
+                                (eq item-align 'auto)
+                                (eq item-align 'stretch))
+                        (etaf-item-set-cross-units
+                         item items-cross-max-units direction)))))
                 ;; consider cross-align
                 ;; 返回 cons-cell，用于 pad 在 item 开头和结尾
                 (push (mapcar (lambda (item)
@@ -835,7 +870,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                                     (make-list (1- main-num) gap-units)
                                     (list 0))))
                   ;; 其余 content-align 值，只计算主轴之间的 gap
-                  (if (and (not (eq 'nowarp (oref flex wrap)))
+                  (if (and (not (eq 'nowrap (oref flex wrap)))
                            (> main-num 1)
                            (< cross-content-units cross-flex-units))
                       (setq cross-gaps-lst

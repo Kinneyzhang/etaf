@@ -368,6 +368,60 @@ IMPORTANT 是否为 !important。
     (list (list 'row-gap row-gap important)
           (list 'column-gap column-gap important))))
 
+(defun etaf-css--expand-place-content (value important)
+  "展开 place-content 属性。
+VALUE 是形如 \"center\" 或 \"center space-between\" 的字符串。
+IMPORTANT 是否为 !important。
+返回展开后的声明列表：align-content, justify-content。"
+  (let* ((parts (split-string value "[ \t]+" t))
+         (align-content nil)
+         (justify-content nil))
+    (pcase (length parts)
+      (1
+       (setq align-content (nth 0 parts)
+             justify-content (nth 0 parts)))
+      (_
+       (setq align-content (nth 0 parts)
+             justify-content (nth 1 parts))))
+    (list (list 'align-content align-content important)
+          (list 'justify-content justify-content important))))
+
+(defun etaf-css--expand-place-items (value important)
+  "展开 place-items 属性。
+VALUE 是形如 \"center\" 或 \"center start\" 的字符串。
+IMPORTANT 是否为 !important。
+返回展开后的声明列表：align-items, justify-items。"
+  (let* ((parts (split-string value "[ \t]+" t))
+         (align-items nil)
+         (justify-items nil))
+    (pcase (length parts)
+      (1
+       (setq align-items (nth 0 parts)
+             justify-items (nth 0 parts)))
+      (_
+       (setq align-items (nth 0 parts)
+             justify-items (nth 1 parts))))
+    (list (list 'align-items align-items important)
+          (list 'justify-items justify-items important))))
+
+(defun etaf-css--expand-place-self (value important)
+  "展开 place-self 属性。
+VALUE 是形如 \"center\" 或 \"center start\" 的字符串。
+IMPORTANT 是否为 !important。
+返回展开后的声明列表：align-self, justify-self。"
+  (let* ((parts (split-string value "[ \t]+" t))
+         (align-self nil)
+         (justify-self nil))
+    (pcase (length parts)
+      (1
+       (setq align-self (nth 0 parts)
+             justify-self (nth 0 parts)))
+      (_
+       (setq align-self (nth 0 parts)
+             justify-self (nth 1 parts))))
+    (list (list 'align-self align-self important)
+          (list 'justify-self justify-self important))))
+
 ;;; 主展开函数
 
 (defun etaf-css-expand-shorthand (prop value important)
@@ -394,6 +448,10 @@ IMPORTANT 是否为 !important。
     ('flex (etaf-css--expand-flex value important))
     ('flex-flow (etaf-css--expand-flex-flow value important))
     ('gap (etaf-css--expand-gap value important))
+    ;; place-* 复合属性
+    ('place-content (etaf-css--expand-place-content value important))
+    ('place-items (etaf-css--expand-place-items value important))
+    ('place-self (etaf-css--expand-place-self value important))
     ;; 非复合属性
     (_ nil)))
 
