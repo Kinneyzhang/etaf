@@ -158,7 +158,7 @@ the container's content-width, not each item filling the entire parent width."
          (container-width (etaf-box-model-content-width container-box))
          (total-items-width 0))
     ;; Container should have width 800
-    (should-equal container-width 800)
+    (should (equal container-width 800))
     ;; Calculate total width of all flex items
     (dolist (item flex-items)
       (let* ((box-model (etaf-layout-get-box-model item))
