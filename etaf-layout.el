@@ -913,6 +913,7 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                   children))
          ;; 根据 display 类型合并子节点
          ;; flex 容器使用 flex 特定的合并逻辑
+         (_ (message "content-width:%S" content-width))
          (children-text
           (if is-flex-container
               ;; Flex 容器：使用 flex 布局合并
@@ -921,6 +922,11 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                     (column-gap (or (dom-attr layout-node 'layout-column-gap) 0))
                     (justify-content (dom-attr layout-node 'layout-justify-content))
                     (child-strings (mapcar #'car child-infos)))
+                (message "item-with:%S"
+                         (string-pixel-width
+                          (etaf-layout--merge-flex-children
+                           child-strings flex-direction row-gap column-gap
+                           justify-content content-width content-height-px)))
                 (etaf-layout--merge-flex-children
                  child-strings flex-direction row-gap column-gap
                  justify-content content-width content-height-px))
