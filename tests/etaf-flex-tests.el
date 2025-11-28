@@ -366,6 +366,40 @@ children with flex-shrink > 0 should be reduced proportionally."
       ;; grow item should expand to fill remaining space (700px)
       (should (= grow-width 700)))))
 
+;;; Place-* shorthand property tests
+
+(ert-deftest etaf-css-shorthand-test-place-content-single ()
+  "Test expanding place-content with a single value."
+  (require 'etaf-css-shorthand)
+  (let ((result (etaf-css--expand-place-content "center" nil)))
+    (should (equal (length result) 2))
+    (should (member '(align-content "center" nil) result))
+    (should (member '(justify-content "center" nil) result))))
+
+(ert-deftest etaf-css-shorthand-test-place-content-two-values ()
+  "Test expanding place-content with two values."
+  (require 'etaf-css-shorthand)
+  (let ((result (etaf-css--expand-place-content "center space-between" nil)))
+    (should (equal (length result) 2))
+    (should (member '(align-content "center" nil) result))
+    (should (member '(justify-content "space-between" nil) result))))
+
+(ert-deftest etaf-css-shorthand-test-place-items-single ()
+  "Test expanding place-items with a single value."
+  (require 'etaf-css-shorthand)
+  (let ((result (etaf-css--expand-place-items "stretch" nil)))
+    (should (equal (length result) 2))
+    (should (member '(align-items "stretch" nil) result))
+    (should (member '(justify-items "stretch" nil) result))))
+
+(ert-deftest etaf-css-shorthand-test-place-self-two-values ()
+  "Test expanding place-self with two values."
+  (require 'etaf-css-shorthand)
+  (let ((result (etaf-css--expand-place-self "start end" nil)))
+    (should (equal (length result) 2))
+    (should (member '(align-self "start" nil) result))
+    (should (member '(justify-self "end" nil) result))))
+
 ;;; Inline Element Wrapping Tests
 
 (ert-deftest etaf-layout-test-inline-elements-wrap ()
