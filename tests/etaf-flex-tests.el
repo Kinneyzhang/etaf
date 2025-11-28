@@ -366,5 +366,33 @@ children with flex-shrink > 0 should be reduced proportionally."
       ;; grow item should expand to fill remaining space (700px)
       (should (= grow-width 700)))))
 
+;;; Inline Element Wrapping Tests
+
+(ert-deftest etaf-layout-test-inline-elements-wrap ()
+  "Test that inline elements wrap when they exceed container width."
+  (require 'etaf-layout)
+  (require 'etaf-render)
+  (require 'etaf-css)
+  (require 'etaf-tml)
+  ;; Test the helper function directly
+  (let* ((str1 (make-string 50 ?A))  ;; A string of 50 'A' characters
+         (str2 (make-string 50 ?B))  ;; A string of 50 'B' characters
+         (str3 (make-string 50 ?C))  ;; A string of 50 'C' characters
+         (inline-strings (list str1 str2 str3))
+         (total-width (apply #'+ (mapcar #'string-pixel-width inline-strings)))
+         ;; Set container width to be less than total width but more than 2 items
+         (container-width (* (string-pixel-width str1) 2)))
+    ;; Without wrapping (container-width = nil)
+    (let ((result-no-wrap (etaf-layout--merge-inline-with-wrap inline-strings nil)))
+      ;; Should be on one line (no newlines from wrapping, just from etaf-lines-concat)
+      (should (stringp result-no-wrap)))
+    ;; With wrapping (container-width set)
+    (let ((result-wrap (etaf-layout--merge-inline-with-wrap inline-strings container-width)))
+      ;; Should contain newlines due to wrapping
+      (should (stringp result-wrap))
+      ;; When items exceed container, result should have multiple lines
+      (when (> total-width container-width)
+        (should (> (length (split-string result-wrap "\n")) 1))))))
+
 (provide 'etaf-flex-tests)
 ;;; etaf-flex-tests.el ends here

@@ -760,12 +760,14 @@ FUNC 是接受一个布局节点参数的函数。
 
 ;;; 布局字符串生成（用于 Emacs buffer 渲染）
 
-(defun etaf-layout--merge-children-by-display (child-infos)
+(defun etaf-layout--merge-children-by-display (child-infos &optional container-width)
   "Merge child element strings by display type.
 CHILD-INFOS is a list of ((string . display-type) ...).
+CONTAINER-WIDTH is optional container width for wrapping inline elements.
 Inline elements are concatenated horizontally using etaf-lines-concat.
 Block elements are stacked vertically.
-Consecutive inline elements are grouped together, then combined with block elements."
+Consecutive inline elements are grouped together, then combined with block elements.
+When CONTAINER-WIDTH is provided and inline elements exceed it, they will wrap."
   (if (null child-infos)
       ""
     (let ((result-parts '())  ;; Final vertically combined parts
@@ -782,18 +784,50 @@ Consecutive inline elements are grouped together, then combined with block eleme
               (when inline-group
                 ;; Use etaf-lines-concat to properly join inline elements
                 ;; This treats each element as a complete unit with its borders intact
-                (push (etaf-lines-concat
-                       (nreverse inline-group))
+                (push (etaf-layout--merge-inline-with-wrap
+                       (nreverse inline-group) container-width)
                       result-parts)
                 (setq inline-group nil))
               (push str result-parts)))))
       ;; Handle remaining inline group
       (when inline-group
-        ;; Use etaf-lines-concat to properly join inline elements
-        (push (etaf-lines-concat (nreverse inline-group)) result-parts))
+        ;; Use etaf-lines-concat to properly join inline elements with wrapping
+        (push (etaf-layout--merge-inline-with-wrap
+               (nreverse inline-group) container-width)
+              result-parts))
       ;; Vertically combine all parts
       ;; Use reverse instead of nreverse to avoid destructive modification
       (string-join (reverse result-parts) "\n"))))
+
+(defun etaf-layout--merge-inline-with-wrap (inline-strings &optional container-width)
+  "Merge inline strings, wrapping to new lines when container width is exceeded.
+INLINE-STRINGS is a list of inline element strings.
+CONTAINER-WIDTH is optional container width for wrapping."
+  (if (or (null inline-strings)
+          (null container-width)
+          (<= container-width 0))
+      ;; No wrapping needed
+      (if inline-strings
+          (etaf-lines-concat inline-strings)
+        "")
+    ;; Calculate line breaks based on container width
+    (let* ((widths (mapcar #'string-pixel-width inline-strings))
+           (total-width (apply #'+ widths)))
+      (if (<= total-width container-width)
+          ;; All fit in one line
+          (etaf-lines-concat inline-strings)
+        ;; Need to wrap - calculate line breaks
+        (let* ((line-breaks (etaf-flex-line-breaks container-width widths 0))
+               (lines '())
+               (idx 0))
+          (dolist (count line-breaks)
+            (let ((line-strings (seq-subseq inline-strings idx (+ idx count))))
+              (push (etaf-lines-concat line-strings) lines)
+              (setq idx (+ idx count))))
+          ;; Stack lines vertically
+          (if lines
+              (etaf-lines-stack (nreverse lines))
+            ""))))))
 
 (defun etaf-layout--merge-flex-children (child-strings flex-direction
                                                        row-gap column-gap
@@ -995,7 +1029,8 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
             ;; - inline 元素应该水平拼接
             ;; - block 元素应该垂直堆叠
             ;; 策略：将连续的 inline 元素组合在一起水平拼接，然后与 block 元素垂直堆叠
-            (etaf-layout--merge-children-by-display child-infos)))
+            ;; 传递 content-width 用于 inline 元素换行判断
+            (etaf-layout--merge-children-by-display child-infos content-width)))
          
          ;; 内容：如果有子元素则使用子元素的字符串，否则为空
          (inner-content children-text)
