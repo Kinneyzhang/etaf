@@ -298,9 +298,10 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; 对于块级元素，width:auto 时宽度应该填充父容器
          ;; 但是当位于 flex 容器内时，块级元素的宽度应该由 flex 布局算法计算
          ;; 基于 grow, shrink, basis 和 gap 等属性，而不是自动填充父容器宽度
+         ;; 初始值设为 0，后续由 flex 算法调整实际宽度
          (content-width (if (eq width-value 'auto)
                             (if (or is-inline is-in-flex-container)
-                                0  ; 内联元素或flex子元素：宽度由内容/flex算法决定
+                                0  ; 初始值：后续由内容尺寸或flex算法决定实际宽度
                               (max 0 (- parent-width
                                         padding-left-val padding-right-val
                                         border-left-val border-right-val
