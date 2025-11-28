@@ -961,6 +961,53 @@ CONTAINER-WIDTH is optional container width for wrapping."
               (etaf-lines-stack (nreverse lines))
             ""))))))
 
+(defun etaf-layout--flex-content-justify (items-num rest-units justify-content gap)
+  "Calculate main-axis gaps list following etaf-flex.el etaf-flex-content-justify.
+Returns a list of gaps: (start-gap gap1 gap2 ... end-gap) with items-num + 1 elements.
+This list will be interleaved with items: gap0 item0 gap1 item1 ... gapN."
+  (let ((rest-units (max 0 rest-units)))
+    (pcase justify-content
+      ("flex-start"
+       (append (list 0)
+               (make-list (1- items-num) gap)
+               (list rest-units)))
+      ("flex-end"
+       (append (list rest-units)
+               (make-list (1- items-num) gap)
+               (list 0)))
+      ("center"
+       (let ((half (/ rest-units 2)))
+         (append (list half)
+                 (make-list (1- items-num) gap)
+                 (list (- rest-units half)))))
+      ("space-between"
+       (if (<= items-num 1)
+           (list 0 0)
+         (let ((between (/ (+ rest-units (* gap (1- items-num))) (1- items-num))))
+           (append (list 0)
+                   (make-list (1- items-num) between)
+                   (list 0)))))
+      ("space-around"
+       (if (<= items-num 0)
+           (list 0)
+         (let* ((unit (/ rest-units (* 2 items-num)))
+                (between (+ (* 2 unit) gap)))
+           (append (list unit)
+                   (make-list (1- items-num) between)
+                   (list unit)))))
+      ("space-evenly"
+       (if (<= items-num 0)
+           (list 0)
+         (let ((space (/ rest-units (1+ items-num))))
+           (append (list space)
+                   (make-list (1- items-num) (+ space gap))
+                   (list space)))))
+      (_
+       ;; Default to flex-start
+       (append (list 0)
+               (make-list (1- items-num) gap)
+               (list rest-units))))))
+
 (defun etaf-layout--merge-flex-children (child-strings flex-direction
                                                        row-gap column-gap
                                                        justify-content
@@ -981,10 +1028,10 @@ ALIGN-ITEMS is cross-axis alignment for items within a line.
 ALIGN-CONTENT is cross-axis alignment for lines when wrapping.
 
 This function follows the same strategy as etaf-flex.el:
-1. row-reverse and column-reverse only reverse items within each line, not the wrap direction
+1. row-reverse and column-reverse reverse items AND gaps within each line
 2. wrap-reverse reverses the order of lines
 3. Calculate wrap-lst using etaf-flex-line-breaks when items overflow
-4. Process each line separately with its own justify-content spacing
+4. Process each line with etaf-interleave pattern for gaps and items
 5. Stack/concat lines in the cross-axis direction with align-content support"
   (if (null child-strings)
       ""
@@ -1048,36 +1095,30 @@ This function follows the same strategy as etaf-flex.el:
                      (line-rest-units (if (> container-main-size 0)
                                           (max 0 (- container-main-size line-items-units line-gaps-units))
                                         0))
-                     ;; Calculate space distribution for this line
-                     (space-distribution
-                      (if (> line-rest-units 0)
-                          (etaf-layout-flex-justify-space
-                           justify-content line-rest-units num main-gap)
-                        ;; No extra space - just use gaps
-                        (list 0 main-gap 0)))
-                     (start-space (floor (nth 0 space-distribution)))
-                     (between-space (floor (nth 1 space-distribution)))
-                     (end-space (floor (nth 2 space-distribution)))
-                     ;; For row-reverse and column-reverse, reverse items within each line
-                     ;; This follows etaf-flex.el lines 641-644 and 662-665
-                     (ordered-line-strings (if is-reversed
-                                               (nreverse (copy-sequence line-strings))
-                                             line-strings))
-                     ;; Also swap start and end space for reversed direction
-                     (final-start-space (if is-reversed end-space start-space))
-                     (final-end-space (if is-reversed start-space end-space))
+                     ;; Calculate full gaps list like etaf-flex-content-justify
+                     ;; Returns (start gap1 gap2 ... end) with num+1 elements
+                     (main-gaps-lst (etaf-layout--flex-content-justify
+                                     num line-rest-units justify-content main-gap))
                      ;; Calculate cross-axis max units for align-items/align-content
                      (line-cross-max-units (if is-row
                                                (apply #'max (mapcar #'etaf-string-linum line-strings))
                                              (apply #'max (mapcar #'string-pixel-width line-strings))))
-                     ;; Render this line
+                     ;; For row-reverse and column-reverse, reverse both items AND gaps
+                     ;; This follows etaf-flex.el lines 641-644 and 662-665
+                     (ordered-line-strings (if is-reversed
+                                               (nreverse (copy-sequence line-strings))
+                                             line-strings))
+                     (ordered-main-gaps (if is-reversed
+                                            (nreverse (copy-sequence main-gaps-lst))
+                                          main-gaps-lst))
+                     ;; Render this line using interleave pattern like etaf-flex.el
                      (line-string
                       (if is-row
-                          (etaf-layout--flex-concat-horizontal-with-align
-                           ordered-line-strings final-start-space between-space final-end-space
-                           line-cross-max-units align-items)
-                        (etaf-layout--flex-stack-vertical-with-align
-                         ordered-line-strings final-start-space between-space final-end-space
+                          (etaf-layout--flex-concat-with-gaps
+                           ordered-line-strings ordered-main-gaps
+                           line-cross-max-units align-items t)
+                        (etaf-layout--flex-stack-with-gaps
+                         ordered-line-strings ordered-main-gaps
                          line-cross-max-units align-items))))
                 (push line-cross-max-units cross-max-units-lst)
                 (push line-string lines-strings)
@@ -1100,20 +1141,16 @@ This function follows the same strategy as etaf-flex.el:
                    (cross-rest-units (if (> container-cross-size 0)
                                          (max 0 (- container-cross-size total-cross-units total-cross-gaps))
                                        0))
-                   ;; Calculate cross-axis space distribution based on align-content
-                   (cross-distribution
-                    (if (> cross-rest-units 0)
-                        (etaf-layout-flex-align-content-space
-                         align-content cross-rest-units lines-count cross-gap)
-                      ;; No extra space - just use gaps
-                      (list 0 cross-gap 0))))
+                   ;; Calculate cross-axis gaps list based on align-content
+                   (cross-gaps-lst (etaf-layout--flex-content-justify
+                                    lines-count cross-rest-units align-content cross-gap)))
               (if is-row
-                  ;; Row layout: stack lines vertically with cross-gap and align-content
-                  (etaf-layout--flex-stack-lines-with-align
-                   lines-strings cross-distribution cross-max-units-lst)
-                ;; Column layout: concat lines horizontally with cross-gap and align-content
-                (etaf-layout--flex-concat-lines-with-align
-                 lines-strings cross-distribution cross-max-units-lst)))))))))
+                  ;; Row layout: stack lines vertically with cross-gaps
+                  (etaf-layout--flex-stack-lines-with-gaps
+                   lines-strings cross-gaps-lst)
+                ;; Column layout: concat lines horizontally with cross-gaps
+                (etaf-layout--flex-concat-lines-with-gaps
+                 lines-strings cross-gaps-lst)))))))))
 
 (defun etaf-layout--flex-stack-lines (line-strings cross-gap)
   "Stack multiple lines vertically with cross-gap between them.
@@ -1346,57 +1383,94 @@ IS-ROW is t for row direction (cross-axis is vertical), nil for column."
                     (when (> rest-units 0)
                       (etaf-pixel-blank rest-units (etaf-string-linum string))))))))))))
 
-(defun etaf-layout--flex-stack-lines-with-align (line-strings cross-distribution cross-max-units-lst)
-  "Stack multiple lines vertically with align-content distribution.
-LINE-STRINGS is list of line strings.
-CROSS-DISTRIBUTION is (start-space between-space end-space) for cross axis.
-CROSS-MAX-UNITS-LST is list of max heights for each line."
-  (if (null line-strings)
+(defun etaf-layout--flex-concat-with-gaps (strings gaps-lst cross-max-units align-items is-row)
+  "Horizontally concatenate flex items with gaps using interleave pattern.
+STRINGS is list of item strings.
+GAPS-LST is list of gaps (start gap1 gap2 ... end) with (length strings) + 1 elements.
+CROSS-MAX-UNITS is the maximum height in lines for this row.
+ALIGN-ITEMS is cross-axis alignment.
+IS-ROW should be t for horizontal layout.
+This follows etaf-flex.el etaf-flex-items-concat-single using etaf-interleave."
+  (if (null strings)
       ""
-    (let* ((parts '())
-           (len (length line-strings))
-           (start-space (floor (nth 0 cross-distribution)))
-           (between-space (floor (nth 1 cross-distribution)))
-           (end-space (floor (nth 2 cross-distribution)))
-           ;; Get max width across all lines
-           (max-width (apply #'max (mapcar #'string-pixel-width line-strings))))
-      ;; Add starting space
-      (when (and (> start-space 0) (> max-width 0))
-        (push (etaf-pixel-blank max-width start-space) parts))
-      ;; Add lines with gaps
-      (dotimes (idx len)
-        (push (nth idx line-strings) parts)
-        (when (and (< idx (1- len)) (> between-space 0) (> max-width 0))
-          (push (etaf-pixel-blank max-width between-space) parts)))
-      ;; Add ending space
-      (when (and (> end-space 0) (> max-width 0))
-        (push (etaf-pixel-blank max-width end-space) parts))
-      (etaf-lines-stack (nreverse parts)))))
+    (let* (;; Apply cross-axis alignment to each item
+           (aligned-strings
+            (mapcar (lambda (str)
+                      (etaf-layout--align-item-cross-axis
+                       str cross-max-units align-items is-row))
+                    strings))
+           ;; Create gap spacings
+           (gap-spacings (mapcar (lambda (gap)
+                                   (if (and gap (> gap 0))
+                                       (etaf-pixel-spacing gap)
+                                     ""))
+                                 gaps-lst)))
+      ;; Interleave gaps and items: gap0 item0 gap1 item1 ... gapN
+      (etaf-lines-concat
+       (etaf-interleave gap-spacings aligned-strings)))))
 
-(defun etaf-layout--flex-concat-lines-with-align (line-strings cross-distribution cross-max-units-lst)
-  "Concatenate multiple lines horizontally with align-content distribution.
+(defun etaf-layout--flex-stack-with-gaps (strings gaps-lst cross-max-units align-items)
+  "Vertically stack flex items with gaps using interleave pattern.
+STRINGS is list of item strings.
+GAPS-LST is list of gaps (start gap1 gap2 ... end) with (length strings) + 1 elements.
+CROSS-MAX-UNITS is the maximum width in pixels for this column.
+ALIGN-ITEMS is cross-axis alignment.
+This follows etaf-flex.el etaf-flex-items-stack-single using etaf-interleave."
+  (if (null strings)
+      ""
+    (let* (;; Apply cross-axis alignment to each item
+           (aligned-strings
+            (mapcar (lambda (str)
+                      (etaf-layout--align-item-cross-axis
+                       str cross-max-units align-items nil))
+                    strings))
+           ;; Get max width for blank lines
+           (max-width (if aligned-strings
+                          (apply #'max (mapcar #'string-pixel-width aligned-strings))
+                        0))
+           ;; Create gap blank lines
+           (gap-blanks (mapcar (lambda (gap)
+                                 (if (and gap (> gap 0) (> max-width 0))
+                                     (etaf-string-duplines "" gap)
+                                   nil))
+                               gaps-lst)))
+      ;; Interleave gaps and items: gap0 item0 gap1 item1 ... gapN
+      (etaf-lines-stack
+       (etaf-interleave gap-blanks aligned-strings)))))
+
+(defun etaf-layout--flex-stack-lines-with-gaps (line-strings cross-gaps-lst)
+  "Stack multiple lines vertically with cross-gaps using interleave pattern.
 LINE-STRINGS is list of line strings.
-CROSS-DISTRIBUTION is (start-space between-space end-space) for cross axis.
-CROSS-MAX-UNITS-LST is list of max widths for each line."
+CROSS-GAPS-LST is list of cross-axis gaps (start gap1 gap2 ... end)."
   (if (null line-strings)
       ""
-    (let* ((parts '())
-           (len (length line-strings))
-           (start-space (floor (nth 0 cross-distribution)))
-           (between-space (floor (nth 1 cross-distribution)))
-           (end-space (floor (nth 2 cross-distribution))))
-      ;; Add starting space
-      (when (> start-space 0)
-        (push (etaf-pixel-spacing start-space) parts))
-      ;; Add lines with gaps
-      (dotimes (idx len)
-        (push (nth idx line-strings) parts)
-        (when (and (< idx (1- len)) (> between-space 0))
-          (push (etaf-pixel-spacing between-space) parts)))
-      ;; Add ending space
-      (when (> end-space 0)
-        (push (etaf-pixel-spacing end-space) parts))
-      (etaf-lines-concat (nreverse parts)))))
+    (let* (;; Get max width across all lines
+           (max-width (apply #'max (mapcar #'string-pixel-width line-strings)))
+           ;; Create gap blank lines
+           (gap-blanks (mapcar (lambda (gap)
+                                 (if (and gap (> gap 0) (> max-width 0))
+                                     (etaf-string-duplines "" (floor gap))
+                                   nil))
+                               cross-gaps-lst)))
+      ;; Interleave gaps and lines
+      (etaf-lines-stack
+       (etaf-interleave gap-blanks line-strings)))))
+
+(defun etaf-layout--flex-concat-lines-with-gaps (line-strings cross-gaps-lst)
+  "Concatenate multiple lines horizontally with cross-gaps using interleave pattern.
+LINE-STRINGS is list of line strings.
+CROSS-GAPS-LST is list of cross-axis gaps (start gap1 gap2 ... end)."
+  (if (null line-strings)
+      ""
+    (let* (;; Create gap spacings
+           (gap-spacings (mapcar (lambda (gap)
+                                   (if (and gap (> gap 0))
+                                       (etaf-pixel-spacing (floor gap))
+                                     ""))
+                                 cross-gaps-lst)))
+      ;; Interleave gaps and lines
+      (etaf-lines-concat
+       (etaf-interleave gap-spacings line-strings)))))
 
 (defun etaf-layout-node-string (layout-node)
   "将布局节点转换为可插入 buffer 的字符串。
