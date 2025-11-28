@@ -962,51 +962,60 @@ CONTAINER-WIDTH is optional container width for wrapping."
             ""))))))
 
 (defun etaf-layout--flex-content-justify (items-num rest-units justify-content gap)
-  "Calculate main-axis gaps list following etaf-flex.el etaf-flex-content-justify.
+  "Calculate main-axis gaps list following the pattern in etaf-flex.el.
 Returns a list of gaps: (start-gap gap1 gap2 ... end-gap) with items-num + 1 elements.
-This list will be interleaved with items: gap0 item0 gap1 item1 ... gapN."
+This list will be interleaved with items: gap0 item0 gap1 item1 ... gapN.
+When items-num is 0 or 1, returns appropriate list maintaining the invariant."
   (let ((rest-units (max 0 rest-units)))
-    (pcase justify-content
-      ("flex-start"
-       (append (list 0)
-               (make-list (1- items-num) gap)
-               (list rest-units)))
-      ("flex-end"
-       (append (list rest-units)
-               (make-list (1- items-num) gap)
-               (list 0)))
-      ("center"
-       (let ((half (/ rest-units 2)))
-         (append (list half)
+    (cond
+     ;; Edge case: no items
+     ((<= items-num 0)
+      (list rest-units))
+     ;; Edge case: single item - just start and end gaps
+     ((= items-num 1)
+      (pcase justify-content
+        ("flex-start" (list 0 rest-units))
+        ("flex-end" (list rest-units 0))
+        ("center" (let ((half (/ rest-units 2)))
+                    (list half (- rest-units half))))
+        (_ (list 0 rest-units))))  ; space-between, space-around, space-evenly default to flex-start for 1 item
+     ;; Normal case: multiple items
+     (t
+      (pcase justify-content
+        ("flex-start"
+         (append (list 0)
                  (make-list (1- items-num) gap)
-                 (list (- rest-units half)))))
-      ("space-between"
-       (if (<= items-num 1)
-           (list 0 0)
+                 (list rest-units)))
+        ("flex-end"
+         (append (list rest-units)
+                 (make-list (1- items-num) gap)
+                 (list 0)))
+        ("center"
+         (let ((half (/ rest-units 2)))
+           (append (list half)
+                   (make-list (1- items-num) gap)
+                   (list (- rest-units half)))))
+        ("space-between"
          (let ((between (/ (+ rest-units (* gap (1- items-num))) (1- items-num))))
            (append (list 0)
                    (make-list (1- items-num) between)
-                   (list 0)))))
-      ("space-around"
-       (if (<= items-num 0)
-           (list 0)
+                   (list 0))))
+        ("space-around"
          (let* ((unit (/ rest-units (* 2 items-num)))
                 (between (+ (* 2 unit) gap)))
            (append (list unit)
                    (make-list (1- items-num) between)
-                   (list unit)))))
-      ("space-evenly"
-       (if (<= items-num 0)
-           (list 0)
+                   (list unit))))
+        ("space-evenly"
          (let ((space (/ rest-units (1+ items-num))))
            (append (list space)
                    (make-list (1- items-num) (+ space gap))
-                   (list space)))))
-      (_
-       ;; Default to flex-start
-       (append (list 0)
-               (make-list (1- items-num) gap)
-               (list rest-units))))))
+                   (list space))))
+        (_
+         ;; Default to flex-start
+         (append (list 0)
+                 (make-list (1- items-num) gap)
+                 (list rest-units))))))))
 
 (defun etaf-layout--merge-flex-children (child-strings flex-direction
                                                        row-gap column-gap
