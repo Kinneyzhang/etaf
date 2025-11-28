@@ -270,7 +270,7 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
                  (collection-expr (nth 2 for-parsed))
                  (collection (etaf-template--eval-expr collection-expr data))
                  (new-attrs (etaf-template--remove-attr attrs :v-for))
-                 (results nil)
+                 (results '())
                  (index 0)
                  ;; Ensure collection is a list; nil becomes empty list
                  (items (cond
@@ -286,9 +286,9 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
                     (setq new-data (plist-put new-data idx-key index))))
                 (let* ((new-node (cons tag (append new-attrs children)))
                        (rendered (etaf-template--render-node new-node new-data nil)))
-                  (setq results (append results (car rendered)))))
+                  (push (car rendered) results)))
               (cl-incf index))
-            (cons results 0))
+            (cons (apply #'append (nreverse results)) 0))
         
         ;; Check for v-if (conditional rendering)
         (if-let ((v-if (etaf-template--get-attr attrs :v-if)))
@@ -318,23 +318,23 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
                         (if-let ((else-if-expr (etaf-template--get-attr
                                                else-attrs :v-else-if)))
                             ;; Process v-else-if
-                            (let* ((new-else-attrs
+                            (let* ((stripped-else-attrs
                                    (etaf-template--remove-attr else-attrs :v-else-if))
-                                   (new-else-attrs
-                                   (append (list :v-if else-if-expr) new-else-attrs))
+                                   (else-if-attrs
+                                   (append (list :v-if else-if-expr) stripped-else-attrs))
                                    (new-else-node
                                    (cons else-tag
-                                         (append new-else-attrs else-children)))
+                                         (append else-if-attrs else-children)))
                                    ;; Render the v-else-if with its remaining siblings
                                    (result (etaf-template--render-node
                                            new-else-node data remaining-siblings)))
                               ;; Skip count is 1 (for this v-else-if) plus what it skips
                               (cons (car result) (+ 1 (cdr result))))
                           ;; Process v-else - render it directly (strip v-else attr)
-                          (let* ((new-else-attrs (etaf-template--remove-attr
+                          (let* ((stripped-else-attrs (etaf-template--remove-attr
                                                  else-attrs :v-else))
                                  (rendered (etaf-template--render-element
-                                           else-tag new-else-attrs else-children data)))
+                                           else-tag stripped-else-attrs else-children data)))
                             (cons rendered 1))))
                     ;; No else sibling - render nothing
                     (cons nil 0)))))
