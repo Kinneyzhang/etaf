@@ -257,7 +257,8 @@ CSS-STRING 是 CSS 样式表字符串，如 \".box { border: 1px solid red; }\"�
            (rule-index (etaf-css-index-build all-rules)))
       ;; 更新 CSSOM
       (setq cssom (plist-put cssom :all-rules all-rules))
-      (setq cssom (plist-put cssom :style-rules (append new-rules (plist-get cssom :style-rules))))
+      (setq cssom (plist-put cssom :style-rules
+                             (append new-rules (plist-get cssom :style-rules))))
       (setq cssom (plist-put cssom :rule-index rule-index))
       ;; 清空缓存以使新样式生效
       (etaf-css-clear-cache cssom)))
