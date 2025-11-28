@@ -165,7 +165,9 @@ DOM 是根 DOM 节点。
                       (let ((first-selector (car (plist-get ast :nodes))))
                         (when (and first-selector
                                   (eq (plist-get first-selector :type) 'selector))
-                          (when (etaf-css-selector-basic-match-p node first-selector)
+                          ;; 使用支持组合器的匹配函数
+                          (when (etaf-css-selector-node-matches-p
+                                 node dom first-selector)
                             (push rule matching-rules))))))
                 (error nil))))))))
     (nreverse matching-rules)))

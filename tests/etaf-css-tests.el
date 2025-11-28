@@ -151,5 +151,66 @@
         (css-string (etaf-css-cssom-to-string cssom)))
    (stringp css-string)))
 
+;;; 测试组合选择器样式应用
+
+;; 测试后代选择器
+(setq etaf-css-tests-dom-combinators
+      (etaf-tml-to-dom
+       '(div :id "parent"
+             (div :id "child-1" "Child 1"
+                  (span :id "grandchild" "Grandchild"))
+             (div :id "child-2" "Child 2")
+             (div :id "child-3" "Child 3"))))
+
+;; 测试后代选择器 - parent div 应该匹配 child-1, child-2, child-3, NOT parent
+(should
+ (let* ((cssom (etaf-css-build-cssom etaf-css-tests-dom-combinators))
+        (cssom (etaf-css-add-stylesheet cssom "#parent div { padding-left: 10px; }"))
+        (parent (car (dom-by-id etaf-css-tests-dom-combinators "parent")))
+        (child-1 (car (dom-by-id etaf-css-tests-dom-combinators "child-1")))
+        (style-parent (etaf-css-get-computed-style cssom parent etaf-css-tests-dom-combinators))
+        (style-child (etaf-css-get-computed-style cssom child-1 etaf-css-tests-dom-combinators)))
+   (and (null (alist-get 'padding-left style-parent))  ; parent should NOT get padding
+        (equal (alist-get 'padding-left style-child) "10px")))) ; child should get padding
+
+;; 测试子元素选择器 - #parent > div 应该只匹配直接子元素
+(should
+ (let* ((cssom (etaf-css-build-cssom etaf-css-tests-dom-combinators))
+        (cssom (etaf-css-add-stylesheet cssom "#parent > div { margin-left: 5px; }"))
+        (parent (car (dom-by-id etaf-css-tests-dom-combinators "parent")))
+        (child-1 (car (dom-by-id etaf-css-tests-dom-combinators "child-1")))
+        (style-parent (etaf-css-get-computed-style cssom parent etaf-css-tests-dom-combinators))
+        (style-child (etaf-css-get-computed-style cssom child-1 etaf-css-tests-dom-combinators)))
+   (and (null (alist-get 'margin-left style-parent))  ; parent should NOT get margin
+        (equal (alist-get 'margin-left style-child) "5px")))) ; child should get margin
+
+;; 测试相邻兄弟选择器 - #child-1 + div 应该只匹配 child-2
+(should
+ (let* ((cssom (etaf-css-build-cssom etaf-css-tests-dom-combinators))
+        (cssom (etaf-css-add-stylesheet cssom "#child-1 + div { color: blue; }"))
+        (child-1 (car (dom-by-id etaf-css-tests-dom-combinators "child-1")))
+        (child-2 (car (dom-by-id etaf-css-tests-dom-combinators "child-2")))
+        (child-3 (car (dom-by-id etaf-css-tests-dom-combinators "child-3")))
+        (style-1 (etaf-css-get-computed-style cssom child-1 etaf-css-tests-dom-combinators))
+        (style-2 (etaf-css-get-computed-style cssom child-2 etaf-css-tests-dom-combinators))
+        (style-3 (etaf-css-get-computed-style cssom child-3 etaf-css-tests-dom-combinators)))
+   (and (null (alist-get 'color style-1))  ; child-1 should NOT get color
+        (equal (alist-get 'color style-2) "blue")  ; child-2 should get color
+        (null (alist-get 'color style-3))))) ; child-3 should NOT get color
+
+;; 测试通用兄弟选择器 - #child-1 ~ div 应该匹配 child-2 和 child-3
+(should
+ (let* ((cssom (etaf-css-build-cssom etaf-css-tests-dom-combinators))
+        (cssom (etaf-css-add-stylesheet cssom "#child-1 ~ div { font-weight: bold; }"))
+        (child-1 (car (dom-by-id etaf-css-tests-dom-combinators "child-1")))
+        (child-2 (car (dom-by-id etaf-css-tests-dom-combinators "child-2")))
+        (child-3 (car (dom-by-id etaf-css-tests-dom-combinators "child-3")))
+        (style-1 (etaf-css-get-computed-style cssom child-1 etaf-css-tests-dom-combinators))
+        (style-2 (etaf-css-get-computed-style cssom child-2 etaf-css-tests-dom-combinators))
+        (style-3 (etaf-css-get-computed-style cssom child-3 etaf-css-tests-dom-combinators)))
+   (and (null (alist-get 'font-weight style-1))  ; child-1 should NOT get font-weight
+        (equal (alist-get 'font-weight style-2) "bold")  ; child-2 should get font-weight
+        (equal (alist-get 'font-weight style-3) "bold")))) ; child-3 should get font-weight
+
 (provide 'etaf-css-tests)
 ;;; etaf-css-tests.el ends here
