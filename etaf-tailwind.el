@@ -525,10 +525,10 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
      ;; Border color
      ((cdr (assoc value etaf-tailwind-color-palette))
       (list (cons 'border-color (cdr (assoc value etaf-tailwind-color-palette)))))
-     ;; Border width
-     ((member value '("0" "2" "4" "8"))
+     ;; Border width (Tailwind CSS uses: border-0, border-1, border-2, border-4, border-8)
+     ((member value '("0" "1" "2" "4" "8"))
       (list (cons 'border-width (concat value "px"))))
-     ;; Default border
+     ;; Default border (border without value means 1px)
      ((null value)
       (list (cons 'border-width "1px")))))
    

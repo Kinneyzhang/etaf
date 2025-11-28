@@ -138,6 +138,36 @@
   (should-equal (etaf-tailwind-to-css "items-center")
                 '((align-items . "center"))))
 
+(ert-deftest etaf-tailwind-test-to-css-border-width ()
+  "测试边框宽度转换（修复 border-1 等类的支持）。"
+  ;; border without value means 1px
+  (should-equal (etaf-tailwind-to-css "border")
+                '((border-width . "1px")))
+  ;; border-0 means 0px
+  (should-equal (etaf-tailwind-to-css "border-0")
+                '((border-width . "0px")))
+  ;; border-1 means 1px (这是被修复的关键案例)
+  (should-equal (etaf-tailwind-to-css "border-1")
+                '((border-width . "1px")))
+  ;; border-2 means 2px
+  (should-equal (etaf-tailwind-to-css "border-2")
+                '((border-width . "2px")))
+  ;; border-4 means 4px
+  (should-equal (etaf-tailwind-to-css "border-4")
+                '((border-width . "4px")))
+  ;; border-8 means 8px
+  (should-equal (etaf-tailwind-to-css "border-8")
+                '((border-width . "8px"))))
+
+(ert-deftest etaf-tailwind-test-to-css-border-color ()
+  "测试边框颜色转换。"
+  ;; border-red-500 means border-color: #ef4444
+  (should-equal (etaf-tailwind-to-css "border-red-500")
+                '((border-color . "#ef4444")))
+  ;; border-blue-500 means border-color: #3b82f6
+  (should-equal (etaf-tailwind-to-css "border-blue-500")
+                '((border-color . "#3b82f6"))))
+
 (ert-deftest etaf-tailwind-test-classes-to-css ()
   "测试多个类名转换为 CSS。"
   (let ((result (etaf-tailwind-classes-to-css "flex items-center p-4")))
@@ -230,7 +260,29 @@
     ;; 验证 div 的 Tailwind 样式被正确解析
     (should (equal (cdr (assq 'display div-style)) "flex"))
     (should (equal (cdr (assq 'background-color div-style)) "#ef4444"))
-    (should (equal (cdr (assq 'padding div-style)) "1rem"))))
+    ;; padding 应该被展开为 padding-top, padding-right, etc.
+    (should (equal (cdr (assq 'padding-top div-style)) "1rem"))))
+
+(ert-deftest etaf-tailwind-test-border-cssom-integration ()
+  "测试 Tailwind 边框类在 CSSOM 中的正确展开和解析。
+这是修复 border-1 border-red-500 问题的关键测试。"
+  (require 'etaf-tml)
+  (require 'etaf-css)
+  (let* ((dom (etaf-tml-to-dom
+               '(div :class "border-1 border-red-500"
+                  "test content")))
+         (cssom (etaf-css-build-cssom dom))
+         (div-style (etaf-css-get-computed-style cssom dom dom)))
+    ;; 验证 border-width 被正确展开为各方向的 border-*-width
+    (should (equal (cdr (assq 'border-top-width div-style)) "1px"))
+    (should (equal (cdr (assq 'border-right-width div-style)) "1px"))
+    (should (equal (cdr (assq 'border-bottom-width div-style)) "1px"))
+    (should (equal (cdr (assq 'border-left-width div-style)) "1px"))
+    ;; 验证 border-color 被正确展开为各方向的 border-*-color
+    (should (equal (cdr (assq 'border-top-color div-style)) "#ef4444"))
+    (should (equal (cdr (assq 'border-right-color div-style)) "#ef4444"))
+    (should (equal (cdr (assq 'border-bottom-color div-style)) "#ef4444"))
+    (should (equal (cdr (assq 'border-left-color div-style)) "#ef4444"))))
 
 (ert-deftest etaf-tailwind-test-render-tree-integration ()
   "测试 Tailwind 类在渲染树中的正确应用。"
