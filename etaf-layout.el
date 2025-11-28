@@ -561,7 +561,9 @@ SHOULD-WRAP indicates whether wrapping is enabled."
          (items-count (length flex-items))
          (total-flex-basis 0)
          (total-flex-grow 0)
-         (total-flex-shrink 0))
+         (total-flex-shrink 0)
+         ;; Collect item sizes for grow/shrink calculation
+         (item-sizes '()))
     
     ;; 计算总的 flex-basis、flex-grow 和 flex-shrink
     (dolist (item flex-items)
@@ -569,15 +571,84 @@ SHOULD-WRAP indicates whether wrapping is enabled."
              (box-model (etaf-layout-get-box-model layout))
              (item-main-size (if is-row
                                  (etaf-box-model-total-width box-model)
-                               (etaf-box-model-total-height box-model))))
+                               (etaf-box-model-total-height box-model)))
+             (item-content-size (if is-row
+                                    (etaf-box-model-content-width box-model)
+                                  (etaf-box-model-content-height box-model)))
+             ;; Calculate side size (padding + border + margin)
+             (item-side-size (- item-main-size item-content-size)))
+        (push (list :item item
+                    :layout layout
+                    :box-model box-model
+                    :main-size item-main-size
+                    :content-size item-content-size
+                    :side-size item-side-size)
+              item-sizes)
         (setq total-flex-basis (+ total-flex-basis item-main-size))
         (setq total-flex-grow (+ total-flex-grow (plist-get item :flex-grow)))
         (setq total-flex-shrink (+ total-flex-shrink (plist-get item :flex-shrink)))))
     
+    ;; Reverse to maintain original order
+    (setq item-sizes (nreverse item-sizes))
+    
     ;; 计算总 gap
     (let* ((total-gap (* main-gap (max 0 (1- items-count))))
            (available-space (- main-size total-flex-basis total-gap))
-           (free-space (max 0 available-space)))
+           (free-space (max 0 available-space))
+           ;; Fix: Calculate overflow-space correctly as the amount content exceeds container
+           (overflow-space (max 0 (- (+ total-flex-basis total-gap) main-size))))
+      
+      ;; Apply flex-grow when there's free space and total-flex-grow > 0
+      (when (and (> free-space 0) (> total-flex-grow 0) (> main-size 0))
+        (let* ((grow-unit (/ (float free-space) total-flex-grow))
+               (distributed 0))
+          (dotimes (i (length flex-items))
+            (let* ((item-info (nth i item-sizes))
+                   (item (plist-get item-info :item))
+                   (layout (plist-get item-info :layout))
+                   (box-model (plist-get item-info :box-model))
+                   (content-size (plist-get item-info :content-size))
+                   (side-size (plist-get item-info :side-size))
+                   (flex-grow (plist-get item :flex-grow)))
+              (when (> flex-grow 0)
+                (let* ((grow-amount (max 0  ;; Fix: Ensure grow-amount is never negative
+                                         (if (= i (1- (length flex-items)))
+                                             ;; Last item gets remaining space to avoid rounding errors
+                                             (- free-space distributed)
+                                           (floor (* grow-unit flex-grow)))))
+                       (new-content-size (+ content-size grow-amount)))
+                  (setq distributed (+ distributed grow-amount))
+                  ;; Update box-model content width/height
+                  (if is-row
+                      (plist-put (plist-get box-model :content) :width new-content-size)
+                    (plist-put (plist-get box-model :content) :height new-content-size))))))))
+      
+      ;; Apply flex-shrink when there's overflow and total-flex-shrink > 0
+      (when (and (> overflow-space 0) (> total-flex-shrink 0) (> main-size 0))
+        (let* ((shrink-unit (/ (float overflow-space) total-flex-shrink))
+               (distributed 0))
+          (dotimes (i (length flex-items))
+            (let* ((item-info (nth i item-sizes))
+                   (item (plist-get item-info :item))
+                   (layout (plist-get item-info :layout))
+                   (box-model (plist-get item-info :box-model))
+                   (content-size (plist-get item-info :content-size))
+                   (side-size (plist-get item-info :side-size))
+                   (flex-shrink (plist-get item :flex-shrink)))
+              (when (> flex-shrink 0)
+                ;; Fix: Ensure shrink-amount is never negative
+                (let* ((shrink-amount (max 0
+                                           (if (= i (1- (length flex-items)))
+                                               ;; Last item gets remaining space to avoid rounding errors
+                                               (- overflow-space distributed)
+                                             (floor (* shrink-unit flex-shrink)))))
+                       ;; Don't shrink below 0
+                       (new-content-size (max 0 (- content-size shrink-amount))))
+                  (setq distributed (+ distributed shrink-amount))
+                  ;; Update box-model content width/height
+                  (if is-row
+                      (plist-put (plist-get box-model :content) :width new-content-size)
+                    (plist-put (plist-get box-model :content) :height new-content-size))))))))
       
       ;; 存储计算结果
       (dom-set-attribute layout-node 'layout-flex-free-space free-space)
@@ -693,12 +764,14 @@ FUNC 是接受一个布局节点参数的函数。
 
 ;;; 布局字符串生成（用于 Emacs buffer 渲染）
 
-(defun etaf-layout--merge-children-by-display (child-infos)
+(defun etaf-layout--merge-children-by-display (child-infos &optional container-width)
   "Merge child element strings by display type.
 CHILD-INFOS is a list of ((string . display-type) ...).
+CONTAINER-WIDTH is optional container width for wrapping inline elements.
 Inline elements are concatenated horizontally using etaf-lines-concat.
 Block elements are stacked vertically.
-Consecutive inline elements are grouped together, then combined with block elements."
+Consecutive inline elements are grouped together, then combined with block elements.
+When CONTAINER-WIDTH is provided and inline elements exceed it, they will wrap."
   (if (null child-infos)
       ""
     (let ((result-parts '())  ;; Final vertically combined parts
@@ -715,18 +788,50 @@ Consecutive inline elements are grouped together, then combined with block eleme
               (when inline-group
                 ;; Use etaf-lines-concat to properly join inline elements
                 ;; This treats each element as a complete unit with its borders intact
-                (push (etaf-lines-concat
-                       (nreverse inline-group))
+                (push (etaf-layout--merge-inline-with-wrap
+                       (nreverse inline-group) container-width)
                       result-parts)
                 (setq inline-group nil))
               (push str result-parts)))))
       ;; Handle remaining inline group
       (when inline-group
-        ;; Use etaf-lines-concat to properly join inline elements
-        (push (etaf-lines-concat (nreverse inline-group)) result-parts))
+        ;; Use etaf-lines-concat to properly join inline elements with wrapping
+        (push (etaf-layout--merge-inline-with-wrap
+               (nreverse inline-group) container-width)
+              result-parts))
       ;; Vertically combine all parts
       ;; Use reverse instead of nreverse to avoid destructive modification
       (string-join (reverse result-parts) "\n"))))
+
+(defun etaf-layout--merge-inline-with-wrap (inline-strings &optional container-width)
+  "Merge inline strings, wrapping to new lines when container width is exceeded.
+INLINE-STRINGS is a list of inline element strings.
+CONTAINER-WIDTH is optional container width for wrapping."
+  (if (or (null inline-strings)
+          (null container-width)
+          (<= container-width 0))
+      ;; No wrapping needed
+      (if inline-strings
+          (etaf-lines-concat inline-strings)
+        "")
+    ;; Calculate line breaks based on container width
+    (let* ((widths (mapcar #'string-pixel-width inline-strings))
+           (total-width (apply #'+ widths)))
+      (if (<= total-width container-width)
+          ;; All fit in one line
+          (etaf-lines-concat inline-strings)
+        ;; Need to wrap - calculate line breaks
+        (let* ((line-breaks (etaf-flex-line-breaks container-width widths 0))
+               (lines '())
+               (idx 0))
+          (dolist (count line-breaks)
+            (let ((line-strings (seq-subseq inline-strings idx (+ idx count))))
+              (push (etaf-lines-concat line-strings) lines)
+              (setq idx (+ idx count))))
+          ;; Stack lines vertically
+          (if lines
+              (etaf-lines-stack (nreverse lines))
+            ""))))))
 
 (defun etaf-layout--merge-flex-children (child-strings flex-direction
                                                        row-gap column-gap
@@ -934,7 +1039,8 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
             ;; - inline 元素应该水平拼接
             ;; - block 元素应该垂直堆叠
             ;; 策略：将连续的 inline 元素组合在一起水平拼接，然后与 block 元素垂直堆叠
-            (etaf-layout--merge-children-by-display child-infos)))
+            ;; 传递 content-width 用于 inline 元素换行判断
+            (etaf-layout--merge-children-by-display child-infos content-width)))
          
          ;; 内容：如果有子元素则使用子元素的字符串，否则为空
          (inner-content children-text)
