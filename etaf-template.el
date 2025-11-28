@@ -199,8 +199,8 @@ Handles boolean directives like :v-else that don't take a value."
 
 (defun etaf-template--process-bindings (attrs data)
   "Process attribute bindings in ATTRS using DATA.
-Converts :attr to attr with evaluated value.
-Returns processed attrs plist."
+Returns processed attrs plist.
+Note: v-bind is processed via :v-bind:attr syntax."
   (let ((result nil)
         (rest attrs))
     (while rest
@@ -208,22 +208,15 @@ Returns processed attrs plist."
              (val (cadr rest))
              (key-name (symbol-name key)))
         (cond
-         ;; v-bind:attr="expr" or :attr="expr" binding
-         ((or (string-prefix-p ":v-bind:" key-name)
-              (and (string-prefix-p ":" key-name)
-                   (not (string-prefix-p ":v-" key-name))
-                   (> (length key-name) 1)
-                   ;; Check if it looks like a binding (has double colons)
-                   (string-match-p "^::" key-name)))
-          (let* ((attr-name (if (string-prefix-p ":v-bind:" key-name)
-                                (substring key-name 8)
-                              (substring key-name 2)))
+         ;; v-bind:attr="expr" binding - evaluate expression for value
+         ((string-prefix-p ":v-bind:" key-name)
+          (let* ((attr-name (substring key-name 8))
                  (new-key (intern (concat ":" attr-name)))
                  (new-val (etaf-template--to-string
                           (etaf-template--eval-expr val data))))
             (setq result (append result (list new-key new-val)))))
          
-         ;; Regular attribute
+         ;; Regular attribute - keep as-is
          (t
           (setq result (append result (list key val))))))
       (setq rest (cddr rest)))
@@ -278,8 +271,13 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
                  (collection (etaf-template--eval-expr collection-expr data))
                  (new-attrs (etaf-template--remove-attr attrs :v-for))
                  (results nil)
-                 (index 0))
-            (dolist (item (if (listp collection) collection (list collection)))
+                 (index 0)
+                 ;; Ensure collection is a list; nil becomes empty list
+                 (items (cond
+                         ((null collection) nil)
+                         ((listp collection) collection)
+                         (t (error "v-for requires a list, got: %S" collection)))))
+            (dolist (item items)
               (let* ((item-key (intern (concat ":" item-var)))
                      (new-data (copy-sequence data)))
                 (setq new-data (plist-put new-data item-key item))

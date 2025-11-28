@@ -237,9 +237,9 @@
   (etaf-template-example-reactive)
   (message "\n=== All Examples Complete ==="))
 
-;; Run examples when file is loaded
-(when (and (boundp 'load-file-name) load-file-name)
-  (etaf-template-run-all-examples))
+;; Uncomment to run examples when file is loaded
+;; (when (and (boundp 'load-file-name) load-file-name)
+;;   (etaf-template-run-all-examples))
 
 (provide 'etaf-template-example)
 ;;; etaf-template-example.el ends here
