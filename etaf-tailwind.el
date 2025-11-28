@@ -406,18 +406,11 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
   "Tailwind CSS颜色调色板。")
 
 (defconst etaf-tailwind-spacing-scale
-  '(("0" . "0px") ("px" . "1px")
-    ("0.5" . "0.125rem") ("1" . "0.25rem") ("1.5" . "0.375rem")
-    ("2" . "0.5rem") ("2.5" . "0.625rem") ("3" . "0.75rem")
-    ("3.5" . "0.875rem") ("4" . "1rem") ("5" . "1.25rem")
-    ("6" . "1.5rem") ("7" . "1.75rem") ("8" . "2rem")
-    ("9" . "2.25rem") ("10" . "2.5rem") ("11" . "2.75rem")
-    ("12" . "3rem") ("14" . "3.5rem") ("16" . "4rem")
-    ("20" . "5rem") ("24" . "6rem") ("28" . "7rem")
-    ("32" . "8rem") ("36" . "9rem") ("40" . "10rem")
-    ("44" . "11rem") ("48" . "12rem") ("52" . "13rem")
-    ("56" . "14rem") ("60" . "15rem") ("64" . "16rem")
-    ("72" . "18rem") ("80" . "20rem") ("96" . "24rem"))
+  '(("0" . "0px") ("1" . "1px") ("2" . "2px") ("3" . "4px")
+    ("4" . "4px") ("5" . "5px") ("6" . "6px") ("7" . "7px")
+    ("8" . "8px") ("9" . "9px") ("10" . "10px") ("11" . "11px")
+    ("12" . "12px") ("13" . "13px") ("14" . "14px") ("15" . "15px")
+    ("16" . "16px") ("17" . "17px") ("18" . "18px") ("19" . "19px"))
   "Tailwind CSS间距比例尺。")
 
 (defconst etaf-tailwind-font-sizes
@@ -459,9 +452,11 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
     (when (or property value arbitrary)
       ;; 如果有任意值，直接使用
       (if arbitrary
-          (setq css-props (etaf-tailwind-convert-arbitrary property arbitrary))
+          (setq css-props (etaf-tailwind-convert-arbitrary
+                           property arbitrary))
         ;; 否则根据属性和值转换
-        (setq css-props (etaf-tailwind-convert-standard property value))))
+        (setq css-props (etaf-tailwind-convert-standard
+                         property value))))
     
     css-props))
 

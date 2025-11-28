@@ -79,27 +79,27 @@
   "检查 VALUE 是否是 CSS 长度值。"
   (and (stringp value)
        (or ;; Number with optional decimal and optional unit
-           (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|em\\|rem\\|%\\|pt\\|cm\\|mm\\|in\\|vh\\|vw\\|vmin\\|vmax\\|ex\\|ch\\)?$" value)
-           (string= value "0")
-           (string= value "auto")
-           (string= value "thin")
-           (string= value "medium")
-           (string= value "thick"))))
+        (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|lh\\|%\\)?$" value)
+        (string= value "0")
+        (string= value "auto")
+        (string= value "thin")
+        (string= value "medium")
+        (string= value "thick"))))
 
 (defun etaf-css--is-flex-basis-p (value)
   "检查 VALUE 是否是有效的 flex-basis 值（带单位的长度或关键字）。
 无单位的数字不应被视为 flex-basis。"
   (and (stringp value)
        (or ;; 带单位的长度值
-           (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|em\\|rem\\|%\\|pt\\|cm\\|mm\\|in\\|vh\\|vw\\|vmin\\|vmax\\|ex\\|ch\\)$" value)
-           ;; 0 可以是 flex-basis
-           (string= value "0")
-           ;; 关键字
-           (string= value "auto")
-           (string= value "content")
-           (string= value "max-content")
-           (string= value "min-content")
-           (string= value "fit-content"))))
+        (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|lh\\|%\\)$" value)
+        ;; 0 可以是 flex-basis
+        (string= value "0")
+        ;; 关键字
+        (string= value "auto")
+        (string= value "content")
+        (string= value "max-content")
+        (string= value "min-content")
+        (string= value "fit-content"))))
 
 (defun etaf-css--is-color-p (value)
   "检查 VALUE 是否是 CSS 颜色值。"
@@ -161,11 +161,17 @@ IMPORTANT 是否为 !important。
          (result '()))
     (dolist (side '(top right bottom left))
       (when width
-        (push (list (intern (format "border-%s-width" side)) width important) result))
+        (push (list (intern (format "border-%s-width" side))
+                    width important)
+              result))
       (when style
-        (push (list (intern (format "border-%s-style" side)) style important) result))
+        (push (list (intern (format "border-%s-style" side))
+                    style important)
+              result))
       (when color
-        (push (list (intern (format "border-%s-color" side)) color important) result)))
+        (push (list (intern (format "border-%s-color" side))
+                    color important)
+              result)))
     (nreverse result)))
 
 (defun etaf-css--expand-border-side (side value important)
@@ -180,11 +186,17 @@ IMPORTANT 是否为 !important。
          (color (nth 2 parsed))
          (result '()))
     (when width
-      (push (list (intern (format "border-%s-width" side)) width important) result))
+      (push (list (intern (format "border-%s-width" side))
+                  width important)
+            result))
     (when style
-      (push (list (intern (format "border-%s-style" side)) style important) result))
+      (push (list (intern (format "border-%s-style" side))
+                  style important)
+            result))
     (when color
-      (push (list (intern (format "border-%s-color" side)) color important) result))
+      (push (list (intern (format "border-%s-color" side))
+                  color important)
+            result))
     (nreverse result)))
 
 (defun etaf-css--expand-border-width (value important)
@@ -247,6 +259,18 @@ IMPORTANT 是否为 !important。
           (list 'margin-bottom bottom important)
           (list 'margin-left left important))))
 
+(defun etaf-css--expand-margin-inline (value important)
+  "展开 margin-inline 属性。IMPORTANT 是否为 !important。
+返回展开后的声明列表。"
+  (list (list 'margin-left value important)
+        (list 'margin-right value important)))
+
+(defun etaf-css--expand-margin-block (value important)
+  "展开 margin-inline 属性。IMPORTANT 是否为 !important。
+返回展开后的声明列表。"
+  (list (list 'margin-top value important)
+        (list 'margin-bottom value important)))
+
 (defun etaf-css--expand-padding (value important)
   "展开 padding 属性。
 VALUE 是形如 \"10px\" 或 \"10px 20px 30px 40px\" 的字符串。
@@ -261,6 +285,18 @@ IMPORTANT 是否为 !important。
           (list 'padding-right right important)
           (list 'padding-bottom bottom important)
           (list 'padding-left left important))))
+
+(defun etaf-css--expand-padding-inline (value important)
+  "展开 padding-inline 属性。IMPORTANT 是否为 !important。
+返回展开后的声明列表。"
+  (list (list 'padding-left value important)
+        (list 'padding-right value important)))
+
+(defun etaf-css--expand-padding-block (value important)
+  "展开 padding-inline 属性。IMPORTANT 是否为 !important。
+返回展开后的声明列表。"
+  (list (list 'padding-top value important)
+        (list 'padding-bottom value important)))
 
 ;;; flex 相关的复合属性
 
@@ -449,7 +485,11 @@ IMPORTANT 是否为 !important。
     ('border-style (etaf-css--expand-border-style value important))
     ;; margin/padding 复合属性
     ('margin (etaf-css--expand-margin value important))
+    ('margin-inline (etaf-css--expand-margin-inline value important))
+    ('margin-block (etaf-css--expand-margin-block value important))
     ('padding (etaf-css--expand-padding value important))
+    ('padding-inline (etaf-css--expand-padding-inline value important))
+    ('padding-block (etaf-css--expand-padding-block value important))
     ;; flex 复合属性
     ('flex (etaf-css--expand-flex value important))
     ('flex-flow (etaf-css--expand-flex-flow value important))
