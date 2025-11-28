@@ -1,0 +1,221 @@
+;;; etaf-tailwind-tests.el --- Tests for etaf-tailwind.el -*- lexical-binding: t; -*-
+
+;; Copyright (C) 2024
+
+;; Keywords: test, tailwind, css
+
+;;; Commentary:
+
+;; 测试 etaf-tailwind.el 的功能
+
+;;; Code:
+
+(require 'etaf-tailwind)
+(require 'etaf-ert)
+
+;;; 类名解析测试
+
+(ert-deftest etaf-tailwind-test-parse-simple-class ()
+  "测试解析简单的 Tailwind 类名。"
+  (let ((result (etaf-tailwind-parse-class "bg-red-500")))
+    (should (null (plist-get result :variants)))
+    (should (equal (plist-get result :utility) "bg-red-500"))
+    (should (equal (plist-get result :property) "bg"))
+    (should (equal (plist-get result :value) "red-500"))))
+
+(ert-deftest etaf-tailwind-test-parse-class-with-variant ()
+  "测试解析带变体的 Tailwind 类名。"
+  (let ((result (etaf-tailwind-parse-class "hover:bg-blue-500")))
+    (should (equal (plist-get result :variants) '("hover")))
+    (should (equal (plist-get result :utility) "bg-blue-500"))
+    (should (equal (plist-get result :property) "bg"))
+    (should (equal (plist-get result :value) "blue-500"))))
+
+(ert-deftest etaf-tailwind-test-parse-class-with-multiple-variants ()
+  "测试解析带多个变体的 Tailwind 类名。"
+  (let ((result (etaf-tailwind-parse-class "md:hover:bg-red-500")))
+    (should (equal (plist-get result :variants) '("md" "hover")))
+    (should (equal (plist-get result :utility) "bg-red-500"))
+    (should (equal (plist-get result :property) "bg"))
+    (should (equal (plist-get result :value) "red-500"))))
+
+(ert-deftest etaf-tailwind-test-parse-arbitrary-value ()
+  "测试解析任意值语法。"
+  (let ((result (etaf-tailwind-parse-class "bg-[#1da1f2]")))
+    (should (equal (plist-get result :property) "bg"))
+    (should (equal (plist-get result :arbitrary) "#1da1f2"))))
+
+(ert-deftest etaf-tailwind-test-parse-standalone-class ()
+  "测试解析独立实用类。"
+  (let ((result (etaf-tailwind-parse-class "flex")))
+    (should (equal (plist-get result :utility) "flex"))
+    (should (equal (plist-get result :property) "flex"))
+    (should (null (plist-get result :value)))))
+
+;;; 类名验证测试
+
+(ert-deftest etaf-tailwind-test-class-p-valid ()
+  "测试有效 Tailwind 类名验证。"
+  (should (etaf-tailwind-class-p "bg-red-500"))
+  (should (etaf-tailwind-class-p "hover:text-lg"))
+  (should (etaf-tailwind-class-p "md:hover:bg-blue-500"))
+  (should (etaf-tailwind-class-p "flex"))
+  (should (etaf-tailwind-class-p "p-4"))
+  (should (etaf-tailwind-class-p "dark:bg-gray-800")))
+
+(ert-deftest etaf-tailwind-test-class-p-invalid ()
+  "测试无效类名验证。"
+  (should-not (etaf-tailwind-class-p nil))
+  (should-not (etaf-tailwind-class-p ""))
+  (should-not (etaf-tailwind-class-p "xyz-invalid-class")))
+
+;;; 变体检查测试
+
+(ert-deftest etaf-tailwind-test-get-variants ()
+  "测试获取变体列表。"
+  (should (null (etaf-tailwind-get-variants "bg-red-500")))
+  (should (equal (etaf-tailwind-get-variants "hover:bg-red-500") '("hover")))
+  (should (equal (etaf-tailwind-get-variants "md:hover:focus:bg-red-500")
+                 '("md" "hover" "focus"))))
+
+(ert-deftest etaf-tailwind-test-has-variant ()
+  "测试变体检查。"
+  (should (etaf-tailwind-has-variant-p "hover:bg-red-500" "hover"))
+  (should-not (etaf-tailwind-has-variant-p "hover:bg-red-500" "focus"))
+  (should (etaf-tailwind-has-variant-p "md:hover:bg-red-500" "md")))
+
+(ert-deftest etaf-tailwind-test-has-responsive ()
+  "测试响应式前缀检查。"
+  (should (etaf-tailwind-has-responsive-p "md:bg-red-500"))
+  (should (etaf-tailwind-has-responsive-p "lg:hover:bg-red-500"))
+  (should-not (etaf-tailwind-has-responsive-p "hover:bg-red-500")))
+
+(ert-deftest etaf-tailwind-test-has-state-variant ()
+  "测试状态变体检查。"
+  (should (etaf-tailwind-has-state-variant-p "hover:bg-red-500"))
+  (should (etaf-tailwind-has-state-variant-p "md:focus:bg-red-500"))
+  (should-not (etaf-tailwind-has-state-variant-p "md:bg-red-500")))
+
+;;; CSS 转换测试
+
+(ert-deftest etaf-tailwind-test-to-css-background ()
+  "测试背景颜色转换。"
+  (should-equal (etaf-tailwind-to-css "bg-red-500")
+                '((background-color . "#ef4444"))))
+
+(ert-deftest etaf-tailwind-test-to-css-padding ()
+  "测试内边距转换。"
+  (should-equal (etaf-tailwind-to-css "p-4")
+                '((padding . "1rem")))
+  (should-equal (etaf-tailwind-to-css "px-2")
+                '((padding-left . "0.5rem") (padding-right . "0.5rem"))))
+
+(ert-deftest etaf-tailwind-test-to-css-display ()
+  "测试显示属性转换。"
+  (should-equal (etaf-tailwind-to-css "flex")
+                '((display . "flex")))
+  (should-equal (etaf-tailwind-to-css "hidden")
+                '((display . "none")))
+  (should-equal (etaf-tailwind-to-css "block")
+                '((display . "block"))))
+
+(ert-deftest etaf-tailwind-test-to-css-rounded ()
+  "测试圆角转换。"
+  (should-equal (etaf-tailwind-to-css "rounded-lg")
+                '((border-radius . "0.5rem")))
+  (should-equal (etaf-tailwind-to-css "rounded-full")
+                '((border-radius . "9999px"))))
+
+(ert-deftest etaf-tailwind-test-to-css-shadow ()
+  "测试阴影转换。"
+  (let ((shadow-md (etaf-tailwind-to-css "shadow-md")))
+    (should (assq 'box-shadow shadow-md))))
+
+(ert-deftest etaf-tailwind-test-to-css-flexbox ()
+  "测试 Flexbox 属性转换。"
+  (should-equal (etaf-tailwind-to-css "justify-center")
+                '((justify-content . "center")))
+  (should-equal (etaf-tailwind-to-css "items-center")
+                '((align-items . "center"))))
+
+(ert-deftest etaf-tailwind-test-classes-to-css ()
+  "测试多个类名转换为 CSS。"
+  (let ((result (etaf-tailwind-classes-to-css "flex items-center p-4")))
+    (should (assq 'display result))
+    (should (assq 'align-items result))
+    (should (assq 'padding result))))
+
+;;; DOM 集成测试
+
+(ert-deftest etaf-tailwind-test-dom-has-class ()
+  "测试 DOM 节点类检查。"
+  (let ((node '(div ((class . "flex bg-red-500")) "content")))
+    (should (etaf-dom-node-has-tailwind-class-p node "flex"))
+    (should (etaf-dom-node-has-tailwind-class-p node "bg-red-500"))
+    (should-not (etaf-dom-node-has-tailwind-class-p node "p-4"))))
+
+(ert-deftest etaf-tailwind-test-add-class ()
+  "测试添加 Tailwind 类。"
+  (let ((node '(div ((class . "flex")) "content")))
+    (etaf-tailwind-add-class node "p-4")
+    (should (etaf-dom-has-class node "flex"))
+    (should (etaf-dom-has-class node "p-4"))))
+
+(ert-deftest etaf-tailwind-test-remove-class ()
+  "测试移除 Tailwind 类。"
+  (let ((node '(div ((class . "flex p-4")) "content")))
+    (etaf-tailwind-remove-class node "p-4")
+    (should (etaf-dom-has-class node "flex"))
+    (should-not (etaf-dom-has-class node "p-4"))))
+
+(ert-deftest etaf-tailwind-test-toggle-class ()
+  "测试切换 Tailwind 类。"
+  (let ((node '(div ((class . "flex")) "content")))
+    (etaf-tailwind-toggle-class node "p-4")
+    (should (etaf-dom-has-class node "p-4"))
+    (etaf-tailwind-toggle-class node "p-4")
+    (should-not (etaf-dom-has-class node "p-4"))))
+
+(ert-deftest etaf-tailwind-test-replace-class ()
+  "测试替换 Tailwind 类。"
+  (let ((node '(div ((class . "bg-red-500")) "content")))
+    (etaf-tailwind-replace-class node "bg-red-500" "bg-blue-500")
+    (should-not (etaf-dom-has-class node "bg-red-500"))
+    (should (etaf-dom-has-class node "bg-blue-500"))))
+
+(ert-deftest etaf-tailwind-test-get-classes-by-property ()
+  "测试按属性获取类。"
+  (let ((node '(div ((class . "bg-red-500 bg-opacity-50 text-white p-4")) "content")))
+    (let ((bg-classes (etaf-tailwind-get-classes-by-property node "bg")))
+      (should (member "bg-red-500" bg-classes))
+      (should (member "bg-opacity-50" bg-classes)))))
+
+;;; 实用函数测试
+
+(ert-deftest etaf-tailwind-test-describe-class ()
+  "测试类名描述。"
+  (let ((desc (etaf-tailwind-describe-class "md:hover:bg-red-500")))
+    (should (stringp desc))
+    (should (string-match "Tailwind Class:" desc))
+    (should (string-match "md" desc))
+    (should (string-match "hover" desc))))
+
+(ert-deftest etaf-tailwind-test-filter-classes ()
+  "测试过滤类列表。"
+  (let ((classes '("flex" "p-4" "invalid-xyz" "bg-red-500")))
+    (let ((filtered (etaf-tailwind-filter-classes classes)))
+      (should (member "flex" filtered))
+      (should (member "p-4" filtered))
+      (should (member "bg-red-500" filtered))
+      (should-not (member "invalid-xyz" filtered)))))
+
+(ert-deftest etaf-tailwind-test-css-to-string ()
+  "测试 CSS 属性转字符串。"
+  (let ((css '((display . "flex") (padding . "1rem"))))
+    (let ((str (etaf-tailwind-css-to-string css)))
+      (should (string-match "display: flex" str))
+      (should (string-match "padding: 1rem" str)))))
+
+(provide 'etaf-tailwind-tests)
+
+;;; etaf-tailwind-tests.el ends here

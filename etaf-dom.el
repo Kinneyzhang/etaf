@@ -358,5 +358,13 @@ NODE是DOM节点，PROPERTY是CSS属性名（symbol）。"
       (ecss-dom-remove-class node class-name)
     (ecss-dom-add-class node class-name)))
 
+;;; etaf-dom-* 别名，为了与项目命名约定保持一致
+
+(defalias 'etaf-dom-set-styles #'ecss-dom-set-styles)
+(defalias 'etaf-dom-add-class #'ecss-dom-add-class)
+(defalias 'etaf-dom-remove-class #'ecss-dom-remove-class)
+(defalias 'etaf-dom-has-class #'ecss-dom-has-class)
+(defalias 'etaf-dom-toggle-class #'ecss-dom-toggle-class)
+
 (provide 'etaf-dom)
 ;;; etaf-dom.el ends here
