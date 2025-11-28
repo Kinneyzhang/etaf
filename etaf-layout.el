@@ -73,12 +73,14 @@
   "解析 CSS 长度值。
 VALUE 是 CSS 值字符串。
 REFERENCE-WIDTH 是参考宽度（用于百分比计算）。
-返回像素值或 'auto。"
+返回像素值或 'auto 或 'none。"
   (cond
    ((null value) 'auto)
    ((eq value 'auto) 'auto)
+   ((eq value 'none) 'none)
    ((numberp value) value)
    ((string= value "auto") 'auto)
+   ((string= value "none") 'none)
    ((string= value "0") 0)
    ((string-match "\\`\\([0-9.]+\\)px\\'" value)
     (string-to-number (match-string 1 value)))
@@ -98,12 +100,14 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算）。
 VALUE 是 CSS 值字符串。
 REFERENCE-HEIGHT 是参考高度（用于百分比计算）。
 在 Emacs 中，高度默认使用行数（lh）作为单位。
-返回行数或 'auto。"
+返回行数或 'auto 或 'none。"
   (cond
    ((null value) 'auto)
    ((eq value 'auto) 'auto)
+   ((eq value 'none) 'none)
    ((numberp value) value)  ; 数字直接作为行数
    ((string= value "auto") 'auto)
+   ((string= value "none") 'none)
    ((string= value "0") 0)
    ;; lh 单位：行高单位，直接返回行数
    ((string-match "\\`\\([0-9.]+\\)lh\\'" value)
@@ -311,6 +315,22 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                         (etaf-layout-get-style-value style 'height "auto") 
                         parent-height))
          
+         ;; min-width, max-width (像素单位)
+         (min-width-value (etaf-layout-parse-length
+                           (etaf-layout-get-style-value style 'min-width "0")
+                           parent-width))
+         (max-width-value (etaf-layout-parse-length
+                           (etaf-layout-get-style-value style 'max-width "none")
+                           parent-width))
+         
+         ;; min-height, max-height (行数单位)
+         (min-height-value (etaf-layout-parse-height
+                            (etaf-layout-get-style-value style 'min-height "0")
+                            parent-height))
+         (max-height-value (etaf-layout-parse-height
+                            (etaf-layout-get-style-value style 'max-height "none")
+                            parent-height))
+         
          ;; 处理 auto 值
          (padding-top-val (if (eq padding-top 'auto) 0 padding-top))
          (padding-right-val (if (eq padding-right 'auto) 0 padding-right))
@@ -333,25 +353,55 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; 检查是否在 flex 容器内
          (is-in-flex-container (plist-get parent-context :flex-container))
          
+         ;; 处理 min/max 值: auto/none 应该被忽略
+         (min-width-val (if (or (eq min-width-value 'auto)
+                                (eq min-width-value 'none))
+                            0
+                          min-width-value))
+         (max-width-val (if (or (eq max-width-value 'auto)
+                                (eq max-width-value 'none))
+                            nil  ; nil 表示无限制
+                          max-width-value))
+         (min-height-val (if (or (eq min-height-value 'auto)
+                                 (eq min-height-value 'none))
+                             0
+                           min-height-value))
+         (max-height-val (if (or (eq max-height-value 'auto)
+                                 (eq max-height-value 'none))
+                             nil  ; nil 表示无限制
+                           max-height-value))
+         
          ;; 计算内容宽度
          ;; 对于内联元素，width:auto 时宽度应该为 0，让后续根据实际内容计算
          ;; 对于块级元素，width:auto 时宽度应该填充父容器
          ;; 但是当位于 flex 容器内时，块级元素的宽度应该由 flex 布局算法计算
          ;; 基于 grow, shrink, basis 和 gap 等属性，而不是自动填充父容器宽度
          ;; 初始值设为 0，后续由 flex 算法调整实际宽度
-         (content-width (if (eq width-value 'auto)
-                            (if (or is-inline is-in-flex-container)
-                                0  ; 初始值：后续由内容尺寸或flex算法决定实际宽度
-                              (max 0 (- parent-width
-                                        padding-left-val padding-right-val
-                                        border-left-val border-right-val
-                                        margin-left-val margin-right-val)))
-                          width-value))
+         (base-content-width (if (eq width-value 'auto)
+                                 (if (or is-inline is-in-flex-container)
+                                     0  ; 初始值：后续由内容尺寸或flex算法决定实际宽度
+                                   (max 0 (- parent-width
+                                             padding-left-val padding-right-val
+                                             border-left-val border-right-val
+                                             margin-left-val margin-right-val)))
+                               width-value))
+         
+         ;; 应用 min-width, max-width 约束
+         ;; 参考 etaf-box.el 中的 etaf-box-content-pixel 函数
+         (content-width (min (or max-width-val most-positive-fixnum)
+                             (max (or min-width-val 0)
+                                  base-content-width)))
          
          ;; 计算内容高度（如果指定）
-         (content-height (if (eq height-value 'auto)
-                             0  ; 将在后续根据子元素计算
-                           height-value)))
+         (base-content-height (if (eq height-value 'auto)
+                                  0  ; 将在后续根据子元素计算
+                                height-value))
+         
+         ;; 应用 min-height, max-height 约束
+         ;; 参考 etaf-box.el 中的 etaf-box-content-height 函数
+         (content-height (min (or max-height-val most-positive-fixnum)
+                              (max (or min-height-val 0)
+                                   base-content-height))))
     
     ;; 构建盒模型
     (list :box-sizing box-sizing
