@@ -886,7 +886,13 @@ ROW-GAP/COLUMN-GAP are row/column gaps.
 JUSTIFY-CONTENT is main axis alignment.
 CONTAINER-WIDTH is the container's content width for row layouts.
 CONTAINER-HEIGHT is the container's content height for column layouts (optional).
-FLEX-WRAP is wrap mode (nowrap/wrap/wrap-reverse, default nowrap)."
+FLEX-WRAP is wrap mode (nowrap/wrap/wrap-reverse, default nowrap).
+
+This function follows the same wrapping strategy as etaf-flex.el:
+1. Calculate wrap-lst using etaf-flex-line-breaks when items overflow
+2. Process each line separately with its own justify-content spacing
+3. Stack/concat lines in the cross-axis direction
+4. Handle wrap-reverse mode by reversing the lines order"
   (if (null child-strings)
       ""
     (message "child-strings:%S" child-strings)
@@ -895,8 +901,6 @@ FLEX-WRAP is wrap mode (nowrap/wrap/wrap-reverse, default nowrap)."
            (main-gap (if is-row column-gap row-gap))
            (cross-gap (if is-row row-gap column-gap))
            (flex-wrap (or flex-wrap "nowrap"))
-           (should-wrap (not (string= flex-wrap "nowrap")))
-           (wrap-reversed (string= flex-wrap "wrap-reverse"))
            ;; Filter out empty strings
            (valid-strings (seq-filter (lambda (s) (> (length s) 0))
                                       child-strings))
@@ -904,76 +908,116 @@ FLEX-WRAP is wrap mode (nowrap/wrap/wrap-reverse, default nowrap)."
            ;; Get container main axis size
            (container-main-size (if is-row
                                     (or container-width 0)
-                                  (or container-height 0))))
+                                  (or container-height 0)))
+           ;; Calculate sizes for each item (same as items-units-lst in etaf-flex.el)
+           (items-units-lst (if is-row
+                                (mapcar #'string-pixel-width valid-strings)
+                              (mapcar #'etaf-string-linum valid-strings)))
+           (items-units (apply #'+ items-units-lst))
+           ;; Calculate total gap for all items
+           (gaps-units (* main-gap (max 0 (1- items-count))))
+           ;; Calculate rest-units (same as in etaf-flex.el line 733)
+           (rest-units (if (> container-main-size 0)
+                           (- container-main-size items-units gaps-units)
+                         0))
+           ;; Determine wrap-lst following etaf-flex.el strategy (lines 744-763)
+           ;; wrap-lst records the number of items on each line
+           (wrap-lst
+            (if (and (not (string= flex-wrap "nowrap"))
+                     (> items-count 1)
+                     (> container-main-size 0)
+                     (< rest-units 0))  ;; items overflow
+                ;; Use etaf-flex-line-breaks to calculate line breaks
+                (etaf-flex-line-breaks container-main-size items-units-lst main-gap)
+              ;; No wrapping - all items on single line
+              (list items-count))))
       (if (null valid-strings)
           ""
-        ;; Calculate sizes for each item
-        (let* ((item-sizes (if is-row
-                               (mapcar #'string-pixel-width valid-strings)
-                             (mapcar #'etaf-string-linum valid-strings)))
-               (actual-total-size (apply #'+ item-sizes))
-               (total-gap (* main-gap (max 0 (1- items-count))))
-               ;; Check if wrapping is needed
-               (needs-wrap (and should-wrap
-                                (> container-main-size 0)
-                                (> (+ actual-total-size total-gap) container-main-size))))
-          (message "(+ actual-total-size total-gap):%S" (+ actual-total-size total-gap))
-          (message "container-main-size:%S" container-main-size)
-          (message "needs-wrap:%S" needs-wrap)
-          (if needs-wrap
-              ;; Wrapping needed - split items into multiple lines
-              (let* ((line-breaks (etaf-flex-line-breaks container-main-size item-sizes main-gap))
-                     (lines '())
-                     (idx 0))
-                (message "line-breaks" line-breaks)
-                ;; Process each line
-                (dolist (count line-breaks)
-                  ;; Skip empty lines
-                  (when (> count 0)
-                    (let* ((line-strings (seq-subseq valid-strings idx (+ idx count)))
-                           (line-items-count (length line-strings))
-                           (line-total-size (apply #'+ (seq-subseq item-sizes idx (+ idx count))))
-                           (line-total-gap (* main-gap (max 0 (1- line-items-count))))
-                           (line-free-space (if (> container-main-size 0)
-                                                (max 0 (- container-main-size line-total-size line-total-gap))
-                                              0))
-                           (space-distribution (etaf-layout-flex-justify-space
-                                                justify-content line-free-space line-items-count main-gap))
-                           (start-space (floor (nth 0 space-distribution)))
-                           (between-space (floor (nth 1 space-distribution)))
-                           (end-space (floor (nth 2 space-distribution))))
-                      (push (if is-row
-                                (etaf-layout--flex-concat-horizontal
-                                 line-strings start-space between-space end-space)
-                              (etaf-layout--flex-stack-vertical
-                               line-strings start-space between-space end-space))
-                            lines)
-                      (setq idx (+ idx count)))))
-                ;; Stack/concat the lines in cross axis direction
-                ;; lines is built in reverse order (via push), so reverse it first
-                ;; then apply wrap-reverse if needed
-                (let ((ordered-lines (nreverse lines)))
-                  (when wrap-reversed
-                    (setq ordered-lines (nreverse ordered-lines)))
-                  (if is-row
-                      ;; Row layout wraps vertically
-                      (etaf-lines-stack ordered-lines)
-                    ;; Column layout wraps horizontally
-                    (etaf-lines-concat ordered-lines))))
-            ;; No wrapping - single line
-            (let* ((free-space (if (> container-main-size 0)
-                                   (max 0 (- container-main-size actual-total-size total-gap))
-                                 0))
-                   (space-distribution (etaf-layout-flex-justify-space
-                                        justify-content free-space items-count main-gap))
-                   (start-space (floor (nth 0 space-distribution)))
-                   (between-space (floor (nth 1 space-distribution)))
-                   (end-space (floor (nth 2 space-distribution))))
-              (if is-row
-                  (etaf-layout--flex-concat-horizontal
-                   valid-strings start-space between-space end-space)
-                (etaf-layout--flex-stack-vertical
-                 valid-strings start-space between-space end-space)))))))))
+        ;; Process each line following etaf-flex.el strategy (lines 766-803)
+        (let ((main-gaps-lst nil)
+              (lines-strings nil)
+              (prev 0))
+          ;; Process each line and calculate main-gaps
+          (dolist (num wrap-lst)
+            (when (> num 0)
+              (let* ((line-strings (seq-subseq valid-strings prev (+ prev num)))
+                     (line-units-lst (seq-subseq items-units-lst prev (+ prev num)))
+                     (line-items-units (apply #'+ line-units-lst))
+                     (line-gaps-units (* main-gap (max 0 (1- num))))
+                     (line-rest-units (if (> container-main-size 0)
+                                          (max 0 (- container-main-size line-items-units line-gaps-units))
+                                        0))
+                     ;; Calculate space distribution for this line
+                     (space-distribution
+                      (if (> line-rest-units 0)
+                          (etaf-layout-flex-justify-space
+                           justify-content line-rest-units num main-gap)
+                        ;; No extra space - just use gaps
+                        (list 0 main-gap 0)))
+                     (start-space (floor (nth 0 space-distribution)))
+                     (between-space (floor (nth 1 space-distribution)))
+                     (end-space (floor (nth 2 space-distribution)))
+                     ;; Render this line
+                     (line-string
+                      (if is-row
+                          (etaf-layout--flex-concat-horizontal
+                           line-strings start-space between-space end-space)
+                        (etaf-layout--flex-stack-vertical
+                         line-strings start-space between-space end-space))))
+                (push line-string lines-strings)
+                (setq prev (+ prev num)))))
+          ;; Reverse lines-strings since we used push
+          (setq lines-strings (nreverse lines-strings))
+          ;; Handle wrap-reverse (same as etaf-flex.el line 942-947)
+          (when (string= flex-wrap "wrap-reverse")
+            (setq lines-strings (nreverse lines-strings)))
+          ;; Stack/concat lines in cross axis direction
+          ;; (same as etaf-flex.el lines 955-964)
+          (if (= (length lines-strings) 1)
+              (car lines-strings)
+            (if is-row
+                ;; Row layout: stack lines vertically with cross-gap
+                (etaf-layout--flex-stack-lines lines-strings cross-gap)
+              ;; Column layout: concat lines horizontally with cross-gap
+              (etaf-layout--flex-concat-lines lines-strings cross-gap))))))))
+
+(defun etaf-layout--flex-stack-lines (line-strings cross-gap)
+  "Stack multiple lines vertically with cross-gap between them.
+LINE-STRINGS is list of line strings.
+CROSS-GAP is the gap between lines (in lines for row layout)."
+  (if (null line-strings)
+      ""
+    (let ((parts '())
+          (len (length line-strings))
+          (idx 0))
+      (dolist (line-str line-strings)
+        (push line-str parts)
+        (when (and (< idx (1- len))
+                   (> cross-gap 0))
+          ;; Add gap lines between lines
+          (let ((width (string-pixel-width line-str)))
+            (when (> width 0)
+              (push (etaf-pixel-blank width cross-gap) parts))))
+        (setq idx (1+ idx)))
+      (etaf-lines-stack (nreverse parts)))))
+
+(defun etaf-layout--flex-concat-lines (line-strings cross-gap)
+  "Concatenate multiple lines horizontally with cross-gap between them.
+LINE-STRINGS is list of line strings.
+CROSS-GAP is the gap between lines (in pixels for column layout)."
+  (if (null line-strings)
+      ""
+    (let ((parts '())
+          (len (length line-strings))
+          (idx 0))
+      (dolist (line-str line-strings)
+        (push line-str parts)
+        (when (and (< idx (1- len))
+                   (> cross-gap 0))
+          ;; Add gap spacing between lines
+          (push (etaf-pixel-spacing cross-gap) parts))
+        (setq idx (1+ idx)))
+      (etaf-lines-concat (nreverse parts)))))
 
 (defun etaf-layout--flex-concat-horizontal (strings start-space between-space end-space)
   "Horizontally concatenate flex child element strings.
