@@ -748,15 +748,9 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
               (let ((items-units
                      (etaf-flex-items-main-units items-plists flex)))
                 (when (> items-units flex-units)
-                  ;; 使用缩减后的实际长度列表计算换行
-                  ;; Use actual shrunk sizes instead of base units for line breaks
-                  (let ((actual-units-lst
-                         (mapcar (lambda (item)
-                                   (etaf-flex-item-main-units item direction))
-                                 (etaf-plists-get items-plists :item))))
-                    (setq wrap-lst (etaf-flex-line-breaks
-                                    flex-units actual-units-lst
-                                    (etaf-flex-main-gap-units flex))))
+                  (setq wrap-lst (etaf-flex-line-breaks
+                                  flex-units items-units-lst
+                                  (etaf-flex-main-gap-units flex)))
                   ;; (elog-debug "wrap-lst:%S" wrap-lst)
                   (let ((prev 0))
                     (dolist (num wrap-lst)
@@ -766,7 +760,7 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
                                          prev (+ prev num))))
                         ;; 重新计算每行的 item 长度
                         (etaf-flex-items-adjust sub-items-plists flex)
-                        (setq prev (+ prev num))))))))))
+                        (setq prev (+ prev num)))))))))
           ;; 依次处理每一条主轴上的 content-justify
           ;; 设置 main-gaps-lst 和 cross-max-units-lst
           (let ((prev 0)

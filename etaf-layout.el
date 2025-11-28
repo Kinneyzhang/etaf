@@ -877,64 +877,98 @@ CONTAINER-WIDTH is optional container width for wrapping."
                                                        row-gap column-gap
                                                        justify-content
                                                        container-width
-                                                       &optional container-height)
+                                                       &optional container-height
+                                                       flex-wrap)
   "Merge child element strings according to flex layout properties.
 CHILD-STRINGS is list of child element strings.
 FLEX-DIRECTION is main axis direction (row/row-reverse/column/column-reverse).
 ROW-GAP/COLUMN-GAP are row/column gaps.
 JUSTIFY-CONTENT is main axis alignment.
 CONTAINER-WIDTH is the container's content width for row layouts.
-CONTAINER-HEIGHT is the container's content height for column layouts (optional)."
+CONTAINER-HEIGHT is the container's content height for column layouts (optional).
+FLEX-WRAP is wrap mode (nowrap/wrap/wrap-reverse, default nowrap)."
   (if (null child-strings)
       ""
     (let* ((is-row (or (string= flex-direction "row")
                        (string= flex-direction "row-reverse")))
            (main-gap (if is-row column-gap row-gap))
+           (cross-gap (if is-row row-gap column-gap))
+           (flex-wrap (or flex-wrap "nowrap"))
+           (should-wrap (not (string= flex-wrap "nowrap")))
+           (wrap-reversed (string= flex-wrap "wrap-reverse"))
            ;; Filter out empty strings
            (valid-strings (seq-filter (lambda (s) (> (length s) 0))
                                       child-strings))
            (items-count (length valid-strings))
-           ;; Calculate actual total size from string dimensions
-           ;; For row: sum of pixel widths; for column: sum of line counts
-           (actual-total-size
-            (if valid-strings
-                (if is-row
-                    (apply #'+ (mapcar #'string-pixel-width valid-strings))
-                  (apply #'+ (mapcar #'etaf-string-linum valid-strings)))
-              0))
-           ;; Calculate total gap
-           (total-gap (* main-gap (max 0 (1- items-count))))
            ;; Get container main axis size
            (container-main-size (if is-row
                                     (or container-width 0)
-                                  (or container-height 0)))
-           ;; Calculate free space based on actual sizes
-           (free-space (if (> container-main-size 0)
-                           (max 0 (- container-main-size actual-total-size total-gap))
-                         0))
-           ;; Recalculate space distribution based on actual sizes
-           (space-distribution (when valid-strings
-                                 (etaf-layout-flex-justify-space
-                                  justify-content free-space items-count main-gap)))
-           ;; Get space distribution
-           (start-space (if space-distribution
-                            (floor (nth 0 space-distribution))
-                          0))
-           (between-space (if space-distribution
-                              (floor (nth 1 space-distribution))
-                            (floor main-gap)))
-           (end-space (if space-distribution
-                          (floor (nth 2 space-distribution))
-                        0)))
+                                  (or container-height 0))))
       (if (null valid-strings)
           ""
-        (if is-row
-            ;; Horizontal layout (row/row-reverse)
-            (etaf-layout--flex-concat-horizontal
-             valid-strings start-space between-space end-space)
-          ;; Vertical layout (column/column-reverse)
-          (etaf-layout--flex-stack-vertical
-           valid-strings start-space between-space end-space))))))
+        ;; Calculate sizes for each item
+        (let* ((item-sizes (if is-row
+                               (mapcar #'string-pixel-width valid-strings)
+                             (mapcar #'etaf-string-linum valid-strings)))
+               (actual-total-size (apply #'+ item-sizes))
+               (total-gap (* main-gap (max 0 (1- items-count))))
+               ;; Check if wrapping is needed
+               (needs-wrap (and should-wrap
+                                (> container-main-size 0)
+                                (> (+ actual-total-size total-gap) container-main-size))))
+          (if needs-wrap
+              ;; Wrapping needed - split items into multiple lines
+              (let* ((line-breaks (etaf-flex-line-breaks container-main-size item-sizes main-gap))
+                     (lines '())
+                     (idx 0))
+                ;; Process each line
+                (dolist (count line-breaks)
+                  ;; Skip empty lines
+                  (when (> count 0)
+                    (let* ((line-strings (seq-subseq valid-strings idx (+ idx count)))
+                           (line-items-count (length line-strings))
+                           (line-total-size (apply #'+ (seq-subseq item-sizes idx (+ idx count))))
+                           (line-total-gap (* main-gap (max 0 (1- line-items-count))))
+                           (line-free-space (if (> container-main-size 0)
+                                                (max 0 (- container-main-size line-total-size line-total-gap))
+                                              0))
+                           (space-distribution (etaf-layout-flex-justify-space
+                                                justify-content line-free-space line-items-count main-gap))
+                           (start-space (floor (nth 0 space-distribution)))
+                           (between-space (floor (nth 1 space-distribution)))
+                           (end-space (floor (nth 2 space-distribution))))
+                      (push (if is-row
+                                (etaf-layout--flex-concat-horizontal
+                                 line-strings start-space between-space end-space)
+                              (etaf-layout--flex-stack-vertical
+                               line-strings start-space between-space end-space))
+                            lines)
+                      (setq idx (+ idx count)))))
+                ;; Stack/concat the lines in cross axis direction
+                ;; lines is built in reverse order (via push), so reverse it first
+                ;; then apply wrap-reverse if needed
+                (let ((ordered-lines (nreverse lines)))
+                  (when wrap-reversed
+                    (setq ordered-lines (nreverse ordered-lines)))
+                  (if is-row
+                      ;; Row layout wraps vertically
+                      (etaf-lines-stack ordered-lines)
+                    ;; Column layout wraps horizontally
+                    (etaf-lines-concat ordered-lines))))
+            ;; No wrapping - single line
+            (let* ((free-space (if (> container-main-size 0)
+                                   (max 0 (- container-main-size actual-total-size total-gap))
+                                 0))
+                   (space-distribution (etaf-layout-flex-justify-space
+                                        justify-content free-space items-count main-gap))
+                   (start-space (floor (nth 0 space-distribution)))
+                   (between-space (floor (nth 1 space-distribution)))
+                   (end-space (floor (nth 2 space-distribution))))
+              (if is-row
+                  (etaf-layout--flex-concat-horizontal
+                   valid-strings start-space between-space end-space)
+                (etaf-layout--flex-stack-vertical
+                 valid-strings start-space between-space end-space))))))))))
 
 (defun etaf-layout--flex-concat-horizontal (strings start-space between-space end-space)
   "Horizontally concatenate flex child element strings.
@@ -1065,10 +1099,11 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                     (row-gap (or (dom-attr layout-node 'layout-row-gap) 0))
                     (column-gap (or (dom-attr layout-node 'layout-column-gap) 0))
                     (justify-content (dom-attr layout-node 'layout-justify-content))
+                    (flex-wrap (or (dom-attr layout-node 'layout-flex-wrap) "nowrap"))
                     (child-strings (mapcar #'car child-infos)))
                 (etaf-layout--merge-flex-children
                  child-strings flex-direction row-gap column-gap
-                 justify-content content-width content-height-px))
+                 justify-content content-width content-height-px flex-wrap))
             ;; 非 flex 容器：使用原有的 display 类型合并逻辑
             ;; - inline 元素应该水平拼接
             ;; - block 元素应该垂直堆叠
