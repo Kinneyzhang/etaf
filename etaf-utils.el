@@ -247,9 +247,18 @@ FROM-TAIL 为 t 表示优先从尾部加上多余的部分。"
 
 (defun etaf-propertize-bgcolor (string bgcolor)
   "Apply background color BGCOLOR to STRING, handling display properties.
+
 This function properly applies background color to characters that have
 display properties like (space :width ...) by updating the display spec
-to include the face with background color."
+to include the face with background color.
+
+For regular text, `add-face-text-property' is used.
+For text with `(space :width ...)' display properties, the display spec
+is updated to include `:face (:background BGCOLOR)'.
+
+Example:
+  Input: a string containing \" \" with display property (space :width (10))
+  Output: same string with display property (space :width (10) :face (:background BGCOLOR))"
   (let* ((string (copy-sequence string))
          (len (length string))
          (pos 0))
@@ -261,15 +270,22 @@ to include the face with background color."
                  (eq (car display) 'space))
             ;; For display property with (space ...), add :face with background
             (let* ((existing-face (plist-get (cdr display) :face))
-                   (new-face (if existing-face
-                                 (if (and (consp existing-face)
-                                          (plist-get existing-face :background))
-                                     existing-face
-                                   (if (consp existing-face)
-                                       (plist-put (copy-sequence existing-face)
-                                                  :background bgcolor)
-                                     `(:inherit ,existing-face :background ,bgcolor)))
-                               `(:background ,bgcolor)))
+                   (new-face (cond
+                              ;; Existing face already has background, keep it
+                              ((and existing-face
+                                    (consp existing-face)
+                                    (plist-get existing-face :background))
+                               existing-face)
+                              ;; Existing face is a plist, add background to it
+                              ((and existing-face (consp existing-face))
+                               (plist-put (copy-sequence existing-face)
+                                          :background bgcolor))
+                              ;; Existing face is a symbol, inherit from it
+                              (existing-face
+                               `(:inherit ,existing-face :background ,bgcolor))
+                              ;; No existing face, create new one
+                              (t
+                               `(:background ,bgcolor))))
                    (new-display (append (list 'space)
                                         (plist-put (copy-sequence (cdr display))
                                                    :face new-face))))
