@@ -222,13 +222,37 @@
 
 (let* ((instance (etaf-tag-create-instance 'button nil '("Click")))
        (base-style (etaf-tag-get-computed-style instance)))
-  ;; Button should have padding in default style
-  (should (assq 'padding base-style))
+  ;; Button should have padding-left/right in default style
+  (should (assq 'padding-left base-style))
+  (should (assq 'padding-right base-style))
   
   ;; Simulate hover state
   (plist-put (plist-get instance :state) :hovered t)
   (let ((hover-style (etaf-tag-get-computed-style instance)))
     ;; Should have hover background color
     (should (assq 'background-color hover-style))))
+
+;;; Test unit consistency - vertical uses lh, horizontal uses px
+
+;; Test p tag uses lh for vertical margins
+(let ((p-def (etaf-tag-get-definition 'p)))
+  (let ((style (plist-get p-def :default-style)))
+    (should (string-match "lh" (cdr (assq 'margin-top style))))
+    (should (string-match "lh" (cdr (assq 'margin-bottom style))))))
+
+;; Test ul tag uses lh for vertical margins and px for horizontal padding
+(let ((ul-def (etaf-tag-get-definition 'ul)))
+  (let ((style (plist-get ul-def :default-style)))
+    (should (string-match "lh" (cdr (assq 'margin-top style))))
+    (should (string-match "lh" (cdr (assq 'margin-bottom style))))
+    (should (string-match "px" (cdr (assq 'padding-left style))))))
+
+;; Test button tag uses lh for vertical padding and px for horizontal padding
+(let ((button-def (etaf-tag-get-definition 'button)))
+  (let ((style (plist-get button-def :default-style)))
+    (should (string-match "lh" (cdr (assq 'padding-top style))))
+    (should (string-match "lh" (cdr (assq 'padding-bottom style))))
+    (should (string-match "px" (cdr (assq 'padding-left style))))
+    (should (string-match "px" (cdr (assq 'padding-right style))))))
 
 (provide 'etaf-tag-tests)

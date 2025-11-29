@@ -373,50 +373,50 @@ Returns (tag-name ((attrs...)) children...)."
 
 (define-etaf-tag p
   :display 'block
-  :default-style '((margin-top . "1em")
-                   (margin-bottom . "1em")))
+  :default-style '((margin-top . "1lh")
+                   (margin-bottom . "1lh")))
 
 (define-etaf-tag h1
   :display 'block
   :default-style '((font-size . "2em")
                    (font-weight . "bold")
-                   (margin-top . "0.67em")
-                   (margin-bottom . "0.67em")))
+                   (margin-top . "1lh")
+                   (margin-bottom . "1lh")))
 
 (define-etaf-tag h2
   :display 'block
   :default-style '((font-size . "1.5em")
                    (font-weight . "bold")
-                   (margin-top . "0.83em")
-                   (margin-bottom . "0.83em")))
+                   (margin-top . "1lh")
+                   (margin-bottom . "1lh")))
 
 (define-etaf-tag h3
   :display 'block
   :default-style '((font-size . "1.17em")
                    (font-weight . "bold")
-                   (margin-top . "1em")
-                   (margin-bottom . "1em")))
+                   (margin-top . "1lh")
+                   (margin-bottom . "1lh")))
 
 (define-etaf-tag h4
   :display 'block
   :default-style '((font-size . "1em")
                    (font-weight . "bold")
-                   (margin-top . "1.33em")
-                   (margin-bottom . "1.33em")))
+                   (margin-top . "1lh")
+                   (margin-bottom . "1lh")))
 
 (define-etaf-tag h5
   :display 'block
   :default-style '((font-size . "0.83em")
                    (font-weight . "bold")
-                   (margin-top . "1.67em")
-                   (margin-bottom . "1.67em")))
+                   (margin-top . "1lh")
+                   (margin-bottom . "1lh")))
 
 (define-etaf-tag h6
   :display 'block
   :default-style '((font-size . "0.67em")
                    (font-weight . "bold")
-                   (margin-top . "2.33em")
-                   (margin-bottom . "2.33em")))
+                   (margin-top . "1lh")
+                   (margin-bottom . "1lh")))
 
 (define-etaf-tag header
   :display 'block)
@@ -442,15 +442,15 @@ Returns (tag-name ((attrs...)) children...)."
 (define-etaf-tag ul
   :display 'block
   :default-style '((list-style-type . "disc")
-                   (margin-top . "1em")
-                   (margin-bottom . "1em")
+                   (margin-top . "1lh")
+                   (margin-bottom . "1lh")
                    (padding-left . "40px")))
 
 (define-etaf-tag ol
   :display 'block
   :default-style '((list-style-type . "decimal")
-                   (margin-top . "1em")
-                   (margin-bottom . "1em")
+                   (margin-top . "1lh")
+                   (margin-bottom . "1lh")
                    (padding-left . "40px")))
 
 (define-etaf-tag li
@@ -458,8 +458,8 @@ Returns (tag-name ((attrs...)) children...)."
 
 (define-etaf-tag blockquote
   :display 'block
-  :default-style '((margin-top . "1em")
-                   (margin-bottom . "1em")
+  :default-style '((margin-top . "1lh")
+                   (margin-bottom . "1lh")
                    (margin-left . "40px")
                    (margin-right . "40px")))
 
@@ -473,8 +473,8 @@ Returns (tag-name ((attrs...)) children...)."
   :self-closing t
   :children-allowed nil
   :default-style '((border-top . "1px solid")
-                   (margin-top . "0.5em")
-                   (margin-bottom . "0.5em")))
+                   (margin-top . "1lh")
+                   (margin-bottom . "1lh")))
 
 ;; Inline tags
 (define-etaf-tag span
@@ -578,7 +578,10 @@ Returns (tag-name ((attrs...)) children...)."
 ;; Form elements
 (define-etaf-tag button
   :display 'inline-block
-  :default-style '((padding . "5px 10px")
+  :default-style '((padding-top . "0lh")
+                   (padding-bottom . "0lh")
+                   (padding-left . "10px")
+                   (padding-right . "10px")
                    (border . "1px solid #ccc")
                    (background-color . "#f0f0f0")
                    (cursor . "pointer"))
@@ -601,7 +604,10 @@ Returns (tag-name ((attrs...)) children...)."
   :display 'inline-block
   :self-closing t
   :children-allowed nil
-  :default-style '((padding . "5px")
+  :default-style '((padding-top . "0lh")
+                   (padding-bottom . "0lh")
+                   (padding-left . "5px")
+                   (padding-right . "5px")
                    (border . "1px solid #ccc"))
   :focus-style '((border-color . "blue")
                  (outline . "none"))
@@ -610,7 +616,10 @@ Returns (tag-name ((attrs...)) children...)."
 
 (define-etaf-tag textarea
   :display 'inline-block
-  :default-style '((padding . "5px")
+  :default-style '((padding-top . "0lh")
+                   (padding-bottom . "0lh")
+                   (padding-left . "5px")
+                   (padding-right . "5px")
                    (border . "1px solid #ccc")
                    (font-family . "inherit"))
   :focus-style '((border-color . "blue")
@@ -618,7 +627,10 @@ Returns (tag-name ((attrs...)) children...)."
 
 (define-etaf-tag select
   :display 'inline-block
-  :default-style '((padding . "5px")
+  :default-style '((padding-top . "0lh")
+                   (padding-bottom . "0lh")
+                   (padding-left . "5px")
+                   (padding-right . "5px")
                    (border . "1px solid #ccc")))
 
 (define-etaf-tag option
@@ -634,11 +646,17 @@ Returns (tag-name ((attrs...)) children...)."
 (define-etaf-tag fieldset
   :display 'block
   :default-style '((border . "1px solid #ccc")
-                   (padding . "10px")))
+                   (padding-top . "1lh")
+                   (padding-bottom . "1lh")
+                   (padding-left . "10px")
+                   (padding-right . "10px")))
 
 (define-etaf-tag legend
   :display 'block
-  :default-style '((padding . "0 5px")))
+  :default-style '((padding-top . "0lh")
+                   (padding-bottom . "0lh")
+                   (padding-left . "5px")
+                   (padding-right . "5px")))
 
 ;; Table elements
 (define-etaf-tag table
@@ -661,11 +679,17 @@ Returns (tag-name ((attrs...)) children...)."
   :display 'table-cell
   :default-style '((font-weight . "bold")
                    (text-align . "center")
-                   (padding . "5px")))
+                   (padding-top . "0lh")
+                   (padding-bottom . "0lh")
+                   (padding-left . "5px")
+                   (padding-right . "5px")))
 
 (define-etaf-tag td
   :display 'table-cell
-  :default-style '((padding . "5px")))
+  :default-style '((padding-top . "0lh")
+                   (padding-bottom . "0lh")
+                   (padding-left . "5px")
+                   (padding-right . "5px")))
 
 (define-etaf-tag caption
   :display 'table-caption)
@@ -691,7 +715,10 @@ Returns (tag-name ((attrs...)) children...)."
 ;; Semantic elements
 (define-etaf-tag figure
   :display 'block
-  :default-style '((margin . "1em 40px")))
+  :default-style '((margin-top . "1lh")
+                   (margin-bottom . "1lh")
+                   (margin-left . "40px")
+                   (margin-right . "40px")))
 
 (define-etaf-tag figcaption
   :display 'block)
@@ -713,7 +740,10 @@ Returns (tag-name ((attrs...)) children...)."
   :display 'block
   :default-style '((position . "absolute")
                    (border . "1px solid #ccc")
-                   (padding . "1em")
+                   (padding-top . "1lh")
+                   (padding-bottom . "1lh")
+                   (padding-left . "10px")
+                   (padding-right . "10px")
                    (background-color . "white")))
 
 (define-etaf-tag progress
