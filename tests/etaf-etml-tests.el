@@ -82,139 +82,139 @@
   (etaf-etml-render '(div "Value: {{ missing }}") '(:other "x"))
   '(div "Value: "))
 
-;;; v-if Conditional Rendering Tests
+;;; e-if Conditional Rendering Tests
 
 (should-equal
-  (etaf-etml-render '(div (p :v-if "visible" "Visible")) '(:visible t))
+  (etaf-etml-render '(div (p :e-if "visible" "Visible")) '(:visible t))
   '(div (p "Visible")))
 
 (should-equal
-  (etaf-etml-render '(div (p :v-if "visible" "Visible")) '(:visible nil))
+  (etaf-etml-render '(div (p :e-if "visible" "Visible")) '(:visible nil))
   '(div))
 
 (should-equal
-  (etaf-etml-render '(div (p :v-if "count" "Has count")) '(:count 5))
+  (etaf-etml-render '(div (p :e-if "count" "Has count")) '(:count 5))
   '(div (p "Has count")))
 
 (should-equal
-  (etaf-etml-render '(div (p :v-if "count" "Has count")) '(:count 0))
+  (etaf-etml-render '(div (p :e-if "count" "Has count")) '(:count 0))
   '(div))
 
 ;; Test negation
 (should-equal
-  (etaf-etml-render '(div (p :v-if "!hidden" "Shown")) '(:hidden nil))
+  (etaf-etml-render '(div (p :e-if "!hidden" "Shown")) '(:hidden nil))
   '(div (p "Shown")))
 
 (should-equal
-  (etaf-etml-render '(div (p :v-if "!hidden" "Shown")) '(:hidden t))
+  (etaf-etml-render '(div (p :e-if "!hidden" "Shown")) '(:hidden t))
   '(div))
 
-;;; v-if/v-else Tests
+;;; e-if/e-else Tests
 
 (should-equal
   (etaf-etml-render
     '(div
-       (p :v-if "loggedIn" "Welcome!")
-       (p :v-else "Please login"))
+       (p :e-if "loggedIn" "Welcome!")
+       (p :e-else "Please login"))
     '(:loggedIn t))
   '(div (p "Welcome!")))
 
 (should-equal
   (etaf-etml-render
     '(div
-       (p :v-if "loggedIn" "Welcome!")
-       (p :v-else "Please login"))
+       (p :e-if "loggedIn" "Welcome!")
+       (p :e-else "Please login"))
     '(:loggedIn nil))
   '(div (p "Please login")))
 
-;;; v-if/v-else-if/v-else Tests
+;;; e-if/e-else-if/e-else Tests
 
 (should-equal
   (etaf-etml-render
     '(div
-       (p :v-if "status" :class "{{ status }}" "Status A")
-       (p :v-else-if "fallback" "Fallback")
-       (p :v-else "Default"))
+       (p :e-if "status" :class "{{ status }}" "Status A")
+       (p :e-else-if "fallback" "Fallback")
+       (p :e-else "Default"))
     '(:status "active" :fallback nil))
   '(div (p :class "active" "Status A")))
 
 (should-equal
   (etaf-etml-render
     '(div
-       (p :v-if "status" "Status")
-       (p :v-else-if "fallback" "Fallback")
-       (p :v-else "Default"))
+       (p :e-if "status" "Status")
+       (p :e-else-if "fallback" "Fallback")
+       (p :e-else "Default"))
     '(:status nil :fallback t))
   '(div (p "Fallback")))
 
 (should-equal
   (etaf-etml-render
     '(div
-       (p :v-if "status" "Status")
-       (p :v-else-if "fallback" "Fallback")
-       (p :v-else "Default"))
+       (p :e-if "status" "Status")
+       (p :e-else-if "fallback" "Fallback")
+       (p :e-else "Default"))
     '(:status nil :fallback nil))
   '(div (p "Default")))
 
-;;; v-for List Rendering Tests
+;;; e-for List Rendering Tests
 
 (should-equal
   (etaf-etml-render
-    '(ul (li :v-for "item in items" "{{ item }}"))
+    '(ul (li :e-for "item in items" "{{ item }}"))
     '(:items ("a" "b" "c")))
   '(ul (li "a") (li "b") (li "c")))
 
 (should-equal
   (etaf-etml-render
-    '(div (span :v-for "n in numbers" "{{ n }}"))
+    '(div (span :e-for "n in numbers" "{{ n }}"))
     '(:numbers (1 2 3)))
   '(div (span "1") (span "2") (span "3")))
 
-;; Test v-for with index
+;; Test e-for with index
 (should-equal
   (etaf-etml-render
-    '(ul (li :v-for "(item, idx) in items" "{{ idx }}: {{ item }}"))
+    '(ul (li :e-for "(item, idx) in items" "{{ idx }}: {{ item }}"))
     '(:items ("x" "y" "z")))
   '(ul (li "0: x") (li "1: y") (li "2: z")))
 
 ;; Test empty list
 (should-equal
   (etaf-etml-render
-    '(ul (li :v-for "item in items" "{{ item }}"))
+    '(ul (li :e-for "item in items" "{{ item }}"))
     '(:items ()))
   '(ul))
 
-;;; v-show Tests
+;;; e-show Tests
 
 (should-equal
-  (etaf-etml-render '(div (p :v-show "visible" "Text")) '(:visible t))
+  (etaf-etml-render '(div (p :e-show "visible" "Text")) '(:visible t))
   '(div (p "Text")))
 
 (should-equal
-  (etaf-etml-render '(div (p :v-show "visible" "Text")) '(:visible nil))
+  (etaf-etml-render '(div (p :e-show "visible" "Text")) '(:visible nil))
   '(div (p :style "display: none" "Text")))
 
-;; Test v-show with existing style
+;; Test e-show with existing style
 (should-equal
   (etaf-etml-render
-    '(div (p :v-show "visible" :style "color: red" "Text"))
+    '(div (p :e-show "visible" :style "color: red" "Text"))
     '(:visible nil))
   '(div (p :style "color: red; display: none" "Text")))
 
-;;; v-text Tests
+;;; e-text Tests
 
 (should-equal
-  (etaf-etml-render '(div (p :v-text "message")) '(:message "Hello"))
+  (etaf-etml-render '(div (p :e-text "message")) '(:message "Hello"))
   '(div (p "Hello")))
 
 (should-equal
-  (etaf-etml-render '(div (p :v-text "count")) '(:count 99))
+  (etaf-etml-render '(div (p :e-text "count")) '(:count 99))
   '(div (p "99")))
 
-;; v-text overrides children
+;; e-text overrides children
 (should-equal
   (etaf-etml-render
-    '(div (p :v-text "message" "This will be replaced"))
+    '(div (p :e-text "message" "This will be replaced"))
     '(:message "New content"))
   '(div (p "New content")))
 
@@ -224,8 +224,8 @@
   (etaf-etml-render
     '(div :class "container"
        (h1 "{{ title }}")
-       (ul :v-if "items"
-         (li :v-for "item in items" "{{ item }}")))
+       (ul :e-if "items"
+         (li :e-for "item in items" "{{ item }}")))
     '(:title "My List" :items ("one" "two")))
   '(div :class "container"
      (h1 "My List")
@@ -236,9 +236,9 @@
 (should-equal
   (etaf-etml-render
     '(div
-       (p :v-if "showGreeting" "Hello, {{ name }}!")
-       (ul :v-if "items"
-         (li :v-for "item in items" :class "item" "{{ item }}")))
+       (p :e-if "showGreeting" "Hello, {{ name }}!")
+       (ul :e-if "items"
+         (li :e-for "item in items" :class "item" "{{ item }}")))
     '(:showGreeting t :name "World" :items ("A" "B")))
   '(div
      (p "Hello, World!")
@@ -248,11 +248,11 @@
 
 ;; Boolean literals
 (should-equal
-  (etaf-etml-render '(div (p :v-if "true" "Always")) '())
+  (etaf-etml-render '(div (p :e-if "true" "Always")) '())
   '(div (p "Always")))
 
 (should-equal
-  (etaf-etml-render '(div (p :v-if "false" "Never")) '())
+  (etaf-etml-render '(div (p :e-if "false" "Never")) '())
   '(div))
 
 ;; Number literals in expressions

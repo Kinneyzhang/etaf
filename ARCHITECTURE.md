@@ -706,15 +706,13 @@ DOM + <style> 标签
 | 语法 | 功能 | 示例 |
 |------|------|------|
 | `{{ expr }}` | 文本插值 | `{{ name }}` |
-| `:e-if` / `:v-if` | 条件渲染 | `:e-if "visible"` |
-| `:e-else-if` / `:v-else-if` | 条件分支 | `:e-else-if "count > 0"` |
-| `:e-else` / `:v-else` | 否则分支 | `:e-else` |
-| `:e-for` / `:v-for` | 列表渲染 | `:e-for "item in items"` |
-| `:e-bind:attr` / `:v-bind:attr` | 属性绑定 | `:e-bind:class "className"` |
-| `:e-text` / `:v-text` | 文本内容 | `:e-text "message"` |
-| `:e-show` / `:v-show` | 显示/隐藏 | `:e-show "isVisible"` |
-
-注：推荐使用 `e-*` 前缀，`v-*` 前缀保留用于向后兼容。
+| `:e-if` | 条件渲染 | `:e-if "visible"` |
+| `:e-else-if` | 条件分支 | `:e-else-if "count > 0"` |
+| `:e-else` | 否则分支 | `:e-else` |
+| `:e-for` | 列表渲染 | `:e-for "item in items"` |
+| `:e-bind:attr` | 属性绑定 | `:e-bind:class "className"` |
+| `:e-text` | 文本内容 | `:e-text "message"` |
+| `:e-show` | 显示/隐藏 | `:e-show "isVisible"` |
 
 #### 核心函数
 
@@ -728,7 +726,7 @@ DOM + <style> 标签
 ##### 指令解析
 | 函数 | 功能 |
 |------|------|
-| `etaf-etml--parse-v-for` | 解析 e-for/v-for 表达式 |
+| `etaf-etml--parse-e-for` | 解析 e-for 表达式 |
 | `etaf-etml--truthy-p` | 判断真值 |
 | `etaf-etml--split-attrs-and-children` | 分离属性和子元素 |
 | `etaf-etml--process-bindings` | 处理属性绑定 |
