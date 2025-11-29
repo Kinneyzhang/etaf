@@ -26,6 +26,28 @@
 ;; - Event handlers: on-click, on-hover, on-focus, on-change, etc.
 ;; - Style inheritance: Tags can inherit styles from parent tags
 ;;
+;; Event Support Status (using Emacs native capabilities):
+;;
+;; FULLY SUPPORTED:
+;; - :on-click - Triggered by mouse-1 click, RET, or SPC key
+;;               Uses Emacs keymap property on text
+;; - :on-hover-enter - Triggered when mouse enters the text region
+;;                     Uses help-echo function for tracking
+;; - :on-hover-leave - Triggered when mouse leaves the text region
+;;                     Uses help-echo function for tracking
+;; - :on-keydown - Triggered on key press when point is in region
+;;                 Uses keymap with remapped self-insert-command
+;;
+;; PARTIALLY SUPPORTED:
+;; - :hover-style - Visual hover effect using mouse-face property
+;;
+;; NOT SUPPORTED (Emacs limitations):
+;; - :on-keyup - Emacs has no key release events
+;; - :on-focus - Text regions don't have focus concept in Emacs
+;; - :on-blur - Text regions don't have focus concept in Emacs
+;; - :on-change - For form input; use widgets (widget.el) instead
+;; - :on-input - For form input; use widgets (widget.el) instead
+;;
 ;; Usage Example:
 ;;
 ;;   ;; Define a custom button tag
@@ -169,49 +191,126 @@ EXTRA-DATA is an optional alist of additional event properties."
 
 ;;; Interactive Behaviors
 
+;; Hover tracking state
+(defvar etaf-tag--current-hover-instance nil
+  "The tag instance currently being hovered over.")
+
+(defvar etaf-tag--hover-overlay nil
+  "Overlay used for hover state visual feedback.")
+
 (defun etaf-tag-setup-keymap (tag-instance)
-  "Set up keybindings for TAG-INSTANCE."
+  "Set up keybindings for TAG-INSTANCE.
+Creates a keymap with the following bindings:
+- RET and SPC: trigger on-click event
+- mouse-1: trigger on-click event
+- Other keys: trigger on-keydown event if handler is defined
+
+Returns the configured keymap."
   (let* ((keymap (make-sparse-keymap))
-         (definition (plist-get tag-instance :definition)))
-    ;; Click handler via RET
-    (when (plist-get definition :on-click)
+         (definition (plist-get tag-instance :definition))
+         (on-click (plist-get definition :on-click))
+         (on-keydown (plist-get definition :on-keydown))
+         (on-keyup (plist-get definition :on-keyup)))
+    ;; Click handler via RET and SPC keys
+    (when on-click
       (define-key keymap (kbd "RET")
         (lambda ()
           (interactive)
-          (etaf-tag--dispatch-event tag-instance 'click))))
-    ;; Keydown handlers
-    (when (plist-get definition :on-keydown)
-      (define-key keymap [t]
+          (etaf-tag--dispatch-event tag-instance 'click)))
+      (define-key keymap (kbd "SPC")
+        (lambda ()
+          (interactive)
+          (etaf-tag--dispatch-event tag-instance 'click)))
+      ;; Mouse click handler - mouse-1
+      (define-key keymap [mouse-1]
+        (lambda (event)
+          (interactive "e")
+          (let* ((posn (event-start event))
+                 (pos (posn-point posn)))
+            (etaf-tag--dispatch-event tag-instance 'click
+                                      (list :mouse-event event
+                                            :position pos)))))
+      ;; Double click
+      (define-key keymap [double-mouse-1]
+        (lambda (event)
+          (interactive "e")
+          (let* ((posn (event-start event))
+                 (pos (posn-point posn)))
+            (etaf-tag--dispatch-event tag-instance 'dblclick
+                                      (list :mouse-event event
+                                            :position pos))))))
+    ;; Keydown handler - capture any key when focused
+    (when on-keydown
+      (define-key keymap [remap self-insert-command]
         (lambda ()
           (interactive)
           (let ((key (this-command-keys-vector)))
             (etaf-tag--dispatch-event tag-instance 'keydown
-                                      (list :key key))))))
+                                      (list :key key
+                                            :key-char (aref key (1- (length key)))))))))
+    ;; Note: on-keyup cannot be reliably implemented in Emacs
+    ;; as there's no native key release event. It is marked as unsupported.
     keymap))
 
+(defun etaf-tag--help-echo-handler (window _obj pos)
+  "Help-echo function to track mouse hover and dispatch hover events.
+WINDOW is the window where the mouse is.
+POS is the buffer position under the mouse."
+  (when (and window pos)
+    (let* ((instance (get-text-property pos 'etaf-tag-instance))
+           (definition (and instance (plist-get instance :definition))))
+      ;; Handle hover-leave for previous instance
+      (when (and etaf-tag--current-hover-instance
+                 (not (eq etaf-tag--current-hover-instance instance)))
+        (let ((old-def (plist-get etaf-tag--current-hover-instance :definition)))
+          (when (plist-get old-def :on-hover-leave)
+            (etaf-tag--dispatch-event etaf-tag--current-hover-instance 'hover-leave))
+          ;; Update hover state
+          (plist-put (plist-get etaf-tag--current-hover-instance :state) :hovered nil)))
+      ;; Handle hover-enter for new instance
+      (when (and instance (not (eq etaf-tag--current-hover-instance instance)))
+        (when (plist-get definition :on-hover-enter)
+          (etaf-tag--dispatch-event instance 'hover-enter))
+        ;; Update hover state
+        (plist-put (plist-get instance :state) :hovered t))
+      ;; Update current hover instance
+      (setq etaf-tag--current-hover-instance instance)
+      ;; Return help-echo string
+      (when definition
+        (format "Click or press RET/SPC to activate %s"
+                (plist-get definition :name))))))
+
 (defun etaf-tag-make-interactive (start end tag-instance)
-  "Make the region from START to END interactive based on TAG-INSTANCE."
+  "Make the region from START to END interactive based on TAG-INSTANCE.
+This function adds text properties to enable:
+- Click events via keyboard (RET, SPC) and mouse (mouse-1)
+- Hover events via help-echo tracking
+- Visual hover feedback via mouse-face
+- Pointer cursor change
+
+Note: The following events have limitations in Emacs:
+- on-focus/on-blur: Not supported for text regions (no focus concept)
+- on-change/on-input: Not supported for static text (use widgets instead)
+- on-keyup: Not reliably supported (no key release event in Emacs)"
   (let* ((definition (plist-get tag-instance :definition))
-         (keymap (etaf-tag-setup-keymap tag-instance)))
+         (keymap (etaf-tag-setup-keymap tag-instance))
+         (has-click (plist-get definition :on-click))
+         (has-hover (or (plist-get definition :on-hover-enter)
+                        (plist-get definition :on-hover-leave)
+                        (plist-get definition :hover-style))))
     ;; Add text properties for interactivity
     (add-text-properties
      start end
-     (list 'etaf-tag-instance tag-instance
-           'keymap keymap
-           'mouse-face 'highlight
-           'help-echo (format "Click or press RET to activate %s"
-                              (plist-get definition :name))))
-    ;; Set up mouse click handler
-    (when (plist-get definition :on-click)
-      (add-text-properties
-       start end
-       (list 'local-map
-             (let ((map (make-sparse-keymap)))
-               (define-key map [mouse-1]
-                           (lambda (_event)
-                             (interactive "e")
-                             (etaf-tag--dispatch-event tag-instance 'click)))
-               map))))))
+     `(etaf-tag-instance ,tag-instance
+       keymap ,keymap
+       ;; Visual feedback for hover
+       ,@(when (or has-click has-hover)
+           '(mouse-face highlight))
+       ;; Pointer cursor for clickable elements
+       ,@(when has-click
+           '(pointer hand))
+       ;; Help-echo with function for hover tracking
+       help-echo ,#'etaf-tag--help-echo-handler))))
 
 ;;; Tag Instance Creation
 
@@ -241,19 +340,23 @@ NAME is the tag symbol (e.g., button, div, my-component).
 PROPS is a plist that can include:
 - :display - Display type (`block', `inline', `inline-block', `flex', `none')
 - :default-style - Default style alist ((property . value) ...)
-- :hover-style - Style when hovered
+- :hover-style - Style when hovered (visual feedback via mouse-face)
 - :active-style - Style when active/pressed
-- :focus-style - Style when focused
+- :focus-style - Style when focused (not supported for text regions)
 - :disabled-style - Style when disabled
-- :on-click - Click handler function (lambda (event) ...)
-- :on-hover-enter - Mouse enter handler
-- :on-hover-leave - Mouse leave handler
-- :on-focus - Focus handler
-- :on-blur - Blur handler
-- :on-change - Change handler (for inputs)
-- :on-input - Input handler
-- :on-keydown - Keydown handler
-- :on-keyup - Keyup handler
+
+Event handlers (see Commentary for support status):
+- :on-click - Click handler (SUPPORTED: mouse-1, RET, SPC)
+- :on-hover-enter - Mouse enter handler (SUPPORTED: via help-echo tracking)
+- :on-hover-leave - Mouse leave handler (SUPPORTED: via help-echo tracking)
+- :on-keydown - Keydown handler (SUPPORTED: via keymap)
+- :on-keyup - Keyup handler (NOT SUPPORTED: no key release event in Emacs)
+- :on-focus - Focus handler (NOT SUPPORTED: text regions don't have focus)
+- :on-blur - Blur handler (NOT SUPPORTED: text regions don't have focus)
+- :on-change - Change handler (NOT SUPPORTED: use widget.el for forms)
+- :on-input - Input handler (NOT SUPPORTED: use widget.el for forms)
+
+Other options:
 - :children-allowed - Whether children are allowed (default t)
 - :self-closing - Whether self-closing (default nil)
 - :inherit - Parent tag to inherit from
