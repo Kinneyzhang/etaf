@@ -306,25 +306,41 @@ PARENT-CONTEXT 包含父容器的上下文信息。
         (let ((child-context (list :content-width content-width
                                    :content-height content-height))
               (child-layouts '())
-              (accumulated-height 0))
+              (accumulated-height 0)
+              ;; 检查是否有inline元素子节点
+              (has-inline-element nil))
+          
+          ;; 先遍历一次检查是否有inline元素
+          (dolist (child children)
+            (when (and (consp child) (symbolp (car child)))
+              (let ((child-display (or (dom-attr child 'render-display)
+                                       (etaf-render-get-default-display (car child)))))
+                (when (string= child-display "inline")
+                  (setq has-inline-element t)))))
           
           (dolist (child children)
             (cond
              ((and (consp child) (symbolp (car child)))
               (when-let ((child-layout (etaf-layout-node child child-context)))
                 (push child-layout child-layouts)
+                ;; 只有block元素才计入高度，inline元素会在渲染时合并
                 ;; 计算子元素高度时不包含border高度，因为上下border使用
                 ;; :overline/:underline face实现，不占用额外行数
                 (let* ((child-box (etaf-layout-get-box-model child-layout))
+                       (child-display (or (dom-attr child-layout 'render-display) "block"))
                        (child-total-height (+ (etaf-layout-box-content-height child-box)
                                               (etaf-layout-box-padding-height child-box)
                                               (etaf-layout-box-margin-height child-box))))
-                  (setq accumulated-height (+ accumulated-height child-total-height)))))
+                  ;; 只有block子元素才累加高度
+                  (when (string= child-display "block")
+                    (setq accumulated-height (+ accumulated-height child-total-height))))))
              ((stringp child)
               (push child child-layouts)
-              ;; 字符串子元素也应该计入高度
-              (let ((string-height (etaf-string-linum child)))
-                (setq accumulated-height (+ accumulated-height string-height))))))
+              ;; 只有在没有inline元素时，字符串才计入高度
+              ;; 如果有inline元素，内容会在渲染时合并，高度由渲染结果决定
+              (unless has-inline-element
+                (let ((string-height (etaf-string-linum child)))
+                  (setq accumulated-height (+ accumulated-height string-height)))))))
           
           (setcdr (cdr layout-node) (nreverse child-layouts))
           
