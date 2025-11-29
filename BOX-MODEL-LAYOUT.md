@@ -126,7 +126,7 @@ border-box:
 ### 辅助函数
 
 ```elisp
-(defun etaf-box-model-create ()
+(defun etaf-layout-box-create ()
   "创建空的盒模型结构。"
   (list :box-sizing "content-box"
         :content (list :width 0 :height 0)
@@ -134,63 +134,63 @@ border-box:
         :border (list :top-width 0 :right-width 0 :bottom-width 0 :left-width 0)
         :margin (list :top 0 :right 0 :bottom 0 :left 0)))
 
-(defun etaf-box-model-content-width (box-model)
+(defun etaf-layout-box-content-width (box-model)
   "获取盒模型的内容宽度。"
   (plist-get (plist-get box-model :content) :width))
 
-(defun etaf-box-model-content-height (box-model)
+(defun etaf-layout-box-content-height (box-model)
   "获取盒模型的内容高度。"
   (plist-get (plist-get box-model :content) :height))
 
-(defun etaf-box-model-padding-width (box-model)
+(defun etaf-layout-box-padding-width (box-model)
   "获取盒模型的左右内边距之和。"
   (let ((padding (plist-get box-model :padding)))
     (+ (plist-get padding :left)
        (plist-get padding :right))))
 
-(defun etaf-box-model-padding-height (box-model)
+(defun etaf-layout-box-padding-height (box-model)
   "获取盒模型的上下内边距之和。"
   (let ((padding (plist-get box-model :padding)))
     (+ (plist-get padding :top)
        (plist-get padding :bottom))))
 
-(defun etaf-box-model-border-width (box-model)
+(defun etaf-layout-box-border-width (box-model)
   "获取盒模型的左右边框之和。"
   (let ((border (plist-get box-model :border)))
     (+ (plist-get border :left-width)
        (plist-get border :right-width))))
 
-(defun etaf-box-model-border-height (box-model)
+(defun etaf-layout-box-border-height (box-model)
   "获取盒模型的上下边框之和。"
   (let ((border (plist-get box-model :border)))
     (+ (plist-get border :top-width)
        (plist-get border :bottom-width))))
 
-(defun etaf-box-model-margin-width (box-model)
+(defun etaf-layout-box-margin-width (box-model)
   "获取盒模型的左右外边距之和。"
   (let ((margin (plist-get box-model :margin)))
     (+ (plist-get margin :left)
        (plist-get margin :right))))
 
-(defun etaf-box-model-margin-height (box-model)
+(defun etaf-layout-box-margin-height (box-model)
   "获取盒模型的上下外边距之和。"
   (let ((margin (plist-get box-model :margin)))
     (+ (plist-get margin :top)
        (plist-get margin :bottom))))
 
-(defun etaf-box-model-total-width (box-model)
+(defun etaf-layout-box-total-width (box-model)
   "计算盒模型的总宽度（包含 margin）。"
-  (+ (etaf-box-model-content-width box-model)
-     (etaf-box-model-padding-width box-model)
-     (etaf-box-model-border-width box-model)
-     (etaf-box-model-margin-width box-model)))
+  (+ (etaf-layout-box-content-width box-model)
+     (etaf-layout-box-padding-width box-model)
+     (etaf-layout-box-border-width box-model)
+     (etaf-layout-box-margin-width box-model)))
 
-(defun etaf-box-model-total-height (box-model)
+(defun etaf-layout-box-total-height (box-model)
   "计算盒模型的总高度（包含 margin）。"
-  (+ (etaf-box-model-content-height box-model)
-     (etaf-box-model-padding-height box-model)
-     (etaf-box-model-border-height box-model)
-     (etaf-box-model-margin-height box-model)))
+  (+ (etaf-layout-box-content-height box-model)
+     (etaf-layout-box-padding-height box-model)
+     (etaf-layout-box-border-height box-model)
+     (etaf-layout-box-margin-height box-model)))
 ```
 
 ---
@@ -228,8 +228,8 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                (plist-get margin :top)))
          
          ;; 3. 计算内容区域
-         (content-width (etaf-box-model-content-width box-model))
-         (content-height (etaf-box-model-content-height box-model))
+         (content-width (etaf-layout-box-content-width box-model))
+         (content-height (etaf-layout-box-content-height box-model))
          
          ;; 4. 创建布局节点
          (layout-node (list :render-node render-node
@@ -260,7 +260,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
               ;; 更新 Y 坐标以累积子元素高度
               (plist-put child-context :current-y
                         (+ (plist-get child-context :current-y)
-                           (etaf-box-model-total-height 
+                           (etaf-layout-box-total-height 
                             (plist-get child-layout :box-model)))))))
         (plist-put layout-node :children (nreverse children))))
     
@@ -345,7 +345,7 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算）。
     (dolist (child-layout (plist-get render-node :children))
       (when child-layout
         (let ((child-box (plist-get child-layout :box-model)))
-          (cl-incf total-height (etaf-box-model-total-height child-box)))))
+          (cl-incf total-height (etaf-layout-box-total-height child-box)))))
     total-height))
 ```
 
@@ -513,13 +513,13 @@ CONTAINING-BLOCK 是包含块的位置和尺寸。"
                 (+ cb-x left)
               (if (not (eq right 'auto))
                   (- (+ cb-x cb-width) right 
-                     (etaf-box-model-total-width (plist-get layout-node :box-model)))
+                     (etaf-layout-box-total-width (plist-get layout-node :box-model)))
                 cb-x)))
           (y (if (not (eq top 'auto))
                 (+ cb-y top)
               (if (not (eq bottom 'auto))
                   (- (+ cb-y cb-height) bottom
-                     (etaf-box-model-total-height (plist-get layout-node :box-model)))
+                     (etaf-layout-box-total-height (plist-get layout-node :box-model)))
                 cb-y))))
       
       (plist-put (plist-get layout-node :position) :x x)

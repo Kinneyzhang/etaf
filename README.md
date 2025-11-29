@@ -117,8 +117,8 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
                (plist-get (plist-get node :render-node) :tag)
                (plist-get pos :x)
                (plist-get pos :y)
-               (etaf-box-model-content-width box)
-               (etaf-box-model-content-height box)))))
+               (etaf-layout-box-content-width box)
+               (etaf-layout-box-content-height box)))))
 ```
 
 ### 响应式设计（媒体查询）

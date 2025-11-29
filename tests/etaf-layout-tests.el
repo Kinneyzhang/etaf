@@ -21,13 +21,13 @@
 
 (ert-deftest etaf-layout-test-box-model-create ()
   "Test box model creation."
-  (let ((box-model (etaf-box-model-create)))
+  (let ((box-model (etaf-layout-box-create)))
     (should (plist-get box-model :content))
     (should (plist-get box-model :padding))
     (should (plist-get box-model :border))
     (should (plist-get box-model :margin))
-    (should-equal (etaf-box-model-content-width box-model) 0)
-    (should-equal (etaf-box-model-content-height box-model) 0)))
+    (should-equal (etaf-layout-box-content-width box-model) 0)
+    (should-equal (etaf-layout-box-content-height box-model) 0)))
 
 (ert-deftest etaf-layout-test-box-model-dimensions ()
   "Test box model dimension calculations."
@@ -35,16 +35,16 @@
                         :padding (list :top 10 :right 15 :bottom 10 :left 15)
                         :border (list :top-width 2 :right-width 2 :bottom-width 2 :left-width 2)
                         :margin (list :top 5 :right 10 :bottom 5 :left 10))))
-    (should-equal (etaf-box-model-content-width box-model) 200)
-    (should-equal (etaf-box-model-content-height box-model) 100)
-    (should-equal (etaf-box-model-padding-width box-model) 30)
-    (should-equal (etaf-box-model-padding-height box-model) 20)
-    (should-equal (etaf-box-model-border-width box-model) 4)
-    (should-equal (etaf-box-model-border-height box-model) 4)
-    (should-equal (etaf-box-model-margin-width box-model) 20)
-    (should-equal (etaf-box-model-margin-height box-model) 10)
-    (should-equal (etaf-box-model-total-width box-model) 254)
-    (should-equal (etaf-box-model-total-height box-model) 134)))
+    (should-equal (etaf-layout-box-content-width box-model) 200)
+    (should-equal (etaf-layout-box-content-height box-model) 100)
+    (should-equal (etaf-layout-box-padding-width box-model) 30)
+    (should-equal (etaf-layout-box-padding-height box-model) 20)
+    (should-equal (etaf-layout-box-border-width box-model) 4)
+    (should-equal (etaf-layout-box-border-height box-model) 4)
+    (should-equal (etaf-layout-box-margin-width box-model) 20)
+    (should-equal (etaf-layout-box-margin-height box-model) 10)
+    (should-equal (etaf-layout-box-total-width box-model) 254)
+    (should-equal (etaf-layout-box-total-height box-model) 134)))
 
 ;;; CSS Value Parsing Tests
 
@@ -116,12 +116,12 @@
       
       ;; 检查外层盒子
       (let ((outer-box (etaf-layout-get-box-model outer-node)))
-        (should-equal (etaf-box-model-content-width outer-box) 400))
+        (should-equal (etaf-layout-box-content-width outer-box) 400))
       
       ;; 检查内层盒子
       (let ((inner1-box (etaf-layout-get-box-model (car inner-nodes))))
-        (should-equal (etaf-box-model-content-width inner1-box) 200)
-        (should-equal (etaf-box-model-content-height inner1-box) 100)))))
+        (should-equal (etaf-layout-box-content-width inner1-box) 200)
+        (should-equal (etaf-layout-box-content-height inner1-box) 100)))))
 
 (ert-deftest etaf-layout-test-width-auto ()
   "Test width: auto calculation."
@@ -145,11 +145,11 @@
            (box-model (etaf-layout-get-box-model box-node)))
       
       ;; 容器宽度应该是 800px
-      (should-equal (etaf-box-model-content-width 
+      (should-equal (etaf-layout-box-content-width 
                      (etaf-layout-get-box-model container-node)) 800)
       
       ;; 盒子宽度应该自动填充容器内容宽度 - margin：800 - 10*2 (margin) = 780
-      (should-equal (etaf-box-model-content-width box-model) 780))))
+      (should-equal (etaf-layout-box-content-width box-model) 780))))
 
 (ert-deftest etaf-layout-test-padding-border-margin ()
   "Test padding, border, and margin calculations."
@@ -226,7 +226,7 @@
          (container-box (etaf-layout-get-box-model container-node)))
     
     ;; 容器高度应该是所有子元素高度之和: 3 * (50 + 10) = 180
-    (should-equal (etaf-box-model-content-height container-box) 180)))
+    (should-equal (etaf-layout-box-content-height container-box) 180)))
 
 ;;; Layout Tree Utility Tests
 

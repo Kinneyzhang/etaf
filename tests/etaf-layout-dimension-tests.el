@@ -74,7 +74,7 @@ not the natural height of the content."
          (div-node (car (dom-non-text-children body-node)))
          (box-model (etaf-layout-get-box-model div-node)))
     ;; The div should have height 5 as specified in CSS, not 1 (natural content height)
-    (should-equal (etaf-box-model-content-height box-model) 5)))
+    (should-equal (etaf-layout-box-content-height box-model) 5)))
 
 (ert-deftest etaf-layout-test-css-height-string-rendering ()
   "Test that rendered string respects the CSS height property.
