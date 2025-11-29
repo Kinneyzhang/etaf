@@ -429,15 +429,38 @@ IS-OVERFLOW 表示内容是否实际溢出。"
     ;; visible 或 hidden: 不显示滚动条
     (_ nil)))
 
-(defun etaf-layout-string--scroll-bar-pixel (v-scroll-bar-type)
-  "获取滚动条的像素宽度。
-V-SCROLL-BAR-TYPE 是滚动条风格类型（符号）。"
+(defun etaf-layout-string--create-scroll-bar (v-scroll-bar-type)
+  "创建并配置滚动条对象。
+V-SCROLL-BAR-TYPE 是滚动条风格类型（符号），用于引用 etaf-scroll-bar-alist。
+返回配置好的 etaf-scroll-bar 对象。"
   (let ((scroll-bar (etaf-scroll-bar)))
     ;; 如果有定义的风格，应用风格设置
     (when-let* ((type v-scroll-bar-type)
                 (kvs (alist-get type etaf-scroll-bar-alist)))
       (apply #'etaf-oset scroll-bar kvs))
-    (etaf-scroll-bar-pixel scroll-bar)))
+    scroll-bar))
+
+(defun etaf-layout-string--scroll-bar-pixel (v-scroll-bar-type)
+  "获取滚动条的像素宽度。
+V-SCROLL-BAR-TYPE 是滚动条风格类型（符号）。"
+  (etaf-scroll-bar-pixel (etaf-layout-string--create-scroll-bar v-scroll-bar-type)))
+
+(defun etaf-layout-string--compute-thumb-height (content-height content-linum)
+  "根据内容高度和实际行数计算滚动条滑块高度。
+
+CONTENT-HEIGHT 是显示区域的高度（行数）。
+CONTENT-LINUM 是内容的实际行数。
+
+计算规则：
+- 如果无溢出（content-linum <= content-height），滑块高度 = 内容高度
+- 如果溢出行数 < 内容高度，滑块高度 = 内容高度 - 溢出行数
+- 如果溢出行数 >= 内容高度，滑块高度 = 1（最小值）"
+  (let ((overflow-linum (- content-linum content-height)))
+    (if (> overflow-linum 0)
+        (if (> content-height overflow-linum)
+            (- content-height overflow-linum)
+          1)
+      content-height)))
 
 (defun etaf-layout-string--render-v-scroll-bar
     (v-scroll-bar-p track-height padding-top padding-bottom
@@ -452,20 +475,9 @@ CONTENT-LINUM 是内容的实际行数。
 SCROLL-THUMB-COLOR 和 SCROLL-TRACK-COLOR 是滑块和轨道颜色。
 V-SCROLL-BAR-TYPE 是滚动条风格类型。"
   (when v-scroll-bar-p
-    (let* ((scroll-bar (etaf-scroll-bar))
-           ;; 如果有定义的风格，应用风格设置
-           (_ (when-let* ((type v-scroll-bar-type)
-                          (kvs (alist-get type etaf-scroll-bar-alist)))
-                (apply #'etaf-oset scroll-bar kvs)))
-           ;; 计算滚动条信息
-           (content-height track-height)
-           (overflow-linum (- content-linum content-height))
-           (thumb-height
-            (if (> overflow-linum 0)
-                (if (> content-height overflow-linum)
-                    (- content-height overflow-linum)
-                  1)
-              content-height))
+    (let* ((scroll-bar (etaf-layout-string--create-scroll-bar v-scroll-bar-type))
+           (thumb-height (etaf-layout-string--compute-thumb-height
+                          track-height content-linum))
            (thumb-offset 0))  ;; 初始偏移为 0
       ;; 设置滚动条属性
       (oset scroll-bar track-height track-height)

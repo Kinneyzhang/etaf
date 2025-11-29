@@ -157,6 +157,26 @@
   (should (eq (etaf-layout-string--v-scroll-bar-p "scroll-auto" t) 'real))
   (should (eq (etaf-layout-string--v-scroll-bar-p "scroll-auto" nil) 'blank)))
 
+;;; Thumb height calculation tests
+
+(ert-deftest etaf-layout-string--compute-thumb-height-no-overflow ()
+  "Test thumb height when no overflow."
+  ;; content-linum <= content-height: thumb = content-height
+  (should (= (etaf-layout-string--compute-thumb-height 5 3) 5))
+  (should (= (etaf-layout-string--compute-thumb-height 5 5) 5)))
+
+(ert-deftest etaf-layout-string--compute-thumb-height-small-overflow ()
+  "Test thumb height when overflow is smaller than content height."
+  ;; overflow < content-height: thumb = content-height - overflow
+  (should (= (etaf-layout-string--compute-thumb-height 5 7) 3))
+  (should (= (etaf-layout-string--compute-thumb-height 5 8) 2)))
+
+(ert-deftest etaf-layout-string--compute-thumb-height-large-overflow ()
+  "Test thumb height when overflow is larger than or equal to content height."
+  ;; overflow >= content-height: thumb = 1 (minimum)
+  (should (= (etaf-layout-string--compute-thumb-height 5 10) 1))
+  (should (= (etaf-layout-string--compute-thumb-height 5 15) 1)))
+
 ;;; Integration tests
 
 (ert-deftest etaf-layout-overflow-y-parsing ()
