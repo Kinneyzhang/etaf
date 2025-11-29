@@ -126,19 +126,9 @@ Emacs 的 :height 浮点数表示相对于默认字体的缩放比例。"
    ((stringp css-size)
     (let ((size (string-trim css-size)))
       (cond
-       ;; 像素值：转换为相对高度
-       ((string-match "^\\([0-9.]+\\)px$" size)
-        (let ((px (string-to-number (match-string 1 size))))
-          (/ px etaf-css-baseline-font-size)))
-       ;; em 值：直接作为相对高度
-       ((string-match "^\\([0-9.]+\\)em$" size)
-        (float (string-to-number (match-string 1 size))))
-       ;; rem 值：作为相对高度
-       ((string-match "^\\([0-9.]+\\)rem$" size)
-        (float (string-to-number (match-string 1 size))))
-       ;; 百分比
-       ((string-match "^\\([0-9.]+\\)%$" size)
-        (/ (string-to-number (match-string 1 size)) 100.0))
+       ;; 纯数字字符串（无单位）：作为相对高度
+       ((string-match "^[0-9]+\\(\\.[0-9]+\\)?$" size)
+        (float (string-to-number size)))
        ;; CSS 绝对关键字：基于 16px medium，相邻比例约为 1.2
        ;; https://www.w3.org/TR/css-fonts-3/#absolute-size-value
        ((string= size "xx-small") 0.5625)   ; 9px / 16px
@@ -152,10 +142,6 @@ Emacs 的 :height 浮点数表示相对于默认字体的缩放比例。"
        ;; smaller/larger 使用常见的缩放因子 1.2
        ((string= size "smaller") (/ 1.0 1.2))  ; 缩小一级 (≈0.833)
        ((string= size "larger") 1.2)           ; 放大一级
-       ;; 纯数字字符串（无单位）：作为相对高度
-       ;; 支持从 etaf-tag.el 等模块传递的数值被转换为字符串的情况
-       ((string-match "^[0-9]+\\(\\.[0-9]+\\)?$" size)
-        (float (string-to-number size)))
        (t nil))))
    (t nil)))
 
