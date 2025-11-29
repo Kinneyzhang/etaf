@@ -313,6 +313,198 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
       (should (equal (cdr (assq 'align-items render-style)) "center"))
       (should (equal (cdr (assq 'justify-content render-style)) "center")))))
 
+;;; 新增：扩展的 Tailwind 工具类测试
+
+(ert-deftest etaf-tailwind-test-to-css-typography ()
+  "测试字体排版相关转换。"
+  ;; 斜体
+  (should-equal (etaf-tailwind-to-css "italic")
+                '((font-style . "italic")))
+  (should-equal (etaf-tailwind-to-css "not-italic")
+                '((font-style . "normal")))
+  ;; 文本变换
+  (should-equal (etaf-tailwind-to-css "uppercase")
+                '((text-transform . "uppercase")))
+  (should-equal (etaf-tailwind-to-css "lowercase")
+                '((text-transform . "lowercase")))
+  (should-equal (etaf-tailwind-to-css "capitalize")
+                '((text-transform . "capitalize")))
+  (should-equal (etaf-tailwind-to-css "normal-case")
+                '((text-transform . "none")))
+  ;; 文本装饰
+  (should-equal (etaf-tailwind-to-css "underline")
+                '((text-decoration-line . "underline")))
+  (should-equal (etaf-tailwind-to-css "line-through")
+                '((text-decoration-line . "line-through")))
+  (should-equal (etaf-tailwind-to-css "no-underline")
+                '((text-decoration-line . "none"))))
+
+(ert-deftest etaf-tailwind-test-to-css-leading ()
+  "测试行高 (leading) 转换。"
+  (should-equal (etaf-tailwind-to-css "leading-none")
+                '((line-height . "1")))
+  (should-equal (etaf-tailwind-to-css "leading-tight")
+                '((line-height . "1.25")))
+  (should-equal (etaf-tailwind-to-css "leading-normal")
+                '((line-height . "1.5")))
+  (should-equal (etaf-tailwind-to-css "leading-loose")
+                '((line-height . "2"))))
+
+(ert-deftest etaf-tailwind-test-to-css-tracking ()
+  "测试字符间距 (tracking) 转换。"
+  (should-equal (etaf-tailwind-to-css "tracking-tighter")
+                '((letter-spacing . "-0.05em")))
+  (should-equal (etaf-tailwind-to-css "tracking-tight")
+                '((letter-spacing . "-0.025em")))
+  (should-equal (etaf-tailwind-to-css "tracking-normal")
+                '((letter-spacing . "0em")))
+  (should-equal (etaf-tailwind-to-css "tracking-wide")
+                '((letter-spacing . "0.025em"))))
+
+(ert-deftest etaf-tailwind-test-to-css-position ()
+  "测试定位属性转换。"
+  ;; 位置值
+  (should-equal (etaf-tailwind-to-css "top-0")
+                '((top . "0px")))
+  (should-equal (etaf-tailwind-to-css "right-4")
+                '((right . "4px")))
+  (should-equal (etaf-tailwind-to-css "left-auto")
+                '((left . "auto")))
+  (should-equal (etaf-tailwind-to-css "inset-0")
+                '((top . "0px") (right . "0px") (bottom . "0px") (left . "0px"))))
+
+(ert-deftest etaf-tailwind-test-to-css-flex-grid ()
+  "测试 Flexbox 和 Grid 属性转换。"
+  ;; Flex
+  (should-equal (etaf-tailwind-to-css "grow")
+                '((flex-grow . "1")))
+  (should-equal (etaf-tailwind-to-css "grow-0")
+                '((flex-grow . "0")))
+  (should-equal (etaf-tailwind-to-css "shrink")
+                '((flex-shrink . "1")))
+  (should-equal (etaf-tailwind-to-css "basis-auto")
+                '((flex-basis . "auto")))
+  ;; Order
+  (should-equal (etaf-tailwind-to-css "order-first")
+                '((order . "-9999")))
+  (should-equal (etaf-tailwind-to-css "order-last")
+                '((order . "9999")))
+  ;; Grid
+  (should-equal (etaf-tailwind-to-css "cols-3")
+                '((grid-template-columns . "repeat(3, minmax(0, 1fr))")))
+  (should-equal (etaf-tailwind-to-css "col-span-2")
+                '((grid-column . "span 2 / span 2")))
+  (should-equal (etaf-tailwind-to-css "col-span-full")
+                '((grid-column . "1 / -1"))))
+
+(ert-deftest etaf-tailwind-test-to-css-gap ()
+  "测试 gap 属性转换。"
+  (let ((gap-result (etaf-tailwind-to-css "gap-4")))
+    (should (equal (cdr (assq 'column-gap gap-result)) "4px"))
+    (should (equal (cdr (assq 'row-gap gap-result)) "4lh")))
+  (should-equal (etaf-tailwind-to-css "gap-x-4")
+                '((column-gap . "4px")))
+  (should-equal (etaf-tailwind-to-css "gap-y-4")
+                '((row-gap . "4lh"))))
+
+(ert-deftest etaf-tailwind-test-to-css-content-self ()
+  "测试 content 和 self 对齐属性转换。"
+  (should-equal (etaf-tailwind-to-css "content-center")
+                '((align-content . "center")))
+  (should-equal (etaf-tailwind-to-css "content-between")
+                '((align-content . "space-between")))
+  (should-equal (etaf-tailwind-to-css "self-center")
+                '((align-self . "center")))
+  (should-equal (etaf-tailwind-to-css "self-start")
+                '((align-self . "flex-start"))))
+
+(ert-deftest etaf-tailwind-test-to-css-min-max-size ()
+  "测试 min/max 尺寸属性转换。"
+  (should-equal (etaf-tailwind-to-css "min-w-0")
+                '((min-width . "0px")))
+  (should-equal (etaf-tailwind-to-css "min-w-full")
+                '((min-width . "100%")))
+  (should-equal (etaf-tailwind-to-css "max-w-md")
+                '((max-width . "28rem")))
+  (should-equal (etaf-tailwind-to-css "max-w-prose")
+                '((max-width . "65ch")))
+  (should-equal (etaf-tailwind-to-css "min-h-full")
+                '((min-height . "100%")))
+  (should-equal (etaf-tailwind-to-css "max-h-full")
+                '((max-height . "100%"))))
+
+(ert-deftest etaf-tailwind-test-to-css-size ()
+  "测试 size 属性转换（同时设置 width 和 height）。"
+  (let ((size-result (etaf-tailwind-to-css "size-4")))
+    (should (equal (cdr (assq 'width size-result)) "4px"))
+    (should (equal (cdr (assq 'height size-result)) "4lh")))
+  (let ((size-full (etaf-tailwind-to-css "size-full")))
+    (should (equal (cdr (assq 'width size-full)) "100%"))
+    (should (equal (cdr (assq 'height size-full)) "100%"))))
+
+(ert-deftest etaf-tailwind-test-to-css-logical-spacing ()
+  "测试逻辑间距属性转换 (ps, pe, ms, me)。"
+  (should-equal (etaf-tailwind-to-css "ps-4")
+                '((padding-inline-start . "4px")))
+  (should-equal (etaf-tailwind-to-css "pe-4")
+                '((padding-inline-end . "4px")))
+  (should-equal (etaf-tailwind-to-css "ms-4")
+                '((margin-inline-start . "4px")))
+  (should-equal (etaf-tailwind-to-css "me-4")
+                '((margin-inline-end . "4px"))))
+
+(ert-deftest etaf-tailwind-test-to-css-table ()
+  "测试表格属性转换。"
+  (should-equal (etaf-tailwind-to-css "table-auto")
+                '((table-layout . "auto")))
+  (should-equal (etaf-tailwind-to-css "table-fixed")
+                '((table-layout . "fixed")))
+  (should-equal (etaf-tailwind-to-css "border-collapse")
+                '((border-collapse . "collapse")))
+  (should-equal (etaf-tailwind-to-css "border-separate")
+                '((border-collapse . "separate"))))
+
+(ert-deftest etaf-tailwind-test-to-css-cursor ()
+  "测试光标属性转换。"
+  (should-equal (etaf-tailwind-to-css "cursor-pointer")
+                '((cursor . "pointer")))
+  (should-equal (etaf-tailwind-to-css "cursor-wait")
+                '((cursor . "wait")))
+  (should-equal (etaf-tailwind-to-css "cursor-not-allowed")
+                '((cursor . "not-allowed"))))
+
+(ert-deftest etaf-tailwind-test-to-css-select ()
+  "测试用户选择属性转换。"
+  (should-equal (etaf-tailwind-to-css "select-none")
+                '((user-select . "none")))
+  (should-equal (etaf-tailwind-to-css "select-text")
+                '((user-select . "text")))
+  (should-equal (etaf-tailwind-to-css "select-all")
+                '((user-select . "all"))))
+
+(ert-deftest etaf-tailwind-test-to-css-truncate ()
+  "测试 truncate 属性转换。"
+  (let ((truncate-result (etaf-tailwind-to-css "truncate")))
+    (should (equal (cdr (assq 'overflow truncate-result)) "hidden"))
+    (should (equal (cdr (assq 'text-overflow truncate-result)) "ellipsis"))
+    (should (equal (cdr (assq 'white-space truncate-result)) "nowrap"))))
+
+(ert-deftest etaf-tailwind-test-to-css-sr-only ()
+  "测试屏幕阅读器专用类转换。"
+  (let ((sr-result (etaf-tailwind-to-css "sr-only")))
+    (should (equal (cdr (assq 'position sr-result)) "absolute"))
+    (should (equal (cdr (assq 'width sr-result)) "1px"))
+    (should (equal (cdr (assq 'height sr-result)) "1px"))))
+
+(ert-deftest etaf-tailwind-test-font-family ()
+  "测试字体族转换。"
+  (should-equal (etaf-tailwind-to-css "font-sans")
+                '((font-family . "ui-sans-serif, system-ui, sans-serif")))
+  (should-equal (etaf-tailwind-to-css "font-serif")
+                '((font-family . "ui-serif, Georgia, serif")))
+  (should-equal (etaf-tailwind-to-css "font-mono")
+                '((font-family . "ui-monospace, monospace"))))
+
 (provide 'etaf-tailwind-tests)
 
 ;;; etaf-tailwind-tests.el ends here

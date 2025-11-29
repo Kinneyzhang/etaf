@@ -35,6 +35,135 @@
 ;;
 ;;   ;; 添加Tailwind类到DOM节点
 ;;   (etaf-tailwind-add-class node "hover:bg-blue-500")
+;;
+;; ============================================================================
+;; Tailwind CSS 支持的工具类和 Emacs 渲染能力文档
+;; ============================================================================
+;;
+;; === 完全支持解析和渲染的 Tailwind 工具类 ===
+;;
+;; 以下工具类可以被解析并在 Emacs 中原生渲染（通过 face 属性）：
+;;
+;; 颜色 (Color):
+;;   - text-{color} -> :foreground (所有 Tailwind 调色板颜色)
+;;   - bg-{color} -> :background (所有 Tailwind 调色板颜色)
+;;
+;; 字体 (Typography):
+;;   - font-{weight} -> :weight (thin, light, normal, medium, semibold, bold, black)
+;;   - font-{family} -> :family (sans, serif, mono)
+;;   - text-{size} -> :height (xs, sm, base, lg, xl, 2xl, 3xl, 4xl, 5xl, 6xl, 7xl, 8xl, 9xl)
+;;   - italic, not-italic -> :slant
+;;   - underline, no-underline -> :underline
+;;   - overline -> :overline
+;;   - line-through -> :strike-through
+;;
+;; === 支持解析但无法通过 Emacs 原生能力渲染的工具类 ===
+;;
+;; 以下工具类可以被正确解析为 CSS，但 Emacs 无法原生渲染它们：
+;; (标记: [LAYOUT] = 布局相关, [VISUAL] = 视觉效果, [INTERACTIVE] = 交互)
+;;
+;; [LAYOUT] 布局相关:
+;;   - flex, inline-flex, grid, inline-grid -> display (Emacs 不支持 flexbox/grid 布局)
+;;   - justify-*, items-*, content-*, self-* -> flex/grid 对齐 (无视觉效果)
+;;   - flex-row, flex-col, flex-wrap -> flex 方向/换行
+;;   - cols-*, rows-*, gap-* -> grid 模板
+;;   - order-* -> 排序
+;;   - basis-*, grow, shrink -> flex 尺寸
+;;   - position (static, fixed, absolute, relative, sticky)
+;;   - top-*, right-*, bottom-*, left-*, inset-*
+;;   - z-*
+;;   - float-*, clear-*
+;;   - overflow-*, overscroll-*
+;;
+;; [VISUAL] 视觉效果 (Emacs 无法渲染):
+;;   - shadow-* -> box-shadow (Emacs 不支持阴影效果)
+;;   - rounded-* -> border-radius (Emacs 不支持圆角)
+;;   - opacity-* -> 透明度 (Emacs 终端不支持 alpha 通道)
+;;   - ring-* -> focus ring 效果
+;;   - blur-*, brightness-*, contrast-*, grayscale-*, sepia-* -> CSS filters
+;;   - backdrop-* -> backdrop filters
+;;   - mix-blend-* -> 混合模式
+;;
+;; [VISUAL] 边框 (部分支持):
+;;   - border, border-{width} -> 可以用 :box face 属性近似
+;;   - border-{color} -> :box 可以设置颜色
+;;   - border-{style} (solid, dashed, dotted) -> :box 支持 line-style
+;;   - divide-* -> 子元素分隔线 (需要布局支持)
+;;   - outline-* -> :box 可近似
+;;
+;; [INTERACTIVE] 交互相关 (Emacs 文本不适用):
+;;   - cursor-* -> 鼠标指针样式
+;;   - pointer-events-* -> 指针事件
+;;   - select-* -> 文本选择
+;;   - resize-* -> 调整大小
+;;   - scroll-* -> 滚动行为
+;;   - snap-* -> 滚动吸附
+;;   - touch-* -> 触摸交互
+;;
+;; [VISUAL] 动画和过渡 (Emacs 不支持):
+;;   - transition-* -> CSS transitions
+;;   - duration-*, delay-* -> 时间控制
+;;   - ease-* -> 缓动函数
+;;   - animate-* -> CSS animations
+;;
+;; [VISUAL] 变换 (Emacs 不支持):
+;;   - scale-*, rotate-*, translate-*, skew-* -> CSS transforms
+;;   - origin-* -> transform origin
+;;
+;; [VISUAL] 渐变 (Emacs 不支持):
+;;   - from-*, via-*, to-* -> 渐变颜色停止点
+;;   - bg-gradient-* -> 渐变方向
+;;
+;; === 间距和尺寸 (布局时使用) ===
+;;
+;; 这些值被解析为 CSS，在布局计算时使用：
+;;   - p-*, px-*, py-*, pt-*, pr-*, pb-*, pl-*, ps-*, pe-* -> padding
+;;   - m-*, mx-*, my-*, mt-*, mr-*, mb-*, ml-*, ms-*, me-* -> margin
+;;   - w-*, min-w-*, max-w-* -> width
+;;   - h-*, min-h-*, max-h-* -> height
+;;   - size-* -> width 和 height
+;;   - space-x-*, space-y-* -> 子元素间距
+;;
+;; === 响应式和状态变体 ===
+;;
+;; 响应式前缀 (sm:, md:, lg:, xl:, 2xl:):
+;;   - 被解析和识别，但 Emacs 文本缓冲区没有"视口"概念
+;;   - 可以在构建 CSSOM 时使用 media-env 控制
+;;
+;; 状态变体 (hover:, focus:, active:, disabled: 等):
+;;   - 被解析和识别
+;;   - hover:/focus: 等状态需要通过 Emacs 的 overlay 或事件处理实现
+;;   - disabled: 可以通过修改文本属性模拟
+;;
+;; === 表格相关 ===
+;;   - table-auto, table-fixed -> table-layout
+;;   - border-collapse, border-separate -> border-collapse
+;;   - caption-*, table-header-group, table-footer-group, etc. -> 表格结构
+;;
+;; === 可访问性 ===
+;;   - sr-only -> 屏幕阅读器专用（在 Emacs 中可以隐藏文本）
+;;
+;; === SVG 相关 ===
+;;   - fill-*, stroke-* -> SVG 填充和描边 (Emacs 图像支持时可用)
+;;
+;; ============================================================================
+;; 总结：Emacs 原生可渲染的属性
+;; ============================================================================
+;;
+;; Emacs face 属性可以直接映射的 CSS 属性：
+;;   - color -> :foreground
+;;   - background-color -> :background
+;;   - font-weight -> :weight
+;;   - font-style -> :slant
+;;   - font-size -> :height
+;;   - font-family -> :family
+;;   - text-decoration (underline) -> :underline
+;;   - text-decoration (overline) -> :overline
+;;   - text-decoration (line-through) -> :strike-through
+;;   - border (简化) -> :box
+;;
+;; 其他 CSS 属性被解析为 CSSOM 用于布局计算，但不直接影响文本外观。
+;;
 
 ;;; Code:
 
@@ -119,7 +248,10 @@
   '("container" "flex" "grid" "block" "inline" "hidden" "visible" "invisible"
     "static" "fixed" "absolute" "relative" "sticky"
     "truncate" "italic" "not-italic" "antialiased" "subpixel-antialiased"
-    "uppercase" "lowercase" "capitalize" "normal-case")
+    "uppercase" "lowercase" "capitalize" "normal-case"
+    "underline" "overline" "line-through" "no-underline"
+    "table-auto" "table-fixed" "border-collapse" "border-separate"
+    "inline-block" "inline-flex" "inline-grid" "flow-root" "contents" "list-item")
   "独立的Tailwind CSS实用类（不需要值）。")
 
 ;;; Tailwind class parsing
@@ -155,21 +287,75 @@
     
     ;; 解析实用类
     (when utility
-      ;; 检查任意值语法 [...]
-      (if (string-match "\\(.*\\)\\[\\([^]]+\\)\\]" utility)
-          (progn
-            (setq property (match-string 1 utility)
-                  arbitrary (match-string 2 utility))
-            ;; 移除property末尾的 '-' 如果存在
-            (when (string-suffix-p "-" property)
-              (setq property (substring property 0 -1))))
-        ;; 标准格式：property-value
-        (let ((hyphen-pos (string-match "-" utility)))
-          (if hyphen-pos
-              (setq property (substring utility 0 hyphen-pos)
-                    value (substring utility (1+ hyphen-pos)))
-            ;; 独立实用类（无连字符）
-            (setq property utility)))))
+      ;; 检查是否是独立实用类（不应被分割）
+      (if (member utility etaf-tailwind-standalone-utilities)
+          (setq property utility)
+        ;; 检查任意值语法 [...]
+        (if (string-match "\\(.*\\)\\[\\([^]]+\\)\\]" utility)
+            (progn
+              (setq property (match-string 1 utility)
+                    arbitrary (match-string 2 utility))
+              ;; 移除property末尾的 '-' 如果存在
+              (when (string-suffix-p "-" property)
+                (setq property (substring property 0 -1))))
+          ;; 标准格式：property-value
+          ;; 对于带有多个连字符的属性，找到正确的分割点
+          (let ((hyphen-pos (string-match "-" utility)))
+            (if hyphen-pos
+                ;; 检查是否需要保留更多的属性名称
+                ;; 例如: "min-w-0" -> property: "min-w", value: "0"
+                ;; 例如: "gap-x-4" -> property: "gap-x", value: "4"
+                (let* ((first-part (substring utility 0 hyphen-pos))
+                       (rest (substring utility (1+ hyphen-pos)))
+                       ;; 检查是否是需要特殊处理的前缀
+                       (compound-prefix
+                        (cond
+                         ;; min-* max-* prefixes
+                         ((and (member first-part '("min" "max"))
+                               (string-match "^\\([a-z]+\\)-\\(.+\\)$" rest))
+                          (concat first-part "-" (match-string 1 rest)))
+                         ;; gap-x, gap-y, space-x, space-y, overflow-x, overflow-y, etc.
+                         ((and (member first-part '("gap" "space" "overflow" "overscroll"
+                                                    "scroll" "snap" "border" "divide"
+                                                    "ring" "col" "row"))
+                               (string-match "^\\([xy]\\)-\\(.+\\)$" rest))
+                          (concat first-part "-" (match-string 1 rest)))
+                         ;; not-* prefix
+                         ((and (string= first-part "not")
+                               (string-match "^\\([a-z]+\\)$" rest))
+                          utility)
+                         ;; no-* prefix
+                         ((and (string= first-part "no")
+                               (string-match "^\\([a-z]+\\)$" rest))
+                          utility)
+                         ;; normal-case type
+                         ((and (string= first-part "normal")
+                               (string-match "^\\([a-z]+\\)$" rest))
+                          utility)
+                         ;; line-through
+                         ((and (string= first-part "line")
+                               (string= rest "through"))
+                          utility)
+                         ;; col-span-*, row-span-*, col-start-*, col-end-*, etc
+                         ((and (member first-part '("col" "row"))
+                               (string-match "^\\(span\\|start\\|end\\)-\\(.+\\)$" rest))
+                          first-part)
+                         (t nil))))
+                  (if (and compound-prefix (not (string= compound-prefix utility)))
+                      ;; 使用复合前缀
+                      (let ((value-start (+ (length compound-prefix) 1)))
+                        (if (< value-start (length utility))
+                            (setq property compound-prefix
+                                  value (substring utility value-start))
+                          (setq property compound-prefix)))
+                    ;; 检查独立的compound utilities
+                    (if compound-prefix
+                        (setq property compound-prefix)
+                      ;; 标准分割
+                      (setq property first-part
+                            value rest))))
+              ;; 独立实用类（无连字符）
+              (setq property utility))))))
     
     (list :variants variants
           :utility utility
@@ -504,6 +690,23 @@ VALUE can be a string number or from the spacing scale."
    ((string= property "inline-grid") '((display . "inline-grid")))
    ((string= property "hidden") '((display . "none")))
    ((string= property "table") '((display . "table")))
+   ((string= property "table-caption") '((display . "table-caption")))
+   ((string= property "table-cell") '((display . "table-cell")))
+   ((string= property "table-column") '((display . "table-column")))
+   ((string= property "table-column-group") '((display . "table-column-group")))
+   ((string= property "table-footer-group") '((display . "table-footer-group")))
+   ((string= property "table-header-group") '((display . "table-header-group")))
+   ((string= property "table-row") '((display . "table-row")))
+   ((string= property "table-row-group") '((display . "table-row-group")))
+   ((string= property "flow-root") '((display . "flow-root")))
+   ((string= property "contents") '((display . "contents")))
+   ((string= property "list-item") '((display . "list-item")))
+   
+   ;; Box sizing
+   ((string= property "box")
+    (cond
+     ((string= value "border") '((box-sizing . "border-box")))
+     ((string= value "content") '((box-sizing . "content-box")))))
    
    ;; Position
    ((string= property "static") '((position . "static")))
@@ -512,9 +715,81 @@ VALUE can be a string number or from the spacing scale."
    ((string= property "relative") '((position . "relative")))
    ((string= property "sticky") '((position . "sticky")))
    
+   ;; Position inset values (top, right, bottom, left, inset)
+   ((string= property "top")
+    (etaf-tailwind--convert-position-value 'top value))
+   ((string= property "right")
+    (etaf-tailwind--convert-position-value 'right value))
+   ((string= property "bottom")
+    (etaf-tailwind--convert-position-value 'bottom value))
+   ((string= property "left")
+    (etaf-tailwind--convert-position-value 'left value))
+   ((string= property "inset")
+    (let ((pos-val (etaf-tailwind--get-position-value value)))
+      (when pos-val
+        (list (cons 'top pos-val) (cons 'right pos-val)
+              (cons 'bottom pos-val) (cons 'left pos-val)))))
+   
    ;; Visibility
    ((string= property "visible") '((visibility . "visible")))
    ((string= property "invisible") '((visibility . "hidden")))
+   ((string= property "collapse") '((visibility . "collapse")))
+   
+   ;; Float
+   ((string= property "float")
+    (cond
+     ((string= value "right") '((float . "right")))
+     ((string= value "left") '((float . "left")))
+     ((string= value "none") '((float . "none")))))
+   
+   ;; Clear
+   ((string= property "clear")
+    (cond
+     ((string= value "left") '((clear . "left")))
+     ((string= value "right") '((clear . "right")))
+     ((string= value "both") '((clear . "both")))
+     ((string= value "none") '((clear . "none")))))
+   
+   ;; Object fit (for images)
+   ((string= property "object")
+    (cond
+     ((string= value "contain") '((object-fit . "contain")))
+     ((string= value "cover") '((object-fit . "cover")))
+     ((string= value "fill") '((object-fit . "fill")))
+     ((string= value "none") '((object-fit . "none")))
+     ((string= value "scale-down") '((object-fit . "scale-down")))))
+   
+   ;; Overflow
+   ((string= property "overflow")
+    (cond
+     ((string= value "auto") '((overflow . "auto")))
+     ((string= value "hidden") '((overflow . "hidden")))
+     ((string= value "clip") '((overflow . "clip")))
+     ((string= value "visible") '((overflow . "visible")))
+     ((string= value "scroll") '((overflow . "scroll")))
+     ((string= value "x-auto") '((overflow-x . "auto")))
+     ((string= value "y-auto") '((overflow-y . "auto")))
+     ((string= value "x-hidden") '((overflow-x . "hidden")))
+     ((string= value "y-hidden") '((overflow-y . "hidden")))
+     ((string= value "x-clip") '((overflow-x . "clip")))
+     ((string= value "y-clip") '((overflow-y . "clip")))
+     ((string= value "x-visible") '((overflow-x . "visible")))
+     ((string= value "y-visible") '((overflow-y . "visible")))
+     ((string= value "x-scroll") '((overflow-x . "scroll")))
+     ((string= value "y-scroll") '((overflow-y . "scroll")))))
+   
+   ;; Overscroll
+   ((string= property "overscroll")
+    (cond
+     ((string= value "auto") '((overscroll-behavior . "auto")))
+     ((string= value "contain") '((overscroll-behavior . "contain")))
+     ((string= value "none") '((overscroll-behavior . "none")))
+     ((string= value "y-auto") '((overscroll-behavior-y . "auto")))
+     ((string= value "y-contain") '((overscroll-behavior-y . "contain")))
+     ((string= value "y-none") '((overscroll-behavior-y . "none")))
+     ((string= value "x-auto") '((overscroll-behavior-x . "auto")))
+     ((string= value "x-contain") '((overscroll-behavior-x . "contain")))
+     ((string= value "x-none") '((overscroll-behavior-x . "none")))))
    
    ;; Background color
    ((string= property "bg")
@@ -522,7 +797,7 @@ VALUE can be a string number or from the spacing scale."
       (when color
         (list (cons 'background-color color)))))
    
-   ;; Text color
+   ;; Text color and properties
    ((string= property "text")
     (cond
      ;; Color
@@ -550,23 +825,65 @@ VALUE can be a string number or from the spacing scale."
       (list (cons 'border-width (concat value "px"))))
      ;; Default border (border without value means 1px)
      ((null value)
-      (list (cons 'border-width "1px")))))
+      (list (cons 'border-width "1px")))
+     ;; Border styles
+     ((string= value "solid") '((border-style . "solid")))
+     ((string= value "dashed") '((border-style . "dashed")))
+     ((string= value "dotted") '((border-style . "dotted")))
+     ((string= value "double") '((border-style . "double")))
+     ((string= value "hidden") '((border-style . "hidden")))
+     ((string= value "none") '((border-style . "none")))))
    
-   ;; Padding
-   ((string-prefix-p "p" property)
+   ;; Padding - expanded to handle ps and pe
+   ((or (string= property "p")
+        (string= property "px") (string= property "py")
+        (string= property "pt") (string= property "pr")
+        (string= property "pb") (string= property "pl")
+        (string= property "ps") (string= property "pe"))
     (etaf-tailwind-convert-spacing property value 'padding))
    
-   ;; Margin
-   ((string-prefix-p "m" property)
+   ;; Margin - expanded to handle ms and me
+   ((or (string= property "m")
+        (string= property "mx") (string= property "my")
+        (string= property "mt") (string= property "mr")
+        (string= property "mb") (string= property "ml")
+        (string= property "ms") (string= property "me"))
     (etaf-tailwind-convert-spacing property value 'margin))
+   
+   ;; Space between
+   ((string= property "space")
+    (etaf-tailwind-convert-space-between value))
    
    ;; Width
    ((string= property "w")
     (etaf-tailwind-convert-size 'width value))
    
+   ;; Min-width
+   ((string= property "min-w")
+    (etaf-tailwind--convert-min-max-size 'min-width value))
+   
+   ;; Max-width
+   ((string= property "max-w")
+    (etaf-tailwind--convert-max-width value))
+   
    ;; Height
    ((string= property "h")
     (etaf-tailwind-convert-size 'height value))
+   
+   ;; Min-height
+   ((string= property "min-h")
+    (etaf-tailwind--convert-min-max-size 'min-height value))
+   
+   ;; Max-height
+   ((string= property "max-h")
+    (etaf-tailwind--convert-min-max-size 'max-height value))
+   
+   ;; Size (width and height together)
+   ((string= property "size")
+    (let ((w-css (etaf-tailwind-convert-size 'width value))
+          (h-css (etaf-tailwind-convert-size 'height value)))
+      (when (and w-css h-css)
+        (append w-css h-css))))
    
    ;; Font weight
    ((string= property "font")
@@ -579,7 +896,75 @@ VALUE can be a string number or from the spacing scale."
      ((string= value "semibold") '((font-weight . "600")))
      ((string= value "bold") '((font-weight . "700")))
      ((string= value "extrabold") '((font-weight . "800")))
-     ((string= value "black") '((font-weight . "900")))))
+     ((string= value "black") '((font-weight . "900")))
+     ;; Font families
+     ((string= value "sans") '((font-family . "ui-sans-serif, system-ui, sans-serif")))
+     ((string= value "serif") '((font-family . "ui-serif, Georgia, serif")))
+     ((string= value "mono") '((font-family . "ui-monospace, monospace")))))
+   
+   ;; Typography - italic
+   ((string= property "italic") '((font-style . "italic")))
+   ((string= property "not-italic") '((font-style . "normal")))
+   
+   ;; Typography - text transform
+   ((string= property "uppercase") '((text-transform . "uppercase")))
+   ((string= property "lowercase") '((text-transform . "lowercase")))
+   ((string= property "capitalize") '((text-transform . "capitalize")))
+   ((string= property "normal-case") '((text-transform . "none")))
+   
+   ;; Typography - text decoration
+   ((string= property "underline") '((text-decoration-line . "underline")))
+   ((string= property "overline") '((text-decoration-line . "overline")))
+   ((string= property "line-through") '((text-decoration-line . "line-through")))
+   ((string= property "no-underline") '((text-decoration-line . "none")))
+   
+   ;; Typography - line height (leading)
+   ((string= property "leading")
+    (etaf-tailwind--convert-leading value))
+   
+   ;; Typography - letter spacing (tracking)
+   ((string= property "tracking")
+    (etaf-tailwind--convert-tracking value))
+   
+   ;; Typography - word break
+   ((string= property "break")
+    (cond
+     ((string= value "normal") '((overflow-wrap . "normal") (word-break . "normal")))
+     ((string= value "words") '((overflow-wrap . "break-word")))
+     ((string= value "all") '((word-break . "break-all")))
+     ((string= value "keep") '((word-break . "keep-all")))))
+   
+   ;; Typography - whitespace
+   ((string= property "whitespace")
+    (cond
+     ((string= value "normal") '((white-space . "normal")))
+     ((string= value "nowrap") '((white-space . "nowrap")))
+     ((string= value "pre") '((white-space . "pre")))
+     ((string= value "pre-line") '((white-space . "pre-line")))
+     ((string= value "pre-wrap") '((white-space . "pre-wrap")))
+     ((string= value "break-spaces") '((white-space . "break-spaces")))))
+   
+   ;; Typography - truncate
+   ((string= property "truncate")
+    '((overflow . "hidden") (text-overflow . "ellipsis") (white-space . "nowrap")))
+   
+   ;; Typography - text indent
+   ((string= property "indent")
+    (let ((spacing (etaf-tailwind--spacing-value value 'horizontal)))
+      (when spacing
+        (list (cons 'text-indent spacing)))))
+   
+   ;; Typography - vertical align
+   ((string= property "align")
+    (cond
+     ((string= value "baseline") '((vertical-align . "baseline")))
+     ((string= value "top") '((vertical-align . "top")))
+     ((string= value "middle") '((vertical-align . "middle")))
+     ((string= value "bottom") '((vertical-align . "bottom")))
+     ((string= value "text-top") '((vertical-align . "text-top")))
+     ((string= value "text-bottom") '((vertical-align . "text-bottom")))
+     ((string= value "sub") '((vertical-align . "sub")))
+     ((string= value "super") '((vertical-align . "super")))))
    
    ;; Rounded (border-radius)
    ((string= property "rounded")
@@ -593,6 +978,31 @@ VALUE can be a string number or from the spacing scale."
      ((string= value "2xl") '((border-radius . "1rem")))
      ((string= value "3xl") '((border-radius . "1.5rem")))
      ((string= value "full") '((border-radius . "9999px")))))
+   
+   ;; Outline
+   ((string= property "outline")
+    (cond
+     ((null value) '((outline-style . "solid") (outline-width . "2px")))
+     ((string= value "none") '((outline . "2px solid transparent") (outline-offset . "2px")))
+     ((string= value "dashed") '((outline-style . "dashed")))
+     ((string= value "dotted") '((outline-style . "dotted")))
+     ((string= value "double") '((outline-style . "double")))
+     ((member value '("0" "1" "2" "4" "8"))
+      (list (cons 'outline-width (concat value "px"))))
+     ;; Outline colors
+     ((cdr (assoc value etaf-tailwind-color-palette))
+      (list (cons 'outline-color (cdr (assoc value etaf-tailwind-color-palette)))))))
+   
+   ;; Ring (simplified - box-shadow based in real Tailwind)
+   ((string= property "ring")
+    (cond
+     ((null value) '((box-shadow . "0 0 0 3px rgba(59, 130, 246, 0.5)")))
+     ((string= value "0") '((box-shadow . "none")))
+     ((string= value "1") '((box-shadow . "0 0 0 1px rgba(59, 130, 246, 0.5)")))
+     ((string= value "2") '((box-shadow . "0 0 0 2px rgba(59, 130, 246, 0.5)")))
+     ((string= value "4") '((box-shadow . "0 0 0 4px rgba(59, 130, 246, 0.5)")))
+     ((string= value "8") '((box-shadow . "0 0 0 8px rgba(59, 130, 246, 0.5)")))
+     ((string= value "inset") '((box-shadow . "inset 0 0 0 3px rgba(59, 130, 246, 0.5)")))))
    
    ;; Shadow
    ((string= property "shadow")
@@ -609,6 +1019,8 @@ VALUE can be a string number or from the spacing scale."
       '((box-shadow . "0 20px 25px -5px rgb(0 0 0 / 0.1), 0 8px 10px -6px rgb(0 0 0 / 0.1)")))
      ((string= value "2xl")
       '((box-shadow . "0 25px 50px -12px rgb(0 0 0 / 0.25)")))
+     ((string= value "inner")
+      '((box-shadow . "inset 0 2px 4px 0 rgb(0 0 0 / 0.05)")))
      ((string= value "none")
       '((box-shadow . "none")))))
    
@@ -630,11 +1042,74 @@ VALUE can be a string number or from the spacing scale."
      ((string= value "row-reverse") '((flex-direction . "row-reverse")))
      ((string= value "col") '((flex-direction . "column")))
      ((string= value "col-reverse") '((flex-direction . "column-reverse")))
-     
      ((string= value "1") '((flex . "1 1 0%")))
      ((string= value "auto") '((flex . "1 1 auto")))
      ((string= value "initial") '((flex . "0 1 auto")))
      ((string= value "none") '((flex . "none")))))
+   
+   ;; Flex basis
+   ((string= property "basis")
+    (etaf-tailwind--convert-flex-basis value))
+   
+   ;; Flex grow
+   ((string= property "grow")
+    (cond
+     ((null value) '((flex-grow . "1")))
+     ((string= value "0") '((flex-grow . "0")))))
+   
+   ;; Flex shrink
+   ((string= property "shrink")
+    (cond
+     ((null value) '((flex-shrink . "1")))
+     ((string= value "0") '((flex-shrink . "0")))))
+   
+   ;; Order
+   ((string= property "order")
+    (cond
+     ((string= value "first") '((order . "-9999")))
+     ((string= value "last") '((order . "9999")))
+     ((string= value "none") '((order . "0")))
+     (value (list (cons 'order value)))))
+   
+   ;; Grid columns
+   ((string= property "cols")
+    (list (cons 'grid-template-columns
+                (if (string= value "none") "none"
+                  (format "repeat(%s, minmax(0, 1fr))" value)))))
+   
+   ;; Grid column span
+   ((string= property "col")
+    (cond
+     ((string= value "auto") '((grid-column . "auto")))
+     ((string-prefix-p "span-" value)
+      (let ((span (substring value 5)))
+        (if (string= span "full")
+            '((grid-column . "1 / -1"))
+          (list (cons 'grid-column (format "span %s / span %s" span span))))))
+     ((string-prefix-p "start-" value)
+      (list (cons 'grid-column-start (substring value 6))))
+     ((string-prefix-p "end-" value)
+      (list (cons 'grid-column-end (substring value 4))))))
+   
+   ;; Grid rows
+   ((string= property "rows")
+    (list (cons 'grid-template-rows
+                (if (string= value "none") "none"
+                  (format "repeat(%s, minmax(0, 1fr))" value)))))
+   
+   ;; Grid row span
+   ((string= property "row")
+    (cond
+     ((string= value "auto") '((grid-row . "auto")))
+     ((string-prefix-p "span-" value)
+      (let ((span (substring value 5)))
+        (if (string= span "full")
+            '((grid-row . "1 / -1"))
+          (list (cons 'grid-row (format "span %s / span %s" span span))))))
+     ((string-prefix-p "start-" value)
+      (list (cons 'grid-row-start (substring value 6))))
+     ((string-prefix-p "end-" value)
+      (list (cons 'grid-row-end (substring value 4))))))
    
    ((string= property "justify")
     (cond
@@ -643,7 +1118,9 @@ VALUE can be a string number or from the spacing scale."
      ((string= value "center") '((justify-content . "center")))
      ((string= value "between") '((justify-content . "space-between")))
      ((string= value "around") '((justify-content . "space-around")))
-     ((string= value "evenly") '((justify-content . "space-evenly")))))
+     ((string= value "evenly") '((justify-content . "space-evenly")))
+     ((string= value "normal") '((justify-content . "normal")))
+     ((string= value "stretch") '((justify-content . "stretch")))))
    
    ((string= property "items")
     (cond
@@ -653,6 +1130,33 @@ VALUE can be a string number or from the spacing scale."
      ((string= value "baseline") '((align-items . "baseline")))
      ((string= value "stretch") '((align-items . "stretch")))))
    
+   ;; Content alignment
+   ((string= property "content")
+    (cond
+     ((string= value "normal") '((align-content . "normal")))
+     ((string= value "center") '((align-content . "center")))
+     ((string= value "start") '((align-content . "flex-start")))
+     ((string= value "end") '((align-content . "flex-end")))
+     ((string= value "between") '((align-content . "space-between")))
+     ((string= value "around") '((align-content . "space-around")))
+     ((string= value "evenly") '((align-content . "space-evenly")))
+     ((string= value "baseline") '((align-content . "baseline")))
+     ((string= value "stretch") '((align-content . "stretch")))))
+   
+   ;; Self alignment
+   ((string= property "self")
+    (cond
+     ((string= value "auto") '((align-self . "auto")))
+     ((string= value "start") '((align-self . "flex-start")))
+     ((string= value "end") '((align-self . "flex-end")))
+     ((string= value "center") '((align-self . "center")))
+     ((string= value "stretch") '((align-self . "stretch")))
+     ((string= value "baseline") '((align-self . "baseline")))))
+   
+   ;; Place content
+   ((string= property "place")
+    (etaf-tailwind--convert-place-property value))
+   
    ;; Gap - use px for column-gap, lh for row-gap
    ((string= property "gap")
     (let ((h-spacing (etaf-tailwind--spacing-value value 'horizontal))
@@ -660,6 +1164,18 @@ VALUE can be a string number or from the spacing scale."
       (when (and h-spacing v-spacing)
         (list (cons 'column-gap h-spacing)
               (cons 'row-gap v-spacing)))))
+   
+   ;; Gap-x (column-gap only)
+   ((string= property "gap-x")
+    (let ((spacing (etaf-tailwind--spacing-value value 'horizontal)))
+      (when spacing
+        (list (cons 'column-gap spacing)))))
+   
+   ;; Gap-y (row-gap only)
+   ((string= property "gap-y")
+    (let ((spacing (etaf-tailwind--spacing-value value 'vertical)))
+      (when spacing
+        (list (cons 'row-gap spacing)))))
    
    ;; Z-index
    ((string= property "z")
@@ -670,9 +1186,313 @@ VALUE can be a string number or from the spacing scale."
      ((string= value "30") '((z-index . "30")))
      ((string= value "40") '((z-index . "40")))
      ((string= value "50") '((z-index . "50")))
-     ((string= value "auto") '((z-index . "auto")))))
+     ((string= value "auto") '((z-index . "auto")))
+     ;; Support arbitrary z-index values
+     (value (list (cons 'z-index value)))))
+   
+   ;; Cursor
+   ((string= property "cursor")
+    (when (member value '("auto" "default" "pointer" "wait" "text" "move"
+                          "help" "not-allowed" "none" "context-menu"
+                          "progress" "cell" "crosshair" "vertical-text"
+                          "alias" "copy" "no-drop" "grab" "grabbing"
+                          "all-scroll" "col-resize" "row-resize"
+                          "n-resize" "e-resize" "s-resize" "w-resize"
+                          "ne-resize" "nw-resize" "se-resize" "sw-resize"
+                          "ew-resize" "ns-resize" "nesw-resize" "nwse-resize"
+                          "zoom-in" "zoom-out"))
+      (list (cons 'cursor value))))
+   
+   ;; Pointer events
+   ((string= property "pointer-events")
+    (cond
+     ((string= value "none") '((pointer-events . "none")))
+     ((string= value "auto") '((pointer-events . "auto")))))
+   
+   ;; User select
+   ((string= property "select")
+    (cond
+     ((string= value "none") '((user-select . "none")))
+     ((string= value "text") '((user-select . "text")))
+     ((string= value "all") '((user-select . "all")))
+     ((string= value "auto") '((user-select . "auto")))))
+   
+   ;; Resize
+   ((string= property "resize")
+    (cond
+     ((null value) '((resize . "both")))
+     ((string= value "none") '((resize . "none")))
+     ((string= value "y") '((resize . "vertical")))
+     ((string= value "x") '((resize . "horizontal")))))
+   
+   ;; Scroll behavior
+   ((string= property "scroll")
+    (cond
+     ((string= value "auto") '((scroll-behavior . "auto")))
+     ((string= value "smooth") '((scroll-behavior . "smooth")))))
+   
+   ;; Table layout
+   ((string= property "table-auto") '((table-layout . "auto")))
+   ((string= property "table-fixed") '((table-layout . "fixed")))
+   
+   ;; Border collapse
+   ((string= property "border-collapse") '((border-collapse . "collapse")))
+   ((string= property "border-separate") '((border-collapse . "separate")))
+   
+   ;; SVG fill
+   ((string= property "fill")
+    (cond
+     ((string= value "none") '((fill . "none")))
+     ((string= value "current") '((fill . "currentColor")))
+     ((cdr (assoc value etaf-tailwind-color-palette))
+      (list (cons 'fill (cdr (assoc value etaf-tailwind-color-palette)))))))
+   
+   ;; SVG stroke
+   ((string= property "stroke")
+    (cond
+     ((string= value "none") '((stroke . "none")))
+     ((string= value "current") '((stroke . "currentColor")))
+     ((member value '("0" "1" "2"))
+      (list (cons 'stroke-width value)))
+     ((cdr (assoc value etaf-tailwind-color-palette))
+      (list (cons 'stroke (cdr (assoc value etaf-tailwind-color-palette)))))))
+   
+   ;; Accessibility - screen reader only
+   ((string= property "sr")
+    (cond
+     ((string= value "only")
+      '((position . "absolute") (width . "1px") (height . "1px")
+        (padding . "0") (margin . "-1px") (overflow . "hidden")
+        (clip . "rect(0, 0, 0, 0)") (white-space . "nowrap")
+        (border-width . "0")))))
+   
+   ;; Not screen reader only
+   ((and (string= property "not-sr") (string= value "only"))
+    '((position . "static") (width . "auto") (height . "auto")
+      (padding . "0") (margin . "0") (overflow . "visible")
+      (clip . "auto") (white-space . "normal")))
+   
+   ;; Appearance
+   ((string= property "appearance")
+    (cond
+     ((string= value "none") '((appearance . "none")))
+     ((string= value "auto") '((appearance . "auto")))))
+   
+   ;; Caret color
+   ((string= property "caret")
+    (let ((color (cdr (assoc value etaf-tailwind-color-palette))))
+      (when color
+        (list (cons 'caret-color color)))))
+   
+   ;; Divide (border between children - generates CSS variables in real Tailwind)
+   ;; Simplified implementation
+   ((string= property "divide")
+    (cond
+     ((string= value "x") '((border-left-width . "1px")))
+     ((string= value "y") '((border-top-width . "1px")))
+     ((cdr (assoc value etaf-tailwind-color-palette))
+      (list (cons 'border-color (cdr (assoc value etaf-tailwind-color-palette)))))))
    
    ;; Default: return nil if not recognized
+   (t nil)))
+
+;;; Additional helper functions for Tailwind CSS conversion
+
+(defun etaf-tailwind--get-position-value (value)
+  "Convert position VALUE to CSS.
+VALUE can be a number from spacing scale or special keywords."
+  (cond
+   ;; Numeric values from spacing scale
+   ((cdr (assoc value etaf-tailwind-spacing-scale))
+    (etaf-tailwind--spacing-value value 'horizontal))
+   ;; Direct numeric values
+   ((string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
+    (concat value "px"))
+   ;; Auto and special values
+   ((string= value "auto") "auto")
+   ((string= value "full") "100%")
+   ;; Fractions
+   ((string-match "^\\([0-9]+\\)/\\([0-9]+\\)$" value)
+    (let ((num (string-to-number (match-string 1 value)))
+          (den (string-to-number (match-string 2 value))))
+      (format "%.6f%%" (* 100.0 (/ (float num) den)))))
+   (t nil)))
+
+(defun etaf-tailwind--convert-position-value (prop value)
+  "Convert position property PROP with VALUE.
+PROP is one of 'top, 'right, 'bottom, 'left."
+  (let ((css-val (etaf-tailwind--get-position-value value)))
+    (when css-val
+      (list (cons prop css-val)))))
+
+(defun etaf-tailwind--convert-leading (value)
+  "Convert leading (line-height) VALUE to CSS."
+  (cond
+   ((string= value "none") '((line-height . "1")))
+   ((string= value "tight") '((line-height . "1.25")))
+   ((string= value "snug") '((line-height . "1.375")))
+   ((string= value "normal") '((line-height . "1.5")))
+   ((string= value "relaxed") '((line-height . "1.625")))
+   ((string= value "loose") '((line-height . "2")))
+   ;; Numeric values (3, 4, 5, 6, 7, 8, 9, 10)
+   ((string-match-p "^[0-9]+$" value)
+    (let ((num (string-to-number value)))
+      (list (cons 'line-height (format "%.2frem" (* 0.25 num))))))
+   (t nil)))
+
+(defun etaf-tailwind--convert-tracking (value)
+  "Convert tracking (letter-spacing) VALUE to CSS."
+  (cond
+   ((string= value "tighter") '((letter-spacing . "-0.05em")))
+   ((string= value "tight") '((letter-spacing . "-0.025em")))
+   ((string= value "normal") '((letter-spacing . "0em")))
+   ((string= value "wide") '((letter-spacing . "0.025em")))
+   ((string= value "wider") '((letter-spacing . "0.05em")))
+   ((string= value "widest") '((letter-spacing . "0.1em")))
+   (t nil)))
+
+(defun etaf-tailwind--convert-min-max-size (prop value)
+  "Convert min/max size property PROP with VALUE.
+PROP is one of 'min-width, 'max-width, 'min-height, 'max-height."
+  (let* ((is-width (or (eq prop 'min-width) (eq prop 'max-width)))
+         (direction (if is-width 'horizontal 'vertical))
+         (size (cond
+                ;; Numeric values from spacing scale
+                ((cdr (assoc value etaf-tailwind-spacing-scale))
+                 (etaf-tailwind--spacing-value value direction))
+                ;; Direct numeric values
+                ((string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
+                 (if is-width (concat value "px") (concat value "lh")))
+                ;; Special keywords
+                ((string= value "0") "0")
+                ((string= value "full") "100%")
+                ((string= value "screen")
+                 (if is-width "100vw" "100vh"))
+                ((string= value "none") "none")
+                ((string= value "min") "min-content")
+                ((string= value "max") "max-content")
+                ((string= value "fit") "fit-content")
+                (t nil))))
+    (when size
+      (list (cons prop size)))))
+
+(defconst etaf-tailwind-max-width-scale
+  '(("xs" . "20rem")
+    ("sm" . "24rem")
+    ("md" . "28rem")
+    ("lg" . "32rem")
+    ("xl" . "36rem")
+    ("2xl" . "42rem")
+    ("3xl" . "48rem")
+    ("4xl" . "56rem")
+    ("5xl" . "64rem")
+    ("6xl" . "72rem")
+    ("7xl" . "80rem")
+    ("prose" . "65ch")
+    ("screen-sm" . "640px")
+    ("screen-md" . "768px")
+    ("screen-lg" . "1024px")
+    ("screen-xl" . "1280px")
+    ("screen-2xl" . "1536px"))
+  "Tailwind max-width preset scale.")
+
+(defun etaf-tailwind--convert-max-width (value)
+  "Convert max-width VALUE to CSS."
+  (let ((size (cond
+               ;; Named sizes
+               ((cdr (assoc value etaf-tailwind-max-width-scale))
+                (cdr (assoc value etaf-tailwind-max-width-scale)))
+               ;; Standard size conversions
+               ((cdr (assoc value etaf-tailwind-spacing-scale))
+                (etaf-tailwind--spacing-value value 'horizontal))
+               ;; Direct numeric values
+               ((string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
+                (concat value "px"))
+               ;; Special keywords
+               ((string= value "none") "none")
+               ((string= value "full") "100%")
+               ((string= value "min") "min-content")
+               ((string= value "max") "max-content")
+               ((string= value "fit") "fit-content")
+               (t nil))))
+    (when size
+      (list (cons 'max-width size)))))
+
+(defun etaf-tailwind--convert-flex-basis (value)
+  "Convert flex-basis VALUE to CSS."
+  (let ((size (cond
+               ;; Numeric values from spacing scale
+               ((cdr (assoc value etaf-tailwind-spacing-scale))
+                (etaf-tailwind--spacing-value value 'horizontal))
+               ;; Direct numeric values
+               ((string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
+                (concat value "px"))
+               ;; Fractions
+               ((string-match "^\\([0-9]+\\)/\\([0-9]+\\)$" value)
+                (let ((num (string-to-number (match-string 1 value)))
+                      (den (string-to-number (match-string 2 value))))
+                  (format "%.6f%%" (* 100.0 (/ (float num) den)))))
+               ;; Special keywords
+               ((string= value "auto") "auto")
+               ((string= value "full") "100%")
+               (t nil))))
+    (when size
+      (list (cons 'flex-basis size)))))
+
+(defun etaf-tailwind--convert-place-property (value)
+  "Convert place-* property VALUE.
+VALUE is in format 'content-center', 'items-start', 'self-auto', etc."
+  (cond
+   ;; place-content-*
+   ((string-prefix-p "content-" value)
+    (let ((align-val (substring value 8)))
+      (cond
+       ((string= align-val "center") '((place-content . "center")))
+       ((string= align-val "start") '((place-content . "start")))
+       ((string= align-val "end") '((place-content . "end")))
+       ((string= align-val "between") '((place-content . "space-between")))
+       ((string= align-val "around") '((place-content . "space-around")))
+       ((string= align-val "evenly") '((place-content . "space-evenly")))
+       ((string= align-val "baseline") '((place-content . "baseline")))
+       ((string= align-val "stretch") '((place-content . "stretch"))))))
+   ;; place-items-*
+   ((string-prefix-p "items-" value)
+    (let ((align-val (substring value 6)))
+      (cond
+       ((string= align-val "start") '((place-items . "start")))
+       ((string= align-val "end") '((place-items . "end")))
+       ((string= align-val "center") '((place-items . "center")))
+       ((string= align-val "baseline") '((place-items . "baseline")))
+       ((string= align-val "stretch") '((place-items . "stretch"))))))
+   ;; place-self-*
+   ((string-prefix-p "self-" value)
+    (let ((align-val (substring value 5)))
+      (cond
+       ((string= align-val "auto") '((place-self . "auto")))
+       ((string= align-val "start") '((place-self . "start")))
+       ((string= align-val "end") '((place-self . "end")))
+       ((string= align-val "center") '((place-self . "center")))
+       ((string= align-val "stretch") '((place-self . "stretch"))))))
+   (t nil)))
+
+(defun etaf-tailwind-convert-space-between (value)
+  "Convert space-x-* and space-y-* utilities to CSS.
+VALUE is like 'x-4' or 'y-2'."
+  (cond
+   ;; space-x-*
+   ((string-prefix-p "x-" value)
+    (let* ((spacing-val (substring value 2))
+           (spacing (etaf-tailwind--spacing-value spacing-val 'horizontal)))
+      (when spacing
+        ;; In real Tailwind, this uses > * + * selector
+        ;; We approximate with margin-left for all children
+        (list (cons 'margin-left spacing)))))
+   ;; space-y-*
+   ((string-prefix-p "y-" value)
+    (let* ((spacing-val (substring value 2))
+           (spacing (etaf-tailwind--spacing-value spacing-val 'vertical)))
+      (when spacing
+        (list (cons 'margin-top spacing)))))
    (t nil)))
 
 (defun etaf-tailwind-convert-spacing (property value type)
@@ -722,7 +1542,17 @@ Emacs特有的单位处理：
    ((string= property (if (eq type 'padding) "pl" "ml"))
     (let ((spacing (etaf-tailwind--spacing-value value 'horizontal)))
       (when spacing
-        (list (cons (intern (concat (symbol-name type) "-left")) spacing)))))))
+        (list (cons (intern (concat (symbol-name type) "-left")) spacing)))))
+   ;; Start (inline-start) - maps to left in LTR
+   ((string= property (if (eq type 'padding) "ps" "ms"))
+    (let ((spacing (etaf-tailwind--spacing-value value 'horizontal)))
+      (when spacing
+        (list (cons (intern (concat (symbol-name type) "-inline-start")) spacing)))))
+   ;; End (inline-end) - maps to right in LTR
+   ((string= property (if (eq type 'padding) "pe" "me"))
+    (let ((spacing (etaf-tailwind--spacing-value value 'horizontal)))
+      (when spacing
+        (list (cons (intern (concat (symbol-name type) "-inline-end")) spacing)))))))
 
 (defun etaf-tailwind-convert-size (property value)
   "转换尺寸类（width/height）到CSS。
