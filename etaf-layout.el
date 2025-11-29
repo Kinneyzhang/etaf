@@ -317,7 +317,10 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                                            (etaf-layout-get-box-model child-layout))))
                   (setq accumulated-height (+ accumulated-height child-total-height)))))
              ((stringp child)
-              (push child child-layouts))))
+              (push child child-layouts)
+              ;; 字符串子元素也应该计入高度
+              (let ((string-height (etaf-string-linum child)))
+                (setq accumulated-height (+ accumulated-height string-height))))))
           
           (setcdr (cdr layout-node) (nreverse child-layouts))
           
