@@ -35,6 +35,7 @@
 (require 'etaf-utils)
 (require 'etaf-css-face)
 (require 'etaf-layout-box)
+(require 'etaf-etml-tag)
 
 ;; Forward declarations
 (declare-function etaf-render-get-default-display "etaf-render")
@@ -63,10 +64,12 @@ LAYOUT-NODE 是布局节点。
 
 使用后序遍历从叶子节点开始构建字符串。
 在 Emacs 中，高度使用行数（lines）而不是像素值。
-CSS 文本样式会转换为 Emacs face 属性应用到文本上。"
+CSS 文本样式会转换为 Emacs face 属性应用到文本上。
+如果节点包含事件处理器，keymap 文本属性会被应用到最终字符串上。"
   (let* ((box-model (or (etaf-layout-get-box-model layout-node)
                         (etaf-layout-box-create)))
          (computed-style (dom-attr layout-node 'render-style))
+         (tag-instance (dom-attr layout-node 'etaf-tag-instance))
          (content-width (or (etaf-layout-box-content-width box-model) 0))
          (content-height-px (or (etaf-layout-box-content-height box-model) 0))
          
@@ -159,7 +162,7 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。"
        border-top border-right border-bottom border-left
        border-top-color border-right-color border-bottom-color border-left-color
        margin-top margin-right margin-bottom margin-left
-       computed-style))))
+       computed-style tag-instance))))
 
 ;;; ============================================================
 ;;; 内部函数：盒模型构建
@@ -192,8 +195,11 @@ would otherwise appear as an extra space at the end of each line."
                                                      border-top border-right border-bottom border-left
                                                      border-top-color border-right-color border-bottom-color border-left-color
                                                      margin-top margin-right margin-bottom margin-left
-                                                     computed-style)
-  "构建盒模型字符串。"
+                                                     computed-style &optional tag-instance)
+  "构建盒模型字符串。
+
+如果 TAG-INSTANCE 非空且包含事件处理器，则将 keymap 等文本属性应用到最终字符串上，
+使得按键事件在字符串插入到 buffer 后能够生效。"
   (let* (;; 1. 调整内容宽度
          (sized-content
           (if (> (length inner-content) 0)
@@ -316,6 +322,28 @@ would otherwise appear as an extra space at the end of each line."
                                   (when (> margin-bottom 0)
                                     (etaf-pixel-blank total-width margin-bottom))))
                          with-h-margin)))
+    
+    ;; 7. 应用 keymap 等交互属性
+    ;; 如果 tag-instance 存在且有事件处理器，将 keymap 应用到最终字符串上
+    (when (and tag-instance (> (length final-string) 0))
+      (let* ((definition (plist-get tag-instance :definition))
+             (has-click (plist-get definition :on-click))
+             (has-hover (or (plist-get definition :on-hover-enter)
+                            (plist-get definition :on-hover-leave)
+                            (plist-get definition :hover-style)))
+             (has-keydown (plist-get definition :on-keydown)))
+        (when (or has-click has-hover has-keydown)
+          (let ((keymap (etaf-etml-tag-setup-keymap tag-instance)))
+            (add-text-properties
+             0 (length final-string)
+             `(etaf-tag-instance ,tag-instance
+               keymap ,keymap
+               ,@(when (or has-click has-hover)
+                   '(mouse-face highlight))
+               ,@(when has-click
+                   '(pointer hand))
+               help-echo ,#'etaf-etml-tag--help-echo-handler)
+             final-string)))))
     
     final-string))
 

@@ -88,7 +88,11 @@ Both are converted to:
   (div ((style . \"background: red; padding: 10px\")) ...)
 
 If the tag is defined in etaf-etml-tag, its default styles are merged with
-inline styles, where inline styles take precedence."
+inline styles, where inline styles take precedence.
+
+If the tag has event handlers (on-click, on-hover-enter, etc.), a tag-instance
+is created and stored in the DOM attributes for later use when generating
+the final string with keymap properties."
   (cond
    ;; If it's an atom (string, number, etc.), return as is
    ((atom sexp) sexp)
@@ -112,6 +116,17 @@ inline styles, where inline styles take precedence."
               (setcdr style-attr style-string)))
           ;; Merge etaf-etml-tag default styles if tag is defined
           (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
+          ;; Create tag-instance for tags with event handlers
+          (when (etaf-etml-tag-defined-p tag)
+            (let* ((tag-def (etaf-etml-tag-get-definition tag))
+                   (has-events (or (plist-get tag-def :on-click)
+                                   (plist-get tag-def :on-hover-enter)
+                                   (plist-get tag-def :on-hover-leave)
+                                   (plist-get tag-def :on-keydown)
+                                   (plist-get tag-def :hover-style))))
+              (when has-events
+                (let ((tag-instance (etaf-etml-tag-create-instance tag attrs nil)))
+                  (push (cons 'etaf-tag-instance tag-instance) attr-alist)))))
           (let ((children (mapcar #'etaf-etml-to-dom rest)))
             (cons tag (cons attr-alist children))))))))
 

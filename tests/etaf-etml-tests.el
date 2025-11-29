@@ -49,6 +49,33 @@
   (should (string-match "padding-right" style))
   (should (string-match "border" style)))
 
+;;; Test etaf-etml-tag integration - button tag should have tag-instance for events
+(let* ((result (etaf-etml-to-dom '(button "Click")))
+        (attrs (cadr result))
+        (tag-instance (cdr (assq 'etaf-tag-instance attrs))))
+  ;; button has on-click handler, so it should have tag-instance
+  (should tag-instance)
+  ;; tag-instance should have the button definition
+  (should-equal (plist-get tag-instance :tag-name) 'button)
+  ;; tag-instance should have definition with click handler
+  (let ((definition (plist-get tag-instance :definition)))
+    (should (plist-get definition :on-click))))
+
+;;; Test etaf-etml-tag integration - a tag should have tag-instance for events
+(let* ((result (etaf-etml-to-dom '(a :href "/test" "Link")))
+        (attrs (cadr result))
+        (tag-instance (cdr (assq 'etaf-tag-instance attrs))))
+  ;; a tag has on-click handler, so it should have tag-instance
+  (should tag-instance)
+  (should-equal (plist-get tag-instance :tag-name) 'a))
+
+;;; Test etaf-etml-tag integration - div should NOT have tag-instance (no events)
+(let* ((result (etaf-etml-to-dom '(div "Text")))
+        (attrs (cadr result))
+        (tag-instance (cdr (assq 'etaf-tag-instance attrs))))
+  ;; div has no event handlers or hover styles, so no tag-instance
+  (should-not tag-instance))
+
 ;;; Test etaf-etml-tag integration - units consistency (px for horizontal, lh for vertical)
 (let* ((result (etaf-etml-to-dom '(ul (li "Item"))))
         (attrs (cadr result))
