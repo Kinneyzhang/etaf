@@ -69,5 +69,45 @@
    ;; 检查缓存命中
    (etaf-css-cache-get cache test-dom)))
 
+;;; 测试不同标签的字体大小不会互相干扰
+;;; 这个测试确保 h1, h2, h3 等标签各自保持正确的 font-size 值
+
+(should
+ (let* ((test-dom (etaf-etml-to-dom
+                   '(div
+                     (h1 "click me")
+                     (h2 "click me")
+                     (h3 "click me"))))
+        (cssom (etaf-css-build-cssom test-dom))
+        (children (dom-children test-dom))
+        (h1-node (nth 0 children))
+        (h2-node (nth 1 children))
+        (h3-node (nth 2 children))
+        (h1-style (etaf-css-get-computed-style cssom h1-node test-dom))
+        (h2-style (etaf-css-get-computed-style cssom h2-node test-dom))
+        (h3-style (etaf-css-get-computed-style cssom h3-node test-dom)))
+   ;; 检查每个标题有不同的 font-size
+   (and (equal (cdr (assq 'font-size h1-style)) "1.6")
+        (equal (cdr (assq 'font-size h2-style)) "1.4")
+        (equal (cdr (assq 'font-size h3-style)) "1.3"))))
+
+;;; 测试内联样式只匹配对应的节点
+;;; 确保内联样式规则使用严格的节点身份匹配 (eq)
+
+(should
+ (let* ((test-dom (etaf-etml-to-dom
+                   '(div
+                     (p :style "color: red" "First")
+                     (p :style "color: blue" "Second"))))
+        (cssom (etaf-css-build-cssom test-dom))
+        (children (dom-children test-dom))
+        (p1-node (nth 0 children))
+        (p2-node (nth 1 children))
+        (p1-style (etaf-css-get-computed-style cssom p1-node test-dom))
+        (p2-style (etaf-css-get-computed-style cssom p2-node test-dom)))
+   ;; 两个 p 标签应该有不同的颜色
+   (and (equal (cdr (assq 'color p1-style)) "red")
+        (equal (cdr (assq 'color p2-style)) "blue"))))
+
 (provide 'etaf-css-cache-tests)
 ;;; etaf-css-cache-tests.el ends here
