@@ -606,9 +606,14 @@ Supported flex item properties:
             (dolist (child child-layouts)
               (when (stringp child)
                 (push child sorted-children)))
-            ;; Don't reverse here for row-reverse/column-reverse
-            ;; The reversal is handled during string rendering in etaf-layout--merge-flex-children
-            ;; (following the same pattern as etaf-flex.el which reverses at render time)
+            ;; NOTE: Don't reverse children here for row-reverse/column-reverse.
+            ;; Per CSS Flexbox spec, flex-direction only affects the visual order of items
+            ;; within the main axis, not the DOM order. The visual reversal is handled
+            ;; during string rendering in etaf-layout--merge-flex-children (lines 1126-1131),
+            ;; following the same pattern as the reference implementation in etaf-flex.el
+            ;; (see etaf-flex-rows-string lines 641-644 and etaf-flex-columns-string lines 662-665).
+            ;; Previously, reversing here AND during rendering caused double-reversal,
+            ;; resulting in items appearing in normal order instead of reversed.
             ;; 将排序后的子节点添加到布局节点
             (setcdr (cdr layout-node) (nreverse sorted-children)))
           
