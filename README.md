@@ -18,7 +18,8 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ## 核心模块
 
-- **etaf-etml.el** - TML (Template Markup Language) 到 DOM 的转换，支持 `:style` 属性（字符串和列表格式）和模板指令语法（`e-if`、`e-for`、`e-show` 等）
+- **etaf-etml.el** - TML (Template Markup Language) 到 DOM 的转换，支持模板指令语法（`e-if`、`e-for`、`e-show` 等）、组件系统和 Vue3 风格的响应式系统
+- **etaf-etml-tag.el** - ETML 标签定义系统，用于定义类似 HTML 的标签，包含样式和交互行为
 - **etaf-ecss.el** - ECSS：Emacs 风格的 CSS 表达式（类似 rx 对正则的处理）
 - **etaf-dom.el** - DOM 操作、查询和遍历
 - **etaf-tailwind.el** - Tailwind CSS 支持（Emacs 特有的 px/lh 单位）
@@ -192,7 +193,7 @@ ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `
 (li :e-for "(item, index) in items" "{{ index }}: {{ item }}")
 ```
 
-#### 响应式数据
+#### 响应式数据（基础版本）
 
 ```elisp
 ;; 创建响应式数据
@@ -207,6 +208,145 @@ ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `
 (etaf-etml-get reactive :count)  ;; => 0
 (etaf-etml-set reactive :count 5) ;; 触发 watcher
 ```
+
+### 组件系统（Vue3 风格）
+
+ETAF 支持类似 Vue3 的组件系统，可以定义可复用的自定义组件：
+
+```elisp
+(require 'etaf-etml)
+
+;; 定义一个简单的组件
+(etaf-etml-define-component my-button
+  :props '(:label :disabled)
+  :template '(button :class "my-btn"
+                     :disabled "{{ disabled }}"
+                     "{{ label }}"))
+
+;; 定义带有 setup 函数的组件
+(etaf-etml-define-component counter
+  :props '(:initial)
+  :setup (lambda (props)
+           (let* ((count (etaf-etml-ref (or (plist-get props :initial) 0)))
+                  (increment (lambda ()
+                               (etaf-etml-ref-update count #'1+))))
+             (list :count count
+                   :increment increment)))
+  :template (lambda (data)
+              `(div :class "counter"
+                    (span ,(format "Count: %s"
+                                   (etaf-etml-ref-get (plist-get data :count))))
+                    (button :on-click ,(plist-get data :increment)
+                            "Increment"))))
+
+;; 使用组件（需要先注册）
+(etaf-etml-component-defined-p 'my-button)  ;; => t
+```
+
+#### 组件 API
+
+| 函数/宏 | 说明 | 示例 |
+|---------|------|------|
+| `etaf-etml-define-component` | 定义组件 | `(etaf-etml-define-component name :props '(:x) :template ...)` |
+| `etaf-etml-component-get` | 获取组件定义 | `(etaf-etml-component-get 'name)` |
+| `etaf-etml-component-defined-p` | 检查组件是否已定义 | `(etaf-etml-component-defined-p 'name)` |
+| `etaf-etml-component-list-all` | 列出所有组件 | `(etaf-etml-component-list-all)` |
+
+#### 组件选项
+
+- `:props` - 组件接受的属性列表
+- `:setup` - 设置函数，接收 props 返回组件数据
+- `:template` - 模板，可以是 ETML 表达式或返回 ETML 的函数
+- `:emits` - 组件可以发出的事件列表
+
+### 响应式系统（Vue3 风格）
+
+ETAF 实现了类似 Vue3 Composition API 的响应式系统：
+
+#### Ref（响应式引用）
+
+```elisp
+;; 创建响应式引用
+(let ((count (etaf-etml-ref 0)))
+  ;; 获取值
+  (etaf-etml-ref-get count)     ;; => 0
+  
+  ;; 设置值
+  (etaf-etml-ref-set count 5)   ;; 设置为 5
+  
+  ;; 更新值（基于当前值）
+  (etaf-etml-ref-update count (lambda (n) (+ n 1))))  ;; => 6
+```
+
+#### Computed（计算属性）
+
+```elisp
+(let* ((count (etaf-etml-ref 3))
+       (doubled (etaf-etml-computed
+                 (lambda () (* 2 (etaf-etml-ref-get count))))))
+  ;; 获取计算值
+  (etaf-etml-computed-get doubled)    ;; => 6
+  
+  ;; 依赖变化后自动重新计算
+  (etaf-etml-ref-set count 5)
+  (etaf-etml-computed-get doubled))   ;; => 10
+```
+
+#### Watch（侦听器）
+
+```elisp
+;; 侦听单个响应式源
+(let* ((count (etaf-etml-ref 0))
+       (stop (etaf-etml-watch-source
+              count
+              (lambda (new old)
+                (message "Count changed: %s -> %s" old new)))))
+  (etaf-etml-ref-set count 1)   ;; 触发回调
+  (funcall stop)                 ;; 停止侦听
+  (etaf-etml-ref-set count 2))  ;; 不再触发
+```
+
+#### WatchEffect（自动依赖追踪）
+
+```elisp
+(let* ((count (etaf-etml-ref 0))
+       (stop (etaf-etml-watch-effect
+              (lambda ()
+                ;; 自动追踪 count 作为依赖
+                (message "Count is: %s" (etaf-etml-ref-get count))))))
+  (etaf-etml-ref-set count 1)   ;; 自动重新执行 effect
+  (funcall stop))               ;; 停止 effect
+```
+
+#### Reactive（响应式对象）
+
+```elisp
+(let ((state (etaf-etml-reactive '(:name "Alice" :age 30))))
+  ;; 获取属性
+  (etaf-etml-reactive-get state :name)    ;; => "Alice"
+  
+  ;; 设置属性（触发响应）
+  (etaf-etml-reactive-set state :age 31)
+  
+  ;; 转换为普通 plist
+  (etaf-etml-reactive-to-plist state))    ;; => (:name "Alice" :age 31)
+```
+
+#### 响应式 API 总结
+
+| 函数 | 说明 | 示例 |
+|------|------|------|
+| `etaf-etml-ref` | 创建响应式引用 | `(etaf-etml-ref 0)` |
+| `etaf-etml-ref-get` | 获取引用值 | `(etaf-etml-ref-get ref)` |
+| `etaf-etml-ref-set` | 设置引用值 | `(etaf-etml-ref-set ref 5)` |
+| `etaf-etml-ref-update` | 基于当前值更新 | `(etaf-etml-ref-update ref #'1+)` |
+| `etaf-etml-computed` | 创建计算属性 | `(etaf-etml-computed (lambda () ...))` |
+| `etaf-etml-computed-get` | 获取计算值 | `(etaf-etml-computed-get computed)` |
+| `etaf-etml-watch-source` | 侦听响应式源 | `(etaf-etml-watch-source ref callback)` |
+| `etaf-etml-watch-effect` | 自动依赖追踪的 effect | `(etaf-etml-watch-effect (lambda () ...))` |
+| `etaf-etml-reactive` | 创建响应式对象 | `(etaf-etml-reactive '(:x 1 :y 2))` |
+| `etaf-etml-reactive-get` | 获取响应式对象属性 | `(etaf-etml-reactive-get state :x)` |
+| `etaf-etml-reactive-set` | 设置响应式对象属性 | `(etaf-etml-reactive-set state :x 5)` |
 
 ### Tailwind CSS 支持
 
@@ -324,6 +464,26 @@ ECSS（Emacs CSS）提供了一种使用列表结构表达 CSS 的方式，类�
 ## 功能特性
 
 ### 已实现功能 ✅
+
+- ✅ **Vue3 风格组件系统**（新增）
+  - 使用 `etaf-etml-define-component` 定义自定义组件
+  - Props 支持（组件属性传递）
+  - Setup 函数（组合式 API 入口）
+  - Template 函数或 ETML 表达式
+  - $slots 支持（组件子元素插槽）
+
+- ✅ **Vue3 风格响应式系统**（新增）
+  - `etaf-etml-ref` - 响应式引用
+  - `etaf-etml-computed` - 计算属性（缓存和依赖追踪）
+  - `etaf-etml-watch-source` - 侦听响应式源
+  - `etaf-etml-watch-effect` - 自动依赖追踪的 effect
+  - `etaf-etml-reactive` - 响应式对象
+
+- ✅ **ETML 标签定义系统**
+  - 使用 `define-etaf-etml-tag` 定义自定义标签
+  - 默认样式、hover 样式等状态样式
+  - 事件处理器（on-click、on-hover 等）
+  - 标签继承机制
 
 - ✅ **Emacs 原生模板指令语法**
   - 文本插值 `{{ expression }}`
@@ -443,8 +603,9 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 ```
 
 测试文件：
-- `etaf-template-tests.el` - 模板语法测试（使用 etaf-etml 模块中的 etaf-etml-* 函数）
-- `etaf-tailwind-tests.el` - Tailwind CSS 支持测试（新增）
+- `etaf-etml-tests.el` - ETML 模板语法、组件系统和响应式系统测试
+- `etaf-etml-tag-tests.el` - ETML 标签定义系统测试
+- `etaf-tailwind-tests.el` - Tailwind CSS 支持测试
 - `etaf-css-tests.el` - CSS 主功能测试
 - `etaf-css-important-tests.el` - !important 和层叠测试
 - `etaf-css-cache-tests.el` - 缓存测试
@@ -452,17 +613,15 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 - `etaf-css-inheritance-tests.el` - 继承测试
 - `etaf-css-media-tests.el` - 媒体查询测试
 - `etaf-layout-tests.el` - 布局系统测试
-- `etaf-layout-buffer-string-tests.el` - 布局字符串生成测试
 
 ## 示例
 
 查看 `examples/` 目录获取更多示例：
-- `etaf-template-example.el` - Vue.js 风格模板语法示例
-- `etaf-tailwind-example.el` - Tailwind CSS 功能示例（新增）
+- `etaf-etml-tag-example.el` - ETML 标签定义系统示例
+- `etaf-tailwind-example.el` - Tailwind CSS 功能示例
 - `etaf-css-example.el` - CSS 功能演示
 - `etaf-render-example.el` - 渲染树使用示例
 - `etaf-layout-example.el` - 布局系统完整示例
-- `etaf-layout-buffer-string-example.el` - 布局字符串生成示例
 
 ## 贡献
 
