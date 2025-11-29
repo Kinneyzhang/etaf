@@ -376,7 +376,7 @@ Returns (tag-name ((attrs...)) children...)."
 
 (define-etaf-tag p
   :display 'block
-  :default-style '((margin-left . "5px")))
+  :default-style nil)
 
 (define-etaf-tag h1
   :display 'block
