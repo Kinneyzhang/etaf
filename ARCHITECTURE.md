@@ -18,33 +18,34 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
                                 │
         ┌───────────────────────┼───────────────────────┐
         │                       │                       │
-        ▼                       ▼                       ▼
-┌───────────────┐    ┌─────────────────┐    ┌─────────────────────┐
-│  etaf-tml.el  │    │  etaf-css.el    │    │ etaf-template.el    │
-│  TML → DOM    │    │  CSS 主入口     │    │ Vue风格模板         │
-└───────┬───────┘    └────────┬────────┘    └──────────┬──────────┘
-        │                     │                        │
-        ▼                     ▼                        │
-┌───────────────┐    ┌─────────────────┐              │
-│  etaf-dom.el  │◄───│  CSS 子模块     │              │
-│  DOM 操作     │    │  ├ selector     │              │
-└───────────────┘    │  ├ parser       │              │
-                     │  ├ cascade      │              │
-                     │  ├ inheritance  │              │
-                     │  ├ shorthand    │              │
-                     │  ├ media        │              │
-                     │  ├ cache        │              │
-                     │  ├ index        │              │
-                     │  └ face         │              │
-                     └────────┬────────┘              │
-                              │                       │
-        ┌─────────────────────┼───────────────────────┘
-        │                     │
-        ▼                     ▼
-┌───────────────┐    ┌─────────────────┐
-│etaf-render.el │◄───│etaf-tailwind.el │
-│ 渲染树构建    │    │ Tailwind 支持   │
-└───────┬───────┘    └─────────────────┘
+        ▼                       ▼                       │
+┌───────────────────┐  ┌─────────────────┐              │
+│    etaf-tml.el    │  │  etaf-css.el    │              │
+│  TML → DOM        │  │  CSS 主入口     │              │
+│  + 模板指令支持   │  │                 │              │
+└───────┬───────────┘  └────────┬────────┘              │
+        │                       │                       │
+        ▼                       ▼                       │
+┌───────────────┐      ┌─────────────────┐              │
+│  etaf-dom.el  │◄─────│  CSS 子模块     │              │
+│  DOM 操作     │      │  ├ selector     │              │
+└───────────────┘      │  ├ parser       │              │
+                       │  ├ cascade      │              │
+                       │  ├ inheritance  │              │
+                       │  ├ shorthand    │              │
+                       │  ├ media        │              │
+                       │  ├ cache        │              │
+                       │  ├ index        │              │
+                       │  └ face         │              │
+                       └────────┬────────┘              │
+                                │                       │
+        ┌───────────────────────┼───────────────────────┘
+        │                       │
+        ▼                       ▼
+┌───────────────┐      ┌─────────────────┐
+│etaf-render.el │◄─────│etaf-tailwind.el │
+│ 渲染树构建    │      │ Tailwind 支持   │
+└───────┬───────┘      └─────────────────┘
         │
         ▼
 ┌───────────────┐
@@ -696,56 +697,58 @@ DOM + <style> 标签
 
 ---
 
-### 18. etaf-template.el - Vue 风格模板
+### 18. etaf-tml.el - 模板指令支持（原 etaf-template.el 已合并）
 
-**职责**: 实现类 Vue.js 的模板语法。
+**职责**: 实现类 Vue.js 的模板语法。模板功能现已合并到 etaf-tml.el 中，函数名从 `etaf-template-*` 更名为 `etaf-etml-*`。
 
 #### 支持的语法
 
 | 语法 | 功能 | 示例 |
 |------|------|------|
 | `{{ expr }}` | 文本插值 | `{{ name }}` |
-| `:v-if` | 条件渲染 | `:v-if "visible"` |
-| `:v-else-if` | 条件分支 | `:v-else-if "count > 0"` |
-| `:v-else` | 否则分支 | `:v-else` |
-| `:v-for` | 列表渲染 | `:v-for "item in items"` |
-| `:v-bind:attr` | 属性绑定 | `:v-bind:class "className"` |
-| `:v-text` | 文本内容 | `:v-text "message"` |
-| `:v-show` | 显示/隐藏 | `:v-show "isVisible"` |
+| `:e-if` / `:v-if` | 条件渲染 | `:e-if "visible"` |
+| `:e-else-if` / `:v-else-if` | 条件分支 | `:e-else-if "count > 0"` |
+| `:e-else` / `:v-else` | 否则分支 | `:e-else` |
+| `:e-for` / `:v-for` | 列表渲染 | `:e-for "item in items"` |
+| `:e-bind:attr` / `:v-bind:attr` | 属性绑定 | `:e-bind:class "className"` |
+| `:e-text` / `:v-text` | 文本内容 | `:e-text "message"` |
+| `:e-show` / `:v-show` | 显示/隐藏 | `:e-show "isVisible"` |
+
+注：推荐使用 `e-*` 前缀，`v-*` 前缀保留用于向后兼容。
 
 #### 核心函数
 
 ##### 插值和表达式
 | 函数 | 功能 |
 |------|------|
-| `etaf-template--interpolate-string` | 替换 `{{ }}` 插值 |
-| `etaf-template--eval-expr` | 评估表达式 |
-| `etaf-template--to-string` | 值转字符串 |
+| `etaf-etml--interpolate-string` | 替换 `{{ }}` 插值 |
+| `etaf-etml--eval-expr` | 评估表达式 |
+| `etaf-etml--to-string` | 值转字符串 |
 
 ##### 指令解析
 | 函数 | 功能 |
 |------|------|
-| `etaf-template--parse-v-for` | 解析 v-for 表达式 |
-| `etaf-template--truthy-p` | 判断真值 |
-| `etaf-template--split-attrs-and-children` | 分离属性和子元素 |
-| `etaf-template--process-bindings` | 处理属性绑定 |
+| `etaf-etml--parse-v-for` | 解析 e-for/v-for 表达式 |
+| `etaf-etml--truthy-p` | 判断真值 |
+| `etaf-etml--split-attrs-and-children` | 分离属性和子元素 |
+| `etaf-etml--process-bindings` | 处理属性绑定 |
 
 ##### 渲染
 | 函数 | 功能 |
 |------|------|
-| `etaf-template-render` | 渲染模板 |
-| `etaf-template--render-node` | 递归渲染节点 |
-| `etaf-template--render-element` | 渲染元素 |
-| `etaf-template-to-dom` | 模板渲染并转 DOM |
+| `etaf-etml-render` | 渲染模板 |
+| `etaf-etml--render-node` | 递归渲染节点 |
+| `etaf-etml--render-element` | 渲染元素 |
+| `etaf-etml-to-dom` | 模板渲染并转 DOM |
 
 ##### 响应式数据
 | 函数 | 功能 |
 |------|------|
-| `etaf-template-create-reactive` | 创建响应式数据 |
-| `etaf-template-get` | 获取响应式数据值 |
-| `etaf-template-set` | 设置值并触发更新 |
-| `etaf-template-watch` | 添加数据监听器 |
-| `etaf-template-unwatch` | 移除监听器 |
+| `etaf-etml-create-reactive` | 创建响应式数据 |
+| `etaf-etml-get` | 获取响应式数据值 |
+| `etaf-etml-set` | 设置值并触发更新 |
+| `etaf-etml-watch` | 添加数据监听器 |
+| `etaf-etml-unwatch` | 移除监听器 |
 
 ---
 
@@ -1024,12 +1027,12 @@ etaf-layout-to-string (etaf-layout.el)
 (setq my-template
   '(div
     (h1 "Hello, {{ name }}!")
-    (p :v-if "visible" "This section is visible")
+    (p :e-if "visible" "This section is visible")
     (ul
-      (li :v-for "item in items" "{{ item }}"))))
+      (li :e-for "item in items" "{{ item }}"))))
 
 ;; 渲染
-(etaf-template-render my-template my-data)
+(etaf-etml-render my-template my-data)
 ```
 
 ### 使用 Tailwind CSS
@@ -1086,8 +1089,7 @@ etaf-layout-to-string (etaf-layout.el)
 
 ```
 etaf.el
-├── etaf-tml.el
-├── etaf-template.el
+├── etaf-tml.el (包含模板功能)
 ├── etaf-css.el
 │   ├── etaf-dom.el
 │   ├── etaf-css-selector.el
