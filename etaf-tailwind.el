@@ -62,7 +62,8 @@
     
     ;; Flexbox & Grid
     "basis" "direction" "wrap" "grow" "shrink" "order"
-    "cols" "col" "rows" "row" "gap" "justify" "content" "items" "self" "place"
+    "cols" "col" "rows" "row" "gap" "gap-x" "gap-y"
+    "justify" "content" "items" "self" "place"
     
     ;; Spacing
     "p" "px" "py" "pt" "pr" "pb" "pl" "ps" "pe"
@@ -428,7 +429,9 @@ For Emacs compatibility:
 VALUE can be a string number or from the spacing scale."
   (let ((num-str (or (cdr (assoc value etaf-tailwind-spacing-scale))
                      ;; Support arbitrary numeric values
-                     (when (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
+                     (when (and value
+                                (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$"
+                                                value))
                        value))))
     (when num-str
       (pcase direction
