@@ -1,5 +1,9 @@
 # ETML/ETAF 架构文档
 
+# ETML/ETAF Architecture Documentation
+
+> **English Summary**: ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) is a comprehensive framework for implementing HTML/CSS-like rendering in Emacs. It provides complete DOM operations, CSS parsing, box model layout, and text rendering capabilities. This document details all modules, their functions, and call relationships to help you thoroughly understand the repository implementation.
+
 ## 概述
 
 ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 是一个在 Emacs 中实现类似 HTML/CSS 渲染的框架。它提供了完整的 DOM 操作、CSS 解析、盒模型布局和文本渲染功能。
@@ -49,10 +53,10 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
 └───────┬───────┘
         │
         ▼
-┌───────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  etaf-box.el  │◄───│etaf-scroll-bar  │◄───│  etaf-utils.el  │
-│  盒模型渲染   │    │ 滚动条          │    │  工具函数       │
-└───────┬───────┘    └─────────────────┘    └────────┬────────┘
+┌───────────────┐    ┌─────────────────────┐    ┌─────────────────┐
+│  etaf-box.el  │◄───│etaf-scroll-bar.el   │◄───│  etaf-utils.el  │
+│  盒模型渲染   │    │ 滚动条              │    │  工具函数       │
+└───────┬───────┘    └─────────────────────┘    └────────┬────────┘
         │                                            │
         └────────────────────┬───────────────────────┘
                              │
@@ -376,12 +380,30 @@ DOM + <style> 标签
 
 #### 可继承的属性
 
-```elisp
-(color font-family font-size font-style font-variant font-weight font
- letter-spacing line-height list-style list-style-image list-style-position
- list-style-type text-align text-indent text-transform visibility
- white-space word-spacing cursor direction quotes)
-```
+| 属性 | 说明 |
+|------|------|
+| `color` | 文本颜色 |
+| `font-family` | 字体族 |
+| `font-size` | 字体大小 |
+| `font-style` | 字体样式 |
+| `font-variant` | 字体变体 |
+| `font-weight` | 字体粗细 |
+| `font` | 字体复合属性 |
+| `letter-spacing` | 字母间距 |
+| `line-height` | 行高 |
+| `list-style` | 列表样式 |
+| `list-style-image` | 列表图像 |
+| `list-style-position` | 列表标记位置 |
+| `list-style-type` | 列表标记类型 |
+| `text-align` | 文本对齐 |
+| `text-indent` | 文本缩进 |
+| `text-transform` | 文本转换 |
+| `visibility` | 可见性 |
+| `white-space` | 空白处理 |
+| `word-spacing` | 单词间距 |
+| `cursor` | 光标样式 |
+| `direction` | 文本方向 |
+| `quotes` | 引号样式 |
 
 #### 函数
 
@@ -1085,13 +1107,13 @@ etaf.el
 │   ├── etaf-render.el
 │   ├── etaf-utils.el
 │   └── etaf-css-face.el
-└── etaf-tailwind.el
-
-etaf-box.el
-├── etaf-utils.el
-├── etaf-scroll-bar.el
-│   └── etaf-utils.el
-└── elog
+├── etaf-tailwind.el
+│   └── etaf-dom.el
+└── etaf-box.el (独立模块)
+    ├── etaf-utils.el
+    ├── etaf-scroll-bar.el
+    │   └── etaf-utils.el
+    └── elog
 
 etaf-utils.el
 ├── etaf-pixel.el
