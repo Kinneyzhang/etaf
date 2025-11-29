@@ -17,7 +17,7 @@
 
 ;;; Code:
 
-(require 'etaf-tml)
+(require 'etaf-etml)
 (require 'etaf-css)
 (require 'etaf-render)
 (require 'etaf-layout)

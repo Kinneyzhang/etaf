@@ -6,7 +6,7 @@
 ;;; Code:
 
 (require 'etaf-css)
-(require 'etaf-tml)
+(require 'etaf-etml)
 
 ;;; 示例 1: 解析 CSS 声明
 

@@ -2,7 +2,7 @@
 
 (require 'etaf-css)
 (require 'etaf-css-inheritance)
-(require 'etaf-tml)
+(require 'etaf-etml)
 (require 'etaf-dom)
 (require 'etaf-ert)
 

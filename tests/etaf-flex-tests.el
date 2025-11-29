@@ -130,7 +130,7 @@ the container's content-width, not each item filling the entire parent width."
   (require 'etaf-layout)
   (require 'etaf-render)
   (require 'etaf-css)
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
@@ -182,7 +182,7 @@ children with flex-grow > 0 should be stretched proportionally."
   (require 'etaf-layout)
   (require 'etaf-render)
   (require 'etaf-css)
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
@@ -232,7 +232,7 @@ An item with flex-grow: 2 should grow twice as much as one with flex-grow: 1."
   (require 'etaf-layout)
   (require 'etaf-render)
   (require 'etaf-css)
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
@@ -285,7 +285,7 @@ children with flex-shrink > 0 should be reduced proportionally."
   (require 'etaf-layout)
   (require 'etaf-render)
   (require 'etaf-css)
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
@@ -329,7 +329,7 @@ children with flex-shrink > 0 should be reduced proportionally."
   (require 'etaf-layout)
   (require 'etaf-render)
   (require 'etaf-css)
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
@@ -407,7 +407,7 @@ children with flex-shrink > 0 should be reduced proportionally."
   (require 'etaf-layout)
   (require 'etaf-render)
   (require 'etaf-css)
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   ;; Test the helper function directly
   (let* ((str1 (make-string 50 ?A))  ;; A string of 50 'A' characters
          (str2 (make-string 50 ?B))  ;; A string of 50 'B' characters

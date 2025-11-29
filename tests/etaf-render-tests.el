@@ -7,7 +7,7 @@
 
 (require 'ert)
 (require 'etaf-render)
-(require 'etaf-tml)
+(require 'etaf-etml)
 (require 'etaf-css)
 
 ;;; Test data

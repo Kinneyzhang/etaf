@@ -15,13 +15,13 @@ This document describes the modular architecture of the ETAF (Emacs Template and
 
 #### etaf.el
 - **Purpose**: Main entry point for the ETAF system
-- **Dependencies**: etaf-tml, etaf-css
+- **Dependencies**: etaf-etml, etaf-css
 - **Public Interface**: (none - just aggregates sub-modules)
 - **Usage**: `(require 'etaf)` loads the entire ETAF system
 
 ### Markup Processing Modules
 
-#### etaf-tml.el
+#### etaf-etml.el
 - **Purpose**: TML (Template Markup Language) to DOM conversion
 - **Dependencies**: (none)
 - **Public Interface**:
@@ -177,7 +177,7 @@ This document describes the modular architecture of the ETAF (Emacs Template and
 
 ```
 etaf.el
-├── etaf-tml.el (no dependencies)
+├── etaf-etml.el (no dependencies)
 └── etaf-css.el
     ├── etaf-dom.el
     │   └── dom (built-in)
@@ -202,7 +202,7 @@ etaf-ert.el
 
 ### Modules Merged
 
-1. **etaf-utils.el** → Merged into etaf-tml.el and etaf-dom.el
+1. **etaf-utils.el** → Merged into etaf-etml.el and etaf-dom.el
    - Reason: Too simple (only 2 utility functions), 100% external usage rate
    - Impact: Functions moved to modules that actually use them
 
@@ -231,7 +231,7 @@ etaf-ert.el
 
 ### Basic TML to DOM Conversion
 ```elisp
-(require 'etaf-tml)
+(require 'etaf-etml)
 
 (setq dom (etaf-etml-to-dom
            '(div :class "container"

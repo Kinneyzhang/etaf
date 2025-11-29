@@ -1,7 +1,7 @@
 ;;; etaf-css-tests.el --- Tests for etaf-css -*- lexical-binding: t; -*-
 
 (require 'etaf-css)
-(require 'etaf-tml)
+(require 'etaf-etml)
 (require 'etaf-dom)
 (require 'etaf-ert)
 

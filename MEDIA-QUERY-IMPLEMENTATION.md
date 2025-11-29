@@ -102,7 +102,7 @@
 
 ```elisp
 (require 'etaf-css)
-(require 'etaf-tml)
+(require 'etaf-etml)
 
 ;; 创建带媒体查询的 DOM
 (setq dom 
