@@ -7,15 +7,21 @@
 ;;
 ;; Key features:
 ;; - Converts plist-based TML to alist-based DOM
-;; - Supports :css attribute for inline CSS rules (Emacs-specific)
+;; - Supports :style attribute for inline CSS rules (Emacs-specific)
 ;;
 ;; Example:
-;;   (div :class "box" :css ((background . "red") (padding . "10px"))
+;;   ;; String format (standard CSS)
+;;   (div :class "box" :style "background: red; padding: 10px"
 ;;     "Hello")
 ;;
-;; The :css attribute accepts:
+;;   ;; List format (alist of CSS properties)
+;;   (div :class "box" :style ((background . "red") (padding . "10px"))
+;;     "Hello")
+;;
+;; The :style attribute accepts:
+;; - A string of CSS properties: "property1: value1; property2: value2"
 ;; - An alist of CSS properties: ((property . value) ...)
-;; - This is converted to a style attribute in the DOM
+;; - Both are converted to a style attribute string in the DOM
 
 ;;; Utility functions
 
@@ -47,9 +53,12 @@ Returns a string like \"property1: value1; property2: value2\"."
 Format 1: (tag :attr1 val1 :attr2 val2 child1 child2 ...)
 Format 2: (tag ((attr1 . val1) (attr2 . val2)) child1 child2 ...)
 
-Supports :css attribute for inline CSS rules:
-  (div :css ((background . \"red\") (padding . \"10px\")) ...)
-This is converted to:
+Supports :style attribute for inline CSS rules in two formats:
+  String format:
+    (div :style \"background: red; padding: 10px\" ...)
+  List format:
+    (div :style ((background . \"red\") (padding . \"10px\")) ...)
+Both are converted to:
   (div ((style . \"background: red; padding: 10px\")) ...)"
   (cond
    ;; If it's an atom (string, number, etc.), return as is
@@ -65,27 +74,13 @@ This is converted to:
             (push (car rest) attrs)
             (setq rest (cdr rest))))
         (setq attrs (nreverse attrs))
-        ;; Process :css attribute - convert to style
+        ;; Process :style attribute - handle both string and list formats
         (let* ((attr-alist (etaf-plist-to-alist attrs))
-               (css-attr (assq 'css attr-alist))
                (style-attr (assq 'style attr-alist)))
-          ;; If :css is present, merge it into style
-          (when css-attr
-            (let* ((css-rules (cdr css-attr))
-                   (css-string (etaf-css-alist-to-string css-rules))
-                   (existing-style (cdr style-attr)))
-              ;; Remove the css attribute from alist
-              (setq attr-alist (delq css-attr attr-alist))
-              ;; Update or add style attribute
-              (if style-attr
-                  ;; Append to existing style, ensuring proper semicolon handling
-                  (let ((trimmed-existing (string-trim-right existing-style "[ \t;]+")))
-                    (setcdr style-attr
-                            (if (string-empty-p trimmed-existing)
-                                css-string
-                              (concat trimmed-existing "; " css-string))))
-                ;; Add new style attribute
-                (push (cons 'style css-string) attr-alist))))
+          ;; If :style is present and is a list, convert it to string
+          (when (and style-attr (listp (cdr style-attr)) (not (stringp (cdr style-attr))))
+            (let ((style-string (etaf-css-alist-to-string (cdr style-attr))))
+              (setcdr style-attr style-string)))
           (let ((children (mapcar #'etaf-etml-to-dom rest)))
             (cons tag (cons attr-alist children))))))))
 

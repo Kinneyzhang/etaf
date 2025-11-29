@@ -119,7 +119,7 @@
 ;;; TML Integration Tests
 
 (ert-deftest etaf-ecss-test-etaf-ecss-props ()
-  "Test etaf-ecss-props for TML :css attribute."
+  "Test etaf-ecss-props for TML :style attribute (list format)."
   (let ((result (etaf-ecss-props '(background "red") '(padding 10))))
     (should (equal (cdr (assq 'background result)) "red"))
     (should (equal (cdr (assq 'padding result)) "10px"))))
