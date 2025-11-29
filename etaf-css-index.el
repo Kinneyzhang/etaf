@@ -130,8 +130,9 @@ NODE 是 DOM 节点。
       (when-let ((id-rules (gethash id by-id)))
         (setq candidates (append candidates id-rules))))
     
-    ;; 去重
-    (delete-dups candidates)))
+    ;; 去重 - 使用 eq 测试来按对象身份去重，而不是按内容去重
+    ;; 这对于内联样式很重要，因为不同节点可能有相同内容的样式规则
+    (cl-delete-duplicates candidates :test 'eq)))
 
 (provide 'etaf-css-index)
 ;;; etaf-css-index.el ends here
