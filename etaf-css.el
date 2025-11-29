@@ -152,11 +152,11 @@ DOM 是根 DOM 节点。
             ;; 媒体查询匹配，继续检查选择器
             (cond
              ;; 内联样式直接匹配节点
+             ;; 使用严格的节点身份比较 (eq)，避免不同节点因属性相同而错误匹配
+             ;; 这修复了当多个节点具有相同标签和属性时可能导致的样式混淆问题
              ((eq (plist-get rule :source) 'inline)
               (let ((rule-node (plist-get rule :node)))
-                (when (or (eq rule-node node)
-                          (and (eq (dom-tag rule-node) (dom-tag node))
-                               (equal (dom-attributes rule-node) (dom-attributes node))))
+                (when (eq rule-node node)
                   (push rule matching-rules))))
              ;; 外部样式通过选择器匹配
              ((eq (plist-get rule :source) 'style-tag)
