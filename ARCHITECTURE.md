@@ -73,7 +73,7 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
 1. TML (模板标记语言)
    (div :class "container" (p "Hello"))
         │
-        ▼ etaf-tml-to-dom
+        ▼ etaf-etml-to-dom
 2. DOM (文档对象模型)
    (div ((class . "container")) (p nil "Hello"))
         │
@@ -102,7 +102,7 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
 
 | 函数 | 功能 | 调用关系 |
 |------|------|----------|
-| `etaf-string` | 将 TML 转换为可渲染的字符串 | 调用: `etaf-tml-to-dom` → `etaf-css-build-cssom` → `etaf-render-build-tree` → `etaf-layout-build-tree` → `etaf-layout-to-string` |
+| `etaf-string` | 将 TML 转换为可渲染的字符串 | 调用: `etaf-etml-to-dom` → `etaf-css-build-cssom` → `etaf-render-build-tree` → `etaf-layout-build-tree` → `etaf-layout-to-string` |
 
 ---
 
@@ -124,8 +124,8 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
 
 | 函数 | 功能 | 调用关系 |
 |------|------|----------|
-| `etaf-plist-to-alist` | plist 转 alist | 被 `etaf-tml-to-dom` 调用 |
-| `etaf-tml-to-dom` | TML 递归转 DOM | 调用 `etaf-plist-to-alist`，递归调用自身 |
+| `etaf-plist-to-alist` | plist 转 alist | 被 `etaf-etml-to-dom` 调用 |
+| `etaf-etml-to-dom` | TML 递归转 DOM | 调用 `etaf-plist-to-alist`，递归调用自身 |
 
 ---
 
@@ -898,7 +898,7 @@ DOM + <style> 标签
 
 ```
 etaf-string (etaf.el)
-├── etaf-tml-to-dom (etaf-tml.el)
+├── etaf-etml-to-dom (etaf-tml.el)
 │   └── etaf-plist-to-alist
 │
 ├── etaf-css-build-cssom (etaf-css.el)

@@ -31,7 +31,7 @@
   
   ;; 1. 创建 TML 结构
   (let* ((simple-dom
-          (etaf-tml-to-dom
+          (etaf-etml-to-dom
            '(html
              (head
               (style "
@@ -72,8 +72,8 @@
          
          ;; 4. 构建布局树
          (simple-layout-tree (etaf-layout-build-tree 
-                             simple-render-tree 
-                             '(:width 1024 :height 768))))
+                              simple-render-tree 
+                              '(:width 1024 :height 768))))
     
     ;; 5. 打印布局树结构
     (message "布局树结构：\n%s\n" (etaf-layout-to-string simple-layout-tree))
@@ -81,39 +81,39 @@
     ;; 6. 遍历并打印每个元素的盒模型信息
     (message "\n元素盒模型详情：")
     (etaf-layout-walk simple-layout-tree
-      (lambda (node)
-        (let* ((tag (dom-tag node))
-               (box-model (etaf-layout-get-box-model node))
-               (position (etaf-layout-get-position node))
-               (content (plist-get box-model :content))
-               (padding (plist-get box-model :padding))
-               (border (plist-get box-model :border))
-               (margin (plist-get box-model :margin)))
-          (message "\n<%s>:" tag)
-          (message "  位置: (%d, %d)" 
-                   (plist-get position :x) 
-                   (plist-get position :y))
-          (message "  内容: %dx%d" 
-                   (plist-get content :width) 
-                   (plist-get content :height))
-          (message "  内边距: %d %d %d %d" 
-                   (plist-get padding :top)
-                   (plist-get padding :right)
-                   (plist-get padding :bottom)
-                   (plist-get padding :left))
-          (message "  边框: %d %d %d %d" 
-                   (plist-get border :top-width)
-                   (plist-get border :right-width)
-                   (plist-get border :bottom-width)
-                   (plist-get border :left-width))
-          (message "  外边距: %d %d %d %d" 
-                   (plist-get margin :top)
-                   (plist-get margin :right)
-                   (plist-get margin :bottom)
-                   (plist-get margin :left))
-          (message "  总尺寸: %dx%d"
-                   (etaf-box-model-total-width box-model)
-                   (etaf-box-model-total-height box-model)))))))
+                      (lambda (node)
+                        (let* ((tag (dom-tag node))
+                               (box-model (etaf-layout-get-box-model node))
+                               (position (etaf-layout-get-position node))
+                               (content (plist-get box-model :content))
+                               (padding (plist-get box-model :padding))
+                               (border (plist-get box-model :border))
+                               (margin (plist-get box-model :margin)))
+                          (message "\n<%s>:" tag)
+                          (message "  位置: (%d, %d)" 
+                                   (plist-get position :x) 
+                                   (plist-get position :y))
+                          (message "  内容: %dx%d" 
+                                   (plist-get content :width) 
+                                   (plist-get content :height))
+                          (message "  内边距: %d %d %d %d" 
+                                   (plist-get padding :top)
+                                   (plist-get padding :right)
+                                   (plist-get padding :bottom)
+                                   (plist-get padding :left))
+                          (message "  边框: %d %d %d %d" 
+                                   (plist-get border :top-width)
+                                   (plist-get border :right-width)
+                                   (plist-get border :bottom-width)
+                                   (plist-get border :left-width))
+                          (message "  外边距: %d %d %d %d" 
+                                   (plist-get margin :top)
+                                   (plist-get margin :right)
+                                   (plist-get margin :bottom)
+                                   (plist-get margin :left))
+                          (message "  总尺寸: %dx%d"
+                                   (etaf-box-model-total-width box-model)
+                                   (etaf-box-model-total-height box-model)))))))
 
 ;;; 示例 2: 复杂的页面布局
 
@@ -124,7 +124,7 @@
   
   ;; 1. 创建复杂的 TML 结构
   (let* ((complex-dom
-          (etaf-tml-to-dom
+          (etaf-etml-to-dom
            '(html
              (head
               (style "

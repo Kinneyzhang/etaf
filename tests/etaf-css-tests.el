@@ -54,7 +54,7 @@
 ;;; 测试内联样式提取
 
 (setq etaf-css-tests-dom-with-inline
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(div :style "color: red; font-size: 14px;"
              (p :style "margin:10px;" "Text")
              (span "No style"))))
@@ -70,7 +70,7 @@
 ;;; 测试 style 标签提取
 
 (setq etaf-css-tests-dom-with-style-tag
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
          (head
           (style "div { color: blue; } .test { margin: 5px; }"))
@@ -87,14 +87,14 @@
 ;;; 测试 CSSOM 构建
 
 (setq etaf-css-tests-dom-full
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
-          (head
-            (style "div { color: blue; font-weight: bold; } .highlight { background: yellow; }"))
-          (body
-            (div :class "container" :style "padding: 20px;"
-              (div :class "highlight" "Highlighted text")
-              (p "Normal paragraph"))))))
+         (head
+          (style "div { color: blue; font-weight: bold; } .highlight { background: yellow; }"))
+         (body
+          (div :class "container" :style "padding: 20px;"
+               (div :class "highlight" "Highlighted text")
+               (p "Normal paragraph"))))))
 
 (should
  (let ((cssom (etaf-css-build-cssom etaf-css-tests-dom-full)))
@@ -114,9 +114,9 @@
 ;;; 测试计算样式
 
 (should
- (let* ((test-dom (etaf-tml-to-dom
+ (let* ((test-dom (etaf-etml-to-dom
                    '(div :style "color: red; font-size: 14px;"
-                      (p "Text"))))
+                         (p "Text"))))
         (cssom (etaf-css-build-cssom test-dom))
         (computed (etaf-css-get-computed-style cssom test-dom test-dom)))
    (and (assq 'color computed)
@@ -127,7 +127,7 @@
 ;;; 测试样式层叠（内联样式覆盖外部样式）
 
 (setq etaf-css-tests-dom-cascade
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
          (head
           (style "div { color: blue; font-size: 12px; }"))
@@ -145,7 +145,7 @@
 ;;; 测试 CSSOM 转字符串
 
 (should
- (let* ((test-dom (etaf-tml-to-dom
+ (let* ((test-dom (etaf-etml-to-dom
                    '(div :style "color: red;" "Text")))
         (cssom (etaf-css-build-cssom test-dom))
         (css-string (etaf-css-cssom-to-string cssom)))
@@ -155,7 +155,7 @@
 
 ;; 测试后代选择器
 (setq etaf-css-tests-dom-combinators
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(div :id "parent"
              (div :id "child-1" "Child 1"
                   (span :id "grandchild" "Grandchild"))

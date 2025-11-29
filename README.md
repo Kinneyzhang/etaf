@@ -79,7 +79,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ;; 1. 从 TML 创建 DOM
 (setq my-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
           (head
             (style "
@@ -166,7 +166,7 @@ ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `
 ;;      (ul (li "Apple") (li "Banana") (li "Cherry")))
 
 ;; 转换为 DOM
-(setq my-dom (etaf-tml-to-dom rendered))
+(setq my-dom (etaf-etml-to-dom rendered))
 ```
 
 #### 支持的模板指令
@@ -221,7 +221,7 @@ Tailwind CSS 类名现在可以直接在 TML 中使用，会被自动解析到 C
 (require 'etaf)
 
 ;; 直接在 TML 中使用 Tailwind 类
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(div :class "flex items-center justify-between bg-white rounded-lg shadow-md p-4"
               (h1 :class "text-lg font-bold text-gray-900" "Title")
               (button :class "bg-blue-500 text-white px-4 py-2 rounded" "Click me"))))
@@ -255,13 +255,13 @@ Tailwind CSS 类名现在可以直接在 TML 中使用，会被自动解析到 C
 
 ```elisp
 ;; 使用 :css 属性设置样式（alist 格式）
-(etaf-tml-to-dom
+(etaf-etml-to-dom
   '(div :css ((background . "red") (padding . "10px"))
      "Hello"))
 ;; => (div ((style . "background: red; padding: 10px")) "Hello")
 
 ;; :css 可以与 :style 一起使用，会合并
-(etaf-tml-to-dom
+(etaf-etml-to-dom
   '(div :style "color: blue" :css ((margin . "5px"))
      "Test"))
 ;; => (div ((style . "color: blue; margin: 5px")) "Test")

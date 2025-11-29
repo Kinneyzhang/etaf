@@ -54,12 +54,12 @@
 
 ;; 测试特异性覆盖
 (setq etaf-css-specificity-tests-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
-          (head
-            (style "div { color: blue; } #test { color: green; } .button { color: yellow; }"))
-          (body
-            (div :id "test" :class "button" "Text")))))
+         (head
+          (style "div { color: blue; } #test { color: green; } .button { color: yellow; }"))
+         (body
+          (div :id "test" :class "button" "Text")))))
 
 (should
  (let* ((cssom (etaf-css-build-cssom etaf-css-specificity-tests-dom))
@@ -70,12 +70,12 @@
 
 ;; 测试内联样式优先级最高
 (setq etaf-css-inline-priority-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
-          (head
-            (style "#test { color: blue; }"))
-          (body
-            (div :id "test" :style "color: red;" "Text")))))
+         (head
+          (style "#test { color: blue; }"))
+         (body
+          (div :id "test" :style "color: red;" "Text")))))
 
 (should
  (let* ((cssom (etaf-css-build-cssom etaf-css-inline-priority-dom))

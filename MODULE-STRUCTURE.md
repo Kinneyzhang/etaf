@@ -25,7 +25,7 @@ This document describes the modular architecture of the ETAF (Emacs Template and
 - **Purpose**: TML (Template Markup Language) to DOM conversion
 - **Dependencies**: (none)
 - **Public Interface**:
-  - `etaf-tml-to-dom (sexp)` - Convert TML s-expression to DOM format
+  - `etaf-etml-to-dom (sexp)` - Convert TML s-expression to DOM format
   - `etaf-plist-to-alist (plist)` - Convert property list to association list
 - **Usage**: Convert markup from TML format `(tag :attr val child...)` to DOM format `(tag ((attr . val)) child...)`
 
@@ -233,7 +233,7 @@ etaf-ert.el
 ```elisp
 (require 'etaf-tml)
 
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(div :class "container"
                 (h1 :id "title" "Hello World")
                 (p "This is a paragraph."))))
@@ -247,7 +247,7 @@ etaf-ert.el
 (require 'etaf-css)
 
 ;; Create DOM with styles
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(html
               (head
                 (style ".button { color: red; font-size: 14px; }"))

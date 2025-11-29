@@ -113,7 +113,7 @@
 ;;; 测试带 @media 的 CSSOM 构建
 
 (setq test-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
          (head
           (style "

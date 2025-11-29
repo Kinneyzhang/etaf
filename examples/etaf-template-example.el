@@ -157,31 +157,31 @@
   
   (let* ((template
           '(div :class "app"
-             (header
-              (h1 "{{ title }}")
-              (nav :v-if "navItems"
-                   (ul
-                    (li :v-for "item in navItems"
-                        (a :href "{{ item.url }}" "{{ item.name }}")))))
-             (main
-              (section :v-if "articles"
-                       (article :v-for "article in articles"
-                                :class "article"
-                                (h2 "{{ article.title }}")
-                                (p "{{ article.summary }}")))
-              (section :v-else
-                       (p "No articles available")))
-             (footer
-              (p :v-show "showFooter" "© 2024 {{ siteName }}"))))
+                (header
+                 (h1 "{{ title }}")
+                 (nav :v-if "navItems"
+                      (ul
+                       (li :v-for "item in navItems"
+                           (a :href "{{ item.url }}" "{{ item.name }}")))))
+                (main
+                 (section :v-if "articles"
+                          (article :v-for "article in articles"
+                                   :class "article"
+                                   (h2 "{{ article.title }}")
+                                   (p "{{ article.summary }}")))
+                 (section :v-else
+                          (p "No articles available")))
+                (footer
+                 (p :v-show "showFooter" "© 2024 {{ siteName }}"))))
          
          (data '(:title "My Blog"
-                 :navItems ((:name "Home" :url "/")
-                            (:name "About" :url "/about")
-                            (:name "Contact" :url "/contact"))
-                 :articles ((:title "First Post" :summary "This is the first post")
-                            (:title "Second Post" :summary "Another great post"))
-                 :showFooter t
-                 :siteName "ETAF Blog"))
+                        :navItems ((:name "Home" :url "/")
+                                   (:name "About" :url "/about")
+                                   (:name "Contact" :url "/contact"))
+                        :articles ((:title "First Post" :summary "This is the first post")
+                                   (:title "Second Post" :summary "Another great post"))
+                        :showFooter t
+                        :siteName "ETAF Blog"))
          
          (result (etaf-template-render template data)))
     
@@ -189,7 +189,7 @@
     (message "%S\n" result)
     
     ;; Also convert to DOM format
-    (let ((dom (etaf-tml-to-dom result)))
+    (let ((dom (etaf-etml-to-dom result)))
       (message "As DOM:")
       (message "%S" dom))))
 

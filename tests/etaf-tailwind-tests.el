@@ -263,9 +263,9 @@ p-4 被展开为 padding-top/right/bottom/left。"
 Emacs特有：padding使用px（水平）和lh（垂直）。"
   (require 'etaf-tml)
   (require 'etaf-css)
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(div :class "flex bg-red-500 p-4"
-                  (span :class "text-lg" "Hello"))))
+                     (span :class "text-lg" "Hello"))))
          (cssom (etaf-css-build-cssom dom))
          (div-style (etaf-css-get-computed-style cssom dom dom)))
     ;; 验证 div 的 Tailwind 样式被正确解析
@@ -281,9 +281,9 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
 这是修复 border-1 border-red-500 问题的关键测试。"
   (require 'etaf-tml)
   (require 'etaf-css)
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(div :class "border-1 border-red-500"
-                  "test content")))
+                     "test content")))
          (cssom (etaf-css-build-cssom dom))
          (div-style (etaf-css-get-computed-style cssom dom dom)))
     ;; 验证 border-width 被正确展开为各方向的 border-*-width
@@ -302,9 +302,9 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
   (require 'etaf-tml)
   (require 'etaf-css)
   (require 'etaf-render)
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(div :class "flex items-center justify-center"
-                  (span :class "text-lg font-bold" "Title"))))
+                     (span :class "text-lg font-bold" "Title"))))
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom)))
     ;; 验证渲染树包含正确的 Tailwind 样式

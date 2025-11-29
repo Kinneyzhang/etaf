@@ -24,7 +24,7 @@
 
 ;; 创建一个同时包含内联样式和 <style> 标签的 DOM
 (setq example-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
          (head
           (style "
@@ -56,7 +56,7 @@
 
 ;; 创建一个展示层叠规则的 DOM
 (setq cascade-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
          (head
           (style "
@@ -78,9 +78,9 @@
 
 ;; 创建带继承的 DOM
 (setq inherit-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(div :style "color: red; font-size: 14px;"
-         (p "这个段落继承了父元素的 color 和 font-size"))))
+             (p "这个段落继承了父元素的 color 和 font-size"))))
 
 (setq inherit-cssom (etaf-css-build-cssom inherit-dom))
 (setq p-node (dom-by-tag inherit-dom 'p))
@@ -97,7 +97,7 @@
 
 ;; 创建带媒体查询的 DOM
 (setq media-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
          (head
           (style "

@@ -24,7 +24,7 @@
   
   ;; 1. 创建 TML 结构 - 注意：不指定固定高度，让内容自动确定高度
   (let* ((simple-dom
-          (etaf-tml-to-dom
+          (etaf-etml-to-dom
            '(html
              (head
               (style "
@@ -52,8 +52,8 @@
          
          ;; 4. 构建布局树
          (simple-layout-tree (etaf-layout-build-tree 
-                             simple-render-tree 
-                             '(:width 1024 :height 768)))
+                              simple-render-tree 
+                              '(:width 1024 :height 768)))
          
          ;; 5. 生成 buffer 字符串
          (buffer-string (etaf-layout-to-string simple-layout-tree)))
@@ -84,7 +84,7 @@
   
   ;; 1. 创建嵌套的 TML 结构
   (let* ((nested-dom
-          (etaf-tml-to-dom
+          (etaf-etml-to-dom
            '(html
              (head
               (style "
@@ -129,8 +129,8 @@
          
          ;; 4. 构建布局树
          (nested-layout-tree (etaf-layout-build-tree 
-                             nested-render-tree 
-                             '(:width 1024 :height 768)))
+                              nested-render-tree 
+                              '(:width 1024 :height 768)))
          
          ;; 5. 生成 buffer 字符串
          (buffer-string (etaf-layout-to-string nested-layout-tree)))
@@ -158,7 +158,7 @@
   (message "\n\n=== 坐标方式 vs 字符串拼接方式 ===\n")
   
   ;; 创建相同的布局
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "

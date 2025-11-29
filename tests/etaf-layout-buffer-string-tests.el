@@ -15,7 +15,7 @@
 
 (ert-deftest etaf-layout-test-simple-buffer-string ()
   "测试简单布局转换为 buffer 字符串，验证包含文本内容。"
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -38,7 +38,7 @@
 
 (ert-deftest etaf-layout-test-buffer-string-with-margins ()
   "测试带 margin 的布局转换为 buffer 字符串，验证包含文本内容。"
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -59,7 +59,7 @@
 
 (ert-deftest etaf-layout-test-nested-buffer-string ()
   "测试嵌套布局转换为 buffer 字符串，验证所有文本内容都被渲染。"
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -86,7 +86,7 @@
 
 (ert-deftest etaf-layout-test-buffer-string-with-padding-border ()
   "测试带 padding 和 border 的布局转换为 buffer 字符串，验证文本正确显示。"
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -115,7 +115,7 @@
 
 (ert-deftest etaf-layout-test-inline-elements-same-line ()
   "测试 inline 元素（如 span）应该渲染在同一行。"
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(div
                  (div :class "box"
                       (span "First Span") (span "Second Span")))))
@@ -137,7 +137,7 @@
 
 (ert-deftest etaf-layout-test-inline-style-border-top ()
   "测试内联样式 border-top-width 应该正确应用到盒模型。"
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(div :style "border-top-width: 5px; border-bottom-width: 3px;"
                      "Content with top/bottom border")))
          (cssom (etaf-css-build-cssom dom))
@@ -155,7 +155,7 @@
 
 (ert-deftest etaf-layout-test-mixed-inline-block-elements ()
   "测试混合的 inline 和 block 元素布局。"
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "div { display: block; } span { display: inline; }"))

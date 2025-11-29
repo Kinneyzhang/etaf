@@ -69,7 +69,7 @@ CSS 属性继承：
 ;; => ((color "red" t) (font-size "14px" nil))
 
 ;; 在层叠中，!important 声明优先级最高
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(html
              (head (style "div { color: blue !important; }"))
              (body (div :style "color: red;" "Text")))))
@@ -88,7 +88,7 @@ CSS 属性继承：
 
 ```elisp
 ;; 示例：多个规则的层叠
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(html
              (head (style "
                  div { color: green; }
@@ -106,7 +106,7 @@ CSS 属性继承：
 某些 CSS 属性（如 color, font-family）会自动从父元素继承：
 
 ```elisp
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(div :style "color: red; font-size: 14px;"
              (p "继承的文本"))))
 (setq cssom (etaf-css-build-cssom dom))
@@ -155,7 +155,7 @@ CSS 属性继承：
 
 ```elisp
 ;; 创建带媒体查询的 DOM
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(html
              (head (style "
                .header { padding: 10px; }

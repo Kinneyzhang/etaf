@@ -292,7 +292,7 @@ CSS-STRING 是 CSS 样式表字符串，如 \".box { border: 1px solid red; }\"�
 返回更新后的 CSSOM。
 
 使用示例：
-  (let* ((dom (etaf-tml-to-dom '(div :class \"box\" \"hello\")))
+  (let* ((dom (etaf-etml-to-dom '(div :class \"box\" \"hello\")))
          (cssom (etaf-css-build-cssom dom))
          (cssom (etaf-css-add-stylesheet cssom \".box { color: red; }\")))
     ;; 现在 .box 元素会有红色文字

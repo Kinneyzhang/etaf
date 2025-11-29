@@ -61,7 +61,7 @@
   "Test that CSS height property is respected when rendering box height.
 When a CSS height is specified, the rendered box should have that height,
 not the natural height of the content."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "div { width: 200px; height: 5; }"))
@@ -79,7 +79,7 @@ not the natural height of the content."
 (ert-deftest etaf-layout-test-css-height-string-rendering ()
   "Test that rendered string respects the CSS height property.
 When CSS height is 3 lines, the rendered string should have 3 lines."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "div { width: 200px; height: 3; }"))

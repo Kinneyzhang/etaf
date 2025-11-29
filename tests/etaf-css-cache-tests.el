@@ -52,7 +52,7 @@
 ;;; 测试 CSSOM 缓存集成
 
 (should
- (let* ((test-dom (etaf-tml-to-dom
+ (let* ((test-dom (etaf-etml-to-dom
                    '(div :style "color: red;" "Text")))
         (cssom (etaf-css-build-cssom test-dom)))
    (hash-table-p (plist-get cssom :cache))))
@@ -60,7 +60,7 @@
 ;;; 测试计算样式缓存命中
 
 (should
- (let* ((test-dom (etaf-tml-to-dom
+ (let* ((test-dom (etaf-etml-to-dom
                    '(div :style "color: red;" "Text")))
         (cssom (etaf-css-build-cssom test-dom))
         (cache (plist-get cssom :cache)))
