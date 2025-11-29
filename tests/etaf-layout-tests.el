@@ -312,7 +312,7 @@ This tests the bug fix where string children were not included in height calcula
          (outer-box (etaf-layout-get-box-model outer-div))
          (inner-div (car (dom-non-text-children outer-div)))
          (inner-box (etaf-layout-get-box-model inner-div)))
-    
+
     ;; Inner div should have height 4 (4 lines of text)
     (should-equal (etaf-layout-box-content-height inner-box) 4)
     ;; Outer div should also have height 4 (matches its only child)
