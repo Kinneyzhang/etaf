@@ -77,8 +77,8 @@ Both are converted to:
         ;; Process :style attribute - handle both string and list formats
         (let* ((attr-alist (etaf-plist-to-alist attrs))
                (style-attr (assq 'style attr-alist)))
-          ;; If :style is present and is a list, convert it to string
-          (when (and style-attr (listp (cdr style-attr)) (not (stringp (cdr style-attr))))
+          ;; If :style is present and is a list (alist), convert it to string
+          (when (and style-attr (listp (cdr style-attr)))
             (let ((style-string (etaf-css-alist-to-string (cdr style-attr))))
               (setcdr style-attr style-string)))
           (let ((children (mapcar #'etaf-etml-to-dom rest)))
