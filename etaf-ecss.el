@@ -26,27 +26,27 @@
 ;; Basic Usage:
 ;;
 ;;   ;; Convert a single rule to CSS string
-;;   (ecss ".box" 
+;;   (etaf-ecss ".box" 
 ;;     (background "red")
 ;;     (padding 10)
 ;;     (border 1 'solid "black"))
 ;;   ;; => ".box { background: red; padding: 10px; border: 1px solid black; }"
 ;;
 ;;   ;; Build a stylesheet from multiple rules
-;;   (ecss-stylesheet
+;;   (etaf-ecss-stylesheet
 ;;     (".container" (width 800) (margin 0 'auto))
 ;;     (".box" (background "blue") (padding 10)))
 ;;   ;; => ".container { width: 800px; margin: 0 auto; }\n.box { ... }"
 ;;
 ;; Selector Expressions:
 ;;
-;;   (ecss-selector tag)         ; "tag"
-;;   (ecss-selector (class "box")) ; ".box"
-;;   (ecss-selector (id "main"))   ; "#main"
-;;   (ecss-selector (tag "div"))   ; "div"
-;;   (ecss-selector (child "ul" "li")) ; "ul > li"
-;;   (ecss-selector (descendant "nav" "a")) ; "nav a"
-;;   (ecss-selector (and (tag "div") (class "box"))) ; "div.box"
+;;   (etaf-ecss-selector tag)         ; "tag"
+;;   (etaf-ecss-selector (class "box")) ; ".box"
+;;   (etaf-ecss-selector (id "main"))   ; "#main"
+;;   (etaf-ecss-selector (tag "div"))   ; "div"
+;;   (etaf-ecss-selector (child "ul" "li")) ; "ul > li"
+;;   (etaf-ecss-selector (descendant "nav" "a")) ; "nav a"
+;;   (etaf-ecss-selector (and (tag "div") (class "box"))) ; "div.box"
 ;;
 ;; Property Expressions:
 ;;
@@ -65,7 +65,7 @@
 
 ;;; CSS Selector Expressions
 
-(defun ecss-selector (expr)
+(defun etaf-ecss-selector (expr)
   "Convert selector expression EXPR to CSS selector string.
 
 EXPR can be:
@@ -88,16 +88,16 @@ EXPR can be:
   - (not sel)            => \":not(sel)\"
 
 Examples:
-  (ecss-selector 'div)
+  (etaf-ecss-selector 'div)
   ;; => \"div\"
 
-  (ecss-selector '(class \"container\"))
+  (etaf-ecss-selector '(class \"container\"))
   ;; => \".container\"
 
-  (ecss-selector '(and (tag \"div\") (class \"box\")))
+  (etaf-ecss-selector '(and (tag \"div\") (class \"box\")))
   ;; => \"div.box\"
 
-  (ecss-selector '(descendant \"nav\" (class \"link\")))
+  (etaf-ecss-selector '(descendant \"nav\" (class \"link\")))
   ;; => \"nav .link\""
   (cond
    ;; String - use as-is
@@ -112,13 +112,13 @@ Examples:
           (args (cdr expr)))
       (pcase type
         ;; Class selector
-        ('class (concat "." (ecss--to-string (car args))))
+        ('class (concat "." (etaf-ecss--to-string (car args))))
         
         ;; ID selector
-        ('id (concat "#" (ecss--to-string (car args))))
+        ('id (concat "#" (etaf-ecss--to-string (car args))))
         
         ;; Tag selector
-        ('tag (ecss--to-string (car args)))
+        ('tag (etaf-ecss--to-string (car args)))
         
         ;; Universal selector
         ('any "*")
@@ -131,39 +131,39 @@ Examples:
         
         ;; Child combinator
         ('child
-         (mapconcat #'ecss-selector args " > "))
+         (mapconcat #'etaf-ecss-selector args " > "))
         
         ;; Descendant combinator
         ('descendant
-         (mapconcat #'ecss-selector args " "))
+         (mapconcat #'etaf-ecss-selector args " "))
         
         ;; Adjacent sibling
         ('sibling
-         (mapconcat #'ecss-selector args " + "))
+         (mapconcat #'etaf-ecss-selector args " + "))
         
         ;; General sibling
         ('general-sibling
-         (mapconcat #'ecss-selector args " ~ "))
+         (mapconcat #'etaf-ecss-selector args " ~ "))
         
         ;; Combine selectors (AND)
         ('and
-         (mapconcat #'ecss-selector args ""))
+         (mapconcat #'etaf-ecss-selector args ""))
         
         ;; Group selectors (OR)
         ('or
-         (mapconcat #'ecss-selector args ", "))
+         (mapconcat #'etaf-ecss-selector args ", "))
         
         ;; Pseudo-class
         ('pseudo
-         (concat ":" (ecss--to-string (car args))))
+         (concat ":" (etaf-ecss--to-string (car args))))
         
         ;; Pseudo-element
         ('pseudo-element
-         (concat "::" (ecss--to-string (car args))))
+         (concat "::" (etaf-ecss--to-string (car args))))
         
         ;; Negation
         ('not
-         (format ":not(%s)" (ecss-selector (car args))))
+         (format ":not(%s)" (etaf-ecss-selector (car args))))
         
         ;; First/last child shortcuts
         ('first-child ":first-child")
@@ -173,14 +173,14 @@ Examples:
         
         ;; Unknown - treat first element as tag
         (_
-         (ecss-selector (symbol-name type))))))
+         (etaf-ecss-selector (symbol-name type))))))
    
    ;; Unknown type
    (t (format "%s" expr))))
 
 ;;; CSS Property Expressions
 
-(defun ecss--to-string (val)
+(defun etaf-ecss--to-string (val)
   "Convert VAL to string for CSS."
   (cond
    ((stringp val) val)
@@ -190,12 +190,12 @@ Examples:
 
 ;; Regex pattern for simple numeric values (integer or decimal)
 ;; Note: Does not handle scientific notation (e.g., '1e5') as CSS rarely uses it
-(defconst ecss--numeric-pattern "^-?[0-9]+\\(\\.[0-9]+\\)?$"
+(defconst etaf-ecss--numeric-pattern "^-?[0-9]+\\(\\.[0-9]+\\)?$"
   "Regex pattern for simple CSS numeric values.
 This matches integers and decimals but not scientific notation,
 which is acceptable as CSS properties rarely use scientific notation.")
 
-(defun ecss--value-with-unit (val &optional default-unit)
+(defun etaf-ecss--value-with-unit (val &optional default-unit)
   "Convert VAL to CSS value, adding DEFAULT-UNIT if numeric.
 DEFAULT-UNIT defaults to \"px\".
 
@@ -213,7 +213,7 @@ the common CSS minification practice."
      ((symbolp val) (symbol-name val))
      ;; String - check if it needs unit
      ((stringp val)
-      (if (string-match-p ecss--numeric-pattern val)
+      (if (string-match-p etaf-ecss--numeric-pattern val)
           (if (string= val "0")
               "0"
             (concat val unit))
@@ -221,7 +221,7 @@ the common CSS minification practice."
      ;; Default
      (t (format "%s" val)))))
 
-(defun ecss-property (prop &rest values)
+(defun etaf-ecss-property (prop &rest values)
   "Convert property expression to \"property: value\" string.
 
 PROP is the property name (symbol or string).
@@ -233,25 +233,25 @@ Special handling:
 - Certain properties have special value handling
 
 Examples:
-  (ecss-property 'background \"red\")
+  (etaf-ecss-property 'background \"red\")
   ;; => \"background: red\"
 
-  (ecss-property 'padding 10 20)
+  (etaf-ecss-property 'padding 10 20)
   ;; => \"padding: 10px 20px\"
 
-  (ecss-property 'margin 0 'auto)
+  (etaf-ecss-property 'margin 0 'auto)
   ;; => \"margin: 0 auto\""
-  (let* ((prop-name (ecss--to-string prop))
+  (let* ((prop-name (etaf-ecss--to-string prop))
          (prop-symbol (if (symbolp prop) prop (intern prop-name)))
          ;; Determine the default unit based on property type
-         (default-unit (ecss--property-default-unit prop-symbol))
+         (default-unit (etaf-ecss--property-default-unit prop-symbol))
          (value-str (mapconcat
                      (lambda (v)
-                       (ecss--value-with-unit v default-unit))
+                       (etaf-ecss--value-with-unit v default-unit))
                      values " ")))
     (format "%s: %s" prop-name value-str)))
 
-(defun ecss--property-default-unit (prop)
+(defun etaf-ecss--property-default-unit (prop)
   "Get default unit for property PROP.
 Returns \"px\" for most properties, \"lh\" for vertical spacing in Emacs."
   ;; For Emacs compatibility, we use:
@@ -272,7 +272,7 @@ Returns \"px\" for most properties, \"lh\" for vertical spacing in Emacs."
    ;; Default to px
    (t "px")))
 
-(defun ecss-declaration-block (&rest declarations)
+(defun etaf-ecss-declaration-block (&rest declarations)
   "Convert list of DECLARATIONS to CSS declaration block string.
 
 Each declaration is either:
@@ -282,7 +282,7 @@ Each declaration is either:
 Returns string like \"{ property1: value1; property2: value2; }\"
 
 Example:
-  (ecss-declaration-block
+  (etaf-ecss-declaration-block
     '(background \"red\")
     '(padding 10 20)
     '(margin 0 auto))
@@ -292,43 +292,43 @@ Example:
                    (if (consp decl)
                        (if (listp (cdr decl))
                            ;; List: (prop val1 val2 ...)
-                           (apply #'ecss-property decl)
+                           (apply #'etaf-ecss-property decl)
                          ;; Cons: (prop . val)
-                         (ecss-property (car decl) (cdr decl)))
+                         (etaf-ecss-property (car decl) (cdr decl)))
                      decl))
                  declarations)))
     (format "{ %s; }" (mapconcat #'identity decl-strings "; "))))
 
 ;;; CSS Rule and Stylesheet
 
-(defun ecss (selector &rest declarations)
+(defun etaf-ecss (selector &rest declarations)
   "Create a CSS rule with SELECTOR and DECLARATIONS.
 
 SELECTOR can be a string or selector expression.
 DECLARATIONS are property expressions.
 
 Example:
-  (ecss \".box\"
+  (etaf-ecss \".box\"
     '(background \"red\")
     '(padding 10)
     '(border 1 solid \"black\"))
   ;; => \".box { background: red; padding: 10px; border: 1px solid black; }\"
 
-  (ecss '(and (tag \"div\") (class \"container\"))
+  (etaf-ecss '(and (tag \"div\") (class \"container\"))
     '(width 800)
     '(margin 0 auto))
   ;; => \"div.container { width: 800px; margin: 0 auto; }\""
-  (let ((sel-str (ecss-selector selector))
-        (decl-block (apply #'ecss-declaration-block declarations)))
+  (let ((sel-str (etaf-ecss-selector selector))
+        (decl-block (apply #'etaf-ecss-declaration-block declarations)))
     (format "%s %s" sel-str decl-block)))
 
-(defun ecss-stylesheet (&rest rules)
+(defun etaf-ecss-stylesheet (&rest rules)
   "Create a stylesheet from multiple RULES.
 
 Each rule is a list: (selector declarations ...)
 
 Example:
-  (ecss-stylesheet
+  (etaf-ecss-stylesheet
     '(\".container\" (width 800) (margin 0 auto))
     '(\".box\" (background \"blue\") (padding 10))
     '((descendant \"nav\" \"a\") (color \"white\")))
@@ -339,29 +339,29 @@ Example:
    (lambda (rule)
      (let ((selector (car rule))
            (declarations (cdr rule)))
-       (apply #'ecss selector declarations)))
+       (apply #'etaf-ecss selector declarations)))
    rules "\n"))
 
 ;;; Macros for more convenient usage
 
-(defmacro ecss-rule (selector &rest body)
+(defmacro etaf-ecss-rule (selector &rest body)
   "Create CSS rule with SELECTOR and property declarations in BODY.
 
 This macro allows a cleaner syntax without explicit quoting:
 
-  (ecss-rule \".box\"
+  (etaf-ecss-rule \".box\"
     (background \"red\")
     (padding 10 20))
 
 Expands to:
-  (ecss \".box\" '(background \"red\") '(padding 10 20))"
-  `(ecss ,selector
+  (etaf-ecss \".box\" '(background \"red\") '(padding 10 20))"
+  `(etaf-ecss ,selector
          ,@(mapcar (lambda (decl) `',decl) body)))
 
-(defmacro ecss-rules (&rest rules)
+(defmacro etaf-ecss-rules (&rest rules)
   "Create multiple CSS rules.
 
-  (ecss-rules
+  (etaf-ecss-rules
     (\".container\"
       (width 800)
       (margin 0 auto))
@@ -369,19 +369,19 @@ Expands to:
       (background \"blue\")))
 
 Returns the combined CSS string."
-  `(ecss-stylesheet
+  `(etaf-ecss-stylesheet
     ,@(mapcar (lambda (rule)
                 `'(,(car rule) ,@(cdr rule)))
               rules)))
 
 ;;; Convenience property functions
 
-(defun ecss-props (&rest props)
+(defun etaf-ecss-props (&rest props)
   "Convert property expressions to CSS declarations alist.
 PROPS are pairs of (property value ...).
 
 Useful for :css attribute in TML:
-  (div :css (ecss-props (background \"red\") (padding 10))
+  (div :css (etaf-ecss-props (background \"red\") (padding 10))
     \"content\")
 
 Returns: ((background . \"red\") (padding . \"10px\"))"
@@ -389,29 +389,29 @@ Returns: ((background . \"red\") (padding . \"10px\"))"
     (dolist (prop props)
       (let* ((name (car prop))
              (values (cdr prop))
-             (name-str (ecss--to-string name))
-             (default-unit (ecss--property-default-unit
+             (name-str (etaf-ecss--to-string name))
+             (default-unit (etaf-ecss--property-default-unit
                            (if (symbolp name) name (intern name-str))))
              (value-str (mapconcat
-                        (lambda (v) (ecss--value-with-unit v default-unit))
+                        (lambda (v) (etaf-ecss--value-with-unit v default-unit))
                         values " ")))
         (push (cons (intern name-str) value-str) result)))
     (nreverse result)))
 
 ;;; Integration with TML
 
-(defun ecss-style (&rest declarations)
+(defun etaf-ecss-style (&rest declarations)
   "Create style string from DECLARATIONS.
 Convenient for :style attribute in TML.
 
 Example:
-  (div :style (ecss-style (color \"red\") (padding 10))
+  (div :style (etaf-ecss-style (color \"red\") (padding 10))
     \"Hello\")
   
 Returns: \"color: red; padding: 10px\""
   (mapconcat
    (lambda (decl)
-     (apply #'ecss-property decl))
+     (apply #'etaf-ecss-property decl))
    declarations "; "))
 
 (provide 'etaf-ecss)
