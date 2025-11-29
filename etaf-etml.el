@@ -193,8 +193,8 @@ EXPR can be:
 
 ;;; Directive Parsing
 
-(defun etaf-etml--parse-v-for (expr)
-  "Parse v-for expression EXPR.
+(defun etaf-etml--parse-e-for (expr)
+  "Parse e-for expression EXPR.
 Returns (ITEM-VAR . COLLECTION-EXPR) or (ITEM-VAR INDEX-VAR . COLLECTION-EXPR).
 Supports:
 - \"item in items\"
@@ -212,7 +212,7 @@ Supports:
           nil
           (string-trim (match-string 2 expr))))
    
-   (t (error "Invalid v-for expression: %s" expr))))
+   (t (error "Invalid e-for expression: %s" expr))))
 
 (defun etaf-etml--truthy-p (value)
   "Check if VALUE is truthy (non-nil and non-empty)."
@@ -230,21 +230,18 @@ Supports:
   "Get attribute KEY from ATTRS (plist format)."
   (plist-get attrs key))
 
-(defun etaf-etml--get-directive (attrs e-key v-key)
-  "Get directive from ATTRS checking both E-KEY (preferred) and V-KEY (backward compat).
-Returns the value of the first matching key found."
-  (or (plist-get attrs e-key)
-      (plist-get attrs v-key)))
+(defun etaf-etml--get-directive (attrs e-key)
+  "Get directive E-KEY from ATTRS.
+Returns the value of the key if found."
+  (plist-get attrs e-key))
 
-(defun etaf-etml--has-directive-p (attrs e-key v-key)
-  "Check if ATTRS has either E-KEY or V-KEY directive."
-  (or (plist-member attrs e-key)
-      (plist-member attrs v-key)))
+(defun etaf-etml--has-directive-p (attrs e-key)
+  "Check if ATTRS has E-KEY directive."
+  (plist-member attrs e-key))
 
-(defun etaf-etml--remove-directive (attrs e-key v-key)
-  "Remove both E-KEY and V-KEY directives from ATTRS."
-  (let ((result (etaf-etml--remove-attr attrs e-key)))
-    (etaf-etml--remove-attr result v-key)))
+(defun etaf-etml--remove-directive (attrs e-key)
+  "Remove E-KEY directive from ATTRS."
+  (etaf-etml--remove-attr attrs e-key))
 
 (defun etaf-etml--remove-attr (attrs key)
   "Remove attribute KEY from ATTRS (plist format)."
@@ -260,12 +257,11 @@ Returns the value of the first matching key found."
 
 (defun etaf-etml--split-attrs-and-children (rest)
   "Split REST into (ATTRS . CHILDREN) where ATTRS is a plist.
-Handles boolean directives like :e-else/:v-else that don't take a value.
-Supports both :e-* (preferred) and :v-* (backward compatible) prefixes."
+Handles boolean directives like :e-else that don't take a value."
   (let ((attrs nil)
         (children nil)
-        ;; Boolean directives that don't take a value (both e- and v- prefixes)
-        (boolean-directives '(:e-else :v-else)))
+        ;; Boolean directives that don't take a value
+        (boolean-directives '(:e-else)))
     (while (and rest (keywordp (car rest)))
       (let ((key (car rest)))
         (push key attrs)
@@ -285,15 +281,13 @@ Supports both :e-* (preferred) and :v-* (backward compatible) prefixes."
 ;; Directive prefix length constants
 (defconst etaf-etml--e-bind-prefix ":e-bind:"
   "The e-bind directive prefix.")
-(defconst etaf-etml--v-bind-prefix ":v-bind:"
-  "The v-bind directive prefix (backward compatible).")
 (defconst etaf-etml--bind-prefix-length 8
-  "Length of bind directive prefixes (:e-bind: or :v-bind:).")
+  "Length of bind directive prefix (:e-bind:).")
 
 (defun etaf-etml--process-bindings (attrs data)
   "Process attribute bindings in ATTRS using DATA.
 Returns processed attrs plist.
-Note: e-bind/v-bind is processed via :e-bind:attr or :v-bind:attr syntax."
+Note: e-bind is processed via :e-bind:attr syntax."
   (let ((result nil)
         (rest attrs))
     (while rest
@@ -301,16 +295,8 @@ Note: e-bind/v-bind is processed via :e-bind:attr or :v-bind:attr syntax."
              (val (cadr rest))
              (key-name (symbol-name key)))
         (cond
-         ;; e-bind:attr="expr" binding - evaluate expression for value (preferred)
+         ;; e-bind:attr="expr" binding - evaluate expression for value
          ((string-prefix-p etaf-etml--e-bind-prefix key-name)
-          (let* ((attr-name (substring key-name etaf-etml--bind-prefix-length))
-                 (new-key (intern (concat ":" attr-name)))
-                 (new-val (etaf-etml--to-string
-                           (etaf-etml--eval-expr val data))))
-            (setq result (append result (list new-key new-val)))))
-         
-         ;; v-bind:attr="expr" binding - evaluate expression for value (backward compat)
-         ((string-prefix-p etaf-etml--v-bind-prefix key-name)
           (let* ((attr-name (substring key-name etaf-etml--bind-prefix-length))
                  (new-key (intern (concat ":" attr-name)))
                  (new-val (etaf-etml--to-string
@@ -324,22 +310,19 @@ Note: e-bind/v-bind is processed via :e-bind:attr or :v-bind:attr syntax."
     result))
 
 (defun etaf-etml--find-else-sibling (siblings)
-  "Find e-else/v-else or e-else-if/v-else-if sibling from SIBLINGS list.
-Returns (MATCHING-SIBLING . REMAINING-SIBLINGS) or nil.
-Supports both :e-* (preferred) and :v-* (backward compatible) prefixes."
+  "Find e-else or e-else-if sibling from SIBLINGS list.
+Returns (MATCHING-SIBLING . REMAINING-SIBLINGS) or nil."
   (when siblings
     (let ((first (car siblings)))
       (when (and (listp first) (not (stringp first)))
         (let ((parsed (etaf-etml--split-attrs-and-children (cdr first))))
           (when (or (etaf-etml--get-attr (car parsed) :e-else)
-                    (etaf-etml--get-attr (car parsed) :v-else)
-                    (etaf-etml--get-attr (car parsed) :e-else-if)
-                    (etaf-etml--get-attr (car parsed) :v-else-if))
+                    (etaf-etml--get-attr (car parsed) :e-else-if))
             (cons first (cdr siblings))))))))
 
 (defun etaf-etml-render (template data)
   "Render TEMPLATE with DATA.
-TEMPLATE is TML with e-* or v-* directives.
+TEMPLATE is TML with e-* directives.
 DATA is a plist with template variables.
 Returns standard TML format."
   (let ((result (etaf-etml--render-node template data nil)))
@@ -347,7 +330,7 @@ Returns standard TML format."
     (car (car result))))
 
 (defun etaf-etml--render-node (node data siblings)
-  "Render NODE with DATA, considering SIBLINGS for e-else/v-else directives.
+  "Render NODE with DATA, considering SIBLINGS for e-else directives.
 Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
   (cond
    ;; String - interpolate
@@ -373,21 +356,21 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
                             component attrs children data)))
             (cons (list rendered) 0))
         
-        ;; Check for e-for/v-for (list rendering)
-      (if-let ((for-expr (etaf-etml--get-directive attrs :e-for :v-for)))
-          (let* ((for-parsed (etaf-etml--parse-v-for for-expr))
+        ;; Check for e-for (list rendering)
+      (if-let ((for-expr (etaf-etml--get-directive attrs :e-for)))
+          (let* ((for-parsed (etaf-etml--parse-e-for for-expr))
                  (item-var (nth 0 for-parsed))
                  (index-var (nth 1 for-parsed))
                  (collection-expr (nth 2 for-parsed))
                  (collection (etaf-etml--eval-expr collection-expr data))
-                 (new-attrs (etaf-etml--remove-directive attrs :e-for :v-for))
+                 (new-attrs (etaf-etml--remove-directive attrs :e-for))
                  (results '())
                  (index 0)
                  ;; Ensure collection is a list; nil becomes empty list
                  (items (cond
                          ((null collection) nil)
                          ((listp collection) collection)
-                         (t (error "e-for/v-for requires a list, got: %S" collection)))))
+                         (t (error "e-for requires a list, got: %S" collection)))))
             (dolist (item items)
               (let* ((item-key (intern (concat ":" item-var)))
                      (new-data (copy-sequence data)))
@@ -401,14 +384,14 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
               (cl-incf index))
             (cons (apply #'append (nreverse results)) 0))
         
-        ;; Check for e-if/v-if (conditional rendering)
-        (if-let ((if-expr (etaf-etml--get-directive attrs :e-if :v-if)))
+        ;; Check for e-if (conditional rendering)
+        (if-let ((if-expr (etaf-etml--get-directive attrs :e-if)))
             (let ((condition (etaf-etml--eval-expr if-expr data)))
               (if (etaf-etml--truthy-p condition)
                   ;; Condition true - render this node, skip else siblings
-                  (let* ((new-attrs (etaf-etml--remove-directive attrs :e-if :v-if))
+                  (let* ((new-attrs (etaf-etml--remove-directive attrs :e-if))
                          (skip-count 0))
-                    ;; Count consecutive e-else-if/v-else-if and e-else/v-else siblings to skip
+                    ;; Count consecutive e-else-if and e-else siblings to skip
                     (let ((remaining siblings))
                       (while (etaf-etml--find-else-sibling remaining)
                         (cl-incf skip-count)
@@ -416,7 +399,7 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
                     (let ((rendered (etaf-etml--render-element
                                      tag new-attrs children data)))
                       (cons rendered skip-count)))
-                ;; Condition false - check for e-else-if/v-else-if or e-else/v-else
+                ;; Condition false - check for e-else-if or e-else
                 (let ((else-info (etaf-etml--find-else-sibling siblings)))
                   (if else-info
                       (let* ((else-node (car else-info))
@@ -427,49 +410,49 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
                              (else-children (cdr else-parsed))
                              (remaining-siblings (cdr else-info)))
                         (if-let ((else-if-expr (etaf-etml--get-directive
-                                                else-attrs :e-else-if :v-else-if)))
-                            ;; Process e-else-if/v-else-if
+                                                else-attrs :e-else-if)))
+                            ;; Process e-else-if
                             (let* ((stripped-else-attrs
-                                    (etaf-etml--remove-directive else-attrs :e-else-if :v-else-if))
+                                    (etaf-etml--remove-directive else-attrs :e-else-if))
                                    (else-if-attrs
                                     (append (list :e-if else-if-expr) stripped-else-attrs))
                                    (new-else-node
                                     (cons else-tag
                                           (append else-if-attrs else-children)))
-                                   ;; Render the e-else-if/v-else-if with its remaining siblings
+                                   ;; Render the e-else-if with its remaining siblings
                                    (result (etaf-etml--render-node
                                             new-else-node data remaining-siblings)))
-                              ;; Skip count is 1 (for this e-else-if/v-else-if) plus what it skips
+                              ;; Skip count is 1 (for this e-else-if) plus what it skips
                               (cons (car result) (+ 1 (cdr result))))
-                          ;; Process e-else/v-else - render it directly (strip e-else/v-else attr)
+                          ;; Process e-else - render it directly (strip e-else attr)
                           (let* ((stripped-else-attrs (etaf-etml--remove-directive
-                                                       else-attrs :e-else :v-else))
+                                                       else-attrs :e-else))
                                  (rendered (etaf-etml--render-element
                                             else-tag stripped-else-attrs else-children data)))
                             (cons rendered 1))))
                     ;; No else sibling - render nothing
                     (cons nil 0)))))
           
-          ;; Check for e-else-if/v-else-if without preceding e-if/v-if (standalone)
-          (if-let ((else-if-expr (etaf-etml--get-directive attrs :e-else-if :v-else-if)))
-              ;; This shouldn't normally happen, treat as e-if/v-if
-              (let* ((new-attrs (etaf-etml--remove-directive attrs :e-else-if :v-else-if))
+          ;; Check for e-else-if without preceding e-if (standalone)
+          (if-let ((else-if-expr (etaf-etml--get-directive attrs :e-else-if)))
+              ;; This shouldn't normally happen, treat as e-if
+              (let* ((new-attrs (etaf-etml--remove-directive attrs :e-else-if))
                      (new-attrs (append (list :e-if else-if-expr) new-attrs))
                      (new-node (cons tag (append new-attrs children))))
                 (etaf-etml--render-node new-node data siblings))
             
-            ;; Check for e-else/v-else without preceding e-if/v-if (standalone)
-            (if (etaf-etml--has-directive-p attrs :e-else :v-else)
-                ;; Render as-is (remove e-else/v-else attr)
-                (let* ((new-attrs (etaf-etml--remove-directive attrs :e-else :v-else))
+            ;; Check for e-else without preceding e-if (standalone)
+            (if (etaf-etml--has-directive-p attrs :e-else)
+                ;; Render as-is (remove e-else attr)
+                (let* ((new-attrs (etaf-etml--remove-directive attrs :e-else))
                        (rendered (etaf-etml--render-element
                                   tag new-attrs children data)))
                   (cons rendered 0))
               
-              ;; Check for e-show/v-show (visibility)
-              (if-let ((show-expr (etaf-etml--get-directive attrs :e-show :v-show)))
+              ;; Check for e-show (visibility)
+              (if-let ((show-expr (etaf-etml--get-directive attrs :e-show)))
                   (let ((visible (etaf-etml--eval-expr show-expr data))
-                        (new-attrs (etaf-etml--remove-directive attrs :e-show :v-show)))
+                        (new-attrs (etaf-etml--remove-directive attrs :e-show)))
                     (if (etaf-etml--truthy-p visible)
                         (let ((rendered (etaf-etml--render-element
                                          tag new-attrs children data)))
@@ -485,11 +468,11 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
                                         tag new-attrs children data)))
                         (cons rendered 0))))
                 
-                ;; Check for e-text/v-text
-                (if-let ((text-expr (etaf-etml--get-directive attrs :e-text :v-text)))
+                ;; Check for e-text
+                (if-let ((text-expr (etaf-etml--get-directive attrs :e-text)))
                     (let* ((text-value (etaf-etml--to-string
                                         (etaf-etml--eval-expr text-expr data)))
-                           (new-attrs (etaf-etml--remove-directive attrs :e-text :v-text))
+                           (new-attrs (etaf-etml--remove-directive attrs :e-text))
                            (rendered (etaf-etml--render-element
                                       tag new-attrs (list text-value) data)))
                       (cons rendered 0))
