@@ -254,6 +254,56 @@
     "inline-block" "inline-flex" "inline-grid" "flow-root" "contents" "list-item")
   "独立的Tailwind CSS实用类（不需要值）。")
 
+;;; Constants for Tailwind CSS values
+
+(defconst etaf-tailwind-order-first -9999
+  "Order value for order-first utility.
+Per Tailwind CSS specification, this ensures the element appears first.")
+
+(defconst etaf-tailwind-order-last 9999
+  "Order value for order-last utility.
+Per Tailwind CSS specification, this ensures the element appears last.")
+
+(defconst etaf-tailwind-leading-scale-factor 0.25
+  "Scale factor for numeric leading values.
+Each unit corresponds to 0.25rem in Tailwind CSS.")
+
+(defconst etaf-tailwind-cursor-values
+  '("auto" "default" "pointer" "wait" "text" "move"
+    "help" "not-allowed" "none" "context-menu"
+    "progress" "cell" "crosshair" "vertical-text"
+    "alias" "copy" "no-drop" "grab" "grabbing"
+    "all-scroll" "col-resize" "row-resize"
+    "n-resize" "e-resize" "s-resize" "w-resize"
+    "ne-resize" "nw-resize" "se-resize" "sw-resize"
+    "ew-resize" "ns-resize" "nesw-resize" "nwse-resize"
+    "zoom-in" "zoom-out")
+  "Valid cursor values for Tailwind CSS cursor utilities.")
+
+(defconst etaf-tailwind-sr-only-styles
+  '((position . "absolute")
+    (width . "1px")
+    (height . "1px")
+    (padding . "0")
+    (margin . "-1px")
+    (overflow . "hidden")
+    (clip . "rect(0, 0, 0, 0)")
+    (white-space . "nowrap")
+    (border-width . "0"))
+  "CSS styles for screen reader only (sr-only) utility.
+Visually hides content while keeping it accessible to screen readers.")
+
+(defconst etaf-tailwind-not-sr-only-styles
+  '((position . "static")
+    (width . "auto")
+    (height . "auto")
+    (padding . "0")
+    (margin . "0")
+    (overflow . "visible")
+    (clip . "auto")
+    (white-space . "normal"))
+  "CSS styles to undo screen reader only (not-sr-only) utility.")
+
 ;;; Tailwind class parsing
 
 (defun etaf-tailwind-parse-class (class-name)
@@ -1066,8 +1116,10 @@ VALUE can be a string number or from the spacing scale."
    ;; Order
    ((string= property "order")
     (cond
-     ((string= value "first") '((order . "-9999")))
-     ((string= value "last") '((order . "9999")))
+     ((string= value "first")
+      (list (cons 'order (number-to-string etaf-tailwind-order-first))))
+     ((string= value "last")
+      (list (cons 'order (number-to-string etaf-tailwind-order-last))))
      ((string= value "none") '((order . "0")))
      (value (list (cons 'order value)))))
    
@@ -1192,15 +1244,7 @@ VALUE can be a string number or from the spacing scale."
    
    ;; Cursor
    ((string= property "cursor")
-    (when (member value '("auto" "default" "pointer" "wait" "text" "move"
-                          "help" "not-allowed" "none" "context-menu"
-                          "progress" "cell" "crosshair" "vertical-text"
-                          "alias" "copy" "no-drop" "grab" "grabbing"
-                          "all-scroll" "col-resize" "row-resize"
-                          "n-resize" "e-resize" "s-resize" "w-resize"
-                          "ne-resize" "nw-resize" "se-resize" "sw-resize"
-                          "ew-resize" "ns-resize" "nesw-resize" "nwse-resize"
-                          "zoom-in" "zoom-out"))
+    (when (member value etaf-tailwind-cursor-values)
       (list (cons 'cursor value))))
    
    ;; Pointer events
@@ -1259,18 +1303,12 @@ VALUE can be a string number or from the spacing scale."
    
    ;; Accessibility - screen reader only
    ((string= property "sr")
-    (cond
-     ((string= value "only")
-      '((position . "absolute") (width . "1px") (height . "1px")
-        (padding . "0") (margin . "-1px") (overflow . "hidden")
-        (clip . "rect(0, 0, 0, 0)") (white-space . "nowrap")
-        (border-width . "0")))))
+    (when (string= value "only")
+      (copy-alist etaf-tailwind-sr-only-styles)))
    
    ;; Not screen reader only
    ((and (string= property "not-sr") (string= value "only"))
-    '((position . "static") (width . "auto") (height . "auto")
-      (padding . "0") (margin . "0") (overflow . "visible")
-      (clip . "auto") (white-space . "normal")))
+    (copy-alist etaf-tailwind-not-sr-only-styles))
    
    ;; Appearance
    ((string= property "appearance")
@@ -1337,7 +1375,8 @@ PROP is one of 'top, 'right, 'bottom, 'left."
    ;; Numeric values (3, 4, 5, 6, 7, 8, 9, 10)
    ((string-match-p "^[0-9]+$" value)
     (let ((num (string-to-number value)))
-      (list (cons 'line-height (format "%.2frem" (* 0.25 num))))))
+      (list (cons 'line-height
+                  (format "%.2frem" (* etaf-tailwind-leading-scale-factor num))))))
    (t nil)))
 
 (defun etaf-tailwind--convert-tracking (value)
