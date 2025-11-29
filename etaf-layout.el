@@ -1601,24 +1601,28 @@ CSS 文本样式（如 color、font-weight）会转换为 Emacs face 属性应�
                            (max natural-content-height 0)))
          
          ;; 如果有实际内容但宽度为 0，使用内容的最大行像素宽度作为默认宽度
-         (effective-width (if (and (> (length inner-content) 0) (<= content-width 0))
-                              (let ((lines (split-string inner-content "\n")))
-                                (if lines
-                                    (apply #'max (mapcar #'string-pixel-width lines))
-                                  (string-pixel-width inner-content)))
-                            content-width)))
+         (effective-width
+          (if (and (> (length inner-content) 0) (<= content-width 0))
+              (let ((lines (split-string inner-content "\n")))
+                (if lines
+                    (apply #'max (mapcar #'string-pixel-width lines))
+                  (string-pixel-width inner-content)))
+            content-width)))
+
+    (message "inner-content:%S" inner-content)
     
     ;; 如果内容宽度和高度都为 0 且没有实际内容，返回空字符串
     (if (and (<= effective-width 0) (<= content-height 0))
         ""
       ;; 构建最终内容
       (let* (;; 1. 确保内容符合指定的宽度（使用 etaf-lines-justify）
-             (sized-content (if (> (length inner-content) 0)
-                                (condition-case nil
-                                    (etaf-lines-justify inner-content effective-width)
-                                  (error inner-content))
-                              ;; 如果没有内容，创建空白内容
-                              (etaf-pixel-blank effective-width content-height)))
+             (sized-content
+              (if (> (length inner-content) 0)
+                  (condition-case nil
+                      (etaf-lines-justify inner-content effective-width)
+                    (error inner-content))
+                ;; 如果没有内容，创建空白内容
+                (etaf-pixel-blank effective-width content-height)))
              
              ;; 1.5 应用 CSS 文本样式到内容（不包括 background-color，因为背景需要覆盖 padding 区域）
              ;; 使用 cl-remove-if 过滤掉 background-color
