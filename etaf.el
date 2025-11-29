@@ -17,4 +17,15 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。"
            render-tree (list :width width :height height))))
     (etaf-layout-to-string layout-tree)))
 
+(defun etaf-string-with-data (etml data &optional width height)
+  "将 ETML 转换为带有样式的字符串。
+WIDTH 和 HEIGHT 是可选的视口尺寸。"
+  (let* ((dom (etaf-etml-to-dom etml data))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree
+          (etaf-layout-build-tree
+           render-tree (list :width width :height height))))
+    (etaf-layout-to-string layout-tree)))
+
 (provide 'etaf)
