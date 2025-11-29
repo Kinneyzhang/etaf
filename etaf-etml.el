@@ -694,6 +694,9 @@ Returns the rendered ETML."
 (defvar etaf-etml--effect-stack nil
   "Stack of currently running effects for nested effect tracking.")
 
+(defvar etaf-etml--effect-deps-tracker nil
+  "Tracks dependencies collected during effect execution for cleanup.")
+
 ;;; --- Ref: Basic Reactive Reference ---
 
 (defun etaf-etml-ref (value)
@@ -726,7 +729,12 @@ Also tracks the current effect as a dependency if inside an effect."
     (when etaf-etml--current-effect
       (let ((deps (plist-get ref :deps)))
         (unless (member etaf-etml--current-effect deps)
-          (plist-put ref :deps (cons etaf-etml--current-effect deps)))))
+          (plist-put ref :deps (cons etaf-etml--current-effect deps))))
+      ;; Also track for effect cleanup
+      (when etaf-etml--effect-deps-tracker
+        (let ((tracked (plist-get etaf-etml--effect-deps-tracker :deps)))
+          (unless (member ref tracked)
+            (plist-put etaf-etml--effect-deps-tracker :deps (cons ref tracked))))))
     (plist-get ref :value)))
 
 (defun etaf-etml-ref-set (ref value)
@@ -794,7 +802,12 @@ Recomputes if dirty (dependencies have changed)."
     (when etaf-etml--current-effect
       (let ((deps (plist-get computed :deps)))
         (unless (member etaf-etml--current-effect deps)
-          (plist-put computed :deps (cons etaf-etml--current-effect deps)))))
+          (plist-put computed :deps (cons etaf-etml--current-effect deps))))
+      ;; Also track for effect cleanup
+      (when etaf-etml--effect-deps-tracker
+        (let ((tracked (plist-get etaf-etml--effect-deps-tracker :deps)))
+          (unless (member computed tracked)
+            (plist-put etaf-etml--effect-deps-tracker :deps (cons computed tracked))))))
     ;; Recompute if dirty
     (when (plist-get computed :dirty)
       (let* ((getter (plist-get computed :getter))
@@ -868,27 +881,34 @@ Usage:
     (etaf-etml-ref-set count 1)  ; re-runs effect, logs \"Count is: 1\"
     (funcall stop)               ; stop watching
     (etaf-etml-ref-set count 2)) ; no effect"
-  (let* ((deps-collected nil)
-         (runner nil))
+  (let* ((tracked-deps nil)  ; refs/computed that this effect depends on
+         (runner nil)
+         (active t))         ; whether the effect is still active
     ;; Create the runner that will execute the effect
     (setq runner
           (lambda ()
-            ;; Clear old dependencies
-            (dolist (dep deps-collected)
-              (let ((old-deps (plist-get dep :deps)))
-                (plist-put dep :deps (delete runner old-deps))))
-            (setq deps-collected nil)
-            ;; Run effect with dependency tracking
-            (let ((etaf-etml--current-effect runner))
-              (push runner etaf-etml--effect-stack)
-              (unwind-protect
-                  (funcall effect-fn)
-                (pop etaf-etml--effect-stack)))))
+            (when active
+              ;; Clear old dependencies before re-running
+              (dolist (dep tracked-deps)
+                (let ((old-deps (plist-get dep :deps)))
+                  (plist-put dep :deps (delete runner old-deps))))
+              (setq tracked-deps nil)
+              ;; Run effect with dependency tracking
+              ;; When refs are accessed, they add runner to their deps
+              (let ((etaf-etml--current-effect runner)
+                    (etaf-etml--effect-deps-tracker (list :deps nil)))
+                (push runner etaf-etml--effect-stack)
+                (unwind-protect
+                    (funcall effect-fn)
+                  (pop etaf-etml--effect-stack)
+                  ;; Capture tracked deps for cleanup later
+                  (setq tracked-deps (plist-get etaf-etml--effect-deps-tracker :deps)))))))
     ;; Run immediately
     (funcall runner)
     ;; Return stop function
     (lambda ()
-      (dolist (dep deps-collected)
+      (setq active nil)
+      (dolist (dep tracked-deps)
         (let ((old-deps (plist-get dep :deps)))
           (plist-put dep :deps (delete runner old-deps)))))))
 
