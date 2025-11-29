@@ -29,6 +29,56 @@ This document describes the modular architecture of the ETAF (Emacs Template and
   - `etaf-plist-to-alist (plist)` - Convert property list to association list
 - **Usage**: Convert markup from TML format `(tag :attr val child...)` to DOM format `(tag ((attr . val)) child...)`
 
+#### etaf-tag.el
+- **Purpose**: ETML Tag Definition System - Define HTML-like tags with content, style, and interaction behavior
+- **Dependencies**: (none)
+- **Public Interface**:
+  - `define-etaf-tag (name &rest props)` - Macro to define custom tags
+  - `etaf-tag-defined-p (name)` - Check if a tag is defined
+  - `etaf-tag-get-definition (name)` - Get tag definition
+  - `etaf-tag-list-all ()` - List all defined tags
+  - `etaf-tag-parse (sexp)` - Parse SEXP into tag instance
+  - `etaf-tag-to-dom (sexp)` - Convert SEXP with tags to DOM format
+  - `etaf-tag-create-instance (tag-name attrs children)` - Create tag instance
+  - `etaf-tag-render-to-dom (tag-instance)` - Render tag instance to DOM
+  - `etaf-tag-get-computed-style (tag-instance)` - Get computed style for tag instance
+- **Tag Definition Properties**:
+  - `:display` - Display type (`block`, `inline`, `inline-block`, `flex`, `none`)
+  - `:default-style` - Default style alist
+  - `:hover-style` - Style when hovered
+  - `:active-style` - Style when active/pressed
+  - `:focus-style` - Style when focused
+  - `:disabled-style` - Style when disabled
+  - `:on-click` - Click event handler
+  - `:on-hover-enter` - Mouse enter handler
+  - `:on-hover-leave` - Mouse leave handler
+  - `:on-focus` - Focus handler
+  - `:on-blur` - Blur handler
+  - `:on-change` - Change handler
+  - `:on-input` - Input handler
+  - `:on-keydown` - Keydown handler
+  - `:on-keyup` - Keyup handler
+  - `:children-allowed` - Whether children are allowed
+  - `:self-closing` - Whether self-closing
+  - `:inherit` - Parent tag to inherit from
+  - `:render` - Custom render function
+- **Built-in Tags**: div, span, p, h1-h6, a, button, input, form, table, ul, ol, li, etc. (70+ HTML tags)
+- **Usage**: Define custom tag components with style and interaction behavior
+
+```elisp
+;; Define a custom button
+(define-etaf-tag my-button
+  :display 'inline-block
+  :default-style '((background-color . "blue")
+                   (color . "white"))
+  :hover-style '((background-color . "darkblue"))
+  :on-click (lambda (event)
+              (message "Button clicked!")))
+
+;; Use the tag
+(etaf-tag-to-dom '(my-button :class "primary" "Click Me"))
+```
+
 #### etaf-dom.el
 - **Purpose**: DOM manipulation, query, and traversal operations
 - **Dependencies**: dom (built-in)
@@ -178,6 +228,7 @@ This document describes the modular architecture of the ETAF (Emacs Template and
 ```
 etaf.el
 ├── etaf-etml.el (no dependencies)
+├── etaf-tag.el (no dependencies) - Tag Definition System
 └── etaf-css.el
     ├── etaf-dom.el
     │   └── dom (built-in)
