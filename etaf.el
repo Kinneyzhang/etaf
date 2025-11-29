@@ -4,6 +4,7 @@
 (require 'etaf-render)
 (require 'etaf-layout)
 (require 'etaf-tailwind)
+(require 'etaf-ecss)
 
 (defun etaf-string (tml width &optional height)
   (let* ((dom (etaf-tml-to-dom tml))

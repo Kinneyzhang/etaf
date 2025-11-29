@@ -104,11 +104,18 @@
                 '((background-color . "#ef4444"))))
 
 (ert-deftest etaf-tailwind-test-to-css-padding ()
-  "测试内边距转换。"
+  "测试内边距转换。
+Emacs特有：水平方向使用px，垂直方向使用lh。"
+  ;; p-4 expands to all four directions with appropriate units
   (should-equal (etaf-tailwind-to-css "p-4")
-                '((padding . "1rem")))
+                '((padding-top . "4lh") (padding-right . "4px")
+                  (padding-bottom . "4lh") (padding-left . "4px")))
+  ;; px-2 is horizontal only - uses px
   (should-equal (etaf-tailwind-to-css "px-2")
-                '((padding-left . "0.5rem") (padding-right . "0.5rem"))))
+                '((padding-left . "2px") (padding-right . "2px")))
+  ;; py-2 is vertical only - uses lh
+  (should-equal (etaf-tailwind-to-css "py-2")
+                '((padding-top . "2lh") (padding-bottom . "2lh"))))
 
 (ert-deftest etaf-tailwind-test-to-css-display ()
   "测试显示属性转换。"
@@ -169,11 +176,14 @@
                 '((border-color . "#3b82f6"))))
 
 (ert-deftest etaf-tailwind-test-classes-to-css ()
-  "测试多个类名转换为 CSS。"
+  "测试多个类名转换为 CSS。
+p-4 被展开为 padding-top/right/bottom/left。"
   (let ((result (etaf-tailwind-classes-to-css "flex items-center p-4")))
     (should (assq 'display result))
     (should (assq 'align-items result))
-    (should (assq 'padding result))))
+    ;; padding is expanded into directional properties
+    (should (assq 'padding-top result))
+    (should (assq 'padding-left result))))
 
 ;;; DOM 集成测试
 
@@ -249,7 +259,8 @@
 ;;; CSSOM 集成测试
 
 (ert-deftest etaf-tailwind-test-cssom-integration ()
-  "测试 Tailwind 类在 CSSOM 中的正确解析。"
+  "测试 Tailwind 类在 CSSOM 中的正确解析。
+Emacs特有：padding使用px（水平）和lh（垂直）。"
   (require 'etaf-tml)
   (require 'etaf-css)
   (let* ((dom (etaf-tml-to-dom
@@ -261,7 +272,9 @@
     (should (equal (cdr (assq 'display div-style)) "flex"))
     (should (equal (cdr (assq 'background-color div-style)) "#ef4444"))
     ;; padding 应该被展开为 padding-top, padding-right, etc.
-    (should (equal (cdr (assq 'padding-top div-style)) "1rem"))))
+    ;; 垂直方向使用 lh，水平方向使用 px
+    (should (equal (cdr (assq 'padding-top div-style)) "4lh"))
+    (should (equal (cdr (assq 'padding-right div-style)) "4px"))))
 
 (ert-deftest etaf-tailwind-test-border-cssom-integration ()
   "测试 Tailwind 边框类在 CSSOM 中的正确展开和解析。

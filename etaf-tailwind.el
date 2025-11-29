@@ -406,12 +406,36 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
   "Tailwind CSS颜色调色板。")
 
 (defconst etaf-tailwind-spacing-scale
-  '(("0" . "0px") ("1" . "1px") ("2" . "2px") ("3" . "4px")
-    ("4" . "4px") ("5" . "5px") ("6" . "6px") ("7" . "7px")
-    ("8" . "8px") ("9" . "9px") ("10" . "10px") ("11" . "11px")
-    ("12" . "12px") ("13" . "13px") ("14" . "14px") ("15" . "15px")
-    ("16" . "16px") ("17" . "17px") ("18" . "18px") ("19" . "19px"))
-  "Tailwind CSS间距比例尺。")
+  '(("0" . "0") ("1" . "1") ("2" . "2") ("3" . "3")
+    ("4" . "4") ("5" . "5") ("6" . "6") ("7" . "7")
+    ("8" . "8") ("9" . "9") ("10" . "10") ("11" . "11")
+    ("12" . "12") ("13" . "13") ("14" . "14") ("15" . "15")
+    ("16" . "16") ("17" . "17") ("18" . "18") ("19" . "19")
+    ("20" . "20") ("24" . "24") ("28" . "28") ("32" . "32")
+    ("36" . "36") ("40" . "40") ("44" . "44") ("48" . "48")
+    ("52" . "52") ("56" . "56") ("60" . "60") ("64" . "64")
+    ("72" . "72") ("80" . "80") ("96" . "96"))
+  "Tailwind CSS间距数值（不含单位）。
+单位由方向决定：水平方向使用px，垂直方向使用lh。")
+
+(defun etaf-tailwind--spacing-value (value direction)
+  "Convert spacing VALUE to CSS value based on DIRECTION.
+DIRECTION is either 'horizontal, 'vertical, or 'all.
+For Emacs compatibility:
+- Horizontal (left/right): value in px (pixels)
+- Vertical (top/bottom): value in lh (line-height units)
+- All: use px for horizontal, lh for vertical components
+VALUE can be a string number or from the spacing scale."
+  (let ((num-str (or (cdr (assoc value etaf-tailwind-spacing-scale))
+                     ;; Support arbitrary numeric values
+                     (when (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
+                       value))))
+    (when num-str
+      (pcase direction
+        ('horizontal (concat num-str "px"))
+        ('vertical (concat num-str "lh"))
+        ('all num-str)  ; Used for shorthand properties
+        (_ (concat num-str "px"))))))
 
 (defconst etaf-tailwind-font-sizes
   '(("xs" . ("0.75rem" "1rem"))
@@ -626,11 +650,13 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
      ((string= value "baseline") '((align-items . "baseline")))
      ((string= value "stretch") '((align-items . "stretch")))))
    
-   ;; Gap
+   ;; Gap - use px for column-gap, lh for row-gap
    ((string= property "gap")
-    (let ((spacing (cdr (assoc value etaf-tailwind-spacing-scale))))
-      (when spacing
-        (list (cons 'gap spacing)))))
+    (let ((h-spacing (etaf-tailwind--spacing-value value 'horizontal))
+          (v-spacing (etaf-tailwind--spacing-value value 'vertical)))
+      (when (and h-spacing v-spacing)
+        (list (cons 'column-gap h-spacing)
+              (cons 'row-gap v-spacing)))))
    
    ;; Z-index
    ((string= property "z")
@@ -650,50 +676,73 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
   "转换间距类（padding/margin）到CSS。
 PROPERTY是Tailwind属性（如'p', 'px', 'pt'等）。
 VALUE是间距值（如'4', '8'等）。
-TYPE是'padding或'margin。"
-  (let ((spacing (cdr (assoc value etaf-tailwind-spacing-scale))))
-    (when spacing
-      (cond
-       ;; 全部方向
-       ((string= property (if (eq type 'padding) "p" "m"))
-        (list (cons type spacing)))
-       ;; 水平方向
-       ((string= property (if (eq type 'padding) "px" "mx"))
+TYPE是'padding或'margin。
+
+Emacs特有的单位处理：
+- 水平方向（left/right）使用px像素
+- 垂直方向（top/bottom）使用lh行高单位"
+  (cond
+   ;; 全部方向 - 使用方向特定的单位
+   ((string= property (if (eq type 'padding) "p" "m"))
+    (let ((h-spacing (etaf-tailwind--spacing-value value 'horizontal))
+          (v-spacing (etaf-tailwind--spacing-value value 'vertical)))
+      (when (and h-spacing v-spacing)
+        (list (cons (intern (concat (symbol-name type) "-top")) v-spacing)
+              (cons (intern (concat (symbol-name type) "-right")) h-spacing)
+              (cons (intern (concat (symbol-name type) "-bottom")) v-spacing)
+              (cons (intern (concat (symbol-name type) "-left")) h-spacing)))))
+   ;; 水平方向 - 使用px
+   ((string= property (if (eq type 'padding) "px" "mx"))
+    (let ((spacing (etaf-tailwind--spacing-value value 'horizontal)))
+      (when spacing
         (list (cons (intern (concat (symbol-name type) "-left")) spacing)
-              (cons (intern (concat (symbol-name type) "-right")) spacing)))
-       ;; 垂直方向
-       ((string= property (if (eq type 'padding) "py" "my"))
+              (cons (intern (concat (symbol-name type) "-right")) spacing)))))
+   ;; 垂直方向 - 使用lh
+   ((string= property (if (eq type 'padding) "py" "my"))
+    (let ((spacing (etaf-tailwind--spacing-value value 'vertical)))
+      (when spacing
         (list (cons (intern (concat (symbol-name type) "-top")) spacing)
-              (cons (intern (concat (symbol-name type) "-bottom")) spacing)))
-       ;; 单个方向
-       ((string= property (if (eq type 'padding) "pt" "mt"))
-        (list (cons (intern (concat (symbol-name type) "-top")) spacing)))
-       ((string= property (if (eq type 'padding) "pr" "mr"))
-        (list (cons (intern (concat (symbol-name type) "-right")) spacing)))
-       ((string= property (if (eq type 'padding) "pb" "mb"))
-        (list (cons (intern (concat (symbol-name type) "-bottom")) spacing)))
-       ((string= property (if (eq type 'padding) "pl" "ml"))
+              (cons (intern (concat (symbol-name type) "-bottom")) spacing)))))
+   ;; 单个方向
+   ((string= property (if (eq type 'padding) "pt" "mt"))
+    (let ((spacing (etaf-tailwind--spacing-value value 'vertical)))
+      (when spacing
+        (list (cons (intern (concat (symbol-name type) "-top")) spacing)))))
+   ((string= property (if (eq type 'padding) "pr" "mr"))
+    (let ((spacing (etaf-tailwind--spacing-value value 'horizontal)))
+      (when spacing
+        (list (cons (intern (concat (symbol-name type) "-right")) spacing)))))
+   ((string= property (if (eq type 'padding) "pb" "mb"))
+    (let ((spacing (etaf-tailwind--spacing-value value 'vertical)))
+      (when spacing
+        (list (cons (intern (concat (symbol-name type) "-bottom")) spacing)))))
+   ((string= property (if (eq type 'padding) "pl" "ml"))
+    (let ((spacing (etaf-tailwind--spacing-value value 'horizontal)))
+      (when spacing
         (list (cons (intern (concat (symbol-name type) "-left")) spacing)))))))
 
 (defun etaf-tailwind-convert-size (property value)
-  "转换尺寸类（width/height）到CSS。"
-  (let ((size (cond
-               ;; 使用spacing scale
-               ((cdr (assoc value etaf-tailwind-spacing-scale))
-                (cdr (assoc value etaf-tailwind-spacing-scale)))
-               ;; 百分比
-               ((string-match "^\\([0-9]+\\)/\\([0-9]+\\)$" value)
-                (let ((numerator (string-to-number (match-string 1 value)))
-                      (denominator (string-to-number (match-string 2 value))))
-                  (format "%.6f%%" (* 100.0 (/ (float numerator) denominator)))))
-               ;; 特殊值
-               ((string= value "full") "100%")
-               ((string= value "screen")
-                (if (eq property 'width) "100vw" "100vh"))
-               ((string= value "auto") "auto")
-               ((string= value "min") "min-content")
-               ((string= value "max") "max-content")
-               ((string= value "fit") "fit-content"))))
+  "转换尺寸类（width/height）到CSS。
+Width使用px（水平方向），Height使用lh（垂直方向）。"
+  (let* ((direction (if (eq property 'width) 'horizontal 'vertical))
+         (size (cond
+                ;; 使用spacing scale或任意数值
+                ((or (cdr (assoc value etaf-tailwind-spacing-scale))
+                     (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value))
+                 (etaf-tailwind--spacing-value value direction))
+                ;; 百分比
+                ((string-match "^\\([0-9]+\\)/\\([0-9]+\\)$" value)
+                 (let ((numerator (string-to-number (match-string 1 value)))
+                       (denominator (string-to-number (match-string 2 value))))
+                   (format "%.6f%%" (* 100.0 (/ (float numerator) denominator)))))
+                ;; 特殊值
+                ((string= value "full") "100%")
+                ((string= value "screen")
+                 (if (eq property 'width) "100vw" "100vh"))
+                ((string= value "auto") "auto")
+                ((string= value "min") "min-content")
+                ((string= value "max") "max-content")
+                ((string= value "fit") "fit-content"))))
     (when size
       (list (cons property size)))))
 
