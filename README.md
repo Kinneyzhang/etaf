@@ -134,7 +134,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ### 模板指令语法
 
-ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `v-*` 前缀：
+ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀）：
 
 ```elisp
 (require 'etaf-etml)
@@ -144,7 +144,7 @@ ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `
                 :loggedIn t 
                 :items ("Apple" "Banana" "Cherry")))
 
-;; 创建带有 e-* 指令的模板（推荐使用 e- 前缀）
+;; 创建带有 e-* 指令的模板
 (setq my-template
   '(div :class "app"
      ;; 文本插值
@@ -180,8 +180,6 @@ ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `
 | `:e-for` | 列表渲染 | `(li :e-for "item in items" "{{ item }}")` |
 | `:e-show` | 显示/隐藏 | `(div :e-show "visible" "Content")` |
 | `:e-text` | 文本内容 | `(span :e-text "message")` |
-
-注：也支持 `:v-if`、`:v-for` 等旧版 `v-*` 前缀以保持向后兼容。
 
 #### e-for 支持的格式
 
@@ -492,7 +490,6 @@ ECSS（Emacs CSS）提供了一种使用列表结构表达 CSS 的方式，类�
   - 显示控制 `e-show`
   - 文本指令 `e-text`
   - 响应式数据系统
-  - 兼容 `v-*` 前缀
 
 - ✅ **ECSS：Emacs 风格 CSS 表达式**
   - 类似 `rx` 的列表结构到 CSS 的转换
