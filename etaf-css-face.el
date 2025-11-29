@@ -149,9 +149,9 @@ Emacs 的 :height 浮点数表示相对于默认字体的缩放比例。"
        ((string= size "x-large") 1.5)       ; 24px / 16px
        ((string= size "xx-large") 2.0)      ; 32px / 16px
        ;; CSS 相对关键字：根据当前字体大小调整
-       ;; smaller/larger 使用常见的缩放因子
-       ((string= size "smaller") 0.833)     ; 约 1/1.2，缩小一级
-       ((string= size "larger") 1.2)        ; 放大一级
+       ;; smaller/larger 使用常见的缩放因子 1.2
+       ((string= size "smaller") (/ 1.0 1.2))  ; 缩小一级 (≈0.833)
+       ((string= size "larger") 1.2)           ; 放大一级
        (t nil))))
    (t nil)))
 
