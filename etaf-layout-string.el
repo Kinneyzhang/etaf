@@ -166,9 +166,15 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。"
 ;;; ============================================================
 
 (defun etaf-layout-string--apply-bgcolor-per-line (string bgcolor)
-  "将背景色应用到字符串的每一行，不包括换行符。
-STRING 是多行字符串，BGCOLOR 是 Emacs 颜色值。
-这样可以避免换行符也带有背景色，从而导致每行结尾多一个空格的背景色。"
+  "Apply background color to each line of STRING, excluding newline characters.
+
+STRING is a potentially multi-line string.
+BGCOLOR is an Emacs color value (string, e.g., \"red\" or \"#ff0000\").
+
+Returns a new string with the background color face property applied to
+each line's content, but not to the newline characters.  This prevents
+the newline characters from rendering with a visible background, which
+would otherwise appear as an extra space at the end of each line."
   (let ((lines (split-string string "\n")))
     (mapconcat
      (lambda (line)
