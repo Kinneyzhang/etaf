@@ -165,6 +165,22 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。"
 ;;; 内部函数：盒模型构建
 ;;; ============================================================
 
+(defun etaf-layout-string--apply-bgcolor-per-line (string bgcolor)
+  "将背景色应用到字符串的每一行，不包括换行符。
+STRING 是多行字符串，BGCOLOR 是 Emacs 颜色值。
+这样可以避免换行符也带有背景色，从而导致每行结尾多一个空格的背景色。"
+  (let ((lines (split-string string "\n")))
+    (mapconcat
+     (lambda (line)
+       (let ((result (copy-sequence line)))
+         (when (> (length result) 0)
+           (add-face-text-property 0 (length result)
+                                   `(:background ,bgcolor)
+                                   t result))
+         result))
+     lines
+     "\n")))
+
 (defun etaf-layout-string--build-box (inner-content effective-width content-height content-height-px
                                                      padding-top padding-right padding-bottom padding-left
                                                      border-top border-right border-bottom border-left
@@ -230,16 +246,14 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。"
                            with-padding))
          
          ;; 3.5 应用背景色
+         ;; 注意：背景色需要逐行应用，不能应用到换行符上，否则会导致每行结尾多一个空格的背景色
          (bgcolor (when computed-style
                     (cdr (assq 'background-color computed-style))))
          (with-bgcolor (if (and bgcolor (> (length with-h-padding) 0))
                            (let ((emacs-color (etaf-css-color-to-emacs bgcolor)))
                              (if emacs-color
-                                 (let ((result (copy-sequence with-h-padding)))
-                                   (add-face-text-property 0 (length result)
-                                                           `(:background ,emacs-color)
-                                                           t result)
-                                   result)
+                                 (etaf-layout-string--apply-bgcolor-per-line
+                                  with-h-padding emacs-color)
                                with-h-padding))
                          with-h-padding))
          
