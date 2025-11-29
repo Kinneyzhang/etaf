@@ -110,34 +110,39 @@ CSS-COLOR 是 CSS 颜色字符串，如 \"red\", \"#ff0000\", \"rgb(255,0,0)\"�
 
 (defun etaf-css-font-size-to-emacs (css-size)
   "将 CSS font-size 转换为 Emacs :height 值。
-返回相对高度（如 1.2）或绝对高度（如 120）。"
-  (when (and css-size (stringp css-size))
+返回相对高度浮点数（如 1.2），与 Emacs face 的 :height 属性一致。
+Emacs 的 :height 浮点数表示相对于默认字体的缩放比例。"
+  (cond
+   ;; 数值类型：直接作为相对高度（支持 etaf-tag.el 中的数值定义）
+   ((numberp css-size) (float css-size))
+   ;; 字符串类型
+   ((stringp css-size)
     (let ((size (string-trim css-size)))
       (cond
-       ;; 像素值：转换为相对高度
+       ;; 像素值：转换为相对高度（假设基准字体大小为 16px）
        ((string-match "^\\([0-9.]+\\)px$" size)
         (let ((px (string-to-number (match-string 1 size))))
-          ;; 假设默认字体大小为 14px
-          (* 10 (round (* 10 (/ px 14.0))))))
+          (/ px 16.0)))
        ;; em 值：直接作为相对高度
        ((string-match "^\\([0-9.]+\\)em$" size)
-        (string-to-number (match-string 1 size)))
+        (float (string-to-number (match-string 1 size))))
        ;; rem 值：作为相对高度
        ((string-match "^\\([0-9.]+\\)rem$" size)
-        (string-to-number (match-string 1 size)))
+        (float (string-to-number (match-string 1 size))))
        ;; 百分比
        ((string-match "^\\([0-9.]+\\)%$" size)
         (/ (string-to-number (match-string 1 size)) 100.0))
        ;; 关键字
-       ((string= size "small") 0.9)
-       ((string= size "large") 1.2)
+       ((string= size "small") 0.875)
+       ((string= size "large") 1.125)
        ((string= size "x-large") 1.5)
        ((string= size "xx-large") 2.0)
-       ((string= size "x-small") 0.7)
-       ((string= size "xx-small") 0.5)
-       ((string= size "smaller") 0.8)
-       ((string= size "larger") 1.25)
-       (t nil)))))
+       ((string= size "x-small") 0.75)
+       ((string= size "xx-small") 0.625)
+       ((string= size "smaller") 0.833)
+       ((string= size "larger") 1.2)
+       (t nil))))
+   (t nil)))
 
 ;;; 主转换函数
 
