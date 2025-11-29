@@ -23,7 +23,7 @@
  (etaf-etml-to-dom '(div :class "box" :style ((color . "blue")) "World"))
  '(div ((class . "box") (style . "color: blue")) "World"))
 
-;;; Test etaf-tag integration - p tag should NOT have default styles
+;;; Test etaf-etml-tag integration - p tag should NOT have default styles
 ;; (p tag has :default-style nil, so no styles are merged)
 (let* ((result (etaf-etml-to-dom '(p "Hello")))
        (attrs (cadr result))
@@ -31,7 +31,7 @@
   ;; p tag should NOT have any style since :default-style is nil
   (should-equal style nil))
 
-;;; Test etaf-tag integration - p tag inline style is preserved as-is
+;;; Test etaf-etml-tag integration - p tag inline style is preserved as-is
 (let* ((result (etaf-etml-to-dom '(p :style "margin-top: 2lh" "Hello")))
        (attrs (cadr result))
        (style (cdr (assq 'style attrs))))
@@ -39,17 +39,17 @@
   (should (stringp style))
   (should (string-match "margin-top: 2lh" style)))
 
-;;; Test etaf-tag integration - button tag should have padding styles
+;;; Test etaf-etml-tag integration - button tag should have padding styles
 (let* ((result (etaf-etml-to-dom '(button "Click")))
        (attrs (cadr result))
        (style (cdr (assq 'style attrs))))
-  ;; button should have padding and border styles from etaf-tag
+  ;; button should have padding and border styles from etaf-etml-tag
   (should (stringp style))
   (should (string-match "padding-left" style))
   (should (string-match "padding-right" style))
   (should (string-match "border" style)))
 
-;;; Test etaf-tag integration - units consistency (px for horizontal, lh for vertical)
+;;; Test etaf-etml-tag integration - units consistency (px for horizontal, lh for vertical)
 (let* ((result (etaf-etml-to-dom '(ul (li "Item"))))
        (attrs (cadr result))
        (style (cdr (assq 'style attrs))))

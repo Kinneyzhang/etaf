@@ -1,4 +1,4 @@
-;;; etaf-tag.el --- ETML Tag Definition System -*- lexical-binding: t; -*-
+;;; etaf-etml-tag.el --- ETML Tag Definition System -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2024
 
@@ -21,7 +21,7 @@
 ;; - Interaction: Event handlers and interactive behaviors
 ;;
 ;; Key Features:
-;; - `define-etaf-tag': Macro for defining custom tags
+;; - `define-etaf-etml-tag': Macro for defining custom tags
 ;; - Built-in tags: div, span, button, input, a, p, h1-h6, etc.
 ;; - Event handlers: on-click, on-hover, on-focus, on-change, etc.
 ;; - Style inheritance: Tags can inherit styles from parent tags
@@ -51,7 +51,7 @@
 ;; Usage Example:
 ;;
 ;;   ;; Define a custom button tag
-;;   (define-etaf-tag my-button
+;;   (define-etaf-etml-tag my-button
 ;;     :display 'inline-block
 ;;     :default-style '((background-color . "blue")
 ;;                      (color . "white")
@@ -68,16 +68,16 @@
 
 ;;; Tag Registry
 
-(defvar etaf-tag-definitions (make-hash-table :test 'eq)
+(defvar etaf-etml-tag-definitions (make-hash-table :test 'eq)
   "Hash table storing all defined ETML tag definitions.
 Keys are tag symbols, values are tag definition plists.")
 
-(defvar etaf-tag-instances nil
+(defvar etaf-etml-tag-instances nil
   "List of active tag instances in the current buffer.")
 
 ;;; Tag Definition Structure
 
-(defun etaf-tag-create-definition (name &rest props)
+(defun etaf-etml-tag-create-definition (name &rest props)
   "Create a tag definition with NAME and PROPS.
 PROPS is a plist with the following keys:
 - :display - Display type: `block', `inline', `inline-block', `flex', `none'
@@ -123,32 +123,32 @@ PROPS is a plist with the following keys:
                           :render (plist-get props :render))))
     definition))
 
-(defun etaf-tag-get-definition (name)
+(defun etaf-etml-tag-get-definition (name)
   "Get the tag definition for NAME."
-  (gethash name etaf-tag-definitions))
+  (gethash name etaf-etml-tag-definitions))
 
-(defun etaf-tag-register (name definition)
+(defun etaf-etml-tag-register (name definition)
   "Register a tag DEFINITION with NAME."
-  (puthash name definition etaf-tag-definitions))
+  (puthash name definition etaf-etml-tag-definitions))
 
-(defun etaf-tag-unregister (name)
+(defun etaf-etml-tag-unregister (name)
   "Unregister the tag with NAME."
-  (remhash name etaf-tag-definitions))
+  (remhash name etaf-etml-tag-definitions))
 
-(defun etaf-tag-defined-p (name)
+(defun etaf-etml-tag-defined-p (name)
   "Check if a tag with NAME is defined."
-  (not (null (gethash name etaf-tag-definitions))))
+  (not (null (gethash name etaf-etml-tag-definitions))))
 
-(defun etaf-tag-list-all ()
+(defun etaf-etml-tag-list-all ()
   "Return a list of all defined tag names."
   (let ((tags nil))
     (maphash (lambda (key _value) (push key tags))
-             etaf-tag-definitions)
+             etaf-etml-tag-definitions)
     (nreverse tags)))
 
 ;;; Style Merging
 
-(defun etaf-tag--merge-styles (base-style override-style)
+(defun etaf-etml-tag--merge-styles (base-style override-style)
   "Merge OVERRIDE-STYLE into BASE-STYLE.
 Returns a new alist with all properties from both, with override taking precedence."
   (let ((result (copy-alist (or base-style '()))))
@@ -159,20 +159,20 @@ Returns a new alist with all properties from both, with override taking preceden
           (push pair result))))
     result))
 
-(defun etaf-tag--resolve-inherited-style (tag-name)
+(defun etaf-etml-tag--resolve-inherited-style (tag-name)
   "Resolve the complete style for TAG-NAME including inherited styles."
-  (let* ((definition (etaf-tag-get-definition tag-name))
+  (let* ((definition (etaf-etml-tag-get-definition tag-name))
          (inherit (plist-get definition :inherit))
          (own-style (plist-get definition :default-style)))
-    (if (and inherit (etaf-tag-defined-p inherit))
-        (etaf-tag--merge-styles
-         (etaf-tag--resolve-inherited-style inherit)
+    (if (and inherit (etaf-etml-tag-defined-p inherit))
+        (etaf-etml-tag--merge-styles
+         (etaf-etml-tag--resolve-inherited-style inherit)
          own-style)
       own-style)))
 
 ;;; Event Handling
 
-(defun etaf-tag--make-event (type target &optional extra-data)
+(defun etaf-etml-tag--make-event (type target &optional extra-data)
   "Create an event object with TYPE and TARGET.
 EXTRA-DATA is an optional alist of additional event properties."
   (append (list :type type
@@ -180,26 +180,26 @@ EXTRA-DATA is an optional alist of additional event properties."
                 :timestamp (current-time))
           extra-data))
 
-(defun etaf-tag--dispatch-event (tag-instance event-type &optional extra-data)
+(defun etaf-etml-tag--dispatch-event (tag-instance event-type &optional extra-data)
   "Dispatch an event of EVENT-TYPE for TAG-INSTANCE."
   (let* ((definition (plist-get tag-instance :definition))
          (handler-key (intern (concat ":on-" (symbol-name event-type))))
          (handler (plist-get definition handler-key)))
     (when (functionp handler)
-      (let ((event (etaf-tag--make-event event-type tag-instance extra-data)))
+      (let ((event (etaf-etml-tag--make-event event-type tag-instance extra-data)))
         (funcall handler event)))))
 
 ;;; Interactive Behaviors
 
 ;; Hover tracking state - buffer-local to avoid conflicts between buffers
-(defvar-local etaf-tag--current-hover-instance nil
+(defvar-local etaf-etml-tag--current-hover-instance nil
   "The tag instance currently being hovered over in this buffer.
 This is buffer-local to support multiple buffers with etaf-tag content.")
 
-(defvar-local etaf-tag--hover-overlay nil
+(defvar-local etaf-etml-tag--hover-overlay nil
   "Overlay used for hover state visual feedback in this buffer.")
 
-(defun etaf-tag-setup-keymap (tag-instance)
+(defun etaf-etml-tag-setup-keymap (tag-instance)
   "Set up keybindings for TAG-INSTANCE.
 Creates a keymap with the following bindings:
 - RET and SPC: trigger on-click event
@@ -217,18 +217,18 @@ Returns the configured keymap."
       (define-key keymap (kbd "RET")
         (lambda ()
           (interactive)
-          (etaf-tag--dispatch-event tag-instance 'click)))
+          (etaf-etml-tag--dispatch-event tag-instance 'click)))
       (define-key keymap (kbd "SPC")
         (lambda ()
           (interactive)
-          (etaf-tag--dispatch-event tag-instance 'click)))
+          (etaf-etml-tag--dispatch-event tag-instance 'click)))
       ;; Mouse click handler - mouse-1
       (define-key keymap [mouse-1]
         (lambda (event)
           (interactive "e")
           (let* ((posn (event-start event))
                  (pos (posn-point posn)))
-            (etaf-tag--dispatch-event tag-instance 'click
+            (etaf-etml-tag--dispatch-event tag-instance 'click
                                       (list :mouse-event event
                                             :position pos)))))
       ;; Double click
@@ -237,7 +237,7 @@ Returns the configured keymap."
           (interactive "e")
           (let* ((posn (event-start event))
                  (pos (posn-point posn)))
-            (etaf-tag--dispatch-event tag-instance 'dblclick
+            (etaf-etml-tag--dispatch-event tag-instance 'dblclick
                                       (list :mouse-event event
                                             :position pos))))))
     ;; Keydown handler - capture any key when focused
@@ -246,7 +246,7 @@ Returns the configured keymap."
         (lambda ()
           (interactive)
           (let ((key (this-command-keys-vector)))
-            (etaf-tag--dispatch-event tag-instance 'keydown
+            (etaf-etml-tag--dispatch-event tag-instance 'keydown
                                       (list :key key
                                             :key-char (when (> (length key) 0)
                                                         (aref key (1- (length key))))))))))
@@ -254,7 +254,7 @@ Returns the configured keymap."
     ;; as there's no native key release event. It is marked as unsupported.
     keymap))
 
-(defun etaf-tag--help-echo-handler (window _obj pos)
+(defun etaf-etml-tag--help-echo-handler (window _obj pos)
   "Help-echo function to track mouse hover and dispatch hover events.
 WINDOW is the window where the mouse is.
 POS is the buffer position under the mouse."
@@ -262,27 +262,27 @@ POS is the buffer position under the mouse."
     (let* ((instance (get-text-property pos 'etaf-tag-instance))
            (definition (and instance (plist-get instance :definition))))
       ;; Handle hover-leave for previous instance
-      (when (and etaf-tag--current-hover-instance
-                 (not (eq etaf-tag--current-hover-instance instance)))
-        (let ((old-def (plist-get etaf-tag--current-hover-instance :definition)))
+      (when (and etaf-etml-tag--current-hover-instance
+                 (not (eq etaf-etml-tag--current-hover-instance instance)))
+        (let ((old-def (plist-get etaf-etml-tag--current-hover-instance :definition)))
           (when (plist-get old-def :on-hover-leave)
-            (etaf-tag--dispatch-event etaf-tag--current-hover-instance 'hover-leave))
+            (etaf-etml-tag--dispatch-event etaf-etml-tag--current-hover-instance 'hover-leave))
           ;; Update hover state
-          (plist-put (plist-get etaf-tag--current-hover-instance :state) :hovered nil)))
+          (plist-put (plist-get etaf-etml-tag--current-hover-instance :state) :hovered nil)))
       ;; Handle hover-enter for new instance
-      (when (and instance (not (eq etaf-tag--current-hover-instance instance)))
+      (when (and instance (not (eq etaf-etml-tag--current-hover-instance instance)))
         (when (plist-get definition :on-hover-enter)
-          (etaf-tag--dispatch-event instance 'hover-enter))
+          (etaf-etml-tag--dispatch-event instance 'hover-enter))
         ;; Update hover state
         (plist-put (plist-get instance :state) :hovered t))
       ;; Update current hover instance
-      (setq etaf-tag--current-hover-instance instance)
+      (setq etaf-etml-tag--current-hover-instance instance)
       ;; Return help-echo string
       (when definition
         (let ((tag-name (or (plist-get definition :name) "element")))
           (format "Click or press RET/SPC to activate %s" tag-name))))))
 
-(defun etaf-tag-make-interactive (start end tag-instance)
+(defun etaf-etml-tag-make-interactive (start end tag-instance)
   "Make the region from START to END interactive based on TAG-INSTANCE.
 This function adds text properties to enable:
 - Click events via keyboard (RET, SPC) and mouse (mouse-1)
@@ -295,7 +295,7 @@ Note: The following events have limitations in Emacs:
 - on-change/on-input: Not supported for static text (use widgets instead)
 - on-keyup: Not reliably supported (no key release event in Emacs)"
   (let* ((definition (plist-get tag-instance :definition))
-         (keymap (etaf-tag-setup-keymap tag-instance))
+         (keymap (etaf-etml-tag-setup-keymap tag-instance))
          (has-click (plist-get definition :on-click))
          (has-hover (or (plist-get definition :on-hover-enter)
                         (plist-get definition :on-hover-leave)
@@ -312,13 +312,13 @@ Note: The following events have limitations in Emacs:
        ,@(when has-click
            '(pointer hand))
        ;; Help-echo with function for hover tracking
-       help-echo ,#'etaf-tag--help-echo-handler))))
+       help-echo ,#'etaf-etml-tag--help-echo-handler))))
 
 ;;; Tag Instance Creation
 
-(defun etaf-tag-create-instance (tag-name attrs children)
+(defun etaf-etml-tag-create-instance (tag-name attrs children)
   "Create a tag instance with TAG-NAME, ATTRS, and CHILDREN."
-  (let* ((definition (etaf-tag-get-definition tag-name))
+  (let* ((definition (etaf-etml-tag-get-definition tag-name))
          (instance (list :tag-name tag-name
                          :definition definition
                          :attrs attrs
@@ -328,13 +328,13 @@ Note: The following events have limitations in Emacs:
                                       :active nil
                                       :disabled (plist-get attrs :disabled)))))
     ;; Register instance
-    (push instance etaf-tag-instances)
+    (push instance etaf-etml-tag-instances)
     instance))
 
 ;;; Tag Definition Macro
 
 ;;;###autoload
-(defmacro define-etaf-tag (name &rest props)
+(defmacro define-etaf-etml-tag (name &rest props)
   "Define an ETML tag with NAME and PROPS.
 
 NAME is the tag symbol (e.g., button, div, my-component).
@@ -365,7 +365,7 @@ Other options:
 - :render - Custom render function
 
 Example:
-  (define-etaf-tag button
+  (define-etaf-etml-tag button
     :display \\='inline-block
     :default-style \\='((padding . \"5px 10px\")
                       (cursor . \"pointer\"))
@@ -373,50 +373,50 @@ Example:
     :on-click (lambda (event)
                 (message \"Button clicked!\")))"
   (declare (indent defun))
-  (let ((definition-var (intern (format "etaf-tag--%s-definition" name))))
+  (let ((definition-var (intern (format "etaf-etml-tag--%s-definition" name))))
     `(progn
        ;; Create the definition
        (defvar ,definition-var
-         (etaf-tag-create-definition ',name ,@props)
+         (etaf-etml-tag-create-definition ',name ,@props)
          ,(format "Tag definition for %s." name))
        ;; Register the tag
-       (etaf-tag-register ',name ,definition-var)
+       (etaf-etml-tag-register ',name ,definition-var)
        ;; Return the tag name
        ',name)))
 
 ;;; Tag Rendering
 
-(defun etaf-tag-get-computed-style (tag-instance)
+(defun etaf-etml-tag-get-computed-style (tag-instance)
   "Get the computed style for TAG-INSTANCE based on its current state."
   (let* ((definition (plist-get tag-instance :definition))
          (state (plist-get tag-instance :state))
          (attrs (plist-get tag-instance :attrs))
          ;; Start with inherited + default style
-         (base-style (etaf-tag--resolve-inherited-style
+         (base-style (etaf-etml-tag--resolve-inherited-style
                       (plist-get tag-instance :tag-name)))
          ;; Apply inline styles from attrs
          (inline-style (plist-get attrs :style))
-         (style (etaf-tag--merge-styles
+         (style (etaf-etml-tag--merge-styles
                  base-style (when inline-style
                               (if (stringp inline-style)
-                                  (etaf-tag--parse-style-string inline-style)
+                                  (etaf-etml-tag--parse-style-string inline-style)
                                 inline-style)))))
     ;; Apply state-based styles
     (when (plist-get state :hovered)
-      (setq style (etaf-tag--merge-styles
+      (setq style (etaf-etml-tag--merge-styles
                    style (plist-get definition :hover-style))))
     (when (plist-get state :focused)
-      (setq style (etaf-tag--merge-styles
+      (setq style (etaf-etml-tag--merge-styles
                    style (plist-get definition :focus-style))))
     (when (plist-get state :active)
-      (setq style (etaf-tag--merge-styles
+      (setq style (etaf-etml-tag--merge-styles
                    style (plist-get definition :active-style))))
     (when (plist-get state :disabled)
-      (setq style (etaf-tag--merge-styles
+      (setq style (etaf-etml-tag--merge-styles
                    style (plist-get definition :disabled-style))))
     style))
 
-(defun etaf-tag--parse-style-string (style-string)
+(defun etaf-etml-tag--parse-style-string (style-string)
   "Parse a CSS style string into an alist.
 Example: \"color: red; padding: 10px\" => ((color . \"red\") (padding . \"10px\"))"
   (let ((result '())
@@ -428,7 +428,7 @@ Example: \"color: red; padding: 10px\" => ((color . \"red\") (padding . \"10px\"
           (push (cons prop value) result))))
     (nreverse result)))
 
-(defun etaf-tag-render-to-dom (tag-instance)
+(defun etaf-etml-tag-render-to-dom (tag-instance)
   "Render TAG-INSTANCE to DOM format.
 Returns (tag-name ((attrs...)) children...)."
   (let* ((tag-name (plist-get tag-instance :tag-name))
@@ -436,7 +436,7 @@ Returns (tag-name ((attrs...)) children...)."
          (attrs (plist-get tag-instance :attrs))
          (children (plist-get tag-instance :children))
          (custom-render (plist-get definition :render))
-         (computed-style (etaf-tag-get-computed-style tag-instance)))
+         (computed-style (etaf-etml-tag-get-computed-style tag-instance)))
     ;; Use custom render if provided
     (if custom-render
         (funcall custom-render tag-instance)
@@ -444,7 +444,7 @@ Returns (tag-name ((attrs...)) children...)."
       (let ((dom-attrs '()))
         ;; Convert computed style to style attribute
         (when computed-style
-          (push (cons 'style (etaf-tag--style-alist-to-string computed-style))
+          (push (cons 'style (etaf-etml-tag--style-alist-to-string computed-style))
                 dom-attrs))
         ;; Copy other attributes (except :style which we computed)
         (let ((attr-rest attrs))
@@ -462,11 +462,11 @@ Returns (tag-name ((attrs...)) children...)."
                     (mapcar (lambda (child)
                               (if (and (listp child)
                                        (plist-get child :tag-name))
-                                  (etaf-tag-render-to-dom child)
+                                  (etaf-etml-tag-render-to-dom child)
                                 child))
                             children)))))))
 
-(defun etaf-tag--style-alist-to-string (style-alist)
+(defun etaf-etml-tag--style-alist-to-string (style-alist)
   "Convert STYLE-ALIST to CSS style string."
   (mapconcat (lambda (pair)
                (format "%s: %s" (car pair) (cdr pair)))
@@ -475,95 +475,95 @@ Returns (tag-name ((attrs...)) children...)."
 ;;; Built-in Tags
 
 ;; Block-level tags
-(define-etaf-tag div
+(define-etaf-etml-tag div
   :display 'block
   :default-style nil)
 
-(define-etaf-tag p
+(define-etaf-etml-tag p
   :display 'block
   :default-style nil)
 
-(define-etaf-tag h1
+(define-etaf-etml-tag h1
   :display 'block
   :default-style '((font-size . 1.6)
                    (font-weight . "bold")))
 
-(define-etaf-tag h2
+(define-etaf-etml-tag h2
   :display 'block
   :default-style '((font-size . 1.4)
                    (font-weight . "bold")))
 
-(define-etaf-tag h3
+(define-etaf-etml-tag h3
   :display 'block
   :default-style '((font-size . 1.3)
                    (font-weight . "bold")))
 
-(define-etaf-tag h4
+(define-etaf-etml-tag h4
   :display 'block
   :default-style '((font-size . 1.2)
                    (font-weight . "bold")))
 
-(define-etaf-tag h5
+(define-etaf-etml-tag h5
   :display 'block
   :default-style '((font-size . 1.1)
                    (font-weight . "bold")))
 
-(define-etaf-tag h6
+(define-etaf-etml-tag h6
   :display 'block
   :default-style '((font-size . 1.0)
                    (font-weight . "bold")))
 
-(define-etaf-tag header
+(define-etaf-etml-tag header
   :display 'block)
 
-(define-etaf-tag footer
+(define-etaf-etml-tag footer
   :display 'block)
 
-(define-etaf-tag section
+(define-etaf-etml-tag section
   :display 'block)
 
-(define-etaf-tag article
+(define-etaf-etml-tag article
   :display 'block)
 
-(define-etaf-tag aside
+(define-etaf-etml-tag aside
   :display 'block)
 
-(define-etaf-tag nav
+(define-etaf-etml-tag nav
   :display 'block)
 
-(define-etaf-tag main
+(define-etaf-etml-tag main
   :display 'block)
 
-(define-etaf-tag ul
+(define-etaf-etml-tag ul
   :display 'block
   :default-style '((list-style-type . "disc")
                    (margin-top . "1lh")
                    (margin-bottom . "1lh")
                    (padding-left . "40px")))
 
-(define-etaf-tag ol
+(define-etaf-etml-tag ol
   :display 'block
   :default-style '((list-style-type . "decimal")
                    (margin-top . "1lh")
                    (margin-bottom . "1lh")
                    (padding-left . "40px")))
 
-(define-etaf-tag li
+(define-etaf-etml-tag li
   :display 'list-item)
 
-(define-etaf-tag blockquote
+(define-etaf-etml-tag blockquote
   :display 'block
   :default-style '((margin-top . "1lh")
                    (margin-bottom . "1lh")
                    (margin-left . "40px")
                    (margin-right . "40px")))
 
-(define-etaf-tag pre
+(define-etaf-etml-tag pre
   :display 'block
   :default-style '((font-family . "monospace")
                    (white-space . "pre")))
 
-(define-etaf-tag hr
+(define-etaf-etml-tag hr
   :display 'block
   :self-closing t
   :children-allowed nil
@@ -572,10 +572,10 @@ Returns (tag-name ((attrs...)) children...)."
                    (margin-bottom . "1lh")))
 
 ;; Inline tags
-(define-etaf-tag span
+(define-etaf-etml-tag span
   :display 'inline)
 
-(define-etaf-tag a
+(define-etaf-etml-tag a
   :display 'inline
   :default-style '((color . "blue")
                    (text-decoration . "underline")
@@ -588,90 +588,90 @@ Returns (tag-name ((attrs...)) children...)."
                 (when href
                   (browse-url href)))))
 
-(define-etaf-tag em
+(define-etaf-etml-tag em
   :display 'inline
   :default-style '((font-style . "italic")))
 
-(define-etaf-tag strong
+(define-etaf-etml-tag strong
   :display 'inline
   :default-style '((font-weight . "bold")))
 
-(define-etaf-tag b
+(define-etaf-etml-tag b
   :display 'inline
   :default-style '((font-weight . "bold")))
 
-(define-etaf-tag i
+(define-etaf-etml-tag i
   :display 'inline
   :default-style '((font-style . "italic")))
 
-(define-etaf-tag u
+(define-etaf-etml-tag u
   :display 'inline
   :default-style '((text-decoration . "underline")))
 
-(define-etaf-tag s
+(define-etaf-etml-tag s
   :display 'inline
   :default-style '((text-decoration . "line-through")))
 
-(define-etaf-tag del
+(define-etaf-etml-tag del
   :display 'inline
   :default-style '((text-decoration . "line-through")))
 
-(define-etaf-tag ins
+(define-etaf-etml-tag ins
   :display 'inline
   :default-style '((text-decoration . "underline")))
 
-(define-etaf-tag mark
+(define-etaf-etml-tag mark
   :display 'inline
   :default-style '((background-color . "yellow")))
 
-(define-etaf-tag small
+(define-etaf-etml-tag small
   :display 'inline
   :default-style '((font-size . "smaller")))
 
-(define-etaf-tag sub
+(define-etaf-etml-tag sub
   :display 'inline
   :default-style '((vertical-align . "sub")
                    (font-size . "smaller")))
 
-(define-etaf-tag sup
+(define-etaf-etml-tag sup
   :display 'inline
   :default-style '((vertical-align . "super")
                    (font-size . "smaller")))
 
-(define-etaf-tag code
+(define-etaf-etml-tag code
   :display 'inline
   :default-style '((font-family . "monospace")))
 
-(define-etaf-tag kbd
+(define-etaf-etml-tag kbd
   :display 'inline
   :default-style '((font-family . "monospace")))
 
-(define-etaf-tag samp
+(define-etaf-etml-tag samp
   :display 'inline
   :default-style '((font-family . "monospace")))
 
-(define-etaf-tag var
+(define-etaf-etml-tag var
   :display 'inline
   :default-style '((font-style . "italic")))
 
-(define-etaf-tag abbr
+(define-etaf-etml-tag abbr
   :display 'inline
   :default-style '((text-decoration . "dotted underline")))
 
-(define-etaf-tag cite
+(define-etaf-etml-tag cite
   :display 'inline
   :default-style '((font-style . "italic")))
 
-(define-etaf-tag q
+(define-etaf-etml-tag q
   :display 'inline)
 
-(define-etaf-tag br
+(define-etaf-etml-tag br
   :display 'inline
   :self-closing t
   :children-allowed nil)
 
 ;; Form elements
-(define-etaf-tag button
+(define-etaf-etml-tag button
   :display 'inline-block
   :default-style '((padding-top . "0lh")
                    (padding-bottom . "0lh")
@@ -695,7 +695,7 @@ Returns (tag-name ((attrs...)) children...)."
                     (when (functionp custom-handler)
                       (funcall custom-handler event)))))))
 
-(define-etaf-tag input
+(define-etaf-etml-tag input
   :display 'inline-block
   :self-closing t
   :children-allowed nil
@@ -709,7 +709,7 @@ Returns (tag-name ((attrs...)) children...)."
   :disabled-style '((background-color . "#f5f5f5")
                     (color . "#999")))
 
-(define-etaf-tag textarea
+(define-etaf-etml-tag textarea
   :display 'inline-block
   :default-style '((padding-top . "0lh")
                    (padding-bottom . "0lh")
@@ -720,7 +720,7 @@ Returns (tag-name ((attrs...)) children...)."
   :focus-style '((border-color . "blue")
                  (outline . "none")))
 
-(define-etaf-tag select
+(define-etaf-etml-tag select
   :display 'inline-block
   :default-style '((padding-top . "0lh")
                    (padding-bottom . "0lh")
@@ -728,17 +728,17 @@ Returns (tag-name ((attrs...)) children...)."
                    (padding-right . "5px")
                    (border . "1px solid #ccc")))
 
-(define-etaf-tag option
+(define-etaf-etml-tag option
   :display 'block)
 
-(define-etaf-tag label
+(define-etaf-etml-tag label
   :display 'inline
   :default-style '((cursor . "pointer")))
 
-(define-etaf-tag form
+(define-etaf-etml-tag form
   :display 'block)
 
-(define-etaf-tag fieldset
+(define-etaf-etml-tag fieldset
   :display 'block
   :default-style '((border . "1px solid #ccc")
                    (padding-top . "1lh")
@@ -746,7 +746,7 @@ Returns (tag-name ((attrs...)) children...)."
                    (padding-left . "10px")
                    (padding-right . "10px")))
 
-(define-etaf-tag legend
+(define-etaf-etml-tag legend
   :display 'block
   :default-style '((padding-top . "0lh")
                    (padding-bottom . "0lh")
@@ -754,23 +754,23 @@ Returns (tag-name ((attrs...)) children...)."
                    (padding-right . "5px")))
 
 ;; Table elements
-(define-etaf-tag table
+(define-etaf-etml-tag table
   :display 'table
   :default-style '((border-collapse . "collapse")))
 
-(define-etaf-tag thead
+(define-etaf-etml-tag thead
   :display 'table-header-group)
 
-(define-etaf-tag tbody
+(define-etaf-etml-tag tbody
   :display 'table-row-group)
 
-(define-etaf-tag tfoot
+(define-etaf-etml-tag tfoot
   :display 'table-footer-group)
 
-(define-etaf-tag tr
+(define-etaf-etml-tag tr
   :display 'table-row)
 
-(define-etaf-tag th
+(define-etaf-etml-tag th
   :display 'table-cell
   :default-style '((font-weight . "bold")
                    (text-align . "center")
@@ -779,49 +779,49 @@ Returns (tag-name ((attrs...)) children...)."
                    (padding-left . "5px")
                    (padding-right . "5px")))
 
-(define-etaf-tag td
+(define-etaf-etml-tag td
   :display 'table-cell
   :default-style '((padding-top . "0lh")
                    (padding-bottom . "0lh")
                    (padding-left . "5px")
                    (padding-right . "5px")))
 
-(define-etaf-tag caption
+(define-etaf-etml-tag caption
   :display 'table-caption)
 
 ;; Media elements
-(define-etaf-tag img
+(define-etaf-etml-tag img
   :display 'inline-block
   :self-closing t
   :children-allowed nil)
 
-(define-etaf-tag video
+(define-etaf-etml-tag video
   :display 'inline-block)
 
-(define-etaf-tag audio
+(define-etaf-etml-tag audio
   :display 'inline)
 
-(define-etaf-tag canvas
+(define-etaf-etml-tag canvas
   :display 'inline-block)
 
-(define-etaf-tag svg
+(define-etaf-etml-tag svg
   :display 'inline-block)
 
 ;; Semantic elements
-(define-etaf-tag figure
+(define-etaf-etml-tag figure
   :display 'block
   :default-style '((margin-top . "1lh")
                    (margin-bottom . "1lh")
                    (margin-left . "40px")
                    (margin-right . "40px")))
 
-(define-etaf-tag figcaption
+(define-etaf-etml-tag figcaption
   :display 'block)
 
-(define-etaf-tag details
+(define-etaf-etml-tag details
   :display 'block)
 
-(define-etaf-tag summary
+(define-etaf-etml-tag summary
   :display 'list-item
   :default-style '((cursor . "pointer"))
   :on-click (lambda (event)
@@ -831,7 +831,7 @@ Returns (tag-name ((attrs...)) children...)."
                 (plist-put state :expanded
                            (not (plist-get state :expanded))))))
 
-(define-etaf-tag dialog
+(define-etaf-etml-tag dialog
   :display 'block
   :default-style '((position . "absolute")
                    (border . "1px solid #ccc")
@@ -841,17 +841,17 @@ Returns (tag-name ((attrs...)) children...)."
                    (padding-right . "10px")
                    (background-color . "white")))
 
-(define-etaf-tag progress
+(define-etaf-etml-tag progress
   :display 'inline-block
   :children-allowed nil)
 
-(define-etaf-tag meter
+(define-etaf-etml-tag meter
   :display 'inline-block
   :children-allowed nil)
 
 ;;; High-level API
 
-(defun etaf-tag-parse (sexp)
+(defun etaf-etml-tag-parse (sexp)
   "Parse SEXP into a tag instance.
 SEXP format: (tag-name :attr1 val1 :attr2 val2 children...)
 Returns a tag instance or the original sexp if not a valid tag."
@@ -861,7 +861,7 @@ Returns a tag instance or the original sexp if not a valid tag."
            (attrs nil)
            (children nil))
       ;; Check if this is a defined tag
-      (if (etaf-tag-defined-p tag-name)
+      (if (etaf-etml-tag-defined-p tag-name)
           (progn
             ;; Parse attributes (keywords and their values)
             (while (and rest (keywordp (car rest)))
@@ -875,22 +875,22 @@ Returns a tag instance or the original sexp if not a valid tag."
             (setq children
                   (mapcar (lambda (child)
                             (if (listp child)
-                                (etaf-tag-parse child)
+                                (etaf-etml-tag-parse child)
                               child))
                           rest))
             ;; Create tag instance
-            (etaf-tag-create-instance tag-name attrs children))
+            (etaf-etml-tag-create-instance tag-name attrs children))
         ;; Not a defined tag, return as-is
         sexp))))
 
-(defun etaf-tag-to-dom (sexp)
+(defun etaf-etml-tag-to-dom (sexp)
   "Convert SEXP with ETML tags to DOM format.
 This parses the SEXP, resolves tag definitions, and returns standard DOM."
-  (let ((parsed (etaf-tag-parse sexp)))
+  (let ((parsed (etaf-etml-tag-parse sexp)))
     (if (and (listp parsed) (plist-get parsed :tag-name))
-        (etaf-tag-render-to-dom parsed)
+        (etaf-etml-tag-render-to-dom parsed)
       ;; Pass through if not a valid tag instance
       parsed)))
 
-(provide 'etaf-tag)
-;;; etaf-tag.el ends here
+(provide 'etaf-etml-tag)
+;;; etaf-etml-tag.el ends here

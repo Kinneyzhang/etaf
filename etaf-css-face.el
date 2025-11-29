@@ -120,7 +120,7 @@ CSS-COLOR 是 CSS 颜色字符串，如 \"red\", \"#ff0000\", \"rgb(255,0,0)\"�
 返回相对高度浮点数（如 1.2），与 Emacs face 的 :height 属性一致。
 Emacs 的 :height 浮点数表示相对于默认字体的缩放比例。"
   (cond
-   ;; 数值类型：直接作为相对高度（支持 etaf-tag.el 中的数值定义）
+   ;; 数值类型：直接作为相对高度（支持 etaf-etml-tag.el 中的数值定义）
    ((numberp css-size) (float css-size))
    ;; 字符串类型
    ((stringp css-size)
