@@ -113,7 +113,7 @@ inline styles, where inline styles take precedence."
           ;; Merge etaf-etml-tag default styles if tag is defined
           (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
           (let ((children (mapcar #'etaf-etml-to-dom rest)))
-            (cons tag (cons attr-alist children)))))))))
+            (cons tag (cons attr-alist children))))))))
 
 ;;; Text Interpolation (Mustache syntax)
 
