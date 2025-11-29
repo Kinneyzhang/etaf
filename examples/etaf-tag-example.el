@@ -263,7 +263,7 @@
   "Run all tag examples."
   (interactive)
   (etaf-tag-example-basic)
-  (message "\n" )
+  (message "\n")
   (etaf-tag-example-definitions)
   (message "\n")
   (etaf-tag-example-custom)
