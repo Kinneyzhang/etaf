@@ -358,7 +358,7 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
    ((atom node)
     (cons (list node) 0))
    
-   ;; List (element)
+   ;; List (element or component)
    (t
     (let* ((tag (car node))
            (rest (cdr node))
@@ -366,7 +366,14 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
            (attrs (car parsed))
            (children (cdr parsed)))
       
-      ;; Check for e-for/v-for (list rendering)
+      ;; Check if this is a component first
+      (if (etaf-etml--is-component-p tag)
+          (let* ((component (etaf-etml-component-get tag))
+                 (rendered (etaf-etml--render-component
+                            component attrs children data)))
+            (cons (list rendered) 0))
+        
+        ;; Check for e-for/v-for (list rendering)
       (if-let ((for-expr (etaf-etml--get-directive attrs :e-for :v-for)))
           (let* ((for-parsed (etaf-etml--parse-v-for for-expr))
                  (item-var (nth 0 for-parsed))
@@ -490,7 +497,7 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
                   ;; No special directives - render normally
                   (let ((rendered (etaf-etml--render-element
                                    tag attrs children data)))
-                    (cons rendered 0))))))))))))
+                    (cons rendered 0)))))))))))))
 
 (defun etaf-etml--render-element (tag attrs children data)
   "Render element with TAG, ATTRS, CHILDREN using DATA.
@@ -942,38 +949,6 @@ Usage:
                  (setq result (plist-put result key (etaf-etml-ref-get ref))))
                refs)
       result)))
-
-;;; ============================================================================
-;;; Integration: Component + Reactive in ETML Rendering
-;;; ============================================================================
-
-(defun etaf-etml--render-node-with-components (node data siblings)
-  "Extended version of render-node that handles components.
-Delegates to component rendering when a component tag is detected."
-  (cond
-   ;; String - interpolate
-   ((stringp node)
-    (cons (list (etaf-etml--interpolate-string node data)) 0))
-   
-   ;; Atom - return as is
-   ((atom node)
-    (cons (list node) 0))
-   
-   ;; List (element or component)
-   (t
-    (let* ((tag (car node))
-           (rest (cdr node)))
-      ;; Check if this is a component
-      (if (etaf-etml--is-component-p tag)
-          (let* ((parsed (etaf-etml--split-attrs-and-children rest))
-                 (attrs (car parsed))
-                 (children (cdr parsed))
-                 (component (etaf-etml-component-get tag))
-                 (rendered (etaf-etml--render-component
-                            component attrs children data)))
-            (cons (list rendered) 0))
-        ;; Not a component - use original render logic
-        (etaf-etml--render-node node data siblings))))))
 
 ;;; --- Backward Compatibility ---
 ;;; Keep the old simple reactive system for backward compatibility
