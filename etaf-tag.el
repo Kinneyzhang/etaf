@@ -194,22 +194,24 @@ EXTRA-DATA is an optional alist of additional event properties."
   (let* ((definition (plist-get tag-instance :definition))
          (keymap (etaf-tag-setup-keymap tag-instance)))
     ;; Add text properties for interactivity
-    (add-text-properties start end
-                         (list 'etaf-tag-instance tag-instance
-                               'keymap keymap
-                               'mouse-face 'highlight
-                               'help-echo (format "Click or press RET to activate %s"
-                                                  (plist-get definition :name))))
+    (add-text-properties
+     start end
+     (list 'etaf-tag-instance tag-instance
+           'keymap keymap
+           'mouse-face 'highlight
+           'help-echo (format "Click or press RET to activate %s"
+                              (plist-get definition :name))))
     ;; Set up mouse click handler
     (when (plist-get definition :on-click)
-      (add-text-properties start end
-                           (list 'local-map
-                                 (let ((map (make-sparse-keymap)))
-                                   (define-key map [mouse-1]
-                                     (lambda (_event)
-                                       (interactive "e")
-                                       (etaf-tag--dispatch-event tag-instance 'click)))
-                                   map))))))
+      (add-text-properties
+       start end
+       (list 'local-map
+             (let ((map (make-sparse-keymap)))
+               (define-key map [mouse-1]
+                           (lambda (_event)
+                             (interactive "e")
+                             (etaf-tag--dispatch-event tag-instance 'click)))
+               map))))))
 
 ;;; Tag Instance Creation
 
@@ -289,24 +291,24 @@ Example:
                       (plist-get tag-instance :tag-name)))
          ;; Apply inline styles from attrs
          (inline-style (plist-get attrs :style))
-         (style (etaf-tag--merge-styles base-style
-                                        (when inline-style
-                                          (if (stringp inline-style)
-                                              (etaf-tag--parse-style-string inline-style)
-                                            inline-style)))))
+         (style (etaf-tag--merge-styles
+                 base-style (when inline-style
+                              (if (stringp inline-style)
+                                  (etaf-tag--parse-style-string inline-style)
+                                inline-style)))))
     ;; Apply state-based styles
     (when (plist-get state :hovered)
-      (setq style (etaf-tag--merge-styles style
-                                          (plist-get definition :hover-style))))
+      (setq style (etaf-tag--merge-styles
+                   style (plist-get definition :hover-style))))
     (when (plist-get state :focused)
-      (setq style (etaf-tag--merge-styles style
-                                          (plist-get definition :focus-style))))
+      (setq style (etaf-tag--merge-styles
+                   style (plist-get definition :focus-style))))
     (when (plist-get state :active)
-      (setq style (etaf-tag--merge-styles style
-                                          (plist-get definition :active-style))))
+      (setq style (etaf-tag--merge-styles
+                   style (plist-get definition :active-style))))
     (when (plist-get state :disabled)
-      (setq style (etaf-tag--merge-styles style
-                                          (plist-get definition :disabled-style))))
+      (setq style (etaf-tag--merge-styles
+                   style (plist-get definition :disabled-style))))
     style))
 
 (defun etaf-tag--parse-style-string (style-string)
@@ -350,13 +352,14 @@ Returns (tag-name ((attrs...)) children...)."
                     (push (cons attr-name value) dom-attrs))))
               (setq attr-rest (cddr attr-rest)))))
         ;; Build DOM node
-        (cons tag-name (cons (nreverse dom-attrs)
-                             (mapcar (lambda (child)
-                                       (if (and (listp child)
-                                                (plist-get child :tag-name))
-                                           (etaf-tag-render-to-dom child)
-                                         child))
-                                     children)))))))
+        (cons tag-name
+              (cons (nreverse dom-attrs)
+                    (mapcar (lambda (child)
+                              (if (and (listp child)
+                                       (plist-get child :tag-name))
+                                  (etaf-tag-render-to-dom child)
+                                child))
+                            children)))))))
 
 (defun etaf-tag--style-alist-to-string (style-alist)
   "Convert STYLE-ALIST to CSS style string."
