@@ -313,8 +313,12 @@ PARENT-CONTEXT 包含父容器的上下文信息。
              ((and (consp child) (symbolp (car child)))
               (when-let ((child-layout (etaf-layout-node child child-context)))
                 (push child-layout child-layouts)
-                (let ((child-total-height (etaf-layout-box-total-height 
-                                           (etaf-layout-get-box-model child-layout))))
+                ;; 计算子元素高度时不包含border高度，因为上下border使用
+                ;; :overline/:underline face实现，不占用额外行数
+                (let* ((child-box (etaf-layout-get-box-model child-layout))
+                       (child-total-height (+ (etaf-layout-box-content-height child-box)
+                                              (etaf-layout-box-padding-height child-box)
+                                              (etaf-layout-box-margin-height child-box))))
                   (setq accumulated-height (+ accumulated-height child-total-height)))))
              ((stringp child)
               (push child child-layouts)
