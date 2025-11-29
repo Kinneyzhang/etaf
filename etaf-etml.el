@@ -26,7 +26,7 @@
 ;;; Utility functions
 
 (require 'cl-lib)
-(require 'etaf-tag)
+(require 'etaf-etml-tag)
 
 (defun etaf-plist-to-alist (plist)
   "Convert a plist to an alist.
@@ -50,21 +50,21 @@ Returns a string like \"property1: value1; property2: value2\"."
              css-alist "; "))
 
 (defun etaf-etml--merge-tag-styles (tag attr-alist)
-  "Merge etaf-tag default styles into ATTR-ALIST for TAG.
-If TAG is defined in etaf-tag, its default style is used as the base,
+  "Merge etaf-etml-tag default styles into ATTR-ALIST for TAG.
+If TAG is defined in etaf-etml-tag, its default style is used as the base,
 and any inline :style in ATTR-ALIST overrides the default.
 Returns the updated ATTR-ALIST with merged style attribute."
-  (when (etaf-tag-defined-p tag)
-    (let* ((tag-def (etaf-tag-get-definition tag))
+  (when (etaf-etml-tag-defined-p tag)
+    (let* ((tag-def (etaf-etml-tag-get-definition tag))
            (default-style (plist-get tag-def :default-style)))
       (when default-style
         (let* ((style-attr (assq 'style attr-alist))
                (inline-style (when style-attr
                                (if (stringp (cdr style-attr))
-                                   (etaf-tag--parse-style-string (cdr style-attr))
+                                   (etaf-etml-tag--parse-style-string (cdr style-attr))
                                  (cdr style-attr))))
                ;; Merge: default-style as base, inline-style overrides
-               (merged-style (etaf-tag--merge-styles default-style inline-style)))
+               (merged-style (etaf-etml-tag--merge-styles default-style inline-style)))
           (if merged-style
               (let ((merged-string (etaf-css-alist-to-string merged-style)))
                 (if style-attr
@@ -87,7 +87,7 @@ Supports :style attribute for inline CSS rules in two formats:
 Both are converted to:
   (div ((style . \"background: red; padding: 10px\")) ...)
 
-If the tag is defined in etaf-tag, its default styles are merged with
+If the tag is defined in etaf-etml-tag, its default styles are merged with
 inline styles, where inline styles take precedence."
   (cond
    ;; If it's an atom (string, number, etc.), return as is
@@ -110,10 +110,10 @@ inline styles, where inline styles take precedence."
           (when (and style-attr (listp (cdr style-attr)))
             (let ((style-string (etaf-css-alist-to-string (cdr style-attr))))
               (setcdr style-attr style-string)))
-          ;; Merge etaf-tag default styles if tag is defined
+          ;; Merge etaf-etml-tag default styles if tag is defined
           (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
           (let ((children (mapcar #'etaf-etml-to-dom rest)))
-            (cons tag (cons attr-alist children))))))))
+            (cons tag (cons attr-alist children)))))))))
 
 ;;; Text Interpolation (Mustache syntax)
 

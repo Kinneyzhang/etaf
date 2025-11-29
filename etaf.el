@@ -4,7 +4,7 @@
 (require 'etaf-layout)
 (require 'etaf-tailwind)
 (require 'etaf-ecss)
-(require 'etaf-tag)
+(require 'etaf-etml-tag)
 
 (defun etaf-string (etml &optional width height)
   "将 ETML 转换为带有样式的字符串。

@@ -52,7 +52,7 @@
   ;; Numeric values
   (should (= (etaf-css-font-size-to-emacs 1.4) 1.4))
   (should (= (etaf-css-font-size-to-emacs 1.0) 1.0))
-  ;; Numeric strings (unitless) - important for etaf-tag.el compatibility
+  ;; Numeric strings (unitless) - important for etaf-etml-tag.el compatibility
   (should (= (etaf-css-font-size-to-emacs "1.4") 1.4))
   (should (= (etaf-css-font-size-to-emacs "1.6") 1.6))
   (should (= (etaf-css-font-size-to-emacs "1") 1.0))

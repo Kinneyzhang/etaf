@@ -1,4 +1,4 @@
-;;; etaf-tag-example.el --- ETML Tag Definition System Examples -*- lexical-binding: t; -*-
+;;; etaf-etml-tag-example.el --- ETML Tag Definition System Examples -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
@@ -11,22 +11,22 @@
 
 ;;; Code:
 
-(require 'etaf-tag)
+(require 'etaf-etml-tag)
 
 ;;; Example 1: Basic Tag Usage
 
-(defun etaf-tag-example-basic ()
+(defun etaf-etml-tag-example-basic ()
   "Demonstrate basic tag usage."
   (interactive)
   (message "=== Basic Tag Usage ===\n")
   
   ;; Check if tags are defined
-  (message "div defined: %s" (etaf-tag-defined-p 'div))
-  (message "button defined: %s" (etaf-tag-defined-p 'button))
+  (message "div defined: %s" (etaf-etml-tag-defined-p 'div))
+  (message "button defined: %s" (etaf-etml-tag-defined-p 'button))
   
   ;; Parse a simple tag
   (let* ((sexp '(div :class "container" "Hello World"))
-         (parsed (etaf-tag-parse sexp)))
+         (parsed (etaf-etml-tag-parse sexp)))
     (message "\nParsed tag: %S" parsed)
     (message "Tag name: %s" (plist-get parsed :tag-name))
     (message "Attrs: %S" (plist-get parsed :attrs))
@@ -34,22 +34,22 @@
 
 ;;; Example 2: Tag Definitions
 
-(defun etaf-tag-example-definitions ()
+(defun etaf-etml-tag-example-definitions ()
   "Demonstrate tag definitions."
   (interactive)
   (message "=== Tag Definitions ===\n")
   
   ;; Get definition for a block element
-  (let ((div-def (etaf-tag-get-definition 'div)))
+  (let ((div-def (etaf-etml-tag-get-definition 'div)))
     (message "div display: %s" (plist-get div-def :display))
     (message "div allows children: %s" (plist-get div-def :children-allowed)))
   
   ;; Get definition for an inline element
-  (let ((span-def (etaf-tag-get-definition 'span)))
+  (let ((span-def (etaf-etml-tag-get-definition 'span)))
     (message "\nspan display: %s" (plist-get span-def :display)))
   
   ;; Get definition for a form element
-  (let ((button-def (etaf-tag-get-definition 'button)))
+  (let ((button-def (etaf-etml-tag-get-definition 'button)))
     (message "\nbutton display: %s" (plist-get button-def :display))
     (message "button has click handler: %s"
              (functionp (plist-get button-def :on-click)))
@@ -59,7 +59,7 @@
 ;;; Example 3: Custom Tag Definition
 
 ;; Define a custom primary button tag
-(define-etaf-tag primary-button
+(define-etaf-etml-tag primary-button
   :display 'inline-block
   :inherit 'button
   :default-style '((background-color . "#007bff")
@@ -78,7 +78,7 @@
                   (message "Executing action: %s" custom-action)))))
 
 ;; Define a custom danger button tag
-(define-etaf-tag danger-button
+(define-etaf-etml-tag danger-button
   :display 'inline-block
   :inherit 'button
   :default-style '((background-color . "#dc3545")
@@ -92,7 +92,7 @@
               (message "Danger button clicked! Be careful!")))
 
 ;; Define a custom card component
-(define-etaf-tag card
+(define-etaf-etml-tag card
   :display 'block
   :default-style '((border . "1px solid #ddd")
                    (border-radius . "8px")
@@ -102,7 +102,7 @@
                    (box-shadow . "0 2px 4px rgba(0,0,0,0.1)")))
 
 ;; Define a custom badge/chip component
-(define-etaf-tag badge
+(define-etaf-etml-tag badge
   :display 'inline-block
   :default-style '((background-color . "#6c757d")
                    (color . "white")
@@ -110,35 +110,35 @@
                    (border-radius . "12px")
                    (font-size . "0.875em")))
 
-(defun etaf-tag-example-custom ()
+(defun etaf-etml-tag-example-custom ()
   "Demonstrate custom tag definitions."
   (interactive)
   (message "=== Custom Tag Definitions ===\n")
   
   ;; Check custom tags are defined
-  (message "primary-button defined: %s" (etaf-tag-defined-p 'primary-button))
-  (message "danger-button defined: %s" (etaf-tag-defined-p 'danger-button))
-  (message "card defined: %s" (etaf-tag-defined-p 'card))
-  (message "badge defined: %s" (etaf-tag-defined-p 'badge))
+  (message "primary-button defined: %s" (etaf-etml-tag-defined-p 'primary-button))
+  (message "danger-button defined: %s" (etaf-etml-tag-defined-p 'danger-button))
+  (message "card defined: %s" (etaf-etml-tag-defined-p 'card))
+  (message "badge defined: %s" (etaf-etml-tag-defined-p 'badge))
   
   ;; Get custom tag definition
-  (let ((primary-def (etaf-tag-get-definition 'primary-button)))
+  (let ((primary-def (etaf-etml-tag-get-definition 'primary-button)))
     (message "\nprimary-button inherits from: %s" (plist-get primary-def :inherit))
     (message "primary-button style: %S" (plist-get primary-def :default-style))))
 
 ;;; Example 4: Rendering Tags to DOM
 
-(defun etaf-tag-example-render ()
+(defun etaf-etml-tag-example-render ()
   "Demonstrate rendering tags to DOM format."
   (interactive)
   (message "=== Rendering Tags to DOM ===\n")
   
   ;; Simple tag
-  (let ((dom (etaf-tag-to-dom '(div :class "container" "Hello"))))
+  (let ((dom (etaf-etml-tag-to-dom '(div :class "container" "Hello"))))
     (message "Simple div DOM: %S" dom))
   
   ;; Nested tags
-  (let ((dom (etaf-tag-to-dom
+  (let ((dom (etaf-etml-tag-to-dom
               '(div :class "app"
                     (h1 "Title")
                     (p :class "content" "This is a paragraph.")
@@ -146,7 +146,7 @@
     (message "\nNested DOM: %S" dom))
   
   ;; Using custom tags
-  (let ((dom (etaf-tag-to-dom
+  (let ((dom (etaf-etml-tag-to-dom
               '(card
                 (h2 "Card Title")
                 (p "Card content goes here.")
@@ -156,13 +156,13 @@
 
 ;;; Example 5: Interactive Components
 
-(defun etaf-tag-example-interactive ()
+(defun etaf-etml-tag-example-interactive ()
   "Demonstrate interactive tag features."
   (interactive)
   (message "=== Interactive Tags ===\n")
   
   ;; Create a button instance
-  (let* ((instance (etaf-tag-create-instance
+  (let* ((instance (etaf-etml-tag-create-instance
                     'button
                     '(:class "my-btn" :type "button")
                     '("Click Me")))
@@ -175,35 +175,35 @@
     (message "\n--- Simulating states ---")
     
     ;; Default state
-    (let ((style (etaf-tag-get-computed-style instance)))
+    (let ((style (etaf-etml-tag-get-computed-style instance)))
       (message "Default background: %s" (cdr (assq 'background-color style))))
     
     ;; Hover state
     (plist-put (plist-get instance :state) :hovered t)
-    (let ((style (etaf-tag-get-computed-style instance)))
+    (let ((style (etaf-etml-tag-get-computed-style instance)))
       (message "Hovered background: %s" (cdr (assq 'background-color style))))
     
     ;; Active state
     (plist-put (plist-get instance :state) :active t)
-    (let ((style (etaf-tag-get-computed-style instance)))
+    (let ((style (etaf-etml-tag-get-computed-style instance)))
       (message "Active background: %s" (cdr (assq 'background-color style))))
     
     ;; Disabled state
     (plist-put (plist-get instance :state) :hovered nil)
     (plist-put (plist-get instance :state) :active nil)
     (plist-put (plist-get instance :state) :disabled t)
-    (let ((style (etaf-tag-get-computed-style instance)))
+    (let ((style (etaf-etml-tag-get-computed-style instance)))
       (message "Disabled background: %s" (cdr (assq 'background-color style))))))
 
 ;;; Example 6: Event Handling
 
-(defun etaf-tag-example-events ()
+(defun etaf-etml-tag-example-events ()
   "Demonstrate event handling."
   (interactive)
   (message "=== Event Handling ===\n")
   
   ;; Create an event
-  (let ((event (etaf-tag--make-event 'click
+  (let ((event (etaf-etml-tag--make-event 'click
                                      '(:tag-name button)
                                      '(:x 100 :y 200 :button 1))))
     (message "Event type: %s" (plist-get event :type))
@@ -214,28 +214,28 @@
   
   ;; Dispatch event on an instance
   (message "\n--- Dispatching events ---")
-  (let ((instance (etaf-tag-create-instance
+  (let ((instance (etaf-etml-tag-create-instance
                    'primary-button
                    '(:action "test-action")
                    '("Test Button"))))
     (message "Dispatching click event...")
-    (etaf-tag--dispatch-event instance 'click)))
+    (etaf-etml-tag--dispatch-event instance 'click)))
 
 ;;; Example 7: List All Tags
 
-(defun etaf-tag-example-list-tags ()
+(defun etaf-etml-tag-example-list-tags ()
   "List all defined tags by category."
   (interactive)
   (message "=== All Defined Tags ===\n")
   
-  (let* ((all-tags (etaf-tag-list-all))
+  (let* ((all-tags (etaf-etml-tag-list-all))
          (block-tags '())
          (inline-tags '())
          (inline-block-tags '())
          (other-tags '()))
     ;; Categorize tags
     (dolist (tag all-tags)
-      (let* ((def (etaf-tag-get-definition tag))
+      (let* ((def (etaf-etml-tag-get-definition tag))
              (display (plist-get def :display)))
         (pcase display
           ('block (push tag block-tags))
@@ -262,20 +262,20 @@
 (defun etaf-tag-run-all-examples ()
   "Run all tag examples."
   (interactive)
-  (etaf-tag-example-basic)
+  (etaf-etml-tag-example-basic)
   (message "\n")
-  (etaf-tag-example-definitions)
+  (etaf-etml-tag-example-definitions)
   (message "\n")
-  (etaf-tag-example-custom)
+  (etaf-etml-tag-example-custom)
   (message "\n")
-  (etaf-tag-example-render)
+  (etaf-etml-tag-example-render)
   (message "\n")
-  (etaf-tag-example-interactive)
+  (etaf-etml-tag-example-interactive)
   (message "\n")
-  (etaf-tag-example-events)
+  (etaf-etml-tag-example-events)
   (message "\n")
-  (etaf-tag-example-list-tags)
+  (etaf-etml-tag-example-list-tags)
   (message "\n=== All Examples Complete ==="))
 
-(provide 'etaf-tag-example)
-;;; etaf-tag-example.el ends here
+(provide 'etaf-etml-tag-example)
+;;; etaf-etml-tag-example.el ends here
