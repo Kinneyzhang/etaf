@@ -380,8 +380,8 @@ Returns the combined CSS string."
   "Convert property expressions to CSS declarations alist.
 PROPS are pairs of (property value ...).
 
-Useful for :css attribute in TML:
-  (div :css (etaf-ecss-props (background \"red\") (padding 10))
+Useful for :style attribute (list format) in TML:
+  (div :style (etaf-ecss-props (background \"red\") (padding 10))
     \"content\")
 
 Returns: ((background . \"red\") (padding . \"10px\"))"

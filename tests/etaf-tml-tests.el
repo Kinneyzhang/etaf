@@ -3,6 +3,27 @@
 
 (setq-local lisp-indent-offset 2)
 
+;;; :style attribute tests - string format
+(should-equal
+ (etaf-etml-to-dom '(div :style "background: red" "Hello"))
+ '(div ((style . "background: red")) "Hello"))
+
+;;; :style attribute tests - list format (alist)
+(should-equal
+ (etaf-etml-to-dom '(div :style ((background . "red")) "Hello"))
+ '(div ((style . "background: red")) "Hello"))
+
+;;; :style attribute tests - list format with multiple properties
+(should-equal
+ (etaf-etml-to-dom '(div :style ((background . "red") (padding . "10px")) "Hello"))
+ '(div ((style . "background: red; padding: 10px")) "Hello"))
+
+;;; :style attribute tests - mixed with other attributes
+(should-equal
+ (etaf-etml-to-dom '(div :class "box" :style ((color . "blue")) "World"))
+ '(div ((class . "box") (style . "color: blue")) "World"))
+
+;;; Complex TML structure test
 (should-equal
  (etaf-etml-to-dom
   '(div :class "rounded-xl bg-white p-10"

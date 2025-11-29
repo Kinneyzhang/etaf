@@ -18,7 +18,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ## 核心模块
 
-- **etaf-etml.el** - TML (Template Markup Language) 到 DOM 的转换，支持 `:css` 属性和模板指令语法（`e-if`、`e-for`、`e-show` 等）
+- **etaf-etml.el** - TML (Template Markup Language) 到 DOM 的转换，支持 `:style` 属性（字符串和列表格式）和模板指令语法（`e-if`、`e-for`、`e-show` 等）
 - **etaf-ecss.el** - ECSS：Emacs 风格的 CSS 表达式（类似 rx 对正则的处理）
 - **etaf-dom.el** - DOM 操作、查询和遍历
 - **etaf-tailwind.el** - Tailwind CSS 支持（Emacs 特有的 px/lh 单位）
@@ -250,20 +250,20 @@ Tailwind CSS 类名现在可以直接在 TML 中使用，会被自动解析到 C
 
 ### 直接在 TML 上设置 CSS 样式
 
-可以使用 `:css` 属性直接在 TML 元素上设置 CSS 样式，无需关心 CSSOM：
+可以使用 `:style` 属性直接在 TML 元素上设置 CSS 样式，支持字符串和列表两种格式：
 
 ```elisp
-;; 使用 :css 属性设置样式（alist 格式）
+;; 使用 :style 属性设置样式（字符串格式）
 (etaf-etml-to-dom
-  '(div :css ((background . "red") (padding . "10px"))
+  '(div :style "background: red; padding: 10px"
      "Hello"))
 ;; => (div ((style . "background: red; padding: 10px")) "Hello")
 
-;; :css 可以与 :style 一起使用，会合并
+;; 使用 :style 属性设置样式（列表格式，alist）
 (etaf-etml-to-dom
-  '(div :style "color: blue" :css ((margin . "5px"))
-     "Test"))
-;; => (div ((style . "color: blue; margin: 5px")) "Test")
+  '(div :style ((background . "red") (padding . "10px"))
+     "Hello"))
+;; => (div ((style . "background: red; padding: 10px")) "Hello")
 ```
 
 ### ECSS：Emacs 风格的 CSS 表达式
@@ -312,11 +312,11 @@ ECSS（Emacs CSS）提供了一种使用列表结构表达 CSS 的方式，类�
 #### 与 TML 集成
 
 ```elisp
-;; 使用 ecss-props 生成 :css 属性的值
-(div :css (ecss-props '(background "red") '(padding 10))
+;; 使用 ecss-props 生成 :style 属性的值（列表格式）
+(div :style (ecss-props '(background "red") '(padding 10))
   "content")
 
-;; 使用 ecss-style 生成 :style 属性的值
+;; 使用 ecss-style 生成 :style 属性的值（字符串格式）
 (div :style (ecss-style '(color "red") '(padding 10))
   "content")
 ```
@@ -341,7 +341,7 @@ ECSS（Emacs CSS）提供了一种使用列表结构表达 CSS 的方式，类�
   - 与 TML 无缝集成
 
 - ✅ **直接在 TML 设置 CSS 样式**
-  - `:css` 属性支持 alist 格式样式
+  - `:style` 属性支持字符串和列表两种格式
   - 无需关心 CSSOM，直接在 TML 操作
 
 - ✅ **Tailwind CSS 支持**
