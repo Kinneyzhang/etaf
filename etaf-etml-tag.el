@@ -539,14 +539,14 @@ Returns (tag-name ((attrs...)) children...)."
   :default-style '((list-style-type . "disc")
                    (margin-top . "1lh")
                    (margin-bottom . "1lh")
-                   (padding-left . "40px")))
+                   (padding-left . "10px")))
 
 (define-etaf-etml-tag ol
   :display 'block
   :default-style '((list-style-type . "decimal")
                    (margin-top . "1lh")
                    (margin-bottom . "1lh")
-                   (padding-left . "40px")))
+                   (padding-left . "10px")))
 
 (define-etaf-etml-tag li
   :display 'list-item)
