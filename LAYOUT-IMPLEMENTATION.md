@@ -229,7 +229,7 @@ etaf-layout-to-string              ; 转换为可读字符串
 ```elisp
 (require 'etaf)
 
-(let* ((dom (etaf-tml-to-dom
+(let* ((dom (etaf-etml-to-dom
              '(html
                (head
                 (style ".box { width: 200px; height: 100px; padding-left: 10px; }"))
@@ -246,7 +246,7 @@ etaf-layout-to-string              ; 转换为可读字符串
 ### 示例 2：复杂嵌套布局
 
 ```elisp
-(let* ((dom (etaf-tml-to-dom
+(let* ((dom (etaf-etml-to-dom
              '(html
                (head
                 (style "

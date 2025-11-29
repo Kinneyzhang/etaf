@@ -6,12 +6,13 @@
 (require 'etaf-tailwind)
 (require 'etaf-ecss)
 
-(defun etaf-string (tml width &optional height)
-  (let* ((dom (etaf-tml-to-dom tml))
+(defun etaf-string (etml &optional width height)
+  (let* ((dom (etaf-etml-to-dom etml))
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree
-                       render-tree (list :width width :height height))))
+         (layout-tree
+          (etaf-layout-build-tree
+           render-tree (list :width width :height height))))
     (etaf-layout-to-string layout-tree)))
 
 (provide 'etaf)

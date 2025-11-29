@@ -87,7 +87,7 @@ CSSOM 是一个 plist，包含以下键：
 ```elisp
 ;; 1. 创建 DOM
 (setq my-dom
-  (etaf-tml-to-dom
+  (etaf-etml-to-dom
    '(html
       (head
         (style "

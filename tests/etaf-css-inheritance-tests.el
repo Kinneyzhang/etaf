@@ -37,9 +37,9 @@
 ;;; 测试继承集成（带 DOM）
 
 (should
- (let* ((test-dom (etaf-tml-to-dom
+ (let* ((test-dom (etaf-etml-to-dom
                    '(div :style "color: red; font-size: 14px;"
-                     (p "Text"))))
+                         (p "Text"))))
         (cssom (etaf-css-build-cssom test-dom))
         (p-node (dom-by-tag test-dom 'p))
         (computed (etaf-css-get-computed-style cssom p-node test-dom)))

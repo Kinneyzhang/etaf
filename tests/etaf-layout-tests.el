@@ -74,7 +74,7 @@
 
 (ert-deftest etaf-layout-test-simple-block-layout ()
   "Test simple block layout."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "div { width: 200px; height: 100px; padding: 10px; margin: 5px; }"))
@@ -90,7 +90,7 @@
 
 (ert-deftest etaf-layout-test-nested-blocks ()
   "Test nested block layout."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -125,7 +125,7 @@
 
 (ert-deftest etaf-layout-test-width-auto ()
   "Test width: auto calculation."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -146,14 +146,14 @@
       
       ;; 容器宽度应该是 800px
       (should-equal (etaf-box-model-content-width 
-                    (etaf-layout-get-box-model container-node)) 800)
+                     (etaf-layout-get-box-model container-node)) 800)
       
       ;; 盒子宽度应该自动填充容器内容宽度 - margin：800 - 10*2 (margin) = 780
       (should-equal (etaf-box-model-content-width box-model) 780))))
 
 (ert-deftest etaf-layout-test-padding-border-margin ()
   "Test padding, border, and margin calculations."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -206,7 +206,7 @@
 
 (ert-deftest etaf-layout-test-height-auto ()
   "Test height: auto calculation based on children."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -232,7 +232,7 @@
 
 (ert-deftest etaf-layout-test-layout-walk ()
   "Test layout tree traversal."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (body
                   (div (div "Nested"))))))
@@ -242,15 +242,15 @@
          (count 0))
     
     (etaf-layout-walk layout-tree
-      (lambda (_node)
-        (cl-incf count)))
+                      (lambda (_node)
+                        (cl-incf count)))
     
     ;; 应该遍历 html, body, div, div 共 4 个节点
     (should (>= count 4))))
 
 (ert-deftest etaf-layout-test-layout-to-string ()
   "Test layout tree string conversion."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (body
                   (div "Content")))))
@@ -267,7 +267,7 @@
 
 (ert-deftest etaf-layout-test-full-pipeline ()
   "Test complete pipeline from TML to layout."
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "

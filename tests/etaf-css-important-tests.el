@@ -60,7 +60,7 @@
 ;;; 测试完整的层叠场景
 
 (setq etaf-css-important-tests-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
          (head
           (style "div { color: blue !important; font-size: 12px; }"))
@@ -80,7 +80,7 @@
 ;;; 测试多规则层叠
 
 (setq etaf-css-cascade-tests-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
          (head
           (style "div { color: green; }

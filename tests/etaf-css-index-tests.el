@@ -66,7 +66,7 @@
 ;;; 测试 CSSOM 索引集成
 
 (should
- (let* ((test-dom (etaf-tml-to-dom
+ (let* ((test-dom (etaf-etml-to-dom
                    '(html
                      (head (style "div { color: red; }"))
                      (body (div "Text")))))

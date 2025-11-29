@@ -45,7 +45,7 @@
 ;;   (etaf-template-render my-template my-data)
 ;;
 ;; The template will be converted to standard TML format that can be
-;; processed by etaf-tml-to-dom.
+;; processed by etaf-etml-to-dom.
 
 ;;; Code:
 
@@ -474,7 +474,7 @@ Returns list of rendered nodes (usually just one)."
   "Render TEMPLATE with DATA and convert to DOM.
 This is a convenience function combining template rendering and TML-to-DOM."
   (require 'etaf-tml)
-  (etaf-tml-to-dom (etaf-template-render template data)))
+  (etaf-etml-to-dom (etaf-template-render template data)))
 
 ;;; Reactive Data System
 

@@ -230,11 +230,11 @@ DECLARATIONS-LIST 是声明列表的列表，每个声明包含属性、值、�
 (defun etaf-css-benchmark-with-cache ()
   "测试缓存带来的性能提升。"
   (interactive)
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(div :id "test" :style "color: red;"
-                  (p "Text 1")
-                  (p "Text 2")
-                  (p "Text 3"))))
+                     (p "Text 1")
+                     (p "Text 2")
+                     (p "Text 3"))))
          (cssom (etaf-css-build-cssom-with-cache dom))
          (node (dom-by-id dom "test"))
          (iterations 1000))

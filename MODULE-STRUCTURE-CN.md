@@ -25,7 +25,7 @@
 - **目的**: TML (模板标记语言) 到 DOM 的转换
 - **依赖**: (无)
 - **公共接口**:
-  - `etaf-tml-to-dom (sexp)` - 将 TML s 表达式转换为 DOM 格式
+  - `etaf-etml-to-dom (sexp)` - 将 TML s 表达式转换为 DOM 格式
   - `etaf-plist-to-alist (plist)` - 将属性列表转换为关联列表
 - **用法**: 将标记从 TML 格式 `(tag :attr val child...)` 转换为 DOM 格式 `(tag ((attr . val)) child...)`
 
@@ -233,7 +233,7 @@ etaf-ert.el
 ```elisp
 (require 'etaf-tml)
 
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(div :class "container"
                 (h1 :id "title" "Hello World")
                 (p "这是一个段落。"))))
@@ -247,7 +247,7 @@ etaf-ert.el
 (require 'etaf-css)
 
 ;; 创建带样式的 DOM
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(html
               (head
                 (style ".button { color: red; font-size: 14px; }"))

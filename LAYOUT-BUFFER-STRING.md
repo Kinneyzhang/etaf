@@ -47,7 +47,7 @@
 (require 'etaf)
 
 ;; 1. 创建 DOM
-(let* ((dom (etaf-tml-to-dom
+(let* ((dom (etaf-etml-to-dom
              '(html
                (head
                 (style "body { width: 300px; height: 100px; padding: 20px; }"))
@@ -75,7 +75,7 @@
 ### 嵌套布局示例
 
 ```elisp
-(let* ((dom (etaf-tml-to-dom
+(let* ((dom (etaf-etml-to-dom
              '(html
                (head
                 (style "

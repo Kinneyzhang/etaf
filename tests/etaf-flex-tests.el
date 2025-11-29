@@ -131,7 +131,7 @@ the container's content-width, not each item filling the entire parent width."
   (require 'etaf-render)
   (require 'etaf-css)
   (require 'etaf-tml)
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -183,7 +183,7 @@ children with flex-grow > 0 should be stretched proportionally."
   (require 'etaf-render)
   (require 'etaf-css)
   (require 'etaf-tml)
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -233,7 +233,7 @@ An item with flex-grow: 2 should grow twice as much as one with flex-grow: 1."
   (require 'etaf-render)
   (require 'etaf-css)
   (require 'etaf-tml)
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -286,7 +286,7 @@ children with flex-shrink > 0 should be reduced proportionally."
   (require 'etaf-render)
   (require 'etaf-css)
   (require 'etaf-tml)
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "
@@ -330,7 +330,7 @@ children with flex-shrink > 0 should be reduced proportionally."
   (require 'etaf-render)
   (require 'etaf-css)
   (require 'etaf-tml)
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style "

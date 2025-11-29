@@ -231,7 +231,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 ┌─────────────┐
 │  TML 格式   │  用户输入或模板
 └──────┬──────┘
-       │ etaf-tml-to-dom
+       │ etaf-etml-to-dom
        ▼
 ┌─────────────┐
 │   DOM 树    │  文档对象模型
@@ -278,7 +278,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ```elisp
 ;; 从 TML 创建 DOM
-(setq dom (etaf-tml-to-dom
+(setq dom (etaf-etml-to-dom
            '(div :class "container"
               (div :class "box" "内容"))))
 ```
@@ -583,7 +583,7 @@ VIEWPORT 是视口大小 (:width w :height h)。"
 ```elisp
 ;; 1. 创建 DOM
 (setq my-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
           (head
             (style "
@@ -652,7 +652,7 @@ VIEWPORT 是视口大小 (:width w :height h)。"
 ```elisp
 ;; 创建带媒体查询的 DOM
 (setq responsive-dom
-      (etaf-tml-to-dom
+      (etaf-etml-to-dom
        '(html
           (head
             (style "

@@ -13,36 +13,36 @@
 ;;; Test data
 
 (defvar etaf-render-tests-dom-simple
-  (etaf-tml-to-dom
+  (etaf-etml-to-dom
    '(html
-      (head
-        (style "div { color: blue; display: block; }"))
-      (body
-        (div "Content")
-        (span "More text"))))
+     (head
+      (style "div { color: blue; display: block; }"))
+     (body
+      (div "Content")
+      (span "More text"))))
   "Simple test DOM.")
 
 (defvar etaf-render-tests-dom-hidden
-  (etaf-tml-to-dom
+  (etaf-etml-to-dom
    '(html
-      (head
-        (style "div { color: red; } .hidden { display: none; }"))
-      (body
-        (div "Visible")
-        (div :class "hidden" "Hidden")
-        (span "Visible span"))))
+     (head
+      (style "div { color: red; } .hidden { display: none; }"))
+     (body
+      (div "Visible")
+      (div :class "hidden" "Hidden")
+      (span "Visible span"))))
   "DOM with hidden elements.")
 
 (defvar etaf-render-tests-dom-nested
-  (etaf-tml-to-dom
+  (etaf-etml-to-dom
    '(html
-      (head
-        (style "div { display: block; } span { display: inline; }"))
-      (body
-        (div
-          (span "Text 1")
-          (div
-            (span "Text 2"))))))
+     (head
+      (style "div { display: block; } span { display: inline; }"))
+     (body
+      (div
+       (span "Text 1")
+       (div
+        (span "Text 2"))))))
   "Nested DOM structure.")
 
 ;;; Tests
@@ -168,22 +168,22 @@
 
 (ert-deftest etaf-render-computed-style-integration ()
   "测试渲染节点包含正确的计算样式。"
-  (let* ((dom (etaf-tml-to-dom
+  (let* ((dom (etaf-etml-to-dom
                '(html
-                  (head
-                    (style "div { color: blue; font-size: 14px; }
+                 (head
+                  (style "div { color: blue; font-size: 14px; }
                             #main { color: red; }"))
-                  (body
-                    (div :id "main" "Content")))))
+                 (body
+                  (div :id "main" "Content")))))
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (main-node nil))
     ;; 找到 #main 节点 - 渲染节点保留了原始 DOM 属性
     (etaf-render-walk render-tree
-      (lambda (node)
-        (when (and (null main-node) (eq (dom-tag node) 'div))
-          (when (string= (dom-attr node 'id) "main")
-            (setq main-node node)))))
+                      (lambda (node)
+                        (when (and (null main-node) (eq (dom-tag node) 'div))
+                          (when (string= (dom-attr node 'id) "main")
+                            (setq main-node node)))))
     (should main-node)
     ;; 验证层叠：#main 的 color 应该是 red（覆盖 div 的 blue）
     (should (equal (etaf-render-get-style main-node 'color) "red"))

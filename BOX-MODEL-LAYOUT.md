@@ -843,7 +843,7 @@ VIEWPORT 是视口大小 (:width w :height h)。"
 
 ```elisp
 ;; 1. 创建 DOM 和 CSSOM
-(setq my-dom (etaf-tml-to-dom
+(setq my-dom (etaf-etml-to-dom
               '(html
                  (head
                    (style "
