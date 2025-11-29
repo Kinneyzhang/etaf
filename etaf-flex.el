@@ -639,9 +639,10 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
        (let ((cross-items-pads (nth idx cross-items-pads-lst))
              (main-gaps (nth idx main-gaps-lst)))
          (when (eq direction 'row-reverse)
-           (setq items-plists (nreverse items-plists))
-           (setq main-gaps (nreverse main-gaps))
-           (setq cross-items-pads (nreverse cross-items-pads)))
+           ;; Use reverse instead of nreverse to avoid modifying shared lists
+           (setq items-plists (reverse items-plists))
+           (setq main-gaps (reverse main-gaps))
+           (setq cross-items-pads (reverse cross-items-pads)))
          (etaf-flex-items-concat-single
           items-plists main-gaps cross-items-pads)))
      items-plists-lst))))
@@ -660,9 +661,10 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
        (let ((cross-items-pads (nth idx cross-items-pads-lst))
              (main-gaps (nth idx main-gaps-lst)))
          (when (eq direction 'column-reverse)
-           (setq items-plists (nreverse items-plists))
-           (setq main-gaps (nreverse main-gaps))
-           (setq cross-items-pads (nreverse cross-items-pads)))
+           ;; Use reverse instead of nreverse to avoid modifying shared lists
+           (setq items-plists (reverse items-plists))
+           (setq main-gaps (reverse main-gaps))
+           (setq cross-items-pads (reverse cross-items-pads)))
          (etaf-flex-items-stack-single
           items-plists main-gaps cross-items-pads)))
      items-plists-lst))))
@@ -941,10 +943,11 @@ items-plists, main-gaps-lst 和 cross-items-pads-lst 单个主轴方向的。"
     ;; cross-items-pads-lst: 每个主轴方向的 items 在交叉轴方向的 pads
     (when (eq (oref flex wrap) 'wrap-reverse)
       ;; 下面的每个都是 list 的 list，外层的 list 表示多个主轴方向的数据
-      (setq items-plists-lst (nreverse items-plists-lst))
-      (setq cross-items-pads-lst (nreverse cross-items-pads-lst))
-      (setq main-gaps-lst (nreverse main-gaps-lst))
-      (setq cross-gaps-lst (nreverse cross-gaps-lst)))
+      ;; Use reverse instead of nreverse to avoid modifying shared lists
+      (setq items-plists-lst (reverse items-plists-lst))
+      (setq cross-items-pads-lst (reverse cross-items-pads-lst))
+      (setq main-gaps-lst (reverse main-gaps-lst))
+      (setq cross-gaps-lst (reverse cross-gaps-lst)))
     
     ;; (elog-debug "items-plists-lst:%S" items-plists-lst)
     ;; (elog-debug "items:%S" (etaf-plists-get (nth 0 items-plists-lst)

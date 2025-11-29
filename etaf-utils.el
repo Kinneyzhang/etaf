@@ -245,6 +245,40 @@ FROM-TAIL 为 t 表示优先从尾部加上多余的部分。"
               start end prop value string)))))
     string))
 
+(defun etaf-propertize-bgcolor (string bgcolor)
+  "Apply background color BGCOLOR to STRING, handling display properties.
+This function properly applies background color to characters that have
+display properties like (space :width ...) by updating the display spec
+to include the face with background color."
+  (let* ((string (copy-sequence string))
+         (len (length string))
+         (pos 0))
+    (while (< pos len)
+      (let* ((display (get-text-property pos 'display string))
+             (next-pos (or (next-single-property-change pos 'display string len) len)))
+        (if (and display
+                 (consp display)
+                 (eq (car display) 'space))
+            ;; For display property with (space ...), add :face with background
+            (let* ((existing-face (plist-get (cdr display) :face))
+                   (new-face (if existing-face
+                                 (if (and (consp existing-face)
+                                          (plist-get existing-face :background))
+                                     existing-face
+                                   (if (consp existing-face)
+                                       (plist-put (copy-sequence existing-face)
+                                                  :background bgcolor)
+                                     `(:inherit ,existing-face :background ,bgcolor)))
+                               `(:background ,bgcolor)))
+                   (new-display (append (list 'space)
+                                        (plist-put (copy-sequence (cdr display))
+                                                   :face new-face))))
+              (put-text-property pos next-pos 'display new-display string))
+          ;; For regular text, use add-face-text-property
+          (add-face-text-property pos next-pos `(:background ,bgcolor) t string))
+        (setq pos next-pos)))
+    string))
+
 (defun etaf-add-face-text-property (start end face)
   "已有的 face 更新，没有的 face 增加"
   ;; (add-face-text-property)
