@@ -78,9 +78,12 @@ This is converted to:
               (setq attr-alist (delq css-attr attr-alist))
               ;; Update or add style attribute
               (if style-attr
-                  ;; Append to existing style
-                  (setcdr style-attr 
-                          (concat existing-style "; " css-string))
+                  ;; Append to existing style, ensuring proper semicolon handling
+                  (let ((trimmed-existing (string-trim-right existing-style "[ \t;]+")))
+                    (setcdr style-attr
+                            (if (string-empty-p trimmed-existing)
+                                css-string
+                              (concat trimmed-existing "; " css-string))))
                 ;; Add new style attribute
                 (push (cons 'style css-string) attr-alist))))
           (let ((children (mapcar #'etaf-tml-to-dom rest)))

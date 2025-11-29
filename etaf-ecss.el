@@ -188,22 +188,35 @@ Examples:
    ((symbolp val) (symbol-name val))
    (t (format "%s" val))))
 
+;; Regex pattern for simple numeric values (integer or decimal)
+;; Note: Does not handle scientific notation (e.g., '1e5') as CSS rarely uses it
+(defconst ecss--numeric-pattern "^-?[0-9]+\\(\\.[0-9]+\\)?$"
+  "Regex pattern for simple CSS numeric values.
+This matches integers and decimals but not scientific notation,
+which is acceptable as CSS properties rarely use scientific notation.")
+
 (defun ecss--value-with-unit (val &optional default-unit)
   "Convert VAL to CSS value, adding DEFAULT-UNIT if numeric.
-DEFAULT-UNIT defaults to \"px\"."
+DEFAULT-UNIT defaults to \"px\".
+
+Zero values are special-cased to return \"0\" without units,
+as CSS accepts unitless zero for length values. This follows
+the common CSS minification practice."
   (let ((unit (or default-unit "px")))
     (cond
-     ;; Number - add unit
+     ;; Number - add unit (zero is special: no unit needed)
      ((numberp val)
       (if (zerop val)
           "0"
         (concat (number-to-string val) unit)))
-     ;; Symbol - no unit
+     ;; Symbol - no unit (keywords like 'auto, 'inherit)
      ((symbolp val) (symbol-name val))
      ;; String - check if it needs unit
      ((stringp val)
-      (if (string-match-p "^-?[0-9]+\\(\\.[0-9]+\\)?$" val)
-          (concat val unit)
+      (if (string-match-p ecss--numeric-pattern val)
+          (if (string= val "0")
+              "0"
+            (concat val unit))
         val))
      ;; Default
      (t (format "%s" val)))))
