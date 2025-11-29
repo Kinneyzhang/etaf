@@ -373,50 +373,37 @@ Returns (tag-name ((attrs...)) children...)."
 
 (define-etaf-tag p
   :display 'block
-  :default-style '((margin-top . "1lh")
-                   (margin-bottom . "1lh")))
+  :default-style '((margin-left . "5px")))
 
 (define-etaf-tag h1
   :display 'block
-  :default-style '((font-size . "2em")
-                   (font-weight . "bold")
-                   (margin-top . "1lh")
-                   (margin-bottom . "1lh")))
+  :default-style '((font-size . 1.6)
+                   (font-weight . "bold")))
 
 (define-etaf-tag h2
   :display 'block
-  :default-style '((font-size . "1.5em")
-                   (font-weight . "bold")
-                   (margin-top . "1lh")
-                   (margin-bottom . "1lh")))
+  :default-style '((font-size . 1.4)
+                   (font-weight . "bold")))
 
 (define-etaf-tag h3
   :display 'block
-  :default-style '((font-size . "1.17em")
-                   (font-weight . "bold")
-                   (margin-top . "1lh")
-                   (margin-bottom . "1lh")))
+  :default-style '((font-size . 1.3)
+                   (font-weight . "bold")))
 
 (define-etaf-tag h4
   :display 'block
-  :default-style '((font-size . "1em")
-                   (font-weight . "bold")
-                   (margin-top . "1lh")
-                   (margin-bottom . "1lh")))
+  :default-style '((font-size . 1.2)
+                   (font-weight . "bold")))
 
 (define-etaf-tag h5
   :display 'block
-  :default-style '((font-size . "0.83em")
-                   (font-weight . "bold")
-                   (margin-top . "1lh")
-                   (margin-bottom . "1lh")))
+  :default-style '((font-size . 1.1)
+                   (font-weight . "bold")))
 
 (define-etaf-tag h6
   :display 'block
-  :default-style '((font-size . "0.67em")
-                   (font-weight . "bold")
-                   (margin-top . "1lh")
-                   (margin-bottom . "1lh")))
+  :default-style '((font-size . 1.0)
+                   (font-weight . "bold")))
 
 (define-etaf-tag header
   :display 'block)
