@@ -152,6 +152,10 @@ Emacs 的 :height 浮点数表示相对于默认字体的缩放比例。"
        ;; smaller/larger 使用常见的缩放因子 1.2
        ((string= size "smaller") (/ 1.0 1.2))  ; 缩小一级 (≈0.833)
        ((string= size "larger") 1.2)           ; 放大一级
+       ;; 纯数字字符串（无单位）：作为相对高度
+       ;; 支持从 etaf-tag.el 等模块传递的数值被转换为字符串的情况
+       ((string-match "^[0-9]+\\(\\.[0-9]+\\)?$" size)
+        (float (string-to-number size)))
        (t nil))))
    (t nil)))
 

@@ -45,6 +45,39 @@
   (should (eq (etaf-css-font-style-to-emacs "oblique") 'oblique))
   (should (eq (etaf-css-font-style-to-emacs "normal") 'normal)))
 
+;;; Tests for font-size conversion
+
+(ert-deftest etaf-css-face-test-font-size ()
+  "Test font-size conversion to :height."
+  ;; Numeric values
+  (should (= (etaf-css-font-size-to-emacs 1.4) 1.4))
+  (should (= (etaf-css-font-size-to-emacs 1.0) 1.0))
+  ;; Numeric strings (unitless) - important for etaf-tag.el compatibility
+  (should (= (etaf-css-font-size-to-emacs "1.4") 1.4))
+  (should (= (etaf-css-font-size-to-emacs "1.6") 1.6))
+  (should (= (etaf-css-font-size-to-emacs "1") 1.0))
+  (should (= (etaf-css-font-size-to-emacs "2.0") 2.0))
+  ;; px values
+  (should (= (etaf-css-font-size-to-emacs "16px") 1.0))
+  (should (= (etaf-css-font-size-to-emacs "32px") 2.0))
+  ;; em values
+  (should (= (etaf-css-font-size-to-emacs "1.5em") 1.5))
+  ;; CSS keywords
+  (should (= (etaf-css-font-size-to-emacs "medium") 1.0))
+  (should (= (etaf-css-font-size-to-emacs "larger") 1.2)))
+
+(ert-deftest etaf-css-face-test-font-size-in-style-to-face ()
+  "Test font-size is correctly converted to :height in style-to-face."
+  ;; Numeric font-size
+  (let ((face (etaf-css-style-to-face '((font-size . 1.4)))))
+    (should (= (plist-get face :height) 1.4)))
+  ;; String numeric font-size (unitless)
+  (let ((face (etaf-css-style-to-face '((font-size . "1.6")))))
+    (should (= (plist-get face :height) 1.6)))
+  ;; px font-size
+  (let ((face (etaf-css-style-to-face '((font-size . "20px")))))
+    (should (= (plist-get face :height) 1.25))))
+
 ;;; Tests for text-decoration conversion
 
 (ert-deftest etaf-css-face-test-text-decoration ()
