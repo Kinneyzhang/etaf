@@ -38,6 +38,13 @@
 
 (require 'cl-lib)
 
+;;; CSS 字体大小常量
+
+(defconst etaf-css-baseline-font-size 16.0
+  "CSS 基准字体大小（像素）。
+用于将像素值转换为 Emacs :height 相对值。
+16px 是 CSS 默认的 medium 字体大小。")
+
 ;;; CSS 颜色处理
 
 (defun etaf-css-color-to-emacs (css-color)
@@ -119,10 +126,10 @@ Emacs 的 :height 浮点数表示相对于默认字体的缩放比例。"
    ((stringp css-size)
     (let ((size (string-trim css-size)))
       (cond
-       ;; 像素值：转换为相对高度（假设基准字体大小为 16px）
+       ;; 像素值：转换为相对高度
        ((string-match "^\\([0-9.]+\\)px$" size)
         (let ((px (string-to-number (match-string 1 size))))
-          (/ px 16.0)))
+          (/ px etaf-css-baseline-font-size)))
        ;; em 值：直接作为相对高度
        ((string-match "^\\([0-9.]+\\)em$" size)
         (float (string-to-number (match-string 1 size))))
@@ -132,15 +139,19 @@ Emacs 的 :height 浮点数表示相对于默认字体的缩放比例。"
        ;; 百分比
        ((string-match "^\\([0-9.]+\\)%$" size)
         (/ (string-to-number (match-string 1 size)) 100.0))
-       ;; 关键字
-       ((string= size "small") 0.875)
-       ((string= size "large") 1.125)
-       ((string= size "x-large") 1.5)
-       ((string= size "xx-large") 2.0)
-       ((string= size "x-small") 0.75)
-       ((string= size "xx-small") 0.625)
-       ((string= size "smaller") 0.833)
-       ((string= size "larger") 1.2)
+       ;; CSS 绝对关键字：基于 16px medium，相邻比例约为 1.2
+       ;; https://www.w3.org/TR/css-fonts-3/#absolute-size-value
+       ((string= size "xx-small") 0.5625)   ; 9px / 16px
+       ((string= size "x-small") 0.625)     ; 10px / 16px
+       ((string= size "small") 0.8125)      ; 13px / 16px
+       ((string= size "medium") 1.0)        ; 16px / 16px (基准)
+       ((string= size "large") 1.125)       ; 18px / 16px
+       ((string= size "x-large") 1.5)       ; 24px / 16px
+       ((string= size "xx-large") 2.0)      ; 32px / 16px
+       ;; CSS 相对关键字：根据当前字体大小调整
+       ;; smaller/larger 使用常见的缩放因子
+       ((string= size "smaller") 0.833)     ; 约 1/1.2，缩小一级
+       ((string= size "larger") 1.2)        ; 放大一级
        (t nil))))
    (t nil)))
 
