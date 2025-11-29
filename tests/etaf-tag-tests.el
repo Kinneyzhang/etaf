@@ -130,12 +130,17 @@
   (should-equal (car dom) 'div)
   (should-equal (assq 'class (cadr dom)) '(class . "container")))
 
-;; Test rendering with style
+;; Test rendering with style (using button which has default styles)
+(let* ((instance (etaf-tag-create-instance 'button nil '("Click")))
+       (dom (etaf-tag-render-to-dom instance)))
+  (should-equal (car dom) 'button)
+  ;; button has default style
+  (should (assq 'style (cadr dom))))
+
+;; Test rendering p tag (which has no default style)
 (let* ((instance (etaf-tag-create-instance 'p nil '("Paragraph")))
        (dom (etaf-tag-render-to-dom instance)))
-  (should-equal (car dom) 'p)
-  ;; p has default style
-  (should (assq 'style (cadr dom))))
+  (should-equal (car dom) 'p))
 
 ;;; Test etaf-tag-to-dom
 
@@ -234,18 +239,18 @@
 
 ;;; Test unit consistency - vertical uses lh, horizontal uses px
 
-;; Test p tag uses lh for vertical margins
-(let ((p-def (etaf-tag-get-definition 'p)))
-  (let ((style (plist-get p-def :default-style)))
-    (should (string-match "lh" (cdr (assq 'margin-top style))))
-    (should (string-match "lh" (cdr (assq 'margin-bottom style))))))
-
 ;; Test ul tag uses lh for vertical margins and px for horizontal padding
 (let ((ul-def (etaf-tag-get-definition 'ul)))
   (let ((style (plist-get ul-def :default-style)))
     (should (string-match "lh" (cdr (assq 'margin-top style))))
     (should (string-match "lh" (cdr (assq 'margin-bottom style))))
     (should (string-match "px" (cdr (assq 'padding-left style))))))
+
+;; Test blockquote uses lh for vertical margins
+(let ((bq-def (etaf-tag-get-definition 'blockquote)))
+  (let ((style (plist-get bq-def :default-style)))
+    (should (string-match "lh" (cdr (assq 'margin-top style))))
+    (should (string-match "lh" (cdr (assq 'margin-bottom style))))))
 
 ;; Test button tag uses lh units for vertical padding and px units for horizontal padding
 ;; Note: vertical padding values are "0lh" which still uses the lh unit
@@ -255,5 +260,65 @@
     (should (string-match "lh" (cdr (assq 'padding-bottom style))))
     (should (string-match "px" (cdr (assq 'padding-left style))))
     (should (string-match "px" (cdr (assq 'padding-right style))))))
+
+;;; Test event handling keymap setup
+
+;; Test keymap creation for clickable elements
+(let* ((instance (etaf-tag-create-instance 'button nil '("Click")))
+       (keymap (etaf-tag-setup-keymap instance)))
+  (should (keymapp keymap))
+  ;; Should have RET binding
+  (should (lookup-key keymap (kbd "RET")))
+  ;; Should have SPC binding
+  (should (lookup-key keymap (kbd "SPC")))
+  ;; Should have mouse-1 binding
+  (should (lookup-key keymap [mouse-1]))
+  ;; Should have double-mouse-1 binding
+  (should (lookup-key keymap [double-mouse-1])))
+
+;; Test keymap for non-clickable elements
+(let* ((instance (etaf-tag-create-instance 'div nil '("Text")))
+       (keymap (etaf-tag-setup-keymap instance)))
+  (should (keymapp keymap))
+  ;; Should NOT have RET binding (no on-click)
+  (should-not (lookup-key keymap (kbd "RET")))
+  ;; Should NOT have mouse-1 binding
+  (should-not (lookup-key keymap [mouse-1])))
+
+;;; Test etaf-tag-make-interactive adds proper text properties
+
+(with-temp-buffer
+  (insert "Click Me")
+  (let ((instance (etaf-tag-create-instance 'button nil '("Click Me"))))
+    (etaf-tag-make-interactive 1 9 instance)
+    (goto-char 1)
+    ;; Check text properties were added
+    (should (get-text-property 1 'etaf-tag-instance))
+    (should (get-text-property 1 'keymap))
+    (should (get-text-property 1 'mouse-face))
+    (should (get-text-property 1 'pointer))
+    (should (get-text-property 1 'help-echo))
+    ;; Verify keymap has bindings
+    (let ((keymap (get-text-property 1 'keymap)))
+      (should (lookup-key keymap (kbd "RET"))))))
+
+;;; Test hover tracking variables are defined in etaf-tag.el
+
+;; The variable should be defined after loading etaf-tag.el
+(should (boundp 'etaf-tag--current-hover-instance))
+;; Initial value should be nil
+(should-equal etaf-tag--current-hover-instance nil)
+
+;;; Test event dispatch
+
+(let ((clicked nil))
+  (define-etaf-tag test-click-tag
+    :display 'inline-block
+    :on-click (lambda (event)
+                (setq clicked t)))
+  (let ((instance (etaf-tag-create-instance 'test-click-tag nil '("Test"))))
+    ;; Dispatch click event
+    (etaf-tag--dispatch-event instance 'click)
+    (should clicked)))
 
 (provide 'etaf-tag-tests)
