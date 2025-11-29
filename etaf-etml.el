@@ -540,25 +540,464 @@ This is a convenience function combining template rendering and TML-to-DOM."
   (require 'etaf-etml)
   (etaf-etml--to-dom (etaf-etml-render template data)))
 
-;;; Reactive Data System
+;;; ============================================================================
+;;; Component System (Vue3-like)
+;;; ============================================================================
+
+(defvar etaf-etml-components (make-hash-table :test 'eq)
+  "Hash table storing all registered ETML components.
+Keys are component name symbols, values are component definitions.")
+
+(defun etaf-etml-component-create (name &rest options)
+  "Create a component definition with NAME and OPTIONS.
+OPTIONS is a plist that can include:
+- :props - List of prop names or plist with prop definitions
+- :setup - Setup function that returns data and methods
+- :template - Component template function or ETML expression
+- :render - Custom render function
+- :emits - List of events the component can emit"
+  (let ((component (list :name name
+                         :props (plist-get options :props)
+                         :setup (plist-get options :setup)
+                         :template (plist-get options :template)
+                         :render (plist-get options :render)
+                         :emits (plist-get options :emits))))
+    component))
+
+(defun etaf-etml-component-register (name component)
+  "Register COMPONENT with NAME in the global component registry."
+  (puthash name component etaf-etml-components))
+
+(defun etaf-etml-component-unregister (name)
+  "Unregister the component with NAME."
+  (remhash name etaf-etml-components))
+
+(defun etaf-etml-component-get (name)
+  "Get the component definition for NAME."
+  (gethash name etaf-etml-components))
+
+(defun etaf-etml-component-defined-p (name)
+  "Check if a component with NAME is defined."
+  (not (null (gethash name etaf-etml-components))))
+
+(defun etaf-etml-component-list-all ()
+  "Return a list of all registered component names."
+  (let ((names nil))
+    (maphash (lambda (key _value) (push key names))
+             etaf-etml-components)
+    (nreverse names)))
+
+;;;###autoload
+(defmacro etaf-etml-define-component (name &rest options)
+  "Define an ETML component with NAME and OPTIONS.
+
+NAME is the component symbol (e.g., my-button, user-card).
+
+OPTIONS is a plist that can include:
+- :props - List of prop names the component accepts
+- :setup - Setup function (props) -> plist of reactive data and methods
+- :template - Template function (data) -> ETML sexp, or ETML sexp directly
+- :emits - List of events this component can emit
+
+Example:
+  (etaf-etml-define-component my-counter
+    :props \\='(:initial-count)
+    :setup (lambda (props)
+             (let* ((count (etaf-etml-ref
+                            (or (plist-get props :initial-count) 0)))
+                    (increment (lambda ()
+                                 (etaf-etml-ref-set
+                                  count (1+ (etaf-etml-ref-get count))))))
+               (list :count count :increment increment)))
+    :template (lambda (data)
+                `(div :class \"counter\"
+                      (span ,(format \"Count: %s\" (etaf-etml-ref-get
+                                                    (plist-get data :count))))
+                      (button :on-click ,(plist-get data :increment)
+                              \"Increment\"))))"
+  (declare (indent defun))
+  (let ((component-var (intern (format "etaf-etml-component--%s" name))))
+    `(progn
+       (defvar ,component-var
+         (etaf-etml-component-create ',name ,@options)
+         ,(format "Component definition for %s." name))
+       (etaf-etml-component-register ',name ,component-var)
+       ',name)))
+
+(defun etaf-etml--extract-props (attrs prop-names)
+  "Extract props from ATTRS based on PROP-NAMES.
+Returns a plist of prop values."
+  (let ((props nil))
+    (dolist (prop-name prop-names)
+      (let* ((key (if (keywordp prop-name) prop-name
+                    (intern (concat ":" (symbol-name prop-name)))))
+             (value (plist-get attrs key)))
+        (when value
+          (setq props (plist-put props key value)))))
+    props))
+
+(defun etaf-etml--render-component (component attrs children data)
+  "Render COMPONENT with ATTRS and CHILDREN using DATA context.
+Returns the rendered ETML."
+  (let* ((prop-names (plist-get component :props))
+         (props (etaf-etml--extract-props attrs prop-names))
+         (setup-fn (plist-get component :setup))
+         (template-fn (plist-get component :template))
+         (render-fn (plist-get component :render))
+         ;; Add special $slots prop for children
+         (props-with-slots (plist-put props :$slots children)))
+    ;; Run setup function if provided
+    (let ((component-data (if setup-fn
+                              (funcall setup-fn props-with-slots)
+                            props-with-slots)))
+      ;; Merge component data with parent data
+      (let ((merged-data (append component-data data)))
+        (cond
+         ;; Custom render function
+         (render-fn
+          (funcall render-fn component-data))
+         ;; Template function
+         ((functionp template-fn)
+          (let ((template (funcall template-fn component-data)))
+            (etaf-etml-render template merged-data)))
+         ;; Template as ETML expression
+         (template-fn
+          (etaf-etml-render template-fn merged-data))
+         ;; No template - render children with component data
+         (t
+          (if children
+              (if (= (length children) 1)
+                  (etaf-etml-render (car children) merged-data)
+                `(div ,@(mapcar (lambda (c)
+                                  (etaf-etml-render c merged-data))
+                                children)))
+            nil)))))))
+
+(defun etaf-etml--is-component-p (tag)
+  "Check if TAG is a registered component."
+  (etaf-etml-component-defined-p tag))
+
+;;; ============================================================================
+;;; Reactive System (Vue3-like using add-variable-watcher)
+;;; ============================================================================
+
+(defvar etaf-etml--current-effect nil
+  "The currently running effect, used for dependency tracking.")
+
+(defvar etaf-etml--effect-stack nil
+  "Stack of currently running effects for nested effect tracking.")
+
+;;; --- Ref: Basic Reactive Reference ---
+
+(defun etaf-etml-ref (value)
+  "Create a reactive reference with initial VALUE.
+Returns a ref object that can be accessed with `etaf-etml-ref-get'
+and modified with `etaf-etml-ref-set'.
+
+Usage:
+  (let ((count (etaf-etml-ref 0)))
+    (etaf-etml-ref-get count)     ; => 0
+    (etaf-etml-ref-set count 1)   ; sets to 1 and triggers watchers
+    (etaf-etml-ref-get count))    ; => 1"
+  (let* ((id (cl-gensym "etaf-ref-"))
+         (ref (list :type 'ref
+                    :id id
+                    :value value
+                    :deps nil)))    ; dependencies (effects that read this ref)
+    ref))
+
+(defun etaf-etml-ref-p (obj)
+  "Check if OBJ is a ref object."
+  (and (listp obj)
+       (eq (plist-get obj :type) 'ref)))
+
+(defun etaf-etml-ref-get (ref)
+  "Get the current value of REF.
+Also tracks the current effect as a dependency if inside an effect."
+  (when (etaf-etml-ref-p ref)
+    ;; Track dependency if inside an effect
+    (when etaf-etml--current-effect
+      (let ((deps (plist-get ref :deps)))
+        (unless (member etaf-etml--current-effect deps)
+          (plist-put ref :deps (cons etaf-etml--current-effect deps)))))
+    (plist-get ref :value)))
+
+(defun etaf-etml-ref-set (ref value)
+  "Set REF to VALUE and trigger all dependent effects."
+  (when (etaf-etml-ref-p ref)
+    (let ((old-value (plist-get ref :value)))
+      (unless (equal old-value value)
+        (plist-put ref :value value)
+        ;; Trigger all dependent effects
+        (dolist (effect (plist-get ref :deps))
+          (when (functionp effect)
+            (funcall effect)))))))
+
+(defun etaf-etml-ref-update (ref fn)
+  "Update REF by applying FN to its current value.
+FN receives the current value and should return the new value."
+  (when (etaf-etml-ref-p ref)
+    (let* ((current (etaf-etml-ref-get ref))
+           (new-value (funcall fn current)))
+      (etaf-etml-ref-set ref new-value)
+      new-value)))
+
+;;; --- Computed: Derived Reactive Values ---
+
+(defun etaf-etml-computed (getter)
+  "Create a computed value from GETTER function.
+The computed value is lazily evaluated and cached.
+It automatically tracks dependencies and recomputes when they change.
+
+Usage:
+  (let* ((count (etaf-etml-ref 0))
+         (doubled (etaf-etml-computed
+                   (lambda () (* 2 (etaf-etml-ref-get count))))))
+    (etaf-etml-computed-get doubled)    ; => 0
+    (etaf-etml-ref-set count 5)
+    (etaf-etml-computed-get doubled))   ; => 10"
+  (let* ((id (cl-gensym "etaf-computed-"))
+         (computed (list :type 'computed
+                         :id id
+                         :getter getter
+                         :value nil
+                         :dirty t       ; needs recomputation
+                         :deps nil)))   ; effects that depend on this computed
+    ;; Create an effect to recompute when dependencies change
+    (let ((recompute-effect
+           (lambda ()
+             (plist-put computed :dirty t)
+             ;; Trigger dependent effects
+             (dolist (effect (plist-get computed :deps))
+               (when (functionp effect)
+                 (funcall effect))))))
+      (plist-put computed :recompute-effect recompute-effect))
+    computed))
+
+(defun etaf-etml-computed-p (obj)
+  "Check if OBJ is a computed object."
+  (and (listp obj)
+       (eq (plist-get obj :type) 'computed)))
+
+(defun etaf-etml-computed-get (computed)
+  "Get the current value of COMPUTED.
+Recomputes if dirty (dependencies have changed)."
+  (when (etaf-etml-computed-p computed)
+    ;; Track as dependency if inside an effect
+    (when etaf-etml--current-effect
+      (let ((deps (plist-get computed :deps)))
+        (unless (member etaf-etml--current-effect deps)
+          (plist-put computed :deps (cons etaf-etml--current-effect deps)))))
+    ;; Recompute if dirty
+    (when (plist-get computed :dirty)
+      (let* ((getter (plist-get computed :getter))
+             (recompute-effect (plist-get computed :recompute-effect))
+             ;; Track dependencies during computation
+             (etaf-etml--current-effect recompute-effect)
+             (value (funcall getter)))
+        (plist-put computed :value value)
+        (plist-put computed :dirty nil)))
+    (plist-get computed :value)))
+
+;;; --- Watch: Explicit Dependency Watching ---
+
+(defun etaf-etml-watch-source (source callback &optional options)
+  "Watch SOURCE (ref or computed) and call CALLBACK when it changes.
+CALLBACK receives (new-value old-value).
+OPTIONS can include:
+- :immediate - If t, run callback immediately with current value
+- :deep - If t, deep watch objects (not implemented yet)
+
+Returns a stop function that removes the watcher.
+
+Usage:
+  (let* ((count (etaf-etml-ref 0))
+         (stop (etaf-etml-watch-source
+                count
+                (lambda (new old)
+                  (message \"Count changed: %s -> %s\" old new)))))
+    (etaf-etml-ref-set count 1)  ; triggers callback
+    (funcall stop)               ; stop watching
+    (etaf-etml-ref-set count 2)) ; no callback"
+  (let* ((immediate (plist-get options :immediate))
+         (old-value (cond
+                     ((etaf-etml-ref-p source)
+                      (etaf-etml-ref-get source))
+                     ((etaf-etml-computed-p source)
+                      (etaf-etml-computed-get source))))
+         (watcher (lambda ()
+                    (let ((new-value (cond
+                                      ((etaf-etml-ref-p source)
+                                       (etaf-etml-ref-get source))
+                                      ((etaf-etml-computed-p source)
+                                       (etaf-etml-computed-get source)))))
+                      (unless (equal new-value old-value)
+                        (funcall callback new-value old-value)
+                        (setq old-value new-value))))))
+    ;; Add watcher to source's deps
+    (let ((deps (plist-get source :deps)))
+      (plist-put source :deps (cons watcher deps)))
+    ;; Run immediately if requested
+    (when immediate
+      (funcall callback old-value nil))
+    ;; Return stop function
+    (lambda ()
+      (let ((deps (plist-get source :deps)))
+        (plist-put source :deps (delete watcher deps))))))
+
+;;; --- WatchEffect: Automatic Dependency Tracking ---
+
+(defun etaf-etml-watch-effect (effect-fn)
+  "Run EFFECT-FN immediately and re-run when dependencies change.
+Dependencies are automatically tracked when refs/computed values are accessed.
+
+Returns a stop function that removes the effect.
+
+Usage:
+  (let* ((count (etaf-etml-ref 0))
+         (stop (etaf-etml-watch-effect
+                (lambda ()
+                  (message \"Count is: %s\" (etaf-etml-ref-get count))))))
+    (etaf-etml-ref-set count 1)  ; re-runs effect, logs \"Count is: 1\"
+    (funcall stop)               ; stop watching
+    (etaf-etml-ref-set count 2)) ; no effect"
+  (let* ((deps-collected nil)
+         (runner nil))
+    ;; Create the runner that will execute the effect
+    (setq runner
+          (lambda ()
+            ;; Clear old dependencies
+            (dolist (dep deps-collected)
+              (let ((old-deps (plist-get dep :deps)))
+                (plist-put dep :deps (delete runner old-deps))))
+            (setq deps-collected nil)
+            ;; Run effect with dependency tracking
+            (let ((etaf-etml--current-effect runner))
+              (push runner etaf-etml--effect-stack)
+              (unwind-protect
+                  (funcall effect-fn)
+                (pop etaf-etml--effect-stack)))))
+    ;; Run immediately
+    (funcall runner)
+    ;; Return stop function
+    (lambda ()
+      (dolist (dep deps-collected)
+        (let ((old-deps (plist-get dep :deps)))
+          (plist-put dep :deps (delete runner old-deps)))))))
+
+;;; --- Reactive Object (for plist-like data) ---
+
+(defun etaf-etml-reactive (data)
+  "Create a reactive wrapper around DATA plist.
+Each key becomes a ref that can be accessed and modified reactively.
+
+Usage:
+  (let ((state (etaf-etml-reactive \\='(:name \"Alice\" :age 30))))
+    (etaf-etml-reactive-get state :name)      ; => \"Alice\"
+    (etaf-etml-reactive-set state :name \"Bob\")
+    (etaf-etml-reactive-get state :name))     ; => \"Bob\""
+  (let ((refs (make-hash-table :test 'eq)))
+    ;; Create refs for each key in data
+    (let ((rest data))
+      (while rest
+        (let ((key (car rest))
+              (value (cadr rest)))
+          (puthash key (etaf-etml-ref value) refs))
+        (setq rest (cddr rest))))
+    (list :type 'reactive
+          :refs refs
+          :data data)))
+
+(defun etaf-etml-reactive-p (obj)
+  "Check if OBJ is a reactive object."
+  (and (listp obj)
+       (eq (plist-get obj :type) 'reactive)))
+
+(defun etaf-etml-reactive-get (reactive key)
+  "Get value for KEY from REACTIVE object."
+  (when (etaf-etml-reactive-p reactive)
+    (let* ((refs (plist-get reactive :refs))
+           (ref (gethash key refs)))
+      (if ref
+          (etaf-etml-ref-get ref)
+        nil))))
+
+(defun etaf-etml-reactive-set (reactive key value)
+  "Set KEY to VALUE in REACTIVE object."
+  (when (etaf-etml-reactive-p reactive)
+    (let* ((refs (plist-get reactive :refs))
+           (ref (gethash key refs)))
+      (if ref
+          (etaf-etml-ref-set ref value)
+        ;; Create new ref for new key
+        (puthash key (etaf-etml-ref value) refs)
+        value))))
+
+(defun etaf-etml-reactive-to-plist (reactive)
+  "Convert REACTIVE object to a plain plist."
+  (when (etaf-etml-reactive-p reactive)
+    (let ((result nil)
+          (refs (plist-get reactive :refs)))
+      (maphash (lambda (key ref)
+                 (setq result (plist-put result key (etaf-etml-ref-get ref))))
+               refs)
+      result)))
+
+;;; ============================================================================
+;;; Integration: Component + Reactive in ETML Rendering
+;;; ============================================================================
+
+(defun etaf-etml--render-node-with-components (node data siblings)
+  "Extended version of render-node that handles components.
+Delegates to component rendering when a component tag is detected."
+  (cond
+   ;; String - interpolate
+   ((stringp node)
+    (cons (list (etaf-etml--interpolate-string node data)) 0))
+   
+   ;; Atom - return as is
+   ((atom node)
+    (cons (list node) 0))
+   
+   ;; List (element or component)
+   (t
+    (let* ((tag (car node))
+           (rest (cdr node)))
+      ;; Check if this is a component
+      (if (etaf-etml--is-component-p tag)
+          (let* ((parsed (etaf-etml--split-attrs-and-children rest))
+                 (attrs (car parsed))
+                 (children (cdr parsed))
+                 (component (etaf-etml-component-get tag))
+                 (rendered (etaf-etml--render-component
+                            component attrs children data)))
+            (cons (list rendered) 0))
+        ;; Not a component - use original render logic
+        (etaf-etml--render-node node data siblings))))))
+
+;;; --- Backward Compatibility ---
+;;; Keep the old simple reactive system for backward compatibility
 
 (defvar etaf-etml--watchers (make-hash-table :test 'eq)
   "Hash table mapping data objects to their watchers.")
 
 (defun etaf-etml-create-reactive (data)
   "Create a reactive data wrapper around DATA plist.
-Returns a reactive data object that can trigger re-renders."
+Returns a reactive data object that can trigger re-renders.
+\(Legacy function - consider using `etaf-etml-reactive' for new code.)"
   (let ((reactive (list :data data
                         :version 0
                         :watchers nil)))
     reactive))
 
 (defun etaf-etml-get (reactive key)
-  "Get value for KEY from REACTIVE data object."
+  "Get value for KEY from REACTIVE data object.
+\(Legacy function - works with `etaf-etml-create-reactive' objects.)"
   (plist-get (plist-get reactive :data) key))
 
 (defun etaf-etml-set (reactive key value)
-  "Set KEY to VALUE in REACTIVE data object and trigger watchers."
+  "Set KEY to VALUE in REACTIVE data object and trigger watchers.
+\(Legacy function - works with `etaf-etml-create-reactive' objects.)"
   (let* ((data (plist-get reactive :data))
          (new-data (plist-put data key value)))
     (plist-put reactive :data new-data)
@@ -570,12 +1009,14 @@ Returns a reactive data object that can trigger re-renders."
 
 (defun etaf-etml-watch (reactive callback)
   "Add CALLBACK as watcher to REACTIVE data.
-CALLBACK receives (reactive key value) when data changes."
+CALLBACK receives (reactive key value) when data changes.
+\(Legacy function - works with `etaf-etml-create-reactive' objects.)"
   (let ((watchers (plist-get reactive :watchers)))
     (plist-put reactive :watchers (cons callback watchers))))
 
 (defun etaf-etml-unwatch (reactive callback)
-  "Remove CALLBACK from REACTIVE data watchers."
+  "Remove CALLBACK from REACTIVE data watchers.
+\(Legacy function - works with `etaf-etml-create-reactive' objects.)"
   (let ((watchers (plist-get reactive :watchers)))
     (plist-put reactive :watchers (delete callback watchers))))
 
