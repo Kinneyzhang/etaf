@@ -606,8 +606,9 @@ Supported flex item properties:
             (dolist (child child-layouts)
               (when (stringp child)
                 (push child sorted-children)))
-            (when is-reversed
-              (setq sorted-children (nreverse sorted-children)))
+            ;; Don't reverse here for row-reverse/column-reverse
+            ;; The reversal is handled during string rendering in etaf-layout--merge-flex-children
+            ;; (following the same pattern as etaf-flex.el which reverses at render time)
             ;; 将排序后的子节点添加到布局节点
             (setcdr (cdr layout-node) (nreverse sorted-children)))
           
