@@ -218,6 +218,14 @@ Supports both :e-* (preferred) and :v-* (backward compatible) prefixes."
     (setq children rest)
     (cons attrs children)))
 
+;; Directive prefix length constants
+(defconst etaf-template--e-bind-prefix ":e-bind:"
+  "The e-bind directive prefix.")
+(defconst etaf-template--v-bind-prefix ":v-bind:"
+  "The v-bind directive prefix (backward compatible).")
+(defconst etaf-template--bind-prefix-length 8
+  "Length of bind directive prefixes (:e-bind: or :v-bind:).")
+
 (defun etaf-template--process-bindings (attrs data)
   "Process attribute bindings in ATTRS using DATA.
 Returns processed attrs plist.
@@ -230,16 +238,16 @@ Note: e-bind/v-bind is processed via :e-bind:attr or :v-bind:attr syntax."
              (key-name (symbol-name key)))
         (cond
          ;; e-bind:attr="expr" binding - evaluate expression for value (preferred)
-         ((string-prefix-p ":e-bind:" key-name)
-          (let* ((attr-name (substring key-name 8))
+         ((string-prefix-p etaf-template--e-bind-prefix key-name)
+          (let* ((attr-name (substring key-name etaf-template--bind-prefix-length))
                  (new-key (intern (concat ":" attr-name)))
                  (new-val (etaf-template--to-string
                           (etaf-template--eval-expr val data))))
             (setq result (append result (list new-key new-val)))))
          
          ;; v-bind:attr="expr" binding - evaluate expression for value (backward compat)
-         ((string-prefix-p ":v-bind:" key-name)
-          (let* ((attr-name (substring key-name 8))
+         ((string-prefix-p etaf-template--v-bind-prefix key-name)
+          (let* ((attr-name (substring key-name etaf-template--bind-prefix-length))
                  (new-key (intern (concat ":" attr-name)))
                  (new-val (etaf-template--to-string
                           (etaf-template--eval-expr val data))))
