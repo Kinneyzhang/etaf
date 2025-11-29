@@ -29,6 +29,56 @@
   - `etaf-plist-to-alist (plist)` - 将属性列表转换为关联列表
 - **用法**: 将标记从 TML 格式 `(tag :attr val child...)` 转换为 DOM 格式 `(tag ((attr . val)) child...)`
 
+#### etaf-tag.el
+- **目的**: ETML 标签定义系统 - 定义类似 HTML 的标签，包括内容、样式和交互行为
+- **依赖**: (无)
+- **公共接口**:
+  - `define-etaf-tag (name &rest props)` - 定义自定义标签的宏
+  - `etaf-tag-defined-p (name)` - 检查标签是否已定义
+  - `etaf-tag-get-definition (name)` - 获取标签定义
+  - `etaf-tag-list-all ()` - 列出所有已定义的标签
+  - `etaf-tag-parse (sexp)` - 解析 SEXP 为标签实例
+  - `etaf-tag-to-dom (sexp)` - 将带标签的 SEXP 转换为 DOM 格式
+  - `etaf-tag-create-instance (tag-name attrs children)` - 创建标签实例
+  - `etaf-tag-render-to-dom (tag-instance)` - 将标签实例渲染为 DOM
+  - `etaf-tag-get-computed-style (tag-instance)` - 获取标签实例的计算样式
+- **标签定义属性**:
+  - `:display` - 显示类型 (`block`, `inline`, `inline-block`, `flex`, `none`)
+  - `:default-style` - 默认样式 alist
+  - `:hover-style` - 悬停样式
+  - `:active-style` - 激活样式
+  - `:focus-style` - 聚焦样式
+  - `:disabled-style` - 禁用样式
+  - `:on-click` - 点击事件处理器
+  - `:on-hover-enter` - 鼠标进入处理器
+  - `:on-hover-leave` - 鼠标离开处理器
+  - `:on-focus` - 聚焦处理器
+  - `:on-blur` - 失焦处理器
+  - `:on-change` - 变更处理器
+  - `:on-input` - 输入处理器
+  - `:on-keydown` - 按键按下处理器
+  - `:on-keyup` - 按键释放处理器
+  - `:children-allowed` - 是否允许子元素
+  - `:self-closing` - 是否自闭合
+  - `:inherit` - 继承的父标签
+  - `:render` - 自定义渲染函数
+- **内置标签**: div, span, p, h1-h6, a, button, input, form, table, ul, ol, li 等 70+ 个 HTML 标签
+- **用法**: 定义自定义标签组件，包含样式和交互行为
+
+```elisp
+;; 定义自定义按钮
+(define-etaf-tag my-button
+  :display 'inline-block
+  :default-style '((background-color . "blue")
+                   (color . "white"))
+  :hover-style '((background-color . "darkblue"))
+  :on-click (lambda (event)
+              (message "Button clicked!")))
+
+;; 使用标签
+(etaf-tag-to-dom '(my-button :class "primary" "Click Me"))
+```
+
 #### etaf-dom.el
 - **目的**: DOM 操作、查询和遍历操作
 - **依赖**: dom (内置)
@@ -178,6 +228,7 @@
 ```
 etaf.el
 ├── etaf-etml.el (无依赖)
+├── etaf-tag.el (无依赖) - 标签定义系统
 └── etaf-css.el
     ├── etaf-dom.el
     │   └── dom (内置)
