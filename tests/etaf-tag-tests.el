@@ -304,10 +304,11 @@
 
 ;;; Test hover tracking variables are defined in etaf-tag.el
 
-;; The variable should be defined after loading etaf-tag.el
+;; The variable should be defined after loading etaf-tag.el (buffer-local)
 (should (boundp 'etaf-tag--current-hover-instance))
-;; Initial value should be nil
-(should-equal etaf-tag--current-hover-instance nil)
+;; Initial value should be nil in a fresh buffer
+(with-temp-buffer
+  (should-equal etaf-tag--current-hover-instance nil))
 
 ;;; Test event dispatch
 
