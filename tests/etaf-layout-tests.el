@@ -297,5 +297,26 @@
         (should (dom-tag node))
         (should (etaf-layout-get-box-model node))))))
 
+(ert-deftest etaf-layout-test-nested-div-with-multiline-text ()
+  "Test that nested div with multiline text calculates height correctly.
+This tests the bug fix where string children were not included in height calculation."
+  (let* ((dom (etaf-etml-to-dom
+               '(html
+                 (body
+                  (div (div "line1\nline2\nline3\nline4"))))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (outer-div (car (dom-non-text-children body-node)))
+         (outer-box (etaf-layout-get-box-model outer-div))
+         (inner-div (car (dom-non-text-children outer-div)))
+         (inner-box (etaf-layout-get-box-model inner-div)))
+    
+    ;; Inner div should have height 4 (4 lines of text)
+    (should-equal (etaf-layout-box-content-height inner-box) 4)
+    ;; Outer div should also have height 4 (matches its only child)
+    (should-equal (etaf-layout-box-content-height outer-box) 4)))
+
 (provide 'etaf-layout-tests)
 ;;; etaf-layout-tests.el ends here
