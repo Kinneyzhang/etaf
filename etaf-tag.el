@@ -191,12 +191,13 @@ EXTRA-DATA is an optional alist of additional event properties."
 
 ;;; Interactive Behaviors
 
-;; Hover tracking state
-(defvar etaf-tag--current-hover-instance nil
-  "The tag instance currently being hovered over.")
+;; Hover tracking state - buffer-local to avoid conflicts between buffers
+(defvar-local etaf-tag--current-hover-instance nil
+  "The tag instance currently being hovered over in this buffer.
+This is buffer-local to support multiple buffers with etaf-tag content.")
 
-(defvar etaf-tag--hover-overlay nil
-  "Overlay used for hover state visual feedback.")
+(defvar-local etaf-tag--hover-overlay nil
+  "Overlay used for hover state visual feedback in this buffer.")
 
 (defun etaf-tag-setup-keymap (tag-instance)
   "Set up keybindings for TAG-INSTANCE.
@@ -247,7 +248,8 @@ Returns the configured keymap."
           (let ((key (this-command-keys-vector)))
             (etaf-tag--dispatch-event tag-instance 'keydown
                                       (list :key key
-                                            :key-char (aref key (1- (length key)))))))))
+                                            :key-char (when (> (length key) 0)
+                                                        (aref key (1- (length key))))))))))
     ;; Note: on-keyup cannot be reliably implemented in Emacs
     ;; as there's no native key release event. It is marked as unsupported.
     keymap))
@@ -277,8 +279,8 @@ POS is the buffer position under the mouse."
       (setq etaf-tag--current-hover-instance instance)
       ;; Return help-echo string
       (when definition
-        (format "Click or press RET/SPC to activate %s"
-                (plist-get definition :name))))))
+        (let ((tag-name (or (plist-get definition :name) "element")))
+          (format "Click or press RET/SPC to activate %s" tag-name))))))
 
 (defun etaf-tag-make-interactive (start end tag-instance)
   "Make the region from START to END interactive based on TAG-INSTANCE.
