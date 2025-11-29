@@ -576,7 +576,7 @@ DOM + <style> 标签
 | 函数 | 功能 |
 |------|------|
 | `etaf-layout-block-formatting-context` | 块级格式化上下文布局 |
-| `etaf-layout-flex-formatting-context` | Flex 格式化上下文布局 |
+| `etaf-layout-flex-format` | Flex 格式化上下文布局 |
 | `etaf-layout-flex-compute-main-axis` | Flex 主轴计算 |
 | `etaf-layout-flex-compute-cross-axis` | Flex 交叉轴计算 |
 | `etaf-layout-flex-justify-space` | justify-content 空间分配 |
@@ -591,12 +591,12 @@ DOM + <style> 标签
 ##### 盒模型辅助
 | 函数 | 功能 |
 |------|------|
-| `etaf-box-model-create` | 创建空盒模型 |
-| `etaf-box-model-content-width/height` | 获取内容尺寸 |
-| `etaf-box-model-padding-width/height` | 获取 padding 尺寸 |
-| `etaf-box-model-border-width/height` | 获取 border 尺寸 |
-| `etaf-box-model-margin-width/height` | 获取 margin 尺寸 |
-| `etaf-box-model-total-width/height` | 获取总尺寸 |
+| `etaf-layout-box-create` | 创建空盒模型 |
+| `etaf-layout-box-content-width/height` | 获取内容尺寸 |
+| `etaf-layout-box-padding-width/height` | 获取 padding 尺寸 |
+| `etaf-layout-box-border-width/height` | 获取 border 尺寸 |
+| `etaf-layout-box-margin-width/height` | 获取 margin 尺寸 |
+| `etaf-layout-box-total-width/height` | 获取总尺寸 |
 
 ##### 字符串生成
 | 函数 | 功能 |
@@ -958,10 +958,10 @@ etaf-string (etaf.el)
         │   ├── etaf-layout-compute-box-model
         │   │   ├── etaf-layout-parse-length
         │   │   ├── etaf-layout-parse-height
-        │   │   └── etaf-layout-get-style-value
+        │   │   └── etaf-layout-parse-style-value
         │   └── etaf-layout-create-node
         │
-        └── etaf-layout-flex-formatting-context
+        └── etaf-layout-flex-format
             ├── etaf-layout-compute-box-model
             ├── etaf-layout-flex-compute-main-axis
             │   └── etaf-layout-flex-justify-space
@@ -969,7 +969,7 @@ etaf-string (etaf.el)
 
 etaf-layout-to-string (etaf-layout.el)
 └── etaf-layout-node-string (递归)
-    ├── etaf-box-model-* (获取盒模型各部分)
+    ├── etaf-layout-box-* (获取盒模型各部分)
     ├── etaf-css-apply-face-to-string (etaf-css-face.el)
     │   └── etaf-css-style-to-face
     │       ├── etaf-css-color-to-emacs

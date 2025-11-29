@@ -346,29 +346,6 @@ PARENT-CONTEXT 是父容器上下文。
        (t (etaf-layout-block-formatting-context render-node parent-context))))))
 
 ;;; ============================================================
-;;; 兼容性别名（供现有测试和代码使用）
-;;; ============================================================
-
-;; 盒模型函数别名（保持向后兼容）
-(defalias 'etaf-box-model-create 'etaf-layout-box-create)
-(defalias 'etaf-box-model-content-width 'etaf-layout-box-content-width)
-(defalias 'etaf-box-model-content-height 'etaf-layout-box-content-height)
-(defalias 'etaf-box-model-padding-width 'etaf-layout-box-padding-width)
-(defalias 'etaf-box-model-padding-height 'etaf-layout-box-padding-height)
-(defalias 'etaf-box-model-border-width 'etaf-layout-box-border-width)
-(defalias 'etaf-box-model-border-height 'etaf-layout-box-border-height)
-(defalias 'etaf-box-model-margin-width 'etaf-layout-box-margin-width)
-(defalias 'etaf-box-model-margin-height 'etaf-layout-box-margin-height)
-(defalias 'etaf-box-model-total-width 'etaf-layout-box-total-width)
-(defalias 'etaf-box-model-total-height 'etaf-layout-box-total-height)
-
-;; 解析函数别名（保持向后兼容）
-(defalias 'etaf-layout-get-style-value 'etaf-layout-parse-style-value)
-
-;; Flex 布局函数别名
-(defalias 'etaf-layout-flex-formatting-context 'etaf-layout-flex-format)
-
-;;; ============================================================
 ;;; 延迟加载子模块
 ;;; ============================================================
 

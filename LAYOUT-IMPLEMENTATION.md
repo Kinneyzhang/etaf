@@ -126,14 +126,14 @@
 ```elisp
 ;; CSS 值解析
 etaf-layout-parse-length          ; 解析 px/%, em, auto
-etaf-layout-get-style-value        ; 从样式中获取值
+etaf-layout-parse-style-value        ; 从样式中获取值
 
 ;; 盒模型查询
-etaf-box-model-content-width       ; 内容宽度
-etaf-box-model-padding-width       ; 左右内边距之和
-etaf-box-model-border-width        ; 左右边框之和
-etaf-box-model-margin-width        ; 左右外边距之和
-etaf-box-model-total-width         ; 总宽度（包含 margin）
+etaf-layout-box-content-width       ; 内容宽度
+etaf-layout-box-padding-width       ; 左右内边距之和
+etaf-layout-box-border-width        ; 左右边框之和
+etaf-layout-box-margin-width        ; 左右外边距之和
+etaf-layout-box-total-width         ; 总宽度（包含 margin）
 
 ;; 布局树遍历
 etaf-layout-walk                   ; 深度优先遍历
@@ -174,7 +174,7 @@ etaf-layout-to-string              ; 转换为可读字符串
 ;; 布局所有子元素后累积高度
 (dolist (child children)
   (cl-incf accumulated-height 
-          (etaf-box-model-total-height child-box-model)))
+          (etaf-layout-box-total-height child-box-model)))
 
 ;; 更新盒模型高度
 (when (= content-height 0)
@@ -270,8 +270,8 @@ etaf-layout-to-string              ; 转换为可读字符串
         (message "Position: (%d,%d) Size: %dx%d"
                  (plist-get pos :x)
                  (plist-get pos :y)
-                 (etaf-box-model-content-width box)
-                 (etaf-box-model-content-height box))))))
+                 (etaf-layout-box-content-width box)
+                 (etaf-layout-box-content-height box))))))
 ```
 
 ## 性能特点

@@ -155,19 +155,19 @@ the container's content-width, not each item filling the entire parent width."
          (flex-container (car (dom-non-text-children body-node)))
          (flex-items (dom-non-text-children flex-container))
          (container-box (etaf-layout-get-box-model flex-container))
-         (container-width (etaf-box-model-content-width container-box))
+         (container-width (etaf-layout-box-content-width container-box))
          (total-items-width 0))
     ;; Container should have width 800
     (should (equal container-width 800))
     ;; Calculate total width of all flex items
     (dolist (item flex-items)
       (let* ((box-model (etaf-layout-get-box-model item))
-             (item-width (etaf-box-model-content-width box-model)))
+             (item-width (etaf-layout-box-content-width box-model)))
         ;; Each item should NOT have width equal to container width
         ;; In old buggy code, each item would be 800px (parent width)
         ;; With fix, items should have 0 width (auto-sized by content/flex algorithm)
         (should (< item-width container-width))
-        (setq total-items-width (+ total-items-width (etaf-box-model-total-width box-model)))))
+        (setq total-items-width (+ total-items-width (etaf-layout-box-total-width box-model)))))
     ;; Total width of all items should be <= container width (they shouldn't overflow)
     ;; Note: With width:0, the total will be less than container, which is correct
     ;; as flex algorithm will distribute space based on grow/shrink
@@ -208,22 +208,22 @@ children with flex-grow > 0 should be stretched proportionally."
          (flex-container (car (dom-non-text-children body-node)))
          (flex-items (dom-non-text-children flex-container))
          (container-box (etaf-layout-get-box-model flex-container))
-         (container-width (etaf-box-model-content-width container-box)))
+         (container-width (etaf-layout-box-content-width container-box)))
     ;; Container should have width 800
     (should (equal container-width 800))
     ;; Each item should be stretched from 100px to about 400px (800/2 items)
     ;; because both items have equal flex-grow: 1
     (let* ((item1-box (etaf-layout-get-box-model (nth 0 flex-items)))
            (item2-box (etaf-layout-get-box-model (nth 1 flex-items)))
-           (item1-width (etaf-box-model-content-width item1-box))
-           (item2-width (etaf-box-model-content-width item2-box)))
+           (item1-width (etaf-layout-box-content-width item1-box))
+           (item2-width (etaf-layout-box-content-width item2-box)))
       ;; Each item should be stretched beyond original 100px width
       ;; With equal flex-grow, they should each get 400px (half of 800px)
       (should (> item1-width 100))
       (should (> item2-width 100))
       ;; Total width should equal container width
-      (should (= (+ (etaf-box-model-total-width item1-box)
-                    (etaf-box-model-total-width item2-box))
+      (should (= (+ (etaf-layout-box-total-width item1-box)
+                    (etaf-layout-box-total-width item2-box))
                  container-width)))))
 
 (ert-deftest etaf-layout-test-flex-grow-proportional ()
@@ -265,8 +265,8 @@ An item with flex-grow: 2 should grow twice as much as one with flex-grow: 1."
     ;; Final: item1 ≈ 333.33px, item2 ≈ 566.67px
     (let* ((item1-box (etaf-layout-get-box-model (nth 0 flex-items)))
            (item2-box (etaf-layout-get-box-model (nth 1 flex-items)))
-           (item1-width (etaf-box-model-content-width item1-box))
-           (item2-width (etaf-box-model-content-width item2-box)))
+           (item1-width (etaf-layout-box-content-width item1-box))
+           (item2-width (etaf-layout-box-content-width item2-box)))
       ;; Both should be stretched beyond original 100px
       (should (> item1-width 100))
       (should (> item2-width 100))
@@ -314,14 +314,14 @@ children with flex-shrink > 0 should be reduced proportionally."
     ;; Each item should shrink by 50px to fit (200 - 50 = 150px each)
     (let* ((item1-box (etaf-layout-get-box-model (nth 0 flex-items)))
            (item2-box (etaf-layout-get-box-model (nth 1 flex-items)))
-           (item1-width (etaf-box-model-content-width item1-box))
-           (item2-width (etaf-box-model-content-width item2-box)))
+           (item1-width (etaf-layout-box-content-width item1-box))
+           (item2-width (etaf-layout-box-content-width item2-box)))
       ;; Each item should be shrunk below original 200px width
       (should (< item1-width 200))
       (should (< item2-width 200))
       ;; Total width should equal container width
-      (should (= (+ (etaf-box-model-total-width item1-box)
-                    (etaf-box-model-total-width item2-box))
+      (should (= (+ (etaf-layout-box-total-width item1-box)
+                    (etaf-layout-box-total-width item2-box))
                  300)))))
 
 (ert-deftest etaf-layout-test-flex-grow-zero-no-stretch ()
@@ -359,8 +359,8 @@ children with flex-shrink > 0 should be reduced proportionally."
          (flex-items (dom-non-text-children flex-container)))
     (let* ((no-grow-box (etaf-layout-get-box-model (nth 0 flex-items)))
            (grow-box (etaf-layout-get-box-model (nth 1 flex-items)))
-           (no-grow-width (etaf-box-model-content-width no-grow-box))
-           (grow-width (etaf-box-model-content-width grow-box)))
+           (no-grow-width (etaf-layout-box-content-width no-grow-box))
+           (grow-width (etaf-layout-box-content-width grow-box)))
       ;; no-grow item should stay at 100px
       (should (= no-grow-width 100))
       ;; grow item should expand to fill remaining space (700px)

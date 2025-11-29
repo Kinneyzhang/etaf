@@ -151,8 +151,6 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。"
                   (string-pixel-width inner-content)))
             content-width)))
 
-    (message "inner-content:%S" inner-content)
-    
     (if (and (<= effective-width 0) (<= content-height 0))
         ""
       (etaf-layout-string--build-box
@@ -409,14 +407,9 @@ ALIGN-CONTENT 是多行对齐。"
                      (> items-count 1)
                      (> container-main-size 0)
                      (< rest-units 0))
-                (progn
-                  (message "container-main-size:%S" container-main-size)
-                  (message "items-units-lst:%S" items-units-lst)
-                  (message "main-gap:%S" main-gap)
-                  (etaf-flex-line-breaks container-main-size
-                                         items-units-lst main-gap))
+                (etaf-flex-line-breaks container-main-size
+                                       items-units-lst main-gap)
               (list items-count))))
-      (message "wrap-lst:%S" wrap-lst)
       (if (null valid-strings)
           ""
         (etaf-layout-string--render-flex-lines
