@@ -247,7 +247,8 @@
     (should (string-match "lh" (cdr (assq 'margin-bottom style))))
     (should (string-match "px" (cdr (assq 'padding-left style))))))
 
-;; Test button tag uses lh for vertical padding and px for horizontal padding
+;; Test button tag uses lh units for vertical padding and px units for horizontal padding
+;; Note: vertical padding values are "0lh" which still uses the lh unit
 (let ((button-def (etaf-tag-get-definition 'button)))
   (let ((style (plist-get button-def :default-style)))
     (should (string-match "lh" (cdr (assq 'padding-top style))))
