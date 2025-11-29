@@ -74,7 +74,7 @@
   ;; String numeric font-size (unitless)
   (let ((face (etaf-css-style-to-face '((font-size . "1.6")))))
     (should (= (plist-get face :height) 1.6)))
-  ;; px font-size
+  ;; px font-size (20px / 16px baseline = 1.25)
   (let ((face (etaf-css-style-to-face '((font-size . "20px")))))
     (should (= (plist-get face :height) 1.25))))
 
