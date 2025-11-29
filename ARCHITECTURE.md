@@ -20,7 +20,7 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
         │                       │                       │
         ▼                       ▼                       │
 ┌───────────────────┐  ┌─────────────────┐              │
-│    etaf-tml.el    │  │  etaf-css.el    │              │
+│    etaf-etml.el    │  │  etaf-css.el    │              │
 │  TML → DOM        │  │  CSS 主入口     │              │
 │  + 模板指令支持   │  │                 │              │
 └───────┬───────────┘  └────────┬────────┘              │
@@ -107,7 +107,7 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
 
 ---
 
-### 2. etaf-tml.el - TML 到 DOM 转换
+### 2. etaf-etml.el - TML 到 DOM 转换
 
 **职责**: 将 TML (plist 格式) 转换为 DOM (alist 格式)。
 
@@ -697,9 +697,9 @@ DOM + <style> 标签
 
 ---
 
-### 18. etaf-tml.el - 模板指令支持（原 etaf-template.el 已合并）
+### 18. etaf-etml.el - 模板指令支持（原 etaf-template.el 已合并）
 
-**职责**: 实现类 Vue.js 的模板语法。模板功能现已合并到 etaf-tml.el 中，函数名从 `etaf-template-*` 更名为 `etaf-etml-*`。
+**职责**: 实现类 Vue.js 的模板语法。模板功能现已合并到 etaf-etml.el 中，函数名从 `etaf-template-*` 更名为 `etaf-etml-*`。
 
 #### 支持的语法
 
@@ -901,7 +901,7 @@ DOM + <style> 标签
 
 ```
 etaf-string (etaf.el)
-├── etaf-etml-to-dom (etaf-tml.el)
+├── etaf-etml-to-dom (etaf-etml.el)
 │   └── etaf-plist-to-alist
 │
 ├── etaf-css-build-cssom (etaf-css.el)
@@ -1089,7 +1089,7 @@ etaf-layout-to-string (etaf-layout.el)
 
 ```
 etaf.el
-├── etaf-tml.el (包含模板功能)
+├── etaf-etml.el (包含模板功能)
 ├── etaf-css.el
 │   ├── etaf-dom.el
 │   ├── etaf-css-selector.el

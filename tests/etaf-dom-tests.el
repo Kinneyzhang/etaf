@@ -1,4 +1,4 @@
-(require 'etaf-tml)
+(require 'etaf-etml)
 (require 'etaf-dom)
 (require 'etaf-ert)
 

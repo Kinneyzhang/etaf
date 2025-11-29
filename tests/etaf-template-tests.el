@@ -1,7 +1,7 @@
 ;;; etaf-template-tests.el --- Tests for Vue.js-like template syntax -*- lexical-binding: t; -*-
 
 (require 'etaf-ert)
-(require 'etaf-tml)
+(require 'etaf-etml)
 
 ;;; Text Interpolation Tests
 

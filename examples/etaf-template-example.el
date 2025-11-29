@@ -14,7 +14,7 @@
 
 ;;; Code:
 
-(require 'etaf-tml)
+(require 'etaf-etml)
 
 ;;; Example 1: Text Interpolation
 

@@ -30,7 +30,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ### 1. TML 格式 (Template Markup Language)
 
-**定义位置**: `etaf-tml.el`
+**定义位置**: `etaf-etml.el`
 
 **格式**:
 ```elisp

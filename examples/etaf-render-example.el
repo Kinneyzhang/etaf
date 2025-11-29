@@ -6,7 +6,7 @@
 ;;; Code:
 
 (require 'etaf-render)
-(require 'etaf-tml)
+(require 'etaf-etml)
 (require 'etaf-css)
 
 ;;; Example 1: Basic render tree construction

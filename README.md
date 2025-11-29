@@ -18,7 +18,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ## 核心模块
 
-- **etaf-tml.el** - TML (Template Markup Language) 到 DOM 的转换，支持 `:css` 属性和模板指令语法（`e-if`、`e-for`、`e-show` 等）
+- **etaf-etml.el** - TML (Template Markup Language) 到 DOM 的转换，支持 `:css` 属性和模板指令语法（`e-if`、`e-for`、`e-show` 等）
 - **etaf-ecss.el** - ECSS：Emacs 风格的 CSS 表达式（类似 rx 对正则的处理）
 - **etaf-dom.el** - DOM 操作、查询和遍历
 - **etaf-tailwind.el** - Tailwind CSS 支持（Emacs 特有的 px/lh 单位）
@@ -136,7 +136,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `v-*` 前缀：
 
 ```elisp
-(require 'etaf-tml)
+(require 'etaf-etml)
 
 ;; 定义数据
 (setq my-data '(:name "Alice" 
@@ -443,7 +443,7 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 ```
 
 测试文件：
-- `etaf-template-tests.el` - 模板语法测试（使用 etaf-tml 模块中的 etaf-etml-* 函数）
+- `etaf-template-tests.el` - 模板语法测试（使用 etaf-etml 模块中的 etaf-etml-* 函数）
 - `etaf-tailwind-tests.el` - Tailwind CSS 支持测试（新增）
 - `etaf-css-tests.el` - CSS 主功能测试
 - `etaf-css-important-tests.el` - !important 和层叠测试

@@ -261,7 +261,7 @@ p-4 被展开为 padding-top/right/bottom/left。"
 (ert-deftest etaf-tailwind-test-cssom-integration ()
   "测试 Tailwind 类在 CSSOM 中的正确解析。
 Emacs特有：padding使用px（水平）和lh（垂直）。"
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   (require 'etaf-css)
   (let* ((dom (etaf-etml-to-dom
                '(div :class "flex bg-red-500 p-4"
@@ -279,7 +279,7 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
 (ert-deftest etaf-tailwind-test-border-cssom-integration ()
   "测试 Tailwind 边框类在 CSSOM 中的正确展开和解析。
 这是修复 border-1 border-red-500 问题的关键测试。"
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   (require 'etaf-css)
   (let* ((dom (etaf-etml-to-dom
                '(div :class "border-1 border-red-500"
@@ -299,7 +299,7 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
 
 (ert-deftest etaf-tailwind-test-render-tree-integration ()
   "测试 Tailwind 类在渲染树中的正确应用。"
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   (require 'etaf-css)
   (require 'etaf-render)
   (let* ((dom (etaf-etml-to-dom

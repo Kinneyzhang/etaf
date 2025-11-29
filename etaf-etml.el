@@ -1,4 +1,4 @@
-;;; etaf-tml.el --- TML (Template Markup Language) to DOM conversion -*- lexical-binding: t; -*-
+;;; etaf-etml.el --- TML (Template Markup Language) to DOM conversion -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 
@@ -511,7 +511,7 @@ Returns list of rendered nodes (usually just one)."
 (defun etaf-etml-to-dom (template &optional data)
   "Render TEMPLATE with DATA and convert to DOM.
 This is a convenience function combining template rendering and TML-to-DOM."
-  (require 'etaf-tml)
+  (require 'etaf-etml)
   (etaf-etml--to-dom (etaf-etml-render template data)))
 
 ;;; Reactive Data System
@@ -553,5 +553,5 @@ CALLBACK receives (reactive key value) when data changes."
   (let ((watchers (plist-get reactive :watchers)))
     (plist-put reactive :watchers (delete callback watchers))))
 
-(provide 'etaf-tml)
-;;; etaf-tml.el ends here
+(provide 'etaf-etml)
+;;; etaf-etml.el ends here

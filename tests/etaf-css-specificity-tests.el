@@ -1,7 +1,7 @@
 ;;; etaf-css-specificity-tests.el --- Tests for CSS specificity -*- lexical-binding: t; -*-
 
 (require 'etaf-css)
-(require 'etaf-tml)
+(require 'etaf-etml)
 (require 'etaf-ert)
 
 ;;; 测试特异性计算

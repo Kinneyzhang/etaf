@@ -15,13 +15,13 @@
 
 #### etaf.el
 - **目的**: ETAF 系统的主入口点
-- **依赖**: etaf-tml, etaf-css
+- **依赖**: etaf-etml, etaf-css
 - **公共接口**: (无 - 仅聚合子模块)
 - **用法**: `(require 'etaf)` 加载整个 ETAF 系统
 
 ### 标记处理模块
 
-#### etaf-tml.el
+#### etaf-etml.el
 - **目的**: TML (模板标记语言) 到 DOM 的转换
 - **依赖**: (无)
 - **公共接口**:
@@ -177,7 +177,7 @@
 
 ```
 etaf.el
-├── etaf-tml.el (无依赖)
+├── etaf-etml.el (无依赖)
 └── etaf-css.el
     ├── etaf-dom.el
     │   └── dom (内置)
@@ -202,7 +202,7 @@ etaf-ert.el
 
 ### 合并的模块
 
-1. **etaf-utils.el** → 合并到 etaf-tml.el 和 etaf-dom.el
+1. **etaf-utils.el** → 合并到 etaf-etml.el 和 etaf-dom.el
    - 原因：过于简单（仅 2 个工具函数），100% 外部使用率
    - 影响：函数移至实际使用它们的模块
 
@@ -231,7 +231,7 @@ etaf-ert.el
 
 ### 基本 TML 到 DOM 转换
 ```elisp
-(require 'etaf-tml)
+(require 'etaf-etml)
 
 (setq dom (etaf-etml-to-dom
            '(div :class "container"
