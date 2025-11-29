@@ -476,7 +476,7 @@
       (setq box-string
             (etaf-maplines
              (lambda (line)
-               (etaf-propertize line `(face (:background ,bgcolor))))
+               (etaf-propertize-bgcolor line bgcolor))
              box-string 'string-join "\n")))
     ;; 6. concat: set left and right border(inner-height)
     ;;            set left and right margin(inner-height)
