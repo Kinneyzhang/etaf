@@ -473,8 +473,6 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
    ((string= property "block") '((display . "block")))
    ((string= property "inline") '((display . "inline")))
    ((string= property "inline-block") '((display . "inline-block")))
-   ((string= property "flex") '((display . "flex")))
-   ((string= property "inline-flex") '((display . "inline-flex")))
    ((string= property "grid") '((display . "grid")))
    ((string= property "inline-grid") '((display . "inline-grid")))
    ((string= property "hidden") '((display . "none")))
@@ -594,8 +592,18 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
         (list (cons 'opacity (format "%.2f" opacity-value))))))
    
    ;; Flex properties
+   ((string= property "inline-flex") '((display . "inline-flex")))
    ((string= property "flex")
     (cond
+     ((null value) '((display . "flex")))
+     ((string= value "nowrap") '((flex-wrap . "nowrap")))
+     ((string= value "wrap") '((flex-wrap . "wrap")))
+     ((string= value "wrap-reverse") '((flex-wrap . "wrap-reverse")))
+     ((string= value "row") '((flex-direction . "row")))
+     ((string= value "row-reverse") '((flex-direction . "row-reverse")))
+     ((string= value "col") '((flex-direction . "column")))
+     ((string= value "col-reverse") '((flex-direction . "column-reverse")))
+     
      ((string= value "1") '((flex . "1 1 0%")))
      ((string= value "auto") '((flex . "1 1 auto")))
      ((string= value "initial") '((flex . "0 1 auto")))

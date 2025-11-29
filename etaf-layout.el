@@ -377,14 +377,15 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; 但是当位于 flex 容器内时，块级元素的宽度应该由 flex 布局算法计算
          ;; 基于 grow, shrink, basis 和 gap 等属性，而不是自动填充父容器宽度
          ;; 初始值设为 0，后续由 flex 算法调整实际宽度
-         (base-content-width (if (eq width-value 'auto)
-                                 (if (or is-inline is-in-flex-container)
-                                     0  ; 初始值：后续由内容尺寸或flex算法决定实际宽度
-                                   (max 0 (- parent-width
-                                             padding-left-val padding-right-val
-                                             border-left-val border-right-val
-                                             margin-left-val margin-right-val)))
-                               width-value))
+         (base-content-width
+          (if (eq width-value 'auto)
+              (if (or is-inline is-in-flex-container)
+                  0  ; 初始值：后续由内容尺寸或flex算法决定实际宽度
+                (max 0 (- parent-width
+                          padding-left-val padding-right-val
+                          border-left-val border-right-val
+                          margin-left-val margin-right-val)))
+            width-value))
          
          ;; 应用 min-width, max-width 约束
          ;; 参考 etaf-box.el 中的 etaf-box-content-pixel 函数
@@ -1078,16 +1079,24 @@ This function follows the same strategy as etaf-flex.el:
                          0))
            ;; Determine wrap-lst following etaf-flex.el strategy (lines 744-763)
            ;; wrap-lst records the number of items on each line
+           (_ (message "rest-units:%S" rest-units))
+           (_ (message "container-main-size:%S" container-main-size))
+           (_ (message "flex-wrap:%S; items-count:%S" flex-wrap items-count))
            (wrap-lst
             (if (and (not (string= flex-wrap "nowrap"))
                      (> items-count 1)
                      (> container-main-size 0)
                      (< rest-units 0))  ;; items overflow
                 ;; Use etaf-flex-line-breaks to calculate line breaks
-                (etaf-flex-line-breaks container-main-size
-                                       items-units-lst main-gap)
+                (progn
+                  (message "container-main-size:%S" container-main-size)
+                  (message "items-units-lst:%S" items-units-lst)
+                  (message "main-gap:%S" main-gap)
+                  (etaf-flex-line-breaks container-main-size
+                                         items-units-lst main-gap))
               ;; No wrapping - all items on single line
               (list items-count))))
+      (message "wrap-lst:%S" wrap-lst)
       (if (null valid-strings)
           ""
         ;; Process each line following etaf-flex.el strategy (lines 766-803)
