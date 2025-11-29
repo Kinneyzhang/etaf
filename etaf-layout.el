@@ -205,6 +205,26 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                             (etaf-layout-parse-style-value style 'max-height "none")
                             parent-height))
          
+         ;; 溢出处理属性
+         (overflow-y (etaf-layout-parse-style-value style 'overflow-y "visible"))
+         (v-scroll-bar-type-raw (etaf-layout-parse-style-value
+                                 style 'v-scroll-bar-type nil))
+         (v-scroll-bar-type (when v-scroll-bar-type-raw
+                              (if (symbolp v-scroll-bar-type-raw)
+                                  v-scroll-bar-type-raw
+                                (intern v-scroll-bar-type-raw))))
+         (v-scroll-bar-direction-raw (etaf-layout-parse-style-value
+                                      style 'v-scroll-bar-direction "right"))
+         (v-scroll-bar-direction (if (symbolp v-scroll-bar-direction-raw)
+                                     v-scroll-bar-direction-raw
+                                   (intern v-scroll-bar-direction-raw)))
+         (scroll-thumb-color (etaf-layout-parse-style-value
+                              style 'scroll-thumb-color
+                              (face-attribute 'default :foreground)))
+         (scroll-track-color (etaf-layout-parse-style-value
+                              style 'scroll-track-color
+                              (face-attribute 'default :background)))
+         
          ;; 处理 auto 值
          (padding-top-val (if (eq padding-top 'auto) 0 padding-top))
          (padding-right-val (if (eq padding-right 'auto) 0 padding-right))
@@ -284,7 +304,12 @@ PARENT-CONTEXT 包含父容器的上下文信息：
           :margin (list :top margin-top-val
                         :right margin-right-val
                         :bottom margin-bottom-val
-                        :left margin-left-val))))
+                        :left margin-left-val)
+          :overflow (list :overflow-y overflow-y
+                          :v-scroll-bar-type v-scroll-bar-type
+                          :v-scroll-bar-direction v-scroll-bar-direction
+                          :scroll-thumb-color scroll-thumb-color
+                          :scroll-track-color scroll-track-color))))
 
 ;;; ============================================================
 ;;; 布局算法

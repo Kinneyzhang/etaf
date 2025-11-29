@@ -24,7 +24,12 @@
 ;;    :padding (:top <n> :right <n> :bottom <n> :left <n>)
 ;;    :border (:top-width <n> :right-width <n> :bottom-width <n> :left-width <n>
 ;;             :top-color <color> :right-color <color> :bottom-color <color> :left-color <color>)
-;;    :margin (:top <n> :right <n> :bottom <n> :left <n>))
+;;    :margin (:top <n> :right <n> :bottom <n> :left <n>)
+;;    :overflow (:overflow-y <string>
+;;               :v-scroll-bar-type <symbol>
+;;               :v-scroll-bar-direction <symbol>
+;;               :scroll-thumb-color <color>
+;;               :scroll-track-color <color>))
 ;;
 ;; 公共接口：
 ;; - `etaf-layout-box-create' - 创建空的盒模型结构
@@ -55,7 +60,8 @@
 - :content - 内容区域尺寸
 - :padding - 内边距
 - :border - 边框（宽度和颜色）
-- :margin - 外边距"
+- :margin - 外边距
+- :overflow - 溢出处理属性"
   (list :box-sizing "content-box"
         :content (list :width 0 :height 0)
         :padding (list :top 0 :right 0 :bottom 0 :left 0)
@@ -64,7 +70,12 @@
                       :right-color (face-attribute 'default :foreground)
                       :bottom-color (face-attribute 'default :foreground)
                       :left-color (face-attribute 'default :foreground))
-        :margin (list :top 0 :right 0 :bottom 0 :left 0)))
+        :margin (list :top 0 :right 0 :bottom 0 :left 0)
+        :overflow (list :overflow-y "visible"
+                        :v-scroll-bar-type nil
+                        :v-scroll-bar-direction 'right
+                        :scroll-thumb-color (face-attribute 'default :foreground)
+                        :scroll-track-color (face-attribute 'default :background))))
 
 ;;; ============================================================
 ;;; 内容区域访问器
@@ -153,6 +164,43 @@ BOX-MODEL 是盒模型 plist。"
      (etaf-layout-box-padding-height box-model)
      (etaf-layout-box-border-height box-model)
      (etaf-layout-box-margin-height box-model)))
+
+;;; ============================================================
+;;; 溢出属性访问器
+;;; ============================================================
+
+(defun etaf-layout-box-overflow-y (box-model)
+  "获取盒模型的垂直溢出处理方式。
+BOX-MODEL 是盒模型 plist。
+返回溢出处理字符串，如 \"visible\", \"hidden\", \"auto\", \"scroll\" 等。"
+  (let ((overflow (plist-get box-model :overflow)))
+    (plist-get overflow :overflow-y)))
+
+(defun etaf-layout-box-v-scroll-bar-type (box-model)
+  "获取盒模型的垂直滚动条类型。
+BOX-MODEL 是盒模型 plist。
+返回滚动条类型符号，用于引用 `etaf-scroll-bar-alist' 中定义的滚动条风格。"
+  (let ((overflow (plist-get box-model :overflow)))
+    (plist-get overflow :v-scroll-bar-type)))
+
+(defun etaf-layout-box-v-scroll-bar-direction (box-model)
+  "获取盒模型的垂直滚动条位置。
+BOX-MODEL 是盒模型 plist。
+返回 \\='left 或 \\='right。"
+  (let ((overflow (plist-get box-model :overflow)))
+    (or (plist-get overflow :v-scroll-bar-direction) 'right)))
+
+(defun etaf-layout-box-scroll-thumb-color (box-model)
+  "获取盒模型的滚动条滑块颜色。
+BOX-MODEL 是盒模型 plist。"
+  (let ((overflow (plist-get box-model :overflow)))
+    (plist-get overflow :scroll-thumb-color)))
+
+(defun etaf-layout-box-scroll-track-color (box-model)
+  "获取盒模型的滚动条轨道颜色。
+BOX-MODEL 是盒模型 plist。"
+  (let ((overflow (plist-get box-model :overflow)))
+    (plist-get overflow :scroll-track-color)))
 
 (provide 'etaf-layout-box)
 ;;; etaf-layout-box.el ends here
