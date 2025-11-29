@@ -23,25 +23,21 @@
  (etaf-etml-to-dom '(div :class "box" :style ((color . "blue")) "World"))
  '(div ((class . "box") (style . "color: blue")) "World"))
 
-;;; Test etaf-tag integration - p tag should have default margin styles
+;;; Test etaf-tag integration - p tag should NOT have default styles
+;; (p tag has :default-style nil, so no styles are merged)
 (let* ((result (etaf-etml-to-dom '(p "Hello")))
        (attrs (cadr result))
        (style (cdr (assq 'style attrs))))
-  ;; p tag should have margin-top and margin-bottom styles from etaf-tag
-  (should (stringp style))
-  (should (string-match "margin-top" style))
-  (should (string-match "margin-bottom" style))
-  (should (string-match "1lh" style)))
+  ;; p tag should NOT have any style since :default-style is nil
+  (should-equal style nil))
 
-;;; Test etaf-tag integration - inline style overrides default
+;;; Test etaf-tag integration - p tag inline style is preserved as-is
 (let* ((result (etaf-etml-to-dom '(p :style "margin-top: 2lh" "Hello")))
        (attrs (cadr result))
        (style (cdr (assq 'style attrs))))
-  ;; inline style should override default
+  ;; inline style should be preserved
   (should (stringp style))
-  (should (string-match "margin-top: 2lh" style))
-  ;; default margin-bottom should still be present
-  (should (string-match "margin-bottom: 1lh" style)))
+  (should (string-match "margin-top: 2lh" style)))
 
 ;;; Test etaf-tag integration - button tag should have padding styles
 (let* ((result (etaf-etml-to-dom '(button "Click")))
