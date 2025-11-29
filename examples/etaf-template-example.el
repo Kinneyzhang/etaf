@@ -14,7 +14,6 @@
 
 ;;; Code:
 
-(require 'etaf-template)
 (require 'etaf-tml)
 
 ;;; Example 1: Text Interpolation
@@ -28,7 +27,7 @@
                       (h1 "Hello, {{ name }}!")
                       (p "You have {{ count }} messages.")))
          (data '(:name "Alice" :count 5))
-         (result (etaf-template-render template data)))
+         (result (etaf-etml-render template data)))
     
     (message "Template: %S" template)
     (message "Data: %S" data)
@@ -47,11 +46,11 @@
          
          ;; Test with loggedIn = true
          (data-logged-in '(:loggedIn t :username "Bob"))
-         (result-logged-in (etaf-template-render template data-logged-in))
+         (result-logged-in (etaf-etml-render template data-logged-in))
          
          ;; Test with loggedIn = false
          (data-logged-out '(:loggedIn nil :username ""))
-         (result-logged-out (etaf-template-render template data-logged-out)))
+         (result-logged-out (etaf-etml-render template data-logged-out)))
     
     (message "Template: %S\n" template)
     (message "With loggedIn=true:")
@@ -80,7 +79,7 @@
     
     (message "Template: %S\n" template)
     (dolist (data test-cases)
-      (let ((result (etaf-template-render template data)))
+      (let ((result (etaf-etml-render template data)))
         (message "Data: %S" data)
         (message "Result: %S\n" result)))))
 
@@ -95,7 +94,7 @@
   (let* ((template '(ul
                      (li :v-for "item in items" "{{ item }}")))
          (data '(:items ("Apple" "Banana" "Cherry")))
-         (result (etaf-template-render template data)))
+         (result (etaf-etml-render template data)))
     
     (message "Simple list:")
     (message "Template: %S" template)
@@ -107,7 +106,7 @@
                      (li :v-for "(item, idx) in items" 
                          "{{ idx }}: {{ item }}")))
          (data '(:items ("First" "Second" "Third")))
-         (result (etaf-template-render template data)))
+         (result (etaf-etml-render template data)))
     
     (message "List with index:")
     (message "Template: %S" template)
@@ -125,7 +124,7 @@
                      (p :v-show "visible" "This text is visible")
                      (p :v-show "hidden" "This text is hidden")))
          (data '(:visible t :hidden nil))
-         (result (etaf-template-render template data)))
+         (result (etaf-etml-render template data)))
     
     (message "Template: %S" template)
     (message "Data: %S" data)
@@ -142,7 +141,7 @@
   (let* ((template '(div
                      (span :v-text "message")))
          (data '(:message "Hello from v-text!"))
-         (result (etaf-template-render template data)))
+         (result (etaf-etml-render template data)))
     
     (message "Template: %S" template)
     (message "Data: %S" data)
@@ -183,7 +182,7 @@
                         :showFooter t
                         :siteName "ETAF Blog"))
          
-         (result (etaf-template-render template data)))
+         (result (etaf-etml-render template data)))
     
     (message "Complex Template Result:")
     (message "%S\n" result)
@@ -200,27 +199,27 @@
   (interactive)
   (message "=== Reactive Data Example ===\n")
   
-  (let* ((reactive (etaf-template-create-reactive '(:count 0 :name "Counter")))
+  (let* ((reactive (etaf-etml-create-reactive '(:count 0 :name "Counter")))
          (template '(div
                      (h1 "{{ name }}")
                      (p "Count: {{ count }}"))))
     
     ;; Add a watcher
-    (etaf-template-watch reactive
+    (etaf-etml-watch reactive
       (lambda (r key value)
         (message "Data changed: %S = %S" key value)))
     
     ;; Render with initial data
     (message "Initial render:")
-    (message "%S\n" (etaf-template-render template (plist-get reactive :data)))
+    (message "%S\n" (etaf-etml-render template (plist-get reactive :data)))
     
     ;; Update data
     (message "Updating count to 5...")
-    (etaf-template-set reactive :count 5)
+    (etaf-etml-set reactive :count 5)
     
     ;; Render with updated data
     (message "\nAfter update:")
-    (message "%S\n" (etaf-template-render template (plist-get reactive :data)))))
+    (message "%S\n" (etaf-etml-render template (plist-get reactive :data)))))
 
 ;;; Run All Examples
 

@@ -18,8 +18,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 
 ## 核心模块
 
-- **etaf-tml.el** - TML (Template Markup Language) 到 DOM 的转换，支持 `:css` 属性
-- **etaf-template.el** - 模板指令语法支持（`e-if`、`e-for`、`e-show` 等）
+- **etaf-tml.el** - TML (Template Markup Language) 到 DOM 的转换，支持 `:css` 属性和模板指令语法（`e-if`、`e-for`、`e-show` 等）
 - **etaf-ecss.el** - ECSS：Emacs 风格的 CSS 表达式（类似 rx 对正则的处理）
 - **etaf-dom.el** - DOM 操作、查询和遍历
 - **etaf-tailwind.el** - Tailwind CSS 支持（Emacs 特有的 px/lh 单位）
@@ -137,7 +136,7 @@ TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
 ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `v-*` 前缀：
 
 ```elisp
-(require 'etaf-template)
+(require 'etaf-tml)
 
 ;; 定义数据
 (setq my-data '(:name "Alice" 
@@ -159,7 +158,7 @@ ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `
        (li :e-for "item in items" "{{ item }}"))))
 
 ;; 渲染模板
-(setq rendered (etaf-template-render my-template my-data))
+(setq rendered (etaf-etml-render my-template my-data))
 ;; => (div :class "app" 
 ;;      (h1 "Hello, Alice!") 
 ;;      (p "Welcome back!")
@@ -197,16 +196,16 @@ ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀），同时兼容 `
 
 ```elisp
 ;; 创建响应式数据
-(setq reactive (etaf-template-create-reactive '(:count 0 :name "Counter")))
+(setq reactive (etaf-etml-create-reactive '(:count 0 :name "Counter")))
 
 ;; 添加数据变化监听
-(etaf-template-watch reactive
+(etaf-etml-watch reactive
   (lambda (r key value)
     (message "Data changed: %S = %S" key value)))
 
 ;; 获取和设置数据
-(etaf-template-get reactive :count)  ;; => 0
-(etaf-template-set reactive :count 5) ;; 触发 watcher
+(etaf-etml-get reactive :count)  ;; => 0
+(etaf-etml-set reactive :count 5) ;; 触发 watcher
 ```
 
 ### Tailwind CSS 支持
@@ -444,7 +443,7 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 ```
 
 测试文件：
-- `etaf-template-tests.el` - Vue.js 风格模板语法测试
+- `etaf-template-tests.el` - 模板语法测试（使用 etaf-tml 模块中的 etaf-etml-* 函数）
 - `etaf-tailwind-tests.el` - Tailwind CSS 支持测试（新增）
 - `etaf-css-tests.el` - CSS 主功能测试
 - `etaf-css-important-tests.el` - !important 和层叠测试
