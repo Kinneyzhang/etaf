@@ -23,27 +23,44 @@
  (etaf-etml-to-dom '(div :class "box" :style ((color . "blue")) "World"))
  '(div ((class . "box") (style . "color: blue")) "World"))
 
-;;; Complex TML structure test
-(should-equal
- (etaf-etml-to-dom
-  '(div :class "rounded-xl bg-white p-10"
-        (div :class "space-y-6"
-             (p "An advanced online playground for Tailwind CSS, including support for things like:")
-             (ul :class "space-y-3"
-                 (li (p :class "ml-3" "Customizing your theme with"
-                        (code :class "text-gray-950" "@theme")))
-                 (li (p :class "ml-3" "Adding custom utilities with"
-                        (code :class "text-gray-950" "@utility")))
-                 (li (p :class "ml-3" "Adding custom variants with"
-                        (code :class "text-gray-950" "@variant")))
-                 (li :class "flex"
-                     (p :class "ml-3" "Code completion with instant preview")))
-             (p "Perfect for learning how the framework works, prototyping a new idea, or creating a demo to share online."))
-        (hr :class "my-6 w-full")
-        (p :class "mb-3" "Want to dig deeper into Tailwind?")
-        (p :class "font-semibold"
-           (a :href "https://tailwindcss.com/docs"
-              :class "text-gray-950" "Read the docs →"))))
- '(div ((class . "rounded-xl bg-white p-10")) (div ((class . "space-y-6")) (p nil "An advanced online playground for Tailwind CSS, including support for things like:") (ul ((class . "space-y-3")) (li nil (p ((class . "ml-3")) "Customizing your theme with" (code ((class . "text-gray-950")) "@theme"))) (li nil (p ((class . "ml-3")) "Adding custom utilities with" (code ((class . "text-gray-950")) "@utility"))) (li nil (p ((class . "ml-3")) "Adding custom variants with" (code ((class . "text-gray-950")) "@variant"))) (li ((class . "flex")) (p ((class . "ml-3")) "Code completion with instant preview"))) (p nil "Perfect for learning how the framework works, prototyping a new idea, or creating a demo to share online.")) (hr ((class . "my-6 w-full"))) (p ((class . "mb-3")) "Want to dig deeper into Tailwind?") (p ((class . "font-semibold")) (a ((href . "https://tailwindcss.com/docs") (class . "text-gray-950")) "Read the docs →"))))
+;;; Test etaf-tag integration - p tag should have default margin styles
+(let* ((result (etaf-etml-to-dom '(p "Hello")))
+       (attrs (cadr result))
+       (style (cdr (assq 'style attrs))))
+  ;; p tag should have margin-top and margin-bottom styles from etaf-tag
+  (should (stringp style))
+  (should (string-match "margin-top" style))
+  (should (string-match "margin-bottom" style))
+  (should (string-match "1lh" style)))
+
+;;; Test etaf-tag integration - inline style overrides default
+(let* ((result (etaf-etml-to-dom '(p :style "margin-top: 2lh" "Hello")))
+       (attrs (cadr result))
+       (style (cdr (assq 'style attrs))))
+  ;; inline style should override default
+  (should (stringp style))
+  (should (string-match "margin-top: 2lh" style))
+  ;; default margin-bottom should still be present
+  (should (string-match "margin-bottom: 1lh" style)))
+
+;;; Test etaf-tag integration - button tag should have padding styles
+(let* ((result (etaf-etml-to-dom '(button "Click")))
+       (attrs (cadr result))
+       (style (cdr (assq 'style attrs))))
+  ;; button should have padding and border styles from etaf-tag
+  (should (stringp style))
+  (should (string-match "padding-left" style))
+  (should (string-match "padding-right" style))
+  (should (string-match "border" style)))
+
+;;; Test etaf-tag integration - units consistency (px for horizontal, lh for vertical)
+(let* ((result (etaf-etml-to-dom '(ul (li "Item"))))
+       (attrs (cadr result))
+       (style (cdr (assq 'style attrs))))
+  ;; ul should have vertical margins in lh and horizontal padding in px
+  (should (stringp style))
+  (should (string-match "margin-top: 1lh" style))
+  (should (string-match "margin-bottom: 1lh" style))
+  (should (string-match "padding-left: 40px" style)))
 
 (provide 'etaf-etml-tests)
