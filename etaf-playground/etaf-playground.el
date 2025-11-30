@@ -174,7 +174,7 @@ evaluated expression."
     (style (ecss "#pannel-input > div"
                  "border-x border-t border-gray-500")
            (ecss "#pannel-input > div > p"
-                 "pl-10 dark:bg-gray-600 bg-stone-600 text-rose-400 italic")
+                 "pl-10 bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400 italic")
            (ecss "#pannel-input > div > div"
                  "px-10 py-1"))
     (div :class "ml-20 mt-1"

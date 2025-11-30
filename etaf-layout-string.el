@@ -309,7 +309,7 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                                   0))
          (actual-content-height (if (> content-height-px 0)
                                     content-height-px
-                                  (max styled-content-height content-height))))
+                                  (max styled-content-height content-height)))
          
          ;; 计算是否溢出
          (is-overflow (and (> content-height-px 0)
