@@ -105,7 +105,7 @@ RULES 是 CSS 规则列表。
   "从索引中查询可能匹配节点的候选规则。
 INDEX 是规则索引结构。
 NODE 是 DOM 节点。
-返回候选规则列表（可能包含重复）。"
+返回候选规则列表（按文档顺序排列，可能包含重复）。"
   (let ((candidates '())
         (by-tag (plist-get index :by-tag))
         (by-class (plist-get index :by-class))
@@ -132,7 +132,9 @@ NODE 是 DOM 节点。
     
     ;; 去重 - 使用 eq 测试来按对象身份去重，而不是按内容去重
     ;; 这对于内联样式很重要，因为不同节点可能有相同内容的样式规则
-    (cl-delete-duplicates candidates :test 'eq)))
+    (let ((unique-candidates (cl-delete-duplicates candidates :test 'eq)))
+      ;; 反转列表以恢复文档顺序（因为索引添加时使用了 cons 导致了反转）
+      (nreverse unique-candidates))))
 
 (provide 'etaf-css-index)
 ;;; etaf-css-index.el ends here

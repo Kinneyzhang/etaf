@@ -127,15 +127,16 @@ CSSOM 结构：
           :cache cache
           :media-env env)))
 
-(defun etaf-css-get-rules-for-node (cssom node dom)
+(defun etaf-css-get-rules-for-node (cssom node dom &optional media-env-override)
   "从 CSSOM 中获取适用于指定节点的所有规则（使用索引优化）。
 CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
+MEDIA-ENV-OVERRIDE 是可选的媒体查询环境 alist，用于覆盖 CSSOM 中的默认环境。
 返回适用的规则列表，会过滤掉不匹配的媒体查询规则。"
   (let ((matching-rules '())
         (rule-index (plist-get cssom :rule-index))
-        (media-env (plist-get cssom :media-env))
+        (media-env (or media-env-override (plist-get cssom :media-env)))
         (etaf-dom--query-root dom))
     
     ;; 1. 首先查询索引获取候选规则（性能优化）
@@ -234,10 +235,22 @@ DOM 是根 DOM 节点。
 DARK-STYLE 是暗色模式下的计算样式。
 
 此函数用于生成支持自动切换的 Emacs face，
-当背景模式改变时样式会自动更新。"
-  (let* ((rules (etaf-css-get-rules-for-node cssom node dom))
-         (computed-style (etaf-css-cascade-merge-rules rules))
-         ;; 获取 Tailwind 双模式样式
+当背景模式改变时样式会自动更新。
+
+支持两种双模式样式来源:
+1. 元素 class 属性中的 Tailwind dark: 变体类
+2. 样式表中的 @media (prefers-color-scheme: dark) 规则"
+  (let* (;; 创建亮色和暗色模式的媒体环境
+         (base-env (or (plist-get cssom :media-env) etaf-css-media-environment))
+         (light-env (append '((prefers-color-scheme . "light")) base-env))
+         (dark-env (append '((prefers-color-scheme . "dark")) base-env))
+         ;; 获取亮色模式下的规则（使用亮色媒体环境）
+         (light-rules (etaf-css-get-rules-for-node cssom node dom light-env))
+         (computed-style-light (etaf-css-cascade-merge-rules light-rules))
+         ;; 获取暗色模式下的规则（使用暗色媒体环境）
+         (dark-rules (etaf-css-get-rules-for-node cssom node dom dark-env))
+         (computed-style-dark (etaf-css-cascade-merge-rules dark-rules))
+         ;; 获取 Tailwind 双模式样式（从 class 属性）
          (class-attr (dom-attr node 'class))
          (tailwind-dual (when class-attr
                           (etaf-tailwind-classes-to-css-dual-mode class-attr)))
@@ -247,13 +260,13 @@ DARK-STYLE 是暗色模式下的计算样式。
          (tailwind-dark (when tailwind-dual
                           (etaf-css--expand-tailwind-shorthand
                            (plist-get tailwind-dual :dark))))
-         ;; 合并样式
+         ;; 合并样式（Tailwind 样式覆盖 CSS 规则样式）
          (light-style (if tailwind-light
-                          (etaf-css--merge-style-alists computed-style tailwind-light)
-                        computed-style))
+                          (etaf-css--merge-style-alists computed-style-light tailwind-light)
+                        computed-style-light))
          (dark-style (if tailwind-dark
-                         (etaf-css--merge-style-alists computed-style tailwind-dark)
-                       computed-style))
+                         (etaf-css--merge-style-alists computed-style-dark tailwind-dark)
+                       computed-style-dark))
          ;; 应用属性继承
          (parent (dom-parent dom node)))
     (when parent
