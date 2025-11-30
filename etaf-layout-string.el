@@ -508,14 +508,14 @@ V-SCROLL-BAR-TYPE 是滚动条风格类型。"
            (thumb-height (etaf-layout-string--compute-thumb-height
                           track-height content-linum))
            (thumb-offset 0))  ;; 初始偏移为 0
-      ;; 设置滚动条属性
-      (plist-put scroll-bar :track-height track-height)
-      (plist-put scroll-bar :track-color scroll-track-color)
-      (plist-put scroll-bar :thumb-height thumb-height)
-      (plist-put scroll-bar :thumb-color scroll-thumb-color)
-      (plist-put scroll-bar :thumb-offset thumb-offset)
-      (plist-put scroll-bar :track-padding-top-height (floor padding-top))
-      (plist-put scroll-bar :track-padding-bottom-height (floor padding-bottom))
+      ;; 设置滚动条属性 - 必须捕获 plist-put 的返回值
+      (setq scroll-bar (plist-put scroll-bar :track-height track-height))
+      (setq scroll-bar (plist-put scroll-bar :track-color scroll-track-color))
+      (setq scroll-bar (plist-put scroll-bar :thumb-height thumb-height))
+      (setq scroll-bar (plist-put scroll-bar :thumb-color scroll-thumb-color))
+      (setq scroll-bar (plist-put scroll-bar :thumb-offset thumb-offset))
+      (setq scroll-bar (plist-put scroll-bar :track-padding-top-height (floor padding-top)))
+      (setq scroll-bar (plist-put scroll-bar :track-padding-bottom-height (floor padding-bottom)))
       
       (pcase v-scroll-bar-p
         ('real
@@ -524,8 +524,8 @@ V-SCROLL-BAR-TYPE 是滚动条风格类型。"
         ('blank
          ;; 空白滚动条：将滑块颜色设为轨道颜色
          (let ((color (plist-get scroll-bar :track-color)))
-           (plist-put scroll-bar :thumb-color color)
-           (plist-put scroll-bar :thumb-border-color color)
+           (setq scroll-bar (plist-put scroll-bar :thumb-color color))
+           (setq scroll-bar (plist-put scroll-bar :thumb-border-color color))
            (etaf-layout-scroll-bar-render scroll-bar nil nil)))))))
 
 
