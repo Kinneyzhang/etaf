@@ -230,8 +230,9 @@ DARK-STYLE 是暗色模式的 CSS 样式 alist。
     (if (equal light-face dark-face)
         light-face
       ;; 否则返回带有 display condition 的 face spec
-      `(((((background light)) ,@light-face)
-         (((background dark)) ,@dark-face))))))
+      ;; 格式: ((((background light)) :prop1 val1 ...) (((background dark)) :prop2 val2 ...))
+      `((((background light)) ,@light-face)
+        (((background dark)) ,@dark-face)))))
 
 (defun etaf-css-apply-dual-face-to-string (string light-style dark-style)
   "将亮色和暗色两套 CSS 样式应用到字符串上，支持自动切换。
