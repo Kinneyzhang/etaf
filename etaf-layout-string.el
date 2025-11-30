@@ -36,6 +36,7 @@
 (require 'etaf-css-face)
 (require 'etaf-layout-box)
 (require 'etaf-etml-tag)
+(require 'etaf-scroll-bar)
 
 ;; Forward declarations
 (declare-function etaf-render-get-default-display "etaf-render")
@@ -80,6 +81,8 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
                      '(:top-width 0 :right-width 0 :bottom-width 0 :left-width 0)))
          (margin (or (plist-get box-model :margin)
                      '(:top 0 :right 0 :bottom 0 :left 0)))
+         (overflow (or (plist-get box-model :overflow)
+                       '(:overflow-y "visible")))
          
          ;; 提取各边的值
          (padding-top (floor (or (plist-get padding :top) 0)))
@@ -104,6 +107,15 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
          (margin-right (or (plist-get margin :right) 0))
          (margin-bottom (floor (or (plist-get margin :bottom) 0)))
          (margin-left (or (plist-get margin :left) 0))
+         
+         ;; 溢出处理属性
+         (overflow-y (or (plist-get overflow :overflow-y) "visible"))
+         (v-scroll-bar-type (plist-get overflow :v-scroll-bar-type))
+         (v-scroll-bar-direction (or (plist-get overflow :v-scroll-bar-direction) 'right))
+         (scroll-thumb-color (or (plist-get overflow :scroll-thumb-color)
+                                 (face-attribute 'default :foreground)))
+         (scroll-track-color (or (plist-get overflow :scroll-track-color)
+                                 (face-attribute 'default :background)))
          
          ;; 处理子元素
          (children (dom-children layout-node))
@@ -162,7 +174,11 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
        border-top border-right border-bottom border-left
        border-top-color border-right-color border-bottom-color border-left-color
        margin-top margin-right margin-bottom margin-left
-       computed-style tag-instance))))
+       computed-style tag-instance
+       ;; 新增溢出相关参数
+       overflow-y v-scroll-bar-type v-scroll-bar-direction
+       scroll-thumb-color scroll-track-color
+       natural-content-height))))
 
 ;;; ============================================================
 ;;; 内部函数：盒模型构建
@@ -195,12 +211,39 @@ would otherwise appear as an extra space at the end of each line."
                                                      border-top border-right border-bottom border-left
                                                      border-top-color border-right-color border-bottom-color border-left-color
                                                      margin-top margin-right margin-bottom margin-left
-                                                     computed-style &optional tag-instance)
-  "构建盒模型字符串。
+                                                     computed-style
+                                                     &optional tag-instance overflow-y v-scroll-bar-type v-scroll-bar-direction
+                                                     scroll-thumb-color scroll-track-color natural-content-height)
+  "构建盒模型字符串，支持垂直溢出处理和滚动条。
 
 如果 TAG-INSTANCE 非空且包含事件处理器，则将 keymap 等文本属性应用到最终字符串上，
-使得按键事件在字符串插入到 buffer 后能够生效。"
-  (let* (;; 1. 调整内容宽度
+使得按键事件在字符串插入到 buffer 后能够生效。
+
+OVERFLOW-Y 是垂直溢出处理方式:
+  - \"visible\": 溢出内容正常显示（默认）
+  - \"hidden\": 溢出内容被隐藏
+  - \"auto\": 允许滚动，溢出时显示滚动条
+  - \"scroll\": 允许滚动，始终显示滚动条
+  - \"scroll-visible\": 同 \"scroll\"，始终显示滚动条
+  - \"scroll-hidden\": 允许滚动，但不显示滚动条
+  - \"scroll-auto\": 始终预留滚动条空间，溢出时显示真实滚动条
+
+V-SCROLL-BAR-TYPE 是滚动条风格类型（引用 etaf-scroll-bar-alist）。
+V-SCROLL-BAR-DIRECTION 是滚动条位置，\\='left 或 \\='right。
+SCROLL-THUMB-COLOR 是滚动条滑块颜色。
+SCROLL-TRACK-COLOR 是滚动条轨道颜色。
+NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
+  (let* (;; 设置默认值
+         (overflow-y (or overflow-y "visible"))
+         (v-scroll-bar-direction (or v-scroll-bar-direction 'right))
+         (scroll-thumb-color (or scroll-thumb-color (face-attribute 'default :foreground)))
+         (scroll-track-color (or scroll-track-color (face-attribute 'default :background)))
+         (natural-content-height (or natural-content-height
+                                     (if (> (length inner-content) 0)
+                                         (etaf-string-linum inner-content)
+                                       0)))
+         
+         ;; 1. 调整内容宽度
          (sized-content
           (if (> (length inner-content) 0)
               (condition-case nil
@@ -225,15 +268,34 @@ would otherwise appear as an extra space at the end of each line."
                                     content-height-px
                                   (max styled-content-height content-height)))
          
-         ;; 约束高度
-         (height-constrained-content
-          (if (and (> content-height-px 0)
-                   (> (length styled-content) 0)
-                   (/= styled-content-height content-height-px))
-              (etaf-lines-align styled-content content-height-px 'top)
-            styled-content))
+         ;; 计算是否溢出
+         (is-overflow (and (> content-height-px 0)
+                           (> natural-content-height content-height-px)))
          
-         (inner-height (+ actual-content-height padding-top padding-bottom))
+         ;; 根据 overflow-y 策略确定是否需要滚动条
+         (v-scroll-bar-p (etaf-layout-string--v-scroll-bar-p
+                          overflow-y is-overflow))
+         
+         ;; 约束高度（根据 overflow-y 策略）
+         (height-constrained-content
+          (cond
+           ;; visible: 不裁剪，显示全部内容
+           ((string= overflow-y "visible")
+            styled-content)
+           ;; 其他策略：裁剪到指定高度
+           ((and (> content-height-px 0)
+                 (> (length styled-content) 0)
+                 (/= styled-content-height content-height-px))
+            (etaf-lines-align styled-content content-height-px 'top))
+           (t styled-content)))
+         
+         ;; 重新计算实际内容高度（visible 模式下使用自然高度）
+         (actual-display-height
+          (if (string= overflow-y "visible")
+              (max natural-content-height (if (> content-height-px 0) content-height-px 0))
+            actual-content-height))
+         
+         (inner-height (+ actual-display-height padding-top padding-bottom))
          
          ;; 2. 添加垂直 padding
          (with-padding (if (and (> effective-width 0)
@@ -257,17 +319,37 @@ would otherwise appear as an extra space at the end of each line."
                                       (etaf-pixel-blank padding-right inner-height))))
                            with-padding))
          
+         ;; 3.3 添加垂直滚动条（在 padding 之后、border 之前）
+         (with-scroll-bar
+          (if v-scroll-bar-p
+              (let* ((scroll-bar-str (etaf-layout-string--render-v-scroll-bar
+                                      v-scroll-bar-p
+                                      actual-display-height
+                                      padding-top
+                                      padding-bottom
+                                      natural-content-height
+                                      scroll-thumb-color
+                                      scroll-track-color
+                                      v-scroll-bar-type)))
+                (if (and scroll-bar-str (> (length scroll-bar-str) 0))
+                    (pcase v-scroll-bar-direction
+                      ('right (etaf-lines-concat (list with-h-padding scroll-bar-str)))
+                      ('left (etaf-lines-concat (list scroll-bar-str with-h-padding)))
+                      (_ with-h-padding))
+                  with-h-padding))
+            with-h-padding))
+         
          ;; 3.5 应用背景色
          ;; 注意：背景色需要逐行应用，不能应用到换行符上，否则会导致每行结尾多一个空格的背景色
          (bgcolor (when computed-style
                     (cdr (assq 'background-color computed-style))))
-         (with-bgcolor (if (and bgcolor (> (length with-h-padding) 0))
+         (with-bgcolor (if (and bgcolor (> (length with-scroll-bar) 0))
                            (let ((emacs-color (etaf-css-color-to-emacs bgcolor)))
                              (if emacs-color
                                  (etaf-layout-string--apply-bgcolor-per-line
-                                  with-h-padding emacs-color)
-                               with-h-padding))
-                         with-h-padding))
+                                  with-scroll-bar emacs-color)
+                               with-scroll-bar))
+                         with-scroll-bar))
          
          ;; 4. 添加水平 border
          (with-border (if (and (> inner-height 0)
@@ -284,7 +366,11 @@ would otherwise appear as an extra space at the end of each line."
          
          (total-pixel (+ effective-width
                          padding-left padding-right
-                         border-left border-right))
+                         border-left border-right
+                         ;; 加上滚动条宽度
+                         (if v-scroll-bar-p
+                             (etaf-layout-string--scroll-bar-pixel v-scroll-bar-type)
+                           0)))
          
          ;; 4.5 添加垂直 border
          (with-v-border (if (or (> border-top 0) (> border-bottom 0))
@@ -346,6 +432,101 @@ would otherwise appear as an extra space at the end of each line."
              final-string)))))
     
     final-string))
+
+;;; ============================================================
+;;; 内部函数：垂直滚动条支持
+;;; ============================================================
+
+(defun etaf-layout-string--v-scroll-bar-p (overflow-y is-overflow)
+  "根据 overflow-y 策略判断是否需要显示滚动条。
+返回 \\='real 表示显示真实滚动条，\\='blank 表示显示空白占位，nil 表示不显示。
+
+OVERFLOW-Y 是溢出处理策略字符串。
+IS-OVERFLOW 表示内容是否实际溢出。"
+  (pcase overflow-y
+    ;; scroll 或 scroll-visible: 始终显示真实滚动条
+    ((or "scroll" "scroll-visible") 'real)
+    ;; scroll-auto: 始终预留空间，溢出时显示真实滚动条，否则显示空白
+    ("scroll-auto"
+     (if is-overflow 'real 'blank))
+    ;; auto: 仅溢出时显示真实滚动条（不预留空间）
+    ("auto"
+     (when is-overflow 'real))
+    ;; scroll-hidden: 允许滚动但不显示滚动条
+    ("scroll-hidden" nil)
+    ;; visible 或 hidden: 不显示滚动条
+    (_ nil)))
+
+(defun etaf-layout-string--create-scroll-bar (v-scroll-bar-type)
+  "创建并配置滚动条对象。
+V-SCROLL-BAR-TYPE 是滚动条风格类型（符号），用于引用 etaf-scroll-bar-alist。
+返回配置好的 etaf-scroll-bar 对象。"
+  (let ((scroll-bar (etaf-scroll-bar)))
+    ;; 如果有定义的风格，应用风格设置
+    (when-let* ((type v-scroll-bar-type)
+                (kvs (alist-get type etaf-scroll-bar-alist)))
+      (apply #'etaf-oset scroll-bar kvs))
+    scroll-bar))
+
+(defun etaf-layout-string--scroll-bar-pixel (v-scroll-bar-type)
+  "获取滚动条的像素宽度。
+V-SCROLL-BAR-TYPE 是滚动条风格类型（符号）。"
+  (etaf-scroll-bar-pixel (etaf-layout-string--create-scroll-bar v-scroll-bar-type)))
+
+(defun etaf-layout-string--compute-thumb-height (content-height content-linum)
+  "根据内容高度和实际行数计算滚动条滑块高度。
+
+CONTENT-HEIGHT 是显示区域的高度（行数）。
+CONTENT-LINUM 是内容的实际行数。
+
+计算规则：
+- 如果无溢出（content-linum <= content-height），滑块高度 = 内容高度
+- 如果溢出行数 < 内容高度，滑块高度 = 内容高度 - 溢出行数
+- 如果溢出行数 >= 内容高度，滑块高度 = 1（最小值）"
+  (let ((overflow-linum (- content-linum content-height)))
+    (if (> overflow-linum 0)
+        (if (> content-height overflow-linum)
+            (- content-height overflow-linum)
+          1)
+      content-height)))
+
+(defun etaf-layout-string--render-v-scroll-bar
+    (v-scroll-bar-p track-height padding-top padding-bottom
+                    content-linum scroll-thumb-color scroll-track-color
+                    v-scroll-bar-type)
+  "渲染垂直滚动条字符串。
+
+V-SCROLL-BAR-P 是 \\='real 或 \\='blank。
+TRACK-HEIGHT 是轨道高度（内容区域显示高度）。
+PADDING-TOP 和 PADDING-BOTTOM 是上下内边距。
+CONTENT-LINUM 是内容的实际行数。
+SCROLL-THUMB-COLOR 和 SCROLL-TRACK-COLOR 是滑块和轨道颜色。
+V-SCROLL-BAR-TYPE 是滚动条风格类型。"
+  (when v-scroll-bar-p
+    (let* ((scroll-bar (etaf-layout-string--create-scroll-bar v-scroll-bar-type))
+           (thumb-height (etaf-layout-string--compute-thumb-height
+                          track-height content-linum))
+           (thumb-offset 0))  ;; 初始偏移为 0
+      ;; 设置滚动条属性
+      (oset scroll-bar track-height track-height)
+      (oset scroll-bar track-color scroll-track-color)
+      (oset scroll-bar thumb-height thumb-height)
+      (oset scroll-bar thumb-color scroll-thumb-color)
+      (oset scroll-bar thumb-offset thumb-offset)
+      (oset scroll-bar track-padding-top-height (floor padding-top))
+      (oset scroll-bar track-padding-bottom-height (floor padding-bottom))
+      
+      (pcase v-scroll-bar-p
+        ('real
+         ;; 真实滚动条
+         (etaf-scroll-bar-render scroll-bar nil nil))
+        ('blank
+         ;; 空白滚动条：将滑块颜色设为轨道颜色
+         (let ((color (oref scroll-bar track-color)))
+           (oset scroll-bar thumb-color color)
+           (oset scroll-bar thumb-border-color color)
+           (etaf-scroll-bar-render scroll-bar nil nil)))))))
+
 
 ;;; ============================================================
 ;;; 内部函数：子元素合并
