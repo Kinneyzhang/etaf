@@ -183,9 +183,16 @@ li {
      nil)))
 
 (defun etaf-playground--safe-eval (expr)
-  "Safely evaluate EXPR and return result."
+  "Safely evaluate EXPR and return result.
+Note: This function evaluates arbitrary Elisp code provided by the user.
+This is intentional for a playground environment where users experiment
+with their own code. The evaluation is wrapped in condition-case to
+catch and report errors gracefully.
+
+The second argument `t' to `eval' enables lexical binding for the
+evaluated expression."
   (condition-case err
-      (eval expr t)
+      (eval expr t)  ; t enables lexical binding
     (error
      (setq etaf-playground--error-message
            (format "Eval error: %s" (error-message-string err)))
