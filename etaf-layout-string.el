@@ -37,6 +37,7 @@
 (require 'etaf-layout-box)
 (require 'etaf-etml-tag)
 (require 'etaf-layout-scroll)
+(require 'etaf-layout-interactive)
 
 ;; Forward declarations
 (declare-function etaf-render-get-default-display "etaf-render")
@@ -282,6 +283,10 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
          (v-scroll-bar-p (etaf-layout-string--v-scroll-bar-p
                           overflow-y is-overflow))
          
+         ;; 生成唯一标识符用于滚动缓存
+         (scroll-uuid (when (and v-scroll-bar-p is-overflow)
+                        (format "scroll-%s" (cl-gensym))))
+         
          ;; 约束高度（根据 overflow-y 策略）
          (height-constrained-content
           (cond
@@ -294,6 +299,37 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                  (/= styled-content-height content-height-px))
             (etaf-lines-align styled-content content-height-px 'top))
            (t styled-content)))
+         
+         ;; 3.1 为可滚动内容设置交互属性和缓存
+         (scrollable-content
+          (if (and scroll-uuid is-overflow v-scroll-bar-p
+                   (> (length height-constrained-content) 0))
+              (let* ((original-lines (split-string styled-content "\n" t))
+                     (display-height content-height-px))
+                ;; 初始化缓存并设置滚动数据
+                (etaf-layout-caches-init)
+                (etaf-layout-cache-put
+                 scroll-uuid
+                 (list :content-lines original-lines
+                       :content-linum (length original-lines)
+                       :content-height display-height
+                       :v-scroll-offset 0
+                       :v-scroll-steps (etaf-layout-v-scroll-steps
+                                        (length original-lines) display-height)
+                       :padding-top-height padding-top
+                       :padding-bottom-height padding-bottom
+                       :border-top-p (> border-top 0)
+                       :border-top-color border-top-color
+                       :border-bottom-p (> border-bottom 0)
+                       :border-bottom-color border-bottom-color))
+                ;; 给每一行设置属性
+                (mapconcat
+                 (lambda (line)
+                   (propertize line
+                               'etaf-layout-content-line scroll-uuid
+                               'keymap (etaf-layout-scroll-map)))
+                 (split-string height-constrained-content "\n" t) "\n"))
+            height-constrained-content))
          
          ;; 重新计算实际内容高度（visible 模式下使用自然高度）
          (actual-display-height
@@ -311,10 +347,10 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
               (etaf-lines-stack
                (list (when (> padding-top 0)
                        (etaf-pixel-blank effective-width padding-top))
-                     height-constrained-content
+                     scrollable-content
                      (when (> padding-bottom 0)
                        (etaf-pixel-blank effective-width padding-bottom))))
-            height-constrained-content))
+            scrollable-content))
          
          ;; 3. 添加水平 padding
          (with-h-padding
@@ -340,7 +376,8 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                                       natural-content-height
                                       scroll-thumb-color
                                       scroll-track-color
-                                      v-scroll-bar-type)))
+                                      v-scroll-bar-type
+                                      scroll-uuid)))
                 (if (and scroll-bar-str (> (length scroll-bar-str) 0))
                     (pcase v-scroll-bar-direction
                       ('right (etaf-lines-concat
@@ -515,7 +552,7 @@ CONTENT-LINUM 是内容的实际行数。
 (defun etaf-layout-string--render-v-scroll-bar
     (v-scroll-bar-p track-height padding-top padding-bottom
                     content-linum scroll-thumb-color scroll-track-color
-                    v-scroll-bar-type)
+                    v-scroll-bar-type &optional scroll-uuid)
   "渲染垂直滚动条字符串。
 
 V-SCROLL-BAR-P 是 \\='real 或 \\='blank。
@@ -523,13 +560,16 @@ TRACK-HEIGHT 是轨道高度（内容区域显示高度）。
 PADDING-TOP 和 PADDING-BOTTOM 是上下内边距。
 CONTENT-LINUM 是内容的实际行数。
 SCROLL-THUMB-COLOR 和 SCROLL-TRACK-COLOR 是滑块和轨道颜色（可选，nil 时使用滚动条类型定义的颜色）。
-V-SCROLL-BAR-TYPE 是滚动条风格类型。"
+V-SCROLL-BAR-TYPE 是滚动条风格类型。
+SCROLL-UUID 是可选的滚动区域标识符，用于关联滚动条和内容。"
   (when v-scroll-bar-p
     (let* ((scroll-bar
             (etaf-layout-string--create-scroll-bar v-scroll-bar-type))
            (thumb-height (etaf-layout-string--compute-thumb-height
                           track-height content-linum))
-           (thumb-offset 0))  ;; 初始偏移为 0
+           (thumb-offset 0)  ;; 初始偏移为 0
+           (scroll-steps (etaf-layout-v-scroll-steps
+                          content-linum track-height)))
       ;; 设置滚动条属性 - 必须捕获 plist-put 的返回值
       (setq scroll-bar (plist-put scroll-bar :track-height track-height))
       ;; 只有当显式提供颜色时才覆盖滚动条类型定义的颜色
@@ -551,16 +591,21 @@ V-SCROLL-BAR-TYPE 是滚动条风格类型。"
             (plist-put scroll-bar
                        :track-padding-bottom-height (floor padding-bottom)))
       
-      (pcase v-scroll-bar-p
-        ('real
-         ;; 真实滚动条
-         (etaf-layout-scroll-bar-render scroll-bar nil nil))
-        ('blank
-         ;; 空白滚动条：将滑块颜色设为轨道颜色
-         (let ((color (plist-get scroll-bar :track-color)))
-           (setq scroll-bar (plist-put scroll-bar :thumb-color color))
-           (setq scroll-bar (plist-put scroll-bar :thumb-border-color color))
-           (etaf-layout-scroll-bar-render scroll-bar nil nil)))))))
+      (let ((result
+             (pcase v-scroll-bar-p
+               ('real
+                ;; 真实滚动条
+                (etaf-layout-scroll-bar-render scroll-bar scroll-uuid scroll-steps))
+               ('blank
+                ;; 空白滚动条：将滑块颜色设为轨道颜色
+                (let ((color (plist-get scroll-bar :track-color)))
+                  (setq scroll-bar (plist-put scroll-bar :thumb-color color))
+                  (setq scroll-bar (plist-put scroll-bar :thumb-border-color color))
+                  (etaf-layout-scroll-bar-render scroll-bar scroll-uuid scroll-steps))))))
+        ;; 如果有 scroll-uuid，为滚动条区域添加属性
+        (when (and result scroll-uuid (> (length result) 0))
+          (setq result (propertize result 'etaf-layout-scroll-area scroll-uuid)))
+        result))))
 
 
 ;;; ============================================================
