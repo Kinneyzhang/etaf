@@ -619,9 +619,7 @@ SCROLL-UUID 是可选的滚动区域标识符，用于关联滚动条和内容�
                   (setq scroll-bar (plist-put scroll-bar :thumb-color color))
                   (setq scroll-bar (plist-put scroll-bar :thumb-border-color color))
                   (etaf-layout-scroll-bar-render scroll-bar scroll-uuid scroll-steps))))))
-        ;; 如果有 scroll-uuid，为滚动条区域添加属性
-        (when (and result scroll-uuid (> (length result) 0))
-          (setq result (propertize result 'etaf-layout-scroll-area scroll-uuid)))
+        ;; scroll-area 属性已在 etaf-layout-scroll--render-track-with-thumb 中逐行设置
         result))))
 
 

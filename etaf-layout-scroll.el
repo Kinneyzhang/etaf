@@ -198,10 +198,20 @@ BOX-UUID 是可选的滚动区域标识符，用于滚动条和内容的关联�
             (propertize
              (etaf-pixel-blank thumb-pixel track-height)
              'face (etaf-layout-scroll--track-face scroll-bar)))
-           ;; 在轨道中标记出滑块部分
+           ;; 在轨道中标记出滑块部分，并为所有行添加 scroll-area 属性
            (track-thumb-str
             (with-temp-buffer
               (insert basic-track-str)
+              (goto-char (point-min))
+              ;; 首先为所有行添加 scroll-area 属性（用于滚动条移动时定位）
+              (when box-uuid
+                (dotimes (_ track-height)
+                  (when (not (eobp))
+                    (add-text-properties
+                     (line-beginning-position) (line-end-position)
+                     `(etaf-layout-scroll-area ,box-uuid))
+                    (forward-line 1))))
+              ;; 然后设置滑块部分的特殊属性
               (goto-char (point-min))
               (forward-line thumb-offset)
               ;; 依次设置滑块每一行的 face 和属性
