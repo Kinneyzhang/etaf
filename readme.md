@@ -304,7 +304,6 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 欢迎贡献代码、报告问题或提出改进建议！
 
 ## 许可证
-
 GNU General Public License v3.0 或更高版本。
 
 ## 相关资源
