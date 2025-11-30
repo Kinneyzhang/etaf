@@ -302,7 +302,14 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                              (max min-width-val base-content-width)))
          
          (base-content-height (if (eq height-value 'auto)
-                                  0
+                                  ;; 当高度为 auto 时，如果有父容器高度约束，则使用父容器高度
+                                  ;; 减去 padding/border/margin 作为基础高度（类似宽度的计算逻辑）
+                                  (if (and parent-height (not is-inline) (not is-in-flex-container))
+                                      (max 0 (- parent-height
+                                                padding-top-val padding-bottom-val
+                                                border-top-val border-bottom-val
+                                                margin-top-val margin-bottom-val))
+                                    0)
                                 height-value))
          
          (content-height (min (or max-height-val most-positive-fixnum)
