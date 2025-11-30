@@ -1,1 +1,9 @@
-design.org
+# Byte-compiled Emacs Lisp files
+*.elc
+
+# Backup files
+*~
+\#*\#
+
+# Package directory
+elpa/
