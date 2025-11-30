@@ -7,7 +7,8 @@
 (defun etaf-utils--interleave (list1 list2)
   "Interleave elements of LIST1 and LIST2.
 Returns a list with alternating elements from LIST1 and LIST2.
-The returned list has length (* 2 (min (length LIST1) (length LIST2)))."
+The returned list has length (* 2 (min (length LIST1) (length LIST2))).
+Example: (etaf-utils--interleave '(a b c) '(1 2 3)) => (a 1 b 2 c 3)"
   (let (result)
     (while (and list1 list2)
       (push (pop list1) result)
@@ -19,10 +20,6 @@ The returned list has length (* 2 (min (length LIST1) (length LIST2)))."
 Returns nil if LIST is empty."
   (when list
     (apply #'max list)))
-
-(defun etaf-utils--map (fn list)
-  "Apply FN to each element of LIST and return the results."
-  (mapcar fn list))
 
 (defun etaf-keyword->symbol (keyword)
   (if (keywordp keyword)
@@ -518,7 +515,7 @@ by OFFSET lines from the top, using PADSTR to fill blank lines."
              height linum))))
 
 (defun etaf-string-concat (&rest strings)
-  (let* ((height (etaf-utils--max (etaf-utils--map #'etaf-string-linum strings)))
+  (let* ((height (etaf-utils--max (mapcar #'etaf-string-linum strings)))
          (strings (mapcar (lambda (string)
                             (etaf-lines-pad string height))
                           strings)))
@@ -587,7 +584,7 @@ When JUSTIFY is nil, set it to 'left' by default."
   "TEXT-ALIGN should be one of left,center,right.
 ALIGN should be one of top,center,bottom."
   (setq strings (delete nil strings))
-  (let ((max-height (etaf-utils--max (etaf-utils--map #'etaf-string-linum strings))))
+  (let ((max-height (etaf-utils--max (mapcar #'etaf-string-linum strings))))
     (apply 'etaf-string-concat
            (mapcar (lambda (string)
                      (etaf-lines-justify
@@ -599,7 +596,7 @@ ALIGN should be one of top,center,bottom."
 (defun etaf-lines-stack (strings &optional align text-align)
   "ALIGN used for all blocks, TEXT-ALIGN used for text in a block."
   (setq strings (delete nil strings))
-  (let ((max-width (etaf-utils--max (etaf-utils--map #'string-pixel-width strings))))
+  (let ((max-width (etaf-utils--max (mapcar #'string-pixel-width strings))))
     (mapconcat (lambda (string)
                  (etaf-lines-justify
                   ;; 再 justify 整个 block
