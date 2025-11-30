@@ -110,8 +110,9 @@ Examples of Tailwind declarations:
 (defun etaf-ecss--convert-tailwind-to-css-string (class-name)
   "Convert Tailwind CLASS-NAME to CSS declaration string(s).
 Returns a list of CSS declaration strings like (\"display: flex\" ...).
-Returns nil if the class cannot be converted."
-  (when-let ((css-props (etaf-tailwind-to-css class-name)))
+Returns nil if the class cannot be converted.
+Respects dark mode: dark: prefixed classes only apply in dark mode."
+  (when-let ((css-props (etaf-tailwind-classes-to-css-with-mode class-name)))
     (mapcar (lambda (prop)
               (format "%s: %s" (car prop) (cdr prop)))
             css-props)))
@@ -344,17 +345,12 @@ Returns \"px\" for most properties, \"lh\" for vertical spacing in Emacs."
   "Process a space-separated string of Tailwind CSS classes.
 CLASS-STRING is a string like \"flex items-center bg-red-500\".
 Returns a list of CSS declaration strings.
-Unrecognized classes are skipped with a warning message."
-  (let ((classes (split-string class-string))
-        (css-strings '()))
-    (dolist (class classes)
-      (when (and class (not (string-empty-p class)))
-        (let ((css-props (etaf-tailwind-to-css class)))
-          (if css-props
-              (dolist (prop css-props)
-                (push (format "%s: %s" (car prop) (cdr prop)) css-strings))
-            ;; Log warning and skip unrecognized class
-            (message "Warning: Tailwind class '%s' could not be converted to CSS, skipping" class)))))
+Unrecognized classes are skipped with a warning message.
+Respects dark mode: dark: prefixed classes only apply in dark mode."
+  (let* ((css-props (etaf-tailwind-classes-to-css-with-mode class-string))
+         (css-strings '()))
+    (dolist (prop css-props)
+      (push (format "%s: %s" (car prop) (cdr prop)) css-strings))
     (nreverse css-strings)))
 
 (defun etaf-ecss-declaration-block (&rest declarations)
@@ -513,19 +509,15 @@ Returns: ((background . \"red\") (padding . \"10px\"))"
   (let ((result '()))
     (dolist (prop props)
       (cond
-       ;; String: space-separated Tailwind classes
+       ;; String: space-separated Tailwind classes - use dark-mode-aware function
        ((stringp prop)
-        (let ((classes (split-string prop)))
-          (dolist (class classes)
-            (when (and class (not (string-empty-p class)))
-              (let ((css-props (etaf-tailwind-to-css class)))
-                (when css-props
-                  (dolist (css-prop css-props)
-                    (push css-prop result))))))))
+        (let ((css-props (etaf-tailwind-classes-to-css-with-mode prop)))
+          (dolist (css-prop css-props)
+            (push css-prop result))))
        ;; Tailwind CSS utility class (single-element list)
        ((etaf-ecss--tailwind-class-p prop)
         (let* ((class-name (symbol-name (car prop)))
-               (css-props (etaf-tailwind-to-css class-name)))
+               (css-props (etaf-tailwind-classes-to-css-with-mode class-name)))
           (when css-props
             (dolist (css-prop css-props)
               (push css-prop result)))))
