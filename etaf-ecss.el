@@ -55,6 +55,14 @@
 ;;   (div :style (etaf-ecss-style "flex items-center bg-blue-500")
 ;;     "Hello")
 ;;
+;;   ;; In style tags - use (ecss ...) forms (recommended):
+;;   `(html
+;;      (head
+;;        (style
+;;          (ecss ".header" "flex items-center bg-blue-500")
+;;          (ecss ".content" "p-4" (color "gray"))))
+;;      (body ...))
+;;
 ;; Selector Expressions:
 ;;
 ;;   (etaf-ecss-selector tag)         ; "tag"
@@ -594,23 +602,33 @@ Declarations can be:
 This macro is designed to be used within ETML style tags to write
 CSS using ECSS syntax.
 
+IMPORTANT: When using backquote (`) to construct ETML, you MUST use
+comma (,) before etaf-ecss-css to evaluate it:
+
 Example:
-  ;; In ETML (using string format for Tailwind - recommended):
-  (html
-    (head
-      (style (etaf-ecss-css
-              (\".container\" \"flex items-center\" (width 800) (margin 0 auto))
-              (\".box\" \"flex items-center bg-red-500 p-4\")
-              (\".title\" \"text-lg font-bold\" (color \"#333\")))))
-    (body
-      (div :class \"container\"
-        (div :class \"box\"
-          (h1 :class \"title\" \"Hello ETAF!\")))))
+  ;; CORRECT - Using comma to evaluate the macro:
+  (etaf-render-to-buffer \"*demo*\"
+    `(html
+       (head
+         (style ,(etaf-ecss-css
+                   (\".container\" \"flex items-center\" (width 800))
+                   (\".box\" \"bg-red-500 p-4\"))))
+       (body
+         (div :class \"container\"
+           (div :class \"box\" \"Hello!\")))))
+
+  ;; Also works with plain quote (no backquote):
+  (let ((css (etaf-ecss-css
+               (\".header\" \"flex items-center bg-blue-500\")
+               (\".content\" \"p-4\" (color \"gray\")))))
+    (etaf-render-to-buffer \"*demo*\"
+      `(html
+         (head (style ,css))
+         (body ...))))
 
   ;; The style tag content becomes:
-  ;; .container { display: flex; align-items: center; width: 800px; margin: 0 auto; }
-  ;; .box { display: flex; align-items: center; background-color: #ef4444; ... }
-  ;; .title { font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; color: #333; }"
+  ;; .container { display: flex; align-items: center; width: 800px; }
+  ;; .box { background-color: #ef4444; padding-top: 4lh; ... }"
   `(etaf-ecss-stylesheet
     ,@(mapcar (lambda (rule)
                 `'(,(car rule) ,@(cdr rule)))

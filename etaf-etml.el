@@ -28,6 +28,9 @@
 (require 'cl-lib)
 (require 'etaf-etml-tag)
 
+;; Declare etaf-ecss functions to avoid warnings
+(declare-function etaf-ecss "etaf-ecss")
+
 (defun etaf-plist-to-alist (plist)
   "Convert a plist to an alist.
 Example: (:class \"foo\" :id \"bar\")
@@ -48,6 +51,33 @@ Returns a string like \"property1: value1; property2: value2\"."
   (mapconcat (lambda (pair)
                (format "%s: %s" (car pair) (cdr pair)))
              css-alist "; "))
+
+(defun etaf-etml--ecss-item-p (item)
+  "Check if ITEM is an (ecss ...) form.
+Returns t if ITEM is a list starting with symbol `ecss'."
+  (and (listp item)
+       (eq (car item) 'ecss)))
+
+(defun etaf-etml--process-style-children (children)
+  "Process style tag children, converting (ecss ...) forms to CSS string.
+CHILDREN can be:
+- A single CSS string
+- A list containing (ecss selector declarations...) forms
+Returns a CSS string."
+  (let ((css-parts '()))
+    (dolist (child children)
+      (cond
+       ;; String - add as-is
+       ((stringp child)
+        (push child css-parts))
+       ;; (ecss selector declarations...) form
+       ((etaf-etml--ecss-item-p child)
+        (require 'etaf-ecss)
+        (let ((css (apply #'etaf-ecss (cdr child))))
+          (push css css-parts)))
+       ;; Other - ignore or convert to string
+       (t nil)))
+    (mapconcat #'identity (nreverse css-parts) "\n")))
 
 (defun etaf-etml--merge-tag-styles (tag attr-alist)
   "Merge etaf-etml-tag default styles into ATTR-ALIST for TAG.
@@ -86,6 +116,13 @@ Supports :style attribute for inline CSS rules in two formats:
     (div :style ((background . \"red\") (padding . \"10px\")) ...)
 Both are converted to:
   (div ((style . \"background: red; padding: 10px\")) ...)
+
+Special handling for <style> tags with (ecss ...) forms:
+  (style
+    (ecss \"#id\" \"flex bg-red-500\")
+    (ecss \".class\" \"p-4\" (color \"blue\")))
+Becomes:
+  (style nil \"#id { display: flex; ... }\\n.class { ... }\")
 
 If the tag is defined in etaf-etml-tag, its default styles are merged with
 inline styles, where inline styles take precedence.
@@ -127,7 +164,15 @@ the final string with keymap properties."
               (when has-events
                 (let ((tag-instance (etaf-etml-tag-create-instance tag attrs rest)))
                   (push (cons 'etaf-tag-instance tag-instance) attr-alist)))))
-          (let ((children (mapcar #'etaf-etml-to-dom rest)))
+          ;; Special handling for <style> tag with (ecss ...) forms
+          (let ((children
+                 (if (and (eq tag 'style)
+                          rest
+                          (cl-some #'etaf-etml--ecss-item-p rest))
+                     ;; Style tag with ecss forms - convert to CSS string
+                     (list (etaf-etml--process-style-children rest))
+                   ;; Normal processing
+                   (mapcar #'etaf-etml-to-dom rest))))
             (cons tag (cons attr-alist children))))))))
 
 ;;; Text Interpolation (Mustache syntax)
