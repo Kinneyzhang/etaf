@@ -83,6 +83,42 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。
               ;; 恢复位置
               (goto-char (min pos (point-max))))))))))
 
+(defun etaf-refresh-styles (&optional buffer)
+  "增量更新 BUFFER 中的样式（默认为当前 buffer）。
+只更新带有 `etaf-dual-style` 属性的文本区域的 face，不重新渲染整个 buffer。
+用于主题切换后快速刷新样式。"
+  (interactive)
+  (let ((buf (or buffer (current-buffer))))
+    (when (buffer-live-p buf)
+      (with-current-buffer buf
+        (let ((inhibit-read-only t)
+              (is-dark (etaf-theme-dark-p))
+              (pos (point-min)))
+          ;; 遍历 buffer 中所有带有 etaf-dual-style 属性的区域
+          (while (< pos (point-max))
+            (let* ((dual-style (get-text-property pos 'etaf-dual-style))
+                   (next-change (or (next-single-property-change pos 'etaf-dual-style)
+                                    (point-max))))
+              (when dual-style
+                ;; 根据当前主题选择对应的 face
+                (let ((new-face (if is-dark
+                                    (plist-get dual-style :dark)
+                                  (plist-get dual-style :light))))
+                  (when new-face
+                    ;; 更新 face 属性
+                    (put-text-property pos next-change 'face new-face))))
+              (setq pos next-change))))))))
+
+(defun etaf--refresh-all-buffer-styles ()
+  "增量更新所有 ETAF 管理的 buffer 中的样式。
+用于主题切换时快速刷新所有 ETAF buffer 的样式，不重新渲染。"
+  ;; 清理已关闭的 buffer
+  (setq etaf--managed-buffers
+        (cl-remove-if-not #'buffer-live-p etaf--managed-buffers))
+  ;; 增量更新所有 buffer 的样式
+  (dolist (buf etaf--managed-buffers)
+    (etaf-refresh-styles buf)))
+
 (defun etaf--rerender-all-buffers ()
   "重新渲染所有 ETAF 管理的 buffer。
 用于主题切换时自动刷新所有 ETAF buffer 的样式。"
@@ -94,12 +130,20 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。
     (etaf-rerender-buffer buf)))
 
 (defun etaf-enable-theme-auto-refresh ()
-  "启用主题切换时自动重新渲染 ETAF buffer。
+  "启用主题切换时自动刷新 ETAF buffer 样式。
+使用增量更新，只更新有双模式样式的区域，不重新渲染整个 buffer。
+需要先添加 advice: (advice-add #'load-theme :around #'etaf-change-theme-background)"
+  (add-hook 'etaf-theme-background-change-hook #'etaf--refresh-all-buffer-styles))
+
+(defun etaf-enable-theme-auto-rerender ()
+  "启用主题切换时完全重新渲染 ETAF buffer。
+如果增量更新不够用（如布局也依赖主题），可以使用此函数。
 需要先添加 advice: (advice-add #'load-theme :around #'etaf-change-theme-background)"
   (add-hook 'etaf-theme-background-change-hook #'etaf--rerender-all-buffers))
 
 (defun etaf-disable-theme-auto-refresh ()
-  "禁用主题切换时自动重新渲染。"
+  "禁用主题切换时自动刷新/重新渲染。"
+  (remove-hook 'etaf-theme-background-change-hook #'etaf--refresh-all-buffer-styles)
   (remove-hook 'etaf-theme-background-change-hook #'etaf--rerender-all-buffers))
 
 ;; (defun etaf-string-with-data ())
