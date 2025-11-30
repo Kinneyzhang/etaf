@@ -1,7 +1,28 @@
 ;; -*- lexical-binding: t -*-
 
 (require 'etaf-pixel)
-(require 'dash)
+(require 'cl-lib)
+
+;; Local replacements for dash functions to avoid external dependency
+(defun etaf-utils--interleave (list1 list2)
+  "Interleave elements of LIST1 and LIST2.
+Returns a list with alternating elements from LIST1 and LIST2.
+The returned list has length (* 2 (min (length LIST1) (length LIST2)))."
+  (let (result)
+    (while (and list1 list2)
+      (push (pop list1) result)
+      (push (pop list2) result))
+    (nreverse result)))
+
+(defun etaf-utils--max (list)
+  "Return the maximum value in LIST of numbers.
+Returns nil if LIST is empty."
+  (when list
+    (apply #'max list)))
+
+(defun etaf-utils--map (fn list)
+  "Apply FN to each element of LIST and return the results."
+  (mapcar fn list))
 
 (defun etaf-keyword->symbol (keyword)
   (if (keywordp keyword)
@@ -188,7 +209,7 @@ START和END为区间的起始和结束位置，PROPERTIES为该区间的属性�
   (if (= (length seq1) (1+ (length seq2)))
       (let ((head-seq1 (seq-take seq1 (1- (length seq1))))
             (last-elem (car (last seq1))))
-        (append (-interleave head-seq1 seq2) (list last-elem)))
+        (append (etaf-utils--interleave head-seq1 seq2) (list last-elem)))
     (error "(length %S) != (1+ (length %S))" seq1 seq2)))
 
 (defun etaf-split-size (size n &optional extra start end from-tail)
@@ -497,7 +518,7 @@ by OFFSET lines from the top, using PADSTR to fill blank lines."
              height linum))))
 
 (defun etaf-string-concat (&rest strings)
-  (let* ((height (-max (-map #'etaf-string-linum strings)))
+  (let* ((height (etaf-utils--max (etaf-utils--map #'etaf-string-linum strings)))
          (strings (mapcar (lambda (string)
                             (etaf-lines-pad string height))
                           strings)))
@@ -566,7 +587,7 @@ When JUSTIFY is nil, set it to 'left' by default."
   "TEXT-ALIGN should be one of left,center,right.
 ALIGN should be one of top,center,bottom."
   (setq strings (delete nil strings))
-  (let ((max-height (-max (-map #'etaf-string-linum strings))))
+  (let ((max-height (etaf-utils--max (etaf-utils--map #'etaf-string-linum strings))))
     (apply 'etaf-string-concat
            (mapcar (lambda (string)
                      (etaf-lines-justify
@@ -578,7 +599,7 @@ ALIGN should be one of top,center,bottom."
 (defun etaf-lines-stack (strings &optional align text-align)
   "ALIGN used for all blocks, TEXT-ALIGN used for text in a block."
   (setq strings (delete nil strings))
-  (let ((max-width (-max (-map #'string-pixel-width strings))))
+  (let ((max-width (etaf-utils--max (etaf-utils--map #'string-pixel-width strings))))
     (mapconcat (lambda (string)
                  (etaf-lines-justify
                   ;; 再 justify 整个 block
