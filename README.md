@@ -614,12 +614,28 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 ## 示例
 
 查看 `examples/` 目录获取更多示例：
-- `etaf-component-examples.el` - **组件系统完整示例**（从简单到复杂的 8 个示例）
+- `etaf-interactive-examples.el` - **交互式演示**（在 buffer 中展示和交互，`M-x etaf-interactive-demo`）
+- `etaf-component-examples.el` - 组件系统完整示例（从简单到复杂的 8 个示例）
 - `etaf-etml-tag-example.el` - ETML 标签定义系统示例
 - `etaf-tailwind-example.el` - Tailwind CSS 功能示例
 - `etaf-css-example.el` - CSS 功能演示
 - `etaf-render-example.el` - 渲染树使用示例
 - `etaf-layout-example.el` - 布局系统完整示例
+
+### 快速开始交互式演示
+
+```elisp
+;; 加载交互式示例
+(load-file "examples/etaf-interactive-examples.el")
+
+;; 运行主演示入口（执行下面的命令）
+;; M-x etaf-interactive-demo
+
+;; 或运行单独的示例
+;; M-x etaf-demo-counter      ; 交互式计数器
+;; M-x etaf-demo-todo-app     ; Todo 应用
+;; M-x etaf-demo-progress-bar ; 进度条
+```
 
 ## 贡献
 
