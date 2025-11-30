@@ -678,7 +678,6 @@ Returns (tag-name ((attrs...)) children...)."
                    (padding-left . "10px")
                    (padding-right . "10px")
                    (border . "1px solid #ccc")
-                   (background-color . "#f0f0f0")
                    (cursor . "pointer"))
   :hover-style '((background-color . "#e0e0e0"))
   :active-style '((background-color . "#d0d0d0"))
