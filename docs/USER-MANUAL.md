@@ -585,6 +585,7 @@ ECSS provides Lisp-style CSS expressions, similar to `rx` for regex.
 
 ## Need Help? / 需要帮助？
 
-- Check the [examples](../examples/) directory
-- Read the [Architecture documentation](ARCHITECTURE.md)
-- File issues on GitHub
+- Check the [examples](../examples/) directory for working code examples
+- Read the [Architecture documentation](ARCHITECTURE.md) for system design details
+- Read the [Data Structures documentation](DATA-STRUCTURES.md) for detailed data structure reference
+- File issues on GitHub for bugs or feature requests

@@ -90,11 +90,11 @@ This manual provides architecture details and extension guides for ETAF contribu
         │
         ▼ etaf-css-build-cssom + etaf-render-build-tree
 3. Render Tree
-   Contains computed CSS styles
+   Contains computed CSS styles.
         │
         ▼ etaf-layout-build-tree
 4. Layout Tree
-   Contains box model info (position, size)
+   Contains box model info (position, size).
         │
         ▼ etaf-layout-to-string
 5. String (with text properties)
