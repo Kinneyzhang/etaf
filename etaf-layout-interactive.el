@@ -242,7 +242,7 @@ N 是可选的滚动行数，默认为 1。"
                            (< padding-bottom-height 1)
                            border-bottom-p)
                       (setq line (etaf-propertize-underline
-                                  line border-top-color))))
+                                  line border-bottom-color))))
                (etaf-region-replace line start end))))
          'etaf-layout-content-line uuid t)))))
 
