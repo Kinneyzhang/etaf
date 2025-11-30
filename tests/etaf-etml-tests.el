@@ -196,10 +196,10 @@
 ;;; e-for List Rendering Tests
 
 (should-equal
-  (etaf-etml-render
-    '(ul (li :e-for "item in items" "{{ item }}"))
-    '(:items ("a" "b" "c")))
-  '(ul (li "a") (li "b") (li "c")))
+ (etaf-etml-render
+  '(ul (li :e-for "item in items" "{{ item }}"))
+  '(:items ("a" "b" "c")))
+ '(ul (li "a") (li "b") (li "c")))
 
 (should-equal
   (etaf-etml-render
