@@ -67,9 +67,14 @@ KVS 是滚动条的配置键值对，值会在定义时被求值。"
   :track-padding-left-pixel 0
   :track-padding-right-pixel 3)
 
+;;; FIXEM: many bugs in scroll bar render, related to set default value
+;;; properly in many codes.
+;; if v-scroll-bar-type is set, use the attrs of this type scroll-bar
+;; while override other attr setting.
+;; if v-scroll-bar-type is set is not set, should set default value properly.
 (etaf-layout-scroll-bar-define s2
-  :thumb-color "blue"
-  :track-color "#ddd"
+  :thumb-color "green"
+  :track-color "#444"
   :thumb-pixel 10
   :thumb-border-p t
   :track-border-left-pixel 1
@@ -77,6 +82,8 @@ KVS 是滚动条的配置键值对，值会在定义时被求值。"
   :track-border-left-color "red"
   :track-border-right-color "red"
   :track-padding-left-pixel 1
+  :track-border-bottom-p t
+  :track-border-top-p t
   :track-padding-right-pixel 1)
 
 ;;; ============================================================
@@ -88,7 +95,7 @@ KVS 是滚动条的配置键值对，值会在定义时被求值。"
 TYPE 是可选的滚动条风格类型（符号），用于引用 `etaf-layout-scroll-bar-alist'。"
   (let ((scroll-bar
          (list :track-height 1
-               :track-color (face-attribute 'default :background)
+               :track-color nil
                :track-margin-left-pixel 0
                :track-margin-right-pixel 0
                :track-padding-left-pixel 0
@@ -110,11 +117,12 @@ TYPE 是可选的滚动条风格类型（符号），用于引用 `etaf-layout-s
                :thumb-border-color (face-attribute 'default :foreground)
                :thumb-color (face-attribute 'default :foreground))))
     ;; 如果有定义的风格，应用风格设置
-    (when-let* ((type type)
-                (kvs (copy-sequence (alist-get type etaf-layout-scroll-bar-alist))))
+    (when-let ((kvs (copy-sequence
+                     (alist-get type etaf-layout-scroll-bar-alist))))
       (while kvs
         (let ((key (pop kvs))
               (val (pop kvs)))
+          (message "key:%S val:%S" key val)
           (setq scroll-bar (plist-put scroll-bar key val)))))
     scroll-bar))
 

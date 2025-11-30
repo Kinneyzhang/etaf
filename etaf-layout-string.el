@@ -74,6 +74,8 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
          (content-width (or (etaf-layout-box-content-width box-model) 0))
          (content-height-px
           (or (etaf-layout-box-content-height box-model) 0))
+
+         (_ (message "box-model:%S" box-model))
          
          ;; 获取盒模型各部分
          (padding (or (plist-get box-model :padding)
@@ -168,7 +170,7 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
                     (apply #'max (mapcar #'string-pixel-width lines))
                   (string-pixel-width inner-content)))
             content-width)))
-
+    (message "scroll-track-color in overflow:%S" scroll-track-color)
     (if (and (<= effective-width 0) (<= content-height 0))
         ""
       (etaf-layout-string--build-box
@@ -203,9 +205,8 @@ would otherwise appear as an extra space at the end of each line."
      (lambda (line)
        (let ((result (copy-sequence line)))
          (when (> (length result) 0)
-           (add-face-text-property 0 (length result)
-                                   `(:background ,bgcolor)
-                                   t result))
+           (add-face-text-property
+            0 (length result) `(:background ,bgcolor) t result))
          result))
      lines
      "\n")))
@@ -328,6 +329,7 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
             with-padding))
          
          ;; 3.3 添加垂直滚动条（在 padding 之后、border 之前）
+         (_ (message "scroll-track-color in box:%S" scroll-track-color))
          (with-scroll-bar
           (if v-scroll-bar-p
               (let* ((scroll-bar-str (etaf-layout-string--render-v-scroll-bar
@@ -339,7 +341,6 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                                       scroll-thumb-color
                                       scroll-track-color
                                       v-scroll-bar-type)))
-                (message "scroll-bar-str:%S" scroll-bar-str)
                 (if (and scroll-bar-str (> (length scroll-bar-str) 0))
                     (pcase v-scroll-bar-direction
                       ('right (etaf-lines-concat
