@@ -106,11 +106,11 @@ TYPE 是可选的滚动条风格类型（符号），用于引用 `etaf-layout-s
                :thumb-color (face-attribute 'default :foreground))))
     ;; 如果有定义的风格，应用风格设置
     (when-let* ((type type)
-                (kvs (alist-get type etaf-layout-scroll-bar-alist)))
+                (kvs (copy-sequence (alist-get type etaf-layout-scroll-bar-alist))))
       (while kvs
         (let ((key (pop kvs))
               (val (pop kvs)))
-          (plist-put scroll-bar key val))))
+          (setq scroll-bar (plist-put scroll-bar key val)))))
     scroll-bar))
 
 ;;; ============================================================
