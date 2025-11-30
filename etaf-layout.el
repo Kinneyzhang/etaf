@@ -134,12 +134,14 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                            style 'padding-bottom "0") 
                           parent-width))
          (padding-left (etaf-layout-parse-length 
-                        (etaf-layout-parse-style-value style 'padding-left "0") 
+                        (etaf-layout-parse-style-value
+                         style 'padding-left "0") 
                         parent-width))
          
          ;; Border
          (border-top (etaf-layout-parse-length 
-                      (etaf-layout-parse-style-value style 'border-top-width "0") 
+                      (etaf-layout-parse-style-value
+                       style 'border-top-width "0") 
                       parent-width))
          (border-right (etaf-layout-parse-length 
                         (etaf-layout-parse-style-value
@@ -169,14 +171,17 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          
          ;; Margin
          (margin-top (etaf-layout-parse-length 
-                      (etaf-layout-parse-style-value style 'margin-top "0") 
+                      (etaf-layout-parse-style-value
+                       style 'margin-top "0") 
                       parent-width))
          (margin-right (etaf-layout-parse-length 
-                        (etaf-layout-parse-style-value style 'margin-right "0") 
+                        (etaf-layout-parse-style-value
+                         style 'margin-right "0") 
                         parent-width))
-         (margin-bottom (etaf-layout-parse-length 
-                         (etaf-layout-parse-style-value style 'margin-bottom "0") 
-                         parent-width))
+         (margin-bottom
+          (etaf-layout-parse-length 
+           (etaf-layout-parse-style-value style 'margin-bottom "0") 
+           parent-width))
          (margin-left (etaf-layout-parse-length 
                        (etaf-layout-parse-style-value style 'margin-left "0") 
                        parent-width))
@@ -191,39 +196,54 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          
          ;; min-width, max-width
          (min-width-value (etaf-layout-parse-length
-                           (etaf-layout-parse-style-value style 'min-width "0")
+                           (etaf-layout-parse-style-value
+                            style 'min-width "0")
                            parent-width))
          (max-width-value (etaf-layout-parse-length
-                           (etaf-layout-parse-style-value style 'max-width "none")
+                           (etaf-layout-parse-style-value
+                            style 'max-width "none")
                            parent-width))
          
          ;; min-height, max-height
          (min-height-value (etaf-layout-parse-height
-                            (etaf-layout-parse-style-value style 'min-height "0")
+                            (etaf-layout-parse-style-value
+                             style 'min-height "0")
                             parent-height))
          (max-height-value (etaf-layout-parse-height
-                            (etaf-layout-parse-style-value style 'max-height "none")
+                            (etaf-layout-parse-style-value
+                             style 'max-height "none")
                             parent-height))
          
          ;; 溢出处理属性
-         (overflow-y (etaf-layout-parse-style-value style 'overflow-y "visible"))
-         (v-scroll-bar-type-raw (etaf-layout-parse-style-value
-                                 style 'v-scroll-bar-type nil))
-         (v-scroll-bar-type (when v-scroll-bar-type-raw
-                              (if (symbolp v-scroll-bar-type-raw)
-                                  v-scroll-bar-type-raw
-                                (intern v-scroll-bar-type-raw))))
-         (v-scroll-bar-direction-raw (etaf-layout-parse-style-value
-                                      style 'v-scroll-bar-direction "right"))
-         (v-scroll-bar-direction (if (symbolp v-scroll-bar-direction-raw)
-                                     v-scroll-bar-direction-raw
-                                   (intern v-scroll-bar-direction-raw)))
-         (scroll-thumb-color (etaf-layout-parse-style-value
-                              style 'scroll-thumb-color
-                              (face-attribute 'default :foreground)))
-         (scroll-track-color (etaf-layout-parse-style-value
-                              style 'scroll-track-color
-                              (face-attribute 'default :background)))
+         (overflow-y (etaf-layout-parse-style-value
+                      style 'overflow-y "visible"))
+         (v-scroll-bar-type
+          (when-let ((val (etaf-layout-parse-style-value
+                           style 'v-scroll-bar-type nil)))
+            (if (symbolp val) val (intern val))))
+         (v-scroll-bar-type-plist
+          (when v-scroll-bar-type
+            (etaf-layout-scroll-bar-create v-scroll-bar-type)))
+         (v-scroll-bar-direction
+          (when-let ((val (etaf-layout-parse-style-value
+                           style 'v-scroll-bar-direction "right")))
+            (if (symbolp val) val (intern val))))
+         (scroll-thumb-color
+          (when v-scroll-bar-type-plist
+            (when-let ((color (plist-get
+                               v-scroll-bar-type-plist :thumb-color)))
+              (or color
+                  (etaf-layout-parse-style-value
+                   style 'scroll-thumb-color
+                   (face-attribute 'default :foreground))))))
+         (scroll-track-color
+          (when v-scroll-bar-type-plist
+            (when-let ((color (plist-get
+                               v-scroll-bar-type-plist :track-color)))
+              (or color
+                  (etaf-layout-parse-style-value
+                   style 'scroll-track-color
+                   (face-attribute 'default :background))))))
          
          ;; 处理 auto 值
          (padding-top-val (if (eq padding-top 'auto) 0 padding-top))
@@ -320,7 +340,8 @@ PARENT-CONTEXT 包含父容器的上下文信息：
 RENDER-NODE 是要布局的渲染节点。
 PARENT-CONTEXT 包含父容器的上下文信息。
 返回布局节点。"
-  (let* ((box-model (etaf-layout-compute-box-model render-node parent-context))
+  (let* ((box-model (etaf-layout-compute-box-model
+                     render-node parent-context))
          (content-width (etaf-layout-box-content-width box-model))
          (content-height (etaf-layout-box-content-height box-model))
          (layout-node (etaf-layout-create-node render-node box-model)))
@@ -338,41 +359,48 @@ PARENT-CONTEXT 包含父容器的上下文信息。
           ;; 先遍历一次检查是否有inline元素
           (dolist (child children)
             (when (and (consp child) (symbolp (car child)))
-              (let ((child-display (or (dom-attr child 'render-display)
-                                       (etaf-render-get-default-display (car child)))))
+              (let ((child-display
+                     (or (dom-attr child 'render-display)
+                         (etaf-render-get-default-display (car child)))))
                 (when (string= child-display "inline")
                   (setq has-inline-element t)))))
           
           (dolist (child children)
             (cond
              ((and (consp child) (symbolp (car child)))
-              (when-let ((child-layout (etaf-layout-node child child-context)))
+              (when-let ((child-layout
+                          (etaf-layout-node child child-context)))
                 (push child-layout child-layouts)
                 ;; 只有block元素才计入高度，inline元素会在渲染时合并
                 ;; 计算子元素高度时不包含border高度，因为上下border使用
                 ;; :overline/:underline face实现，不占用额外行数
                 (let* ((child-box (etaf-layout-get-box-model child-layout))
-                       (child-display (or (dom-attr child-layout 'render-display) "block"))
-                       (child-total-height (+ (etaf-layout-box-content-height child-box)
-                                              (etaf-layout-box-padding-height child-box)
-                                              (etaf-layout-box-margin-height child-box))))
+                       (child-display
+                        (or (dom-attr child-layout 'render-display) "block"))
+                       (child-total-height
+                        (+ (etaf-layout-box-content-height child-box)
+                           (etaf-layout-box-padding-height child-box)
+                           (etaf-layout-box-margin-height child-box))))
                   ;; 只有block子元素才累加高度
                   (when (string= child-display "block")
-                    (setq accumulated-height (+ accumulated-height child-total-height))))))
+                    (setq accumulated-height
+                          (+ accumulated-height child-total-height))))))
              ((stringp child)
               (push child child-layouts)
               ;; 只有在没有inline元素时，字符串才计入高度
               ;; 如果有inline元素，内容会在渲染时合并，高度由渲染结果决定
               (unless has-inline-element
                 (let ((string-height (etaf-string-linum child)))
-                  (setq accumulated-height (+ accumulated-height string-height)))))))
+                  (setq accumulated-height
+                        (+ accumulated-height string-height)))))))
           
           (setcdr (cdr layout-node) (nreverse child-layouts))
           
           ;; 高度为 auto 时，根据子元素设置
           (when (= content-height 0)
             (let ((box (etaf-layout-get-box-model layout-node)))
-              (plist-put (plist-get box :content) :height accumulated-height))))))
+              (plist-put (plist-get box :content)
+                         :height accumulated-height))))))
     
     layout-node))
 
@@ -391,7 +419,8 @@ PARENT-CONTEXT 是父容器上下文。
         (etaf-layout-block-formatting-context render-node parent-context))
        ((string= display "inline")
         (etaf-layout-block-formatting-context render-node parent-context))
-       (t (etaf-layout-block-formatting-context render-node parent-context))))))
+       (t (etaf-layout-block-formatting-context
+           render-node parent-context))))))
 
 ;;; ============================================================
 ;;; 延迟加载子模块

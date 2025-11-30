@@ -65,7 +65,8 @@
   (list :box-sizing "content-box"
         :content (list :width 0 :height 0)
         :padding (list :top 0 :right 0 :bottom 0 :left 0)
-        :border (list :top-width 0 :right-width 0 :bottom-width 0 :left-width 0
+        :border (list :top-width 0 :right-width 0
+                      :bottom-width 0 :left-width 0
                       :top-color (face-attribute 'default :foreground)
                       :right-color (face-attribute 'default :foreground)
                       :bottom-color (face-attribute 'default :foreground)
@@ -75,8 +76,8 @@
         (list :overflow-y "visible"
               :v-scroll-bar-type nil
               :v-scroll-bar-direction nil
-              :scroll-thumb-color nil
-              :scroll-track-color nil)))
+              :scroll-thumb-color (face-attribute 'default :foreground)
+              :scroll-track-color (face-attribute 'default :background))))
 
 ;;; ============================================================
 ;;; 内容区域访问器
