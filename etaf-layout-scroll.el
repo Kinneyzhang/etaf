@@ -180,9 +180,10 @@ IDX 是相对于滚动条首行的偏移量。"
                  ((< 0 idx (1- thumb-height)) nil)
                  (t nil))))))))
 
-(defun etaf-layout-scroll--render-track-with-thumb (scroll-bar)
+(defun etaf-layout-scroll--render-track-with-thumb (scroll-bar &optional box-uuid)
   "渲染滚动条轨道和滑块（不含 padding）。
 SCROLL-BAR 是滚动条配置 plist。
+BOX-UUID 是可选的滚动区域标识符，用于滚动条和内容的关联。
 返回渲染后的字符串。"
   (let* ((track-height (or (plist-get scroll-bar :track-height) 1))
          (thumb-offset (or (plist-get scroll-bar :thumb-offset) 0))
@@ -203,19 +204,35 @@ SCROLL-BAR 是滚动条配置 plist。
               (insert basic-track-str)
               (goto-char (point-min))
               (forward-line thumb-offset)
-              ;; 依次设置滑块每一行的 face
+              ;; 依次设置滑块每一行的 face 和属性
               (dotimes (idx thumb-height)
-                (add-text-properties
-                 (line-beginning-position) (line-end-position)
-                 `(face ,(etaf-layout-scroll--thumb-face scroll-bar idx)))
+                (let ((props `(face ,(etaf-layout-scroll--thumb-face scroll-bar idx))))
+                  ;; 为滑块添加标识属性
+                  (when box-uuid
+                    (cond
+                     ;; 高度为 1 时，使用单一属性
+                     ((= thumb-height 1)
+                      (setq props (append props
+                                          `(etaf-layout-scroll-thumb ,box-uuid))))
+                     ;; 高度 > 1 时，区分头尾
+                     ((= idx 0)
+                      (setq props (append props
+                                          `(etaf-layout-scroll-thumb-head ,box-uuid))))
+                     ((= idx (1- thumb-height))
+                      (setq props (append props
+                                          `(etaf-layout-scroll-thumb-tail ,box-uuid))))))
+                  (add-text-properties
+                   (line-beginning-position) (line-end-position)
+                   props))
                 (forward-line 1))
               (buffer-string))))
       track-thumb-str)))
 
-(defun etaf-layout-scroll-bar-render (scroll-bar &optional _box-uuid _scroll-steps)
+(defun etaf-layout-scroll-bar-render (scroll-bar &optional box-uuid _scroll-steps)
   "渲染滚动条为字符串。
 SCROLL-BAR 是滚动条配置 plist。
-_BOX-UUID 和 _SCROLL-STEPS 是兼容参数，当前未使用。
+BOX-UUID 是可选的滚动区域标识符，用于滚动条和内容的关联。
+_SCROLL-STEPS 是兼容参数，当前未使用。
 
 返回渲染后的滚动条字符串。"
   (let* ((track-color (or (plist-get scroll-bar :track-color)
@@ -226,8 +243,8 @@ _BOX-UUID 和 _SCROLL-STEPS 是兼容参数，当前未使用。
          (padding-top (or (plist-get scroll-bar :track-padding-top-height) 0))
          (padding-bottom (or (plist-get scroll-bar :track-padding-bottom-height) 0))
          (inner-height (+ track-height padding-top padding-bottom))
-         ;; 渲染轨道和滑块
-         (track-thumb-str (etaf-layout-scroll--render-track-with-thumb scroll-bar))
+         ;; 渲染轨道和滑块（传递 box-uuid）
+         (track-thumb-str (etaf-layout-scroll--render-track-with-thumb scroll-bar box-uuid))
          ;; 添加垂直 padding
          (with-v-padding
           (if (or (> padding-top 0) (> padding-bottom 0))
