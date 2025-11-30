@@ -1,175 +1,173 @@
 # ETAF - Emacs Text-based Application Framework
 
-ETAF 是一个在 Emacs Lisp 中实现的类浏览器渲染系统，包含 DOM 树、CSS 对象模型（CSSOM）、渲染树和布局引擎。
+<p align="center">
+  <strong>🚀 Build beautiful text-based UIs in Emacs with HTML/CSS-like syntax</strong>
+</p>
 
-## 项目概述
+<p align="center">
+  <a href="#english">English</a> | <a href="#中文">中文</a>
+</p>
 
-ETAF 实现了完整的 CSS 样式计算管线：
+---
+
+<a name="english"></a>
+
+## Overview
+
+ETAF (Emacs Text-based Application Framework) is a comprehensive framework for building rich text-based user interfaces in Emacs. It brings web development concepts like DOM, CSS, and reactive components to the Emacs ecosystem, enabling developers to create sophisticated UI components using familiar HTML/CSS-like syntax.
+
+### Key Features
+
+- 🏗️ **HTML-like Templating** - Write UI using S-expression based TML (Template Markup Language)
+- 🎨 **CSS Support** - Full CSS parsing, cascade algorithm, and computed styles
+- 📦 **Component System** - Vue3-style reactive components with props, setup, and templates
+- 🔄 **Reactive System** - ref, computed, watch, and watchEffect for state management
+- 🎯 **Tailwind CSS** - Built-in support for Tailwind utility classes
+- 📐 **Layout Engine** - Box model and Flexbox layout support
+- ⚡ **Performance Optimized** - Rule indexing and style caching
+
+### Rendering Pipeline
 
 ```
-TML 格式 → DOM 树 → CSSOM → 渲染树 → 布局树 → 绘制
+TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 ```
 
-现在还支持 Emacs 原生的模板指令语法（`e-*` 前缀）：
+## Quick Start
 
-```
-模板（e-if/e-for/e-show等） → 渲染后的 TML → DOM 树 → ...
-```
-
-## 核心模块
-
-- **etaf-etml.el** - TML (Template Markup Language) 到 DOM 的转换，支持模板指令语法（`e-if`、`e-for`、`e-show` 等）、组件系统和 Vue3 风格的响应式系统
-- **etaf-etml-tag.el** - ETML 标签定义系统，用于定义类似 HTML 的标签，包含样式和交互行为
-- **etaf-ecss.el** - ECSS：Emacs 风格的 CSS 表达式（类似 rx 对正则的处理）
-- **etaf-dom.el** - DOM 操作、查询和遍历
-- **etaf-tailwind.el** - Tailwind CSS 支持（Emacs 特有的 px/lh 单位）
-- **etaf-css.el** - CSS 对象模型（CSSOM）主入口
-- **etaf-css-parser.el** - CSS 解析器（支持 !important 和 @media）
-- **etaf-css-selector.el** - CSS 选择器解析和匹配
-- **etaf-css-cascade.el** - CSS 层叠算法和特异性计算
-- **etaf-css-inheritance.el** - CSS 属性继承
-- **etaf-css-media.el** - 媒体查询支持
-- **etaf-css-cache.el** - 计算样式缓存
-- **etaf-css-index.el** - 规则索引优化
-- **etaf-render.el** - 渲染树构建
-- **etaf-layout.el** - 盒模型和布局计算
-
-## 文档
-
-### 核心文档
-
-- **[DATA-STRUCTURES.md](DATA-STRUCTURES.md)** - 📘 数据结构详解
-  - TML、DOM、CSSOM、渲染树的完整说明
-  - 数据结构之间的关系和数据流
-  - 盒模型渲染的数据流程
-  - 实际使用示例和最佳实践
-
-- **[BOX-MODEL-LAYOUT.md](BOX-MODEL-LAYOUT.md)** - 📐 盒模型与布局实现指南
-  - CSS 盒模型详解（content、padding、border、margin）
-  - 布局算法实现（块级、内联、Flexbox）
-  - 定位方案（static、relative、absolute、fixed）
-  - 完整的实现代码示例
-
-- **[LAYOUT-BUFFER-STRING.md](LAYOUT-BUFFER-STRING.md)** - 🎨 布局字符串生成功能（新增）
-  - 将布局树转换为可插入 buffer 的字符串
-  - 适合 Emacs 渲染的文本拼接方式
-  - 使用示例和实现细节
-
-### 架构文档
-
-- **[MODULE-STRUCTURE-CN.md](MODULE-STRUCTURE-CN.md)** - 模块结构说明（中文）
-- **[MODULE-STRUCTURE.md](MODULE-STRUCTURE.md)** - Module Structure (English)
-- **[IMPLEMENTATION-SUMMARY.md](IMPLEMENTATION-SUMMARY.md)** - CSSOM 实现总结
-
-### CSS 功能文档
-
-- **[CSSOM-DESIGN.md](CSSOM-DESIGN.md)** - CSSOM 设计说明与改进建议
-- **[CSSOM-COMPARISON.md](CSSOM-COMPARISON.md)** - CSSOM 与浏览器实现对比
-- **[CSS-MODULES.md](CSS-MODULES.md)** - CSS 模块详解
-- **[MEDIA-QUERY-IMPLEMENTATION.md](MEDIA-QUERY-IMPLEMENTATION.md)** - 媒体查询实现
-- **[ETAF-CSS-README.md](ETAF-CSS-README.md)** - CSS 系统使用指南
-- **[VALIDATION.md](VALIDATION.md)** - 验证和测试
-
-## 快速开始
-
-### 基础使用
+### Basic Usage
 
 ```elisp
 (require 'etaf)
 
-;; 1. 从 TML 创建 DOM
-(setq my-dom
-      (etaf-etml-to-dom
-       '(html
-          (head
-            (style "
-              .container { width: 800px; padding-left: 20px; padding-right: 20px; }
-              .box { width: 200px; height: 100px; margin-left: 10px; margin-right: 10px; margin-top: 10px; margin-bottom: 10px; }"))
-          (body
-            (div :class "container"
-              (div :class "box" "Box 1")
-              (div :class "box" "Box 2"))))))
+;; Simple rendering
+(etaf-render-to-buffer "*demo*"
+  '(div :class "container"
+     (h1 :style "color: blue" "Hello ETAF!")
+     (p "Build beautiful UIs in Emacs")))
 
-;; 2. 构建 CSSOM
-(setq my-cssom (etaf-css-build-cssom my-dom))
-
-;; 3. 构建渲染树
-(setq my-render-tree (etaf-render-build-tree my-dom my-cssom))
-
-;; 4. 构建布局树（新增）
-(setq my-layout-tree (etaf-layout-build-tree my-render-tree '(:width 1024 :height 768)))
-
-;; 5. 查看布局树结构
-(message "布局树:\n%s" (etaf-layout-to-string my-layout-tree))
-
-;; 6. 生成可插入 buffer 的布局字符串（Emacs 渲染方式）
-(setq buffer-string (etaf-layout-to-string my-layout-tree))
-(with-current-buffer (get-buffer-create "*ETAF Layout*")
-  (erase-buffer)
-  (insert buffer-string)
-  (display-buffer (current-buffer)))
-
-;; 7. 查询节点布局信息
-(etaf-layout-walk my-layout-tree
-  (lambda (node)
-    (let ((pos (plist-get node :position))
-          (box (plist-get node :box-model)))
-      (message "Tag: %s, Position: (%d,%d), Size: %dx%d"
-               (plist-get (plist-get node :render-node) :tag)
-               (plist-get pos :x)
-               (plist-get pos :y)
-               (etaf-layout-box-content-width box)
-               (etaf-layout-box-content-height box)))))
+;; With Tailwind CSS classes
+(etaf-render-to-buffer "*demo*"
+  '(div :class "flex items-center p-4 bg-blue-500"
+     (span :class "text-white font-bold" "Styled with Tailwind!")))
 ```
 
-### 响应式设计（媒体查询）
+### Template Directives
 
 ```elisp
-;; 在不同视口宽度下构建 CSSOM
-(setq mobile-cssom 
-      (etaf-css-build-cssom dom '((type . screen) (width . 375))))
-(setq desktop-cssom 
-      (etaf-css-build-cssom dom '((type . screen) (width . 1024))))
-```
+(setq my-data '(:name "Alice" :items ("Apple" "Banana" "Cherry")))
 
-### 模板指令语法
-
-ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀）：
-
-```elisp
-(require 'etaf-etml)
-
-;; 定义数据
-(setq my-data '(:name "Alice" 
-                :loggedIn t 
-                :items ("Apple" "Banana" "Cherry")))
-
-;; 创建带有 e-* 指令的模板
-(setq my-template
-  '(div :class "app"
-     ;; 文本插值
+(etaf-render-to-buffer "*demo*"
+  '(div
      (h1 "Hello, {{ name }}!")
-     
-     ;; 条件渲染
-     (p :e-if "loggedIn" "Welcome back!")
-     (p :e-else "Please login")
-     
-     ;; 列表渲染
      (ul
-       (li :e-for "item in items" "{{ item }}"))))
-
-;; 渲染模板
-(setq rendered (etaf-etml-render my-template my-data))
-;; => (div :class "app" 
-;;      (h1 "Hello, Alice!") 
-;;      (p "Welcome back!")
-;;      (ul (li "Apple") (li "Banana") (li "Cherry")))
-
-;; 转换为 DOM
-(setq my-dom (etaf-etml-to-dom rendered))
+       (li :e-for "item in items" "{{ item }}")))
+  my-data)
 ```
 
-#### 支持的模板指令
+### Component System
+
+```elisp
+;; Define a component
+(etaf-etml-define-component my-button
+  :props '(:label :disabled)
+  :template '(button :class "btn" "{{ label }}"))
+
+;; Use the component
+(etaf-render-to-buffer "*demo*"
+  '(my-button :label "Click Me"))
+```
+
+### Reactive State
+
+```elisp
+(let* ((count (etaf-etml-ref 0))
+       (doubled (etaf-etml-computed
+                  (lambda () (* 2 (etaf-etml-ref-get count))))))
+  (etaf-etml-ref-get count)      ;; => 0
+  (etaf-etml-ref-set count 5)
+  (etaf-etml-computed-get doubled)) ;; => 10
+```
+
+## Documentation
+
+| Document | Description |
+|----------|-------------|
+| [User Manual](docs/USER-MANUAL.md) | Complete guide for using ETAF |
+| [Developer Manual](docs/DEVELOPER-MANUAL.md) | Architecture and extension guide |
+| [Architecture](docs/ARCHITECTURE.md) | System architecture and module relationships |
+| [Data Structures](docs/DATA-STRUCTURES.md) | Detailed data structure documentation |
+
+## Installation
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Kinneyzhang/ETML.git
+```
+
+2. Add to your Emacs configuration:
+```elisp
+(add-to-list 'load-path "/path/to/ETML")
+(require 'etaf)
+```
+
+## Examples
+
+Run interactive demos:
+```elisp
+(load-file "examples/etaf-interactive-examples.el")
+M-x etaf-interactive-demo
+```
+
+## License
+
+GNU General Public License v3.0 or later.
+
+---
+
+<a name="中文"></a>
+
+## 概述
+
+ETAF（Emacs Text-based Application Framework）是一个在 Emacs 中构建丰富文本界面的综合框架。它将 DOM、CSS 和响应式组件等 Web 开发概念引入 Emacs 生态系统，使开发者能够使用熟悉的 HTML/CSS 语法创建复杂的 UI 组件。
+
+### 核心特性
+
+- 🏗️ **类 HTML 模板** - 使用基于 S-expression 的 TML（模板标记语言）编写 UI
+- 🎨 **CSS 支持** - 完整的 CSS 解析、层叠算法和计算样式
+- 📦 **组件系统** - Vue3 风格的响应式组件，支持 props、setup 和 templates
+- 🔄 **响应式系统** - ref、computed、watch 和 watchEffect 状态管理
+- 🎯 **Tailwind CSS** - 内置 Tailwind 工具类支持
+- 📐 **布局引擎** - 盒模型和 Flexbox 布局支持
+- ⚡ **性能优化** - 规则索引和样式缓存
+
+### 渲染流程
+
+```
+TML → DOM 树 → CSSOM → 渲染树 → 布局树 → Buffer 字符串
+```
+
+## 快速开始
+
+### 基础用法
+
+```elisp
+(require 'etaf)
+
+;; 简单渲染
+(etaf-render-to-buffer "*demo*"
+  '(div :class "container"
+     (h1 :style "color: blue" "Hello ETAF!")
+     (p "在 Emacs 中构建精美 UI")))
+
+;; 使用 Tailwind CSS 类
+(etaf-render-to-buffer "*demo*"
+  '(div :class "flex items-center p-4 bg-blue-500"
+     (span :class "text-white font-bold" "Tailwind 样式!")))
+```
+
+### 模板指令
+
+ETAF 支持 Vue 风格的模板指令：
 
 | 指令 | 说明 | 示例 |
 |------|------|------|
@@ -179,234 +177,60 @@ ETAF 支持 Emacs 原生的模板指令语法（`e-*` 前缀）：
 | `:e-else` | 默认分支 | `(p :e-else "Default")` |
 | `:e-for` | 列表渲染 | `(li :e-for "item in items" "{{ item }}")` |
 | `:e-show` | 显示/隐藏 | `(div :e-show "visible" "Content")` |
-| `:e-text` | 文本内容 | `(span :e-text "message")` |
-
-#### e-for 支持的格式
 
 ```elisp
-;; 基本格式
-(li :e-for "item in items" "{{ item }}")
+(setq my-data '(:name "Alice" :items ("苹果" "香蕉" "樱桃")))
 
-;; 带索引
-(li :e-for "(item, index) in items" "{{ index }}: {{ item }}")
+(etaf-render-to-buffer "*demo*"
+  '(div
+     (h1 "你好，{{ name }}！")
+     (ul
+       (li :e-for "item in items" "{{ item }}")))
+  my-data)
 ```
 
-#### 响应式数据（基础版本）
+### 组件系统
 
 ```elisp
-;; 创建响应式数据
-(setq reactive (etaf-etml-create-reactive '(:count 0 :name "Counter")))
-
-;; 添加数据变化监听
-(etaf-etml-watch reactive
-  (lambda (r key value)
-    (message "Data changed: %S = %S" key value)))
-
-;; 获取和设置数据
-(etaf-etml-get reactive :count)  ;; => 0
-(etaf-etml-set reactive :count 5) ;; 触发 watcher
-```
-
-### 组件系统（Vue3 风格）
-
-ETAF 支持类似 Vue3 的组件系统，可以定义可复用的自定义组件：
-
-```elisp
-(require 'etaf-etml)
-
-;; 定义一个简单的组件
+;; 定义组件
 (etaf-etml-define-component my-button
   :props '(:label :disabled)
-  :template '(button :class "my-btn"
-                     :disabled "{{ disabled }}"
-                     "{{ label }}"))
+  :template '(button :class "btn" "{{ label }}"))
 
-;; 定义带有 setup 函数的组件
-(etaf-etml-define-component counter
-  :props '(:initial)
-  :setup (lambda (props)
-           (let* ((count (etaf-etml-ref (or (plist-get props :initial) 0)))
-                  (increment (lambda ()
-                               (etaf-etml-ref-update count #'1+))))
-             (list :count count
-                   :increment increment)))
-  :template (lambda (data)
-              `(div :class "counter"
-                    (span ,(format "Count: %s"
-                                   (etaf-etml-ref-get (plist-get data :count))))
-                    (button :on-click ,(plist-get data :increment)
-                            "Increment"))))
-
-;; 使用组件（需要先注册）
-(etaf-etml-component-defined-p 'my-button)  ;; => t
+;; 使用组件
+(etaf-render-to-buffer "*demo*"
+  '(my-button :label "点击我"))
 ```
 
-#### 组件 API
-
-| 函数/宏 | 说明 | 示例 |
-|---------|------|------|
-| `etaf-etml-define-component` | 定义组件 | `(etaf-etml-define-component name :props '(:x) :template ...)` |
-| `etaf-etml-component-get` | 获取组件定义 | `(etaf-etml-component-get 'name)` |
-| `etaf-etml-component-defined-p` | 检查组件是否已定义 | `(etaf-etml-component-defined-p 'name)` |
-| `etaf-etml-component-list-all` | 列出所有组件 | `(etaf-etml-component-list-all)` |
-
-#### 组件选项
-
-- `:props` - 组件接受的属性列表
-- `:setup` - 设置函数，接收 props 返回组件数据
-- `:template` - 模板，可以是 ETML 表达式或返回 ETML 的函数
-- `:emits` - 组件可以发出的事件列表
-
-### 响应式系统（Vue3 风格）
-
-ETAF 实现了类似 Vue3 Composition API 的响应式系统：
-
-#### Ref（响应式引用）
+### 响应式系统
 
 ```elisp
 ;; 创建响应式引用
-(let ((count (etaf-etml-ref 0)))
-  ;; 获取值
-  (etaf-etml-ref-get count)     ;; => 0
-  
-  ;; 设置值
-  (etaf-etml-ref-set count 5)   ;; 设置为 5
-  
-  ;; 更新值（基于当前值）
-  (etaf-etml-ref-update count (lambda (n) (+ n 1))))  ;; => 6
-```
-
-#### Computed（计算属性）
-
-```elisp
-(let* ((count (etaf-etml-ref 3))
+(let* ((count (etaf-etml-ref 0))
        (doubled (etaf-etml-computed
-                 (lambda () (* 2 (etaf-etml-ref-get count))))))
-  ;; 获取计算值
-  (etaf-etml-computed-get doubled)    ;; => 6
-  
-  ;; 依赖变化后自动重新计算
+                  (lambda () (* 2 (etaf-etml-ref-get count))))))
+  (etaf-etml-ref-get count)      ;; => 0
   (etaf-etml-ref-set count 5)
-  (etaf-etml-computed-get doubled))   ;; => 10
+  (etaf-etml-computed-get doubled)) ;; => 10
 ```
-
-#### Watch（侦听器）
-
-```elisp
-;; 侦听单个响应式源
-(let* ((count (etaf-etml-ref 0))
-       (stop (etaf-etml-watch-source
-              count
-              (lambda (new old)
-                (message "Count changed: %s -> %s" old new)))))
-  (etaf-etml-ref-set count 1)   ;; 触发回调
-  (funcall stop)                 ;; 停止侦听
-  (etaf-etml-ref-set count 2))  ;; 不再触发
-```
-
-#### WatchEffect（自动依赖追踪）
-
-```elisp
-(let* ((count (etaf-etml-ref 0))
-       (stop (etaf-etml-watch-effect
-              (lambda ()
-                ;; 自动追踪 count 作为依赖
-                (message "Count is: %s" (etaf-etml-ref-get count))))))
-  (etaf-etml-ref-set count 1)   ;; 自动重新执行 effect
-  (funcall stop))               ;; 停止 effect
-```
-
-#### Reactive（响应式对象）
-
-```elisp
-(let ((state (etaf-etml-reactive '(:name "Alice" :age 30))))
-  ;; 获取属性
-  (etaf-etml-reactive-get state :name)    ;; => "Alice"
-  
-  ;; 设置属性（触发响应）
-  (etaf-etml-reactive-set state :age 31)
-  
-  ;; 转换为普通 plist
-  (etaf-etml-reactive-to-plist state))    ;; => (:name "Alice" :age 31)
-```
-
-#### 响应式 API 总结
-
-| 函数 | 说明 | 示例 |
-|------|------|------|
-| `etaf-etml-ref` | 创建响应式引用 | `(etaf-etml-ref 0)` |
-| `etaf-etml-ref-get` | 获取引用值 | `(etaf-etml-ref-get ref)` |
-| `etaf-etml-ref-set` | 设置引用值 | `(etaf-etml-ref-set ref 5)` |
-| `etaf-etml-ref-update` | 基于当前值更新 | `(etaf-etml-ref-update ref #'1+)` |
-| `etaf-etml-computed` | 创建计算属性 | `(etaf-etml-computed (lambda () ...))` |
-| `etaf-etml-computed-get` | 获取计算值 | `(etaf-etml-computed-get computed)` |
-| `etaf-etml-watch-source` | 侦听响应式源 | `(etaf-etml-watch-source ref callback)` |
-| `etaf-etml-watch-effect` | 自动依赖追踪的 effect | `(etaf-etml-watch-effect (lambda () ...))` |
-| `etaf-etml-reactive` | 创建响应式对象 | `(etaf-etml-reactive '(:x 1 :y 2))` |
-| `etaf-etml-reactive-get` | 获取响应式对象属性 | `(etaf-etml-reactive-get state :x)` |
-| `etaf-etml-reactive-set` | 设置响应式对象属性 | `(etaf-etml-reactive-set state :x 5)` |
 
 ### Tailwind CSS 支持
 
-Tailwind CSS 类名现在可以直接在 TML 中使用，会被自动解析到 CSSOM 并正确渲染。
-
-**Emacs 特有的单位系统：**
-- 水平方向（left/right/width）使用 `px` 像素
-- 垂直方向（top/bottom/height）使用 `lh` 行高单位
-
 ```elisp
-(require 'etaf)
-
-;; 直接在 TML 中使用 Tailwind 类
-(setq dom (etaf-etml-to-dom
-           '(div :class "flex items-center justify-between bg-white rounded-lg shadow-md p-4"
-              (h1 :class "text-lg font-bold text-gray-900" "Title")
-              (button :class "bg-blue-500 text-white px-4 py-2 rounded" "Click me"))))
-
-;; 构建 CSSOM - Tailwind 类会自动转换为 CSS 属性
-(setq cssom (etaf-css-build-cssom dom))
-
-;; 获取计算样式 - 包含 Tailwind 转换后的 CSS
-;; padding-top/bottom 使用 lh，padding-left/right 使用 px
-(etaf-css-get-computed-style cssom dom dom)
-;; => ((display . "flex") (align-items . "center") ...
-;;     (padding-top . "4lh") (padding-right . "4px") ...)
+;; 直接使用 Tailwind 类
+(etaf-render-to-buffer "*demo*"
+  '(div :class "flex items-center justify-between bg-white rounded-lg shadow-md p-4"
+     (h1 :class "text-lg font-bold text-gray-900" "标题")
+     (button :class "bg-blue-500 text-white px-4 py-2 rounded" "按钮")))
 ```
 
-#### 支持的 Tailwind 功能
+支持的 Tailwind 功能：
+- 响应式前缀：`sm:`, `md:`, `lg:`, `xl:`, `2xl:`
+- 状态变体：`hover:`, `focus:`, `active:`
+- 颜色系统：完整的 Tailwind 调色板
+- 间距、Flexbox、圆角、阴影等
 
-| 功能 | 说明 | 示例 |
-|------|------|------|
-| 响应式前缀 | sm, md, lg, xl, 2xl | `md:flex` |
-| 状态变体 | hover, focus, active 等 | `hover:bg-blue-500` |
-| 任意值 | 方括号语法 | `bg-[#1da1f2]` |
-| 颜色 | 完整的 Tailwind 调色板 | `bg-red-500`, `text-gray-700` |
-| 间距 | padding, margin（px/lh 单位） | `p-4`, `mx-auto`, `mt-2` |
-| Flexbox | 弹性布局 | `flex`, `justify-center`, `items-center` |
-| 圆角 | border-radius | `rounded-lg`, `rounded-full` |
-| 阴影 | box-shadow | `shadow-md`, `shadow-lg` |
-
-### 直接在 TML 上设置 CSS 样式
-
-可以使用 `:style` 属性直接在 TML 元素上设置 CSS 样式，支持字符串和列表两种格式：
-
-```elisp
-;; 使用 :style 属性设置样式（字符串格式）
-(etaf-etml-to-dom
-  '(div :style "background: red; padding: 10px"
-     "Hello"))
-;; => (div ((style . "background: red; padding: 10px")) "Hello")
-
-;; 使用 :style 属性设置样式（列表格式，alist）
-(etaf-etml-to-dom
-  '(div :style ((background . "red") (padding . "10px"))
-     "Hello"))
-;; => (div ((style . "background: red; padding: 10px")) "Hello")
-```
-
-### ECSS：Emacs 风格的 CSS 表达式
-
-ECSS（Emacs CSS）提供了一种使用列表结构表达 CSS 的方式，类似 Emacs 的 `rx` 宏对正则表达式的处理：
+### ECSS：Emacs 风格 CSS
 
 ```elisp
 (require 'etaf-ecss)
@@ -417,224 +241,62 @@ ECSS（Emacs CSS）提供了一种使用列表结构表达 CSS 的方式，类�
   '(padding 10)
   '(border 1 solid "black"))
 ;; => ".box { background: red; padding: 10px; border: 1px solid black; }"
-
-;; 创建样式表
-(ecss-stylesheet
-  '(".container" (width 800) (margin 0 auto))
-  '(".box" (background "blue") (padding 10)))
-;; => ".container { width: 800px; margin: 0 auto; }
-;;     .box { background: blue; padding: 10px; }"
 ```
 
-#### 选择器表达式
+## 文档
 
+| 文档 | 说明 |
+|------|------|
+| [用户手册](docs/USER-MANUAL.md) | 完整的使用指南 |
+| [开发者手册](docs/DEVELOPER-MANUAL.md) | 架构和扩展指南 |
+| [架构文档](docs/ARCHITECTURE.md) | 系统架构和模块关系 |
+| [数据结构](docs/DATA-STRUCTURES.md) | 详细的数据结构文档 |
+
+## 核心模块
+
+| 模块 | 说明 |
+|------|------|
+| `etaf.el` | 主入口，高层 API |
+| `etaf-etml.el` | TML 到 DOM 转换、模板指令、组件系统、响应式系统 |
+| `etaf-css.el` | CSS 对象模型（CSSOM）主入口 |
+| `etaf-render.el` | 渲染树构建 |
+| `etaf-layout.el` | 盒模型和布局计算 |
+| `etaf-tailwind.el` | Tailwind CSS 支持 |
+| `etaf-ecss.el` | Emacs 风格的 CSS 表达式 |
+
+## 安装
+
+1. 克隆仓库：
+```bash
+git clone https://github.com/Kinneyzhang/ETML.git
+```
+
+2. 添加到 Emacs 配置：
 ```elisp
-(ecss-selector 'div)              ; => "div"
-(ecss-selector '(class "box"))    ; => ".box"
-(ecss-selector '(id "main"))      ; => "#main"
-(ecss-selector '(and (tag "div") (class "box"))) ; => "div.box"
-(ecss-selector '(descendant "nav" "a"))          ; => "nav a"
-(ecss-selector '(child "ul" "li"))               ; => "ul > li"
-(ecss-selector '(or ".a" ".b"))                  ; => ".a, .b"
-(ecss-selector '(pseudo "hover"))                ; => ":hover"
+(add-to-list 'load-path "/path/to/ETML")
+(require 'etaf)
 ```
 
-#### 属性表达式（自动添加单位）
+## 示例
 
+运行交互式演示：
 ```elisp
-(ecss-property 'padding 10)        ; => "padding: 10px"
-(ecss-property 'height 5)          ; => "height: 5lh"（垂直属性使用 lh）
-(ecss-property 'margin 0 'auto)    ; => "margin: 0 auto"
+(load-file "examples/etaf-interactive-examples.el")
+M-x etaf-interactive-demo
 ```
 
-#### 与 TML 集成
-
-```elisp
-;; 使用 ecss-props 生成 :style 属性的值（列表格式）
-(div :style (ecss-props '(background "red") '(padding 10))
-  "content")
-
-;; 使用 ecss-style 生成 :style 属性的值（字符串格式）
-(div :style (ecss-style '(color "red") '(padding 10))
-  "content")
-```
-
-## 功能特性
-
-### 已实现功能 ✅
-
-- ✅ **Vue3 风格组件系统**（新增）
-  - 使用 `etaf-etml-define-component` 定义自定义组件
-  - Props 支持（组件属性传递）
-  - Setup 函数（组合式 API 入口）
-  - Template 函数或 ETML 表达式
-  - $slots 支持（组件子元素插槽）
-
-- ✅ **Vue3 风格响应式系统**（新增）
-  - `etaf-etml-ref` - 响应式引用
-  - `etaf-etml-computed` - 计算属性（缓存和依赖追踪）
-  - `etaf-etml-watch-source` - 侦听响应式源
-  - `etaf-etml-watch-effect` - 自动依赖追踪的 effect
-  - `etaf-etml-reactive` - 响应式对象
-
-- ✅ **ETML 标签定义系统**
-  - 使用 `define-etaf-etml-tag` 定义自定义标签
-  - 默认样式、hover 样式等状态样式
-  - 事件处理器（on-click、on-hover 等）
-  - 标签继承机制
-
-- ✅ **Emacs 原生模板指令语法**
-  - 文本插值 `{{ expression }}`
-  - 条件渲染 `e-if` / `e-else-if` / `e-else`
-  - 列表渲染 `e-for`（支持索引）
-  - 显示控制 `e-show`
-  - 文本指令 `e-text`
-  - 响应式数据系统
-
-- ✅ **ECSS：Emacs 风格 CSS 表达式**
-  - 类似 `rx` 的列表结构到 CSS 的转换
-  - 选择器表达式（class、id、descendant、child 等）
-  - 属性表达式（自动添加单位）
-  - 与 TML 无缝集成
-
-- ✅ **直接在 TML 设置 CSS 样式**
-  - `:style` 属性支持字符串和列表两种格式
-  - 无需关心 CSSOM，直接在 TML 操作
-
-- ✅ **Tailwind CSS 支持**
-  - 类名解析和验证
-  - 响应式前缀支持（sm、md、lg、xl、2xl）
-  - 状态变体支持（hover、focus、active 等）
-  - 任意值语法支持
-  - Tailwind 到 CSS 属性转换
-  - **Emacs 特有单位系统**：水平方向 px，垂直方向 lh
-  - DOM 集成操作（添加、移除、切换类）
-  - **CSSOM 集成**：TML 中的 Tailwind 类自动解析到计算样式
-  - **渲染树集成**：正确渲染为最终样式
-
-- ✅ **完整的 CSS 选择器支持**
-  - 标签、类、ID、属性选择器
-  - 后代、子元素、相邻兄弟、通用兄弟组合器
-  - 伪类选择器（:first-child、:last-child 等）
-
-- ✅ **CSS 层叠算法**
-  - 选择器特异性计算
-  - !important 支持
-  - 内联样式优先级
-  - 文档顺序处理
-
-- ✅ **属性继承**
-  - 可继承属性自动传递（color、font-* 等）
-  - 子元素可覆盖继承值
-
-- ✅ **媒体查询**
-  - @media 规则解析
-  - 媒体类型匹配（screen、print、all）
-  - 媒体特性（width、height、min-width、max-width 等）
-
-- ✅ **性能优化**
-  - 规则索引（按标签、类、ID）
-  - 计算样式缓存
-  - 选择器匹配优化
-
-- ✅ **渲染树构建**
-  - 过滤不可见元素（display: none）
-  - 附加计算后的样式
-  - 支持遍历和查询
-
-- ✅ **布局系统**（新实现）
-  - 盒模型计算（content、padding、border、margin）
-  - 块级布局（Block Formatting Context）
-  - width/height 计算（包括 auto 处理）
-  - 位置计算（嵌套元素的精确定位）
-  - plist 基础的清晰数据结构
-  - **布局字符串生成**（新增）：将布局树转换为可插入 Emacs buffer 的字符串，通过文本拼接而非坐标定位实现渲染
-
-### 计划实现功能 📋
-
-- 📋 **布局系统增强**
-  - 内联布局和文本换行
-  - 外边距折叠（Margin Collapsing）
-  - 定位方案（relative、absolute、fixed）
-  - Flexbox 布局
-
-- 📋 **绘制系统**
-  - 背景和边框绘制
-  - 文本渲染
-  - 图层合成
-
-## 性能特性
-
-### 规则索引
-
-CSSOM 自动构建索引，按标签、类、ID 分类规则，显著提升查询性能：
-
-- **未索引**: O(n × m)，n = 规则数，m = 选择器复杂度
-- **已索引**: O(k × log k)，k << n（候选规则数远小于总规则数）
-
-### 样式缓存
-
-计算样式会自动缓存，重复查询时直接返回缓存结果：
-
-- **首次查询**: 完整计算
-- **重复查询**: 10-100x 性能提升
-
-```elisp
-;; 第一次查询：计算并缓存
-(setq style1 (etaf-css-get-computed-style cssom node dom))
-
-;; 第二次查询：从缓存获取
-(setq style2 (etaf-css-get-computed-style cssom node dom))
-
-;; DOM 变化后清除缓存
-(etaf-css-clear-cache cssom)
-```
+示例文件：
+- `examples/etaf-interactive-examples.el` - 交互式演示
+- `examples/etaf-component-examples.el` - 组件系统示例
+- `examples/etaf-tailwind-example.el` - Tailwind CSS 示例
+- `examples/etaf-layout-example.el` - 布局系统示例
 
 ## 测试
 
 运行测试套件：
-
 ```bash
 cd tests
 emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
-```
-
-测试文件：
-- `etaf-etml-tests.el` - ETML 模板语法、组件系统和响应式系统测试
-- `etaf-etml-tag-tests.el` - ETML 标签定义系统测试
-- `etaf-tailwind-tests.el` - Tailwind CSS 支持测试
-- `etaf-css-tests.el` - CSS 主功能测试
-- `etaf-css-important-tests.el` - !important 和层叠测试
-- `etaf-css-cache-tests.el` - 缓存测试
-- `etaf-css-index-tests.el` - 索引测试
-- `etaf-css-inheritance-tests.el` - 继承测试
-- `etaf-css-media-tests.el` - 媒体查询测试
-- `etaf-layout-tests.el` - 布局系统测试
-
-## 示例
-
-查看 `examples/` 目录获取更多示例：
-- `etaf-interactive-examples.el` - **交互式演示**（在 buffer 中展示和交互，`M-x etaf-interactive-demo`）
-- `etaf-component-examples.el` - 组件系统完整示例（从简单到复杂的 8 个示例）
-- `etaf-etml-tag-example.el` - ETML 标签定义系统示例
-- `etaf-tailwind-example.el` - Tailwind CSS 功能示例
-- `etaf-css-example.el` - CSS 功能演示
-- `etaf-render-example.el` - 渲染树使用示例
-- `etaf-layout-example.el` - 布局系统完整示例
-
-### 快速开始交互式演示
-
-```elisp
-;; 加载交互式示例
-(load-file "examples/etaf-interactive-examples.el")
-
-;; 运行主演示入口（执行下面的命令）
-;; M-x etaf-interactive-demo
-
-;; 或运行单独的示例
-;; M-x etaf-demo-counter      ; 交互式计数器
-;; M-x etaf-demo-todo-app     ; Todo 应用
-;; M-x etaf-demo-progress-bar ; 进度条
 ```
 
 ## 贡献
@@ -643,11 +305,10 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 
 ## 许可证
 
-本项目采用 GNU General Public License v3.0 或更高版本。
+GNU General Public License v3.0 或更高版本。
 
 ## 相关资源
 
 - [CSS 规范](https://www.w3.org/Style/CSS/)
 - [CSSOM 规范](https://www.w3.org/TR/cssom-1/)
-- [CSS 层叠规范](https://www.w3.org/TR/css-cascade/)
 - [CSS 盒模型规范](https://www.w3.org/TR/css-box-3/)
