@@ -673,10 +673,8 @@ Returns (tag-name ((attrs...)) children...)."
 ;; Form elements
 (define-etaf-etml-tag button
   :display 'inline-block
-  :default-style '((padding-top . "0lh")
-                   (padding-bottom . "0lh")
-                   (padding-left . "10px")
-                   (padding-right . "10px")
+  :default-style '((padding-block . "0lh")
+                   (padding-inline . "10px")
                    (border . "1px solid #ccc")
                    (cursor . "pointer"))
   :hover-style '((background-color . "#e0e0e0"))
