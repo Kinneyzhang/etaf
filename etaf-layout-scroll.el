@@ -69,10 +69,13 @@ KVS 是滚动条的配置键值对。"
 
 (etaf-layout-scroll-bar-define s2
   :thumb-color "red"
-  :thumb-pixel 2
-  :track-color (face-attribute 'default :foreground)
+  :track-color "#ddd"
+  :thumb-pixel 10
+  :thumb-border-p t
   :track-border-left-pixel 1
   :track-border-right-pixel 1
+  :track-border-left-color "red"
+  :track-border-right-color "red"
   :track-padding-left-pixel 1
   :track-padding-right-pixel 1)
 
