@@ -876,7 +876,7 @@ VALUE can be a string number or from the spacing scale."
       (list (cons 'border-color
                   (cdr (assoc value etaf-tailwind-color-palette)))))
      ;; Border width (Tailwind CSS uses: border-0, border-1, border-2, border-4, border-8)
-     ((member value '("0" "1" "2" "4" "8"))
+     ((and value (string-match-p "^[0-9]+$" value))
       (list (cons 'border-width (concat value "px"))))
      ;; Default border (border without value means 1px)
      ((null value)
@@ -1411,7 +1411,7 @@ VALUE can be:
 Returns a string like '1px', '2px', etc., or nil if VALUE is not recognized."
   (cond
    ((null value) "1px")
-   ((member value '("0" "2" "4" "8"))
+   ((string-match-p "^[0-9]+$" value)
     (concat value "px"))
    (t nil)))
 
