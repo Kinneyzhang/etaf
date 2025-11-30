@@ -153,17 +153,20 @@
     :props '(:title :visible)
     :template (lambda (data)
                 (let ((title (plist-get data :title))
+                      (visible (plist-get data :visible))
                       (slots (plist-get data :$slots)))
-                  `(div :class "modal-overlay"
-                        :style "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5)"
-                        (div :class "modal"
-                             :style "background: white; border-radius: 8px; max-width: 500px; margin: auto"
-                             (div :class "modal-header"
-                                  :style "padding-left: 16px; padding-right: 16px; padding-top: 12px; padding-bottom: 12px; border-bottom: 1px solid #ddd"
-                                  (strong ,title))
-                             (div :class "modal-body"
-                                  :style "padding-left: 16px; padding-right: 16px; padding-top: 16px; padding-bottom: 16px"
-                                  ,@slots))))))
+                  ;; 只有 visible 为 true 时才渲染模态框
+                  (when visible
+                    `(div :class "modal-overlay"
+                          :style "position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5)"
+                          (div :class "modal"
+                               :style "background: white; border-radius: 8px; max-width: 500px; margin: auto"
+                               (div :class "modal-header"
+                                    :style "padding-left: 16px; padding-right: 16px; padding-top: 12px; padding-bottom: 12px; border-bottom: 1px solid #ddd"
+                                    (strong ,title))
+                               (div :class "modal-body"
+                                    :style "padding-left: 16px; padding-right: 16px; padding-top: 16px; padding-bottom: 16px"
+                                    ,@slots)))))))
   
   ;; 定义一个 Container（容器）组件
   (etaf-etml-define-component container
@@ -619,26 +622,43 @@
                         ;; 标题
                         (h1 :style "text-align: center; color: #333" "📝 Todo List")
                         ;; 输入区域
+                        ;; 注意：在真实应用中，input 需要绑定 value 和 on-input 事件
+                        ;; 这里简化展示，重点是组件结构
                         (div :style "display: flex; margin-bottom: 16px"
                              (input :type "text"
                                     :placeholder "添加新任务..."
+                                    :value ,(etaf-etml-ref-get (plist-get data :new-item-text))
                                     :style "flex: 1; padding-left: 8px; padding-right: 8px; padding-top: 8px; padding-bottom: 8px; border: 1px solid #ddd; border-radius: 4px 0 0 4px")
                              (button :on-click ,(plist-get data :add-item)
                                      :style "padding-left: 16px; padding-right: 16px; padding-top: 8px; padding-bottom: 8px; background: #4CAF50; color: white; border: none; border-radius: 0 4px 4px 0; cursor: pointer"
                                      "添加"))
                         ;; 筛选按钮
+                        ;; 注意：在真实应用中，每个按钮需要 on-click 处理器和 active 样式
                         (div :style "display: flex; gap: 8px; margin-bottom: 16px"
-                             (button :style "flex: 1; padding-top: 4px; padding-bottom: 4px" "全部")
-                             (button :style "flex: 1; padding-top: 4px; padding-bottom: 4px" "待完成")
-                             (button :style "flex: 1; padding-top: 4px; padding-bottom: 4px" "已完成"))
+                             (button :style "flex: 1; padding-top: 4px; padding-bottom: 4px"
+                                     :on-click (lambda () (etaf-etml-ref-set ,(plist-get data :filter-type) 'all))
+                                     "全部")
+                             (button :style "flex: 1; padding-top: 4px; padding-bottom: 4px"
+                                     :on-click (lambda () (etaf-etml-ref-set ,(plist-get data :filter-type) 'active))
+                                     "待完成")
+                             (button :style "flex: 1; padding-top: 4px; padding-bottom: 4px"
+                                     :on-click (lambda () (etaf-etml-ref-set ,(plist-get data :filter-type) 'completed))
+                                     "已完成"))
                         ;; 任务列表
+                        ;; 注意：在实际应用中，这里会传入 on-toggle 和 on-delete 回调
+                        ;; 由于示例限制，这里简化了实现
                         (div :class "todo-items"
                              ,@(if filtered
-                                   (mapcar (lambda (item)
-                                             `(todo-item :id ,(plist-get item :id)
-                                                         :text ,(plist-get item :text)
-                                                         :completed ,(plist-get item :completed)))
-                                           filtered)
+                                   (let ((toggle-fn (plist-get data :toggle-item))
+                                         (delete-fn (plist-get data :delete-item)))
+                                     (mapcar (lambda (item)
+                                               (let ((id (plist-get item :id)))
+                                                 `(todo-item :id ,id
+                                                             :text ,(plist-get item :text)
+                                                             :completed ,(plist-get item :completed)
+                                                             :on-toggle (lambda () (funcall ,toggle-fn ,id))
+                                                             :on-delete (lambda () (funcall ,delete-fn ,id)))))
+                                             filtered))
                                  '((p :style "text-align: center; color: #999" "暂无任务"))))
                         ;; 底部统计
                         (div :style "display: flex; justify-content: space-between; margin-top: 16px; padding-top: 16px; border-top: 1px solid #eee; color: #666; font-size: 14px"
@@ -688,15 +708,18 @@
   (message "=== 示例 8：表单组件综合示例 ===\n")
   
   ;; 定义 FormField（表单字段）组件
+  ;; 注意：value 和 on-change 需要由父组件传入
   (etaf-etml-define-component form-field
-    :props '(:label :name :type :placeholder :required :error)
+    :props '(:label :name :type :placeholder :required :error :value :on-change)
     :template (lambda (data)
                 (let ((label (plist-get data :label))
                       (name (plist-get data :name))
                       (type (or (plist-get data :type) "text"))
                       (placeholder (plist-get data :placeholder))
                       (required (plist-get data :required))
-                      (error (plist-get data :error)))
+                      (error (plist-get data :error))
+                      (value (plist-get data :value))
+                      (on-change (plist-get data :on-change)))
                   `(div :class "form-field"
                         :style "margin-bottom: 16px"
                         (label :style "display: block; margin-bottom: 4px; font-weight: 500"
@@ -706,6 +729,9 @@
                         (input :type ,type
                                :name ,name
                                :placeholder ,placeholder
+                               :value ,(or value "")
+                               ,@(when on-change
+                                   `(:on-change ,on-change))
                                :style ,(concat "width: 100%; padding-left: 8px; padding-right: 8px; padding-top: 8px; padding-bottom: 8px; border: 1px solid "
                                                (if error "#dc3545" "#ddd")
                                                "; border-radius: 4px"))
@@ -713,13 +739,16 @@
                             `((span :style "color: #dc3545; font-size: 12px; margin-top: 4px" ,error)))))))
   
   ;; 定义 FormSelect（下拉选择）组件
+  ;; 注意：value 和 on-change 需要由父组件传入
   (etaf-etml-define-component form-select
-    :props '(:label :name :options :required)
+    :props '(:label :name :options :required :value :on-change)
     :template (lambda (data)
                 (let ((label (plist-get data :label))
                       (name (plist-get data :name))
                       (options (or (plist-get data :options) '()))
-                      (required (plist-get data :required)))
+                      (required (plist-get data :required))
+                      (value (plist-get data :value))
+                      (on-change (plist-get data :on-change)))
                   `(div :class "form-field"
                         :style "margin-bottom: 16px"
                         (label :style "display: block; margin-bottom: 4px; font-weight: 500"
@@ -727,6 +756,9 @@
                                ,@(when required
                                    '((span :style "color: red" " *"))))
                         (select :name ,name
+                                :value ,(or value "")
+                                ,@(when on-change
+                                    `(:on-change ,on-change))
                                 :style "width: 100%; padding-left: 8px; padding-right: 8px; padding-top: 8px; padding-bottom: 8px; border: 1px solid #ddd; border-radius: 4px"
                                 (option :value "" "请选择...")
                                 ,@(mapcar (lambda (opt)
