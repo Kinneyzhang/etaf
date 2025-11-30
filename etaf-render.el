@@ -78,13 +78,15 @@ TAG 是元素标签名（symbol）。
       "block"
     "inline"))
 
-(defun etaf-render-create-node (dom-node computed-style)
+(defun etaf-render-create-node (dom-node computed-style &optional computed-style-dark)
   "创建渲染节点（使用 DOM 格式）。
 DOM-NODE 是 DOM 节点。
-COMPUTED-STYLE 是计算后的样式 alist。
+COMPUTED-STYLE 是计算后的样式 alist（亮色模式或当前模式）。
+COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
 返回 DOM 格式的渲染节点：(tag ((attrs...) children...)
 其中 attrs 包含：
-- render-style: 计算样式
+- render-style: 计算样式（亮色/当前模式）
+- render-style-dark: 暗色模式计算样式（如果提供）
 - render-display: 显示类型
 - 以及原始 DOM 属性"
   (let* ((tag (dom-tag dom-node))
@@ -93,8 +95,12 @@ COMPUTED-STYLE 是计算后的样式 alist。
                       (etaf-render-get-default-display tag)))
          (orig-attrs (dom-attributes dom-node))
          ;; 构建新的属性 alist，添加渲染信息
-         (render-attrs (list (cons 'render-style computed-style)
-                             (cons 'render-display display))))
+         (render-attrs (if computed-style-dark
+                           (list (cons 'render-style computed-style)
+                                 (cons 'render-style-dark computed-style-dark)
+                                 (cons 'render-display display))
+                         (list (cons 'render-style computed-style)
+                               (cons 'render-display display)))))
     ;; 合并原始属性和渲染属性
     (list tag (append render-attrs orig-attrs))))
 
@@ -124,10 +130,13 @@ CSSOM 是 CSS 对象模型。
 ROOT-DOM 是 DOM 树根节点。
 返回渲染节点或 nil（如果节点不可见）。"
   (when-let ((tag (dom-tag node)))
-    (let ((computed-style (etaf-css-get-computed-style cssom node root-dom)))
+    ;; 获取双模式计算样式（亮色和暗色）
+    (let* ((dual-style (etaf-css-get-computed-style-dual-mode cssom node root-dom))
+           (computed-style (plist-get dual-style :light))
+           (computed-style-dark (plist-get dual-style :dark)))
       ;; computed-style can be nil or empty list, both are acceptable
       (when (etaf-render-node-visible-p node computed-style)
-        (let ((render-node (etaf-render-create-node node computed-style)))
+        (let ((render-node (etaf-render-create-node node computed-style computed-style-dark)))
           ;; 递归处理子节点
           (let ((children '()))
             (dolist (child (dom-children node))
