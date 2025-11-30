@@ -46,7 +46,7 @@
 (defun etaf-layout-parse-length (value reference-width)
   "解析 CSS 长度值。
 VALUE 是 CSS 值字符串或数字。
-REFERENCE-WIDTH 是参考宽度（用于百分比计算）。
+REFERENCE-WIDTH 是参考宽度（用于百分比计算），可以为 nil。
 
 支持的单位：
 - px: 像素值
@@ -56,7 +56,7 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算）。
 
 返回值：
 - 数字: 解析后的像素值
-- \\='auto: 自动计算
+- \\='auto: 自动计算（包括 REFERENCE-WIDTH 为 nil 时的百分比值）
 - \\='none: 无值"
   (cond
    ((null value) 'auto)
@@ -69,8 +69,10 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算）。
    ((string-match "\\`\\([0-9.]+\\)px\\'" value)
     (string-to-number (match-string 1 value)))
    ((string-match "\\`\\([0-9.]+\\)%\\'" value)
-    (* (/ (string-to-number (match-string 1 value)) 100.0)
-       reference-width))
+    (if reference-width
+        (* (/ (string-to-number (match-string 1 value)) 100.0)
+           reference-width)
+      'auto))
    ((string-match "\\`\\([0-9.]+\\)em\\'" value)
     (* (string-to-number (match-string 1 value)) 16))
    ((string-match "\\`\\([0-9.]+\\)lh\\'" value)
@@ -80,7 +82,7 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算）。
 (defun etaf-layout-parse-height (value reference-height)
   "解析 CSS 高度值。
 VALUE 是 CSS 值字符串或数字。
-REFERENCE-HEIGHT 是参考高度（用于百分比计算）。
+REFERENCE-HEIGHT 是参考高度（用于百分比计算），可以为 nil。
 
 在 Emacs 中，高度使用行数（lh）作为基本单位。
 
@@ -93,7 +95,7 @@ REFERENCE-HEIGHT 是参考高度（用于百分比计算）。
 
 返回值：
 - 数字: 解析后的行数
-- \\='auto: 自动计算
+- \\='auto: 自动计算（包括 REFERENCE-HEIGHT 为 nil 时的百分比值）
 - \\='none: 无值"
   (cond
    ((null value) 'auto)
@@ -108,8 +110,10 @@ REFERENCE-HEIGHT 是参考高度（用于百分比计算）。
    ((string-match "\\`\\([0-9.]+\\)\\'" value)
     (string-to-number (match-string 1 value)))
    ((string-match "\\`\\([0-9.]+\\)%\\'" value)
-    (* (/ (string-to-number (match-string 1 value)) 100.0)
-       reference-height))
+    (if reference-height
+        (* (/ (string-to-number (match-string 1 value)) 100.0)
+           reference-height)
+      'auto))
    ((string-match "\\`\\([0-9.]+\\)px\\'" value)
     (ceiling (/ (string-to-number (match-string 1 value))
                 (float etaf-layout-parse-pixels-per-line))))
