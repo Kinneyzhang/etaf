@@ -545,6 +545,145 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
   (should-equal (etaf-tailwind-to-css "font-mono")
                 '((font-family . "ui-monospace, monospace"))))
 
+;;; 新增: 完整的 Tailwind 颜色测试
+
+(ert-deftest etaf-tailwind-test-all-color-families ()
+  "测试所有 Tailwind CSS 颜色族是否支持。"
+  ;; 灰色系
+  (should-equal (etaf-tailwind-to-css "bg-zinc-500")
+                '((background-color . "#71717a")))
+  (should-equal (etaf-tailwind-to-css "bg-neutral-500")
+                '((background-color . "#737373")))
+  (should-equal (etaf-tailwind-to-css "bg-stone-500")
+                '((background-color . "#78716c")))
+  ;; 黄色系
+  (should-equal (etaf-tailwind-to-css "bg-amber-500")
+                '((background-color . "#f59e0b")))
+  ;; 绿色系
+  (should-equal (etaf-tailwind-to-css "bg-lime-500")
+                '((background-color . "#84cc16")))
+  (should-equal (etaf-tailwind-to-css "bg-emerald-500")
+                '((background-color . "#10b981")))
+  (should-equal (etaf-tailwind-to-css "bg-teal-500")
+                '((background-color . "#14b8a6")))
+  ;; 蓝色系
+  (should-equal (etaf-tailwind-to-css "bg-cyan-500")
+                '((background-color . "#06b6d4")))
+  (should-equal (etaf-tailwind-to-css "bg-sky-500")
+                '((background-color . "#0ea5e9")))
+  ;; 紫色系
+  (should-equal (etaf-tailwind-to-css "bg-violet-500")
+                '((background-color . "#8b5cf6")))
+  (should-equal (etaf-tailwind-to-css "bg-fuchsia-500")
+                '((background-color . "#d946ef")))
+  ;; 粉色系
+  (should-equal (etaf-tailwind-to-css "bg-rose-500")
+                '((background-color . "#f43f5e"))))
+
+(ert-deftest etaf-tailwind-test-color-shades ()
+  "测试颜色的所有色阶（50-950）。"
+  ;; 测试 cyan 的所有色阶
+  (should-equal (etaf-tailwind-to-css "text-cyan-50")
+                '((color . "#ecfeff")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-100")
+                '((color . "#cffafe")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-200")
+                '((color . "#a5f3fc")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-300")
+                '((color . "#67e8f9")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-400")
+                '((color . "#22d3ee")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-500")
+                '((color . "#06b6d4")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-600")
+                '((color . "#0891b2")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-700")
+                '((color . "#0e7490")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-800")
+                '((color . "#155e75")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-900")
+                '((color . "#164e63")))
+  (should-equal (etaf-tailwind-to-css "text-cyan-950")
+                '((color . "#083344"))))
+
+(ert-deftest etaf-tailwind-test-border-colors ()
+  "测试边框颜色（新增颜色）。"
+  (should-equal (etaf-tailwind-to-css "border-emerald-500")
+                '((border-color . "#10b981")))
+  (should-equal (etaf-tailwind-to-css "border-teal-500")
+                '((border-color . "#14b8a6")))
+  (should-equal (etaf-tailwind-to-css "border-sky-500")
+                '((border-color . "#0ea5e9")))
+  (should-equal (etaf-tailwind-to-css "border-violet-500")
+                '((border-color . "#8b5cf6"))))
+
+;;; 新增: Dark mode 测试
+
+(ert-deftest etaf-tailwind-test-dark-variant-detection ()
+  "测试 dark 变体检测。"
+  (should (etaf-tailwind-has-dark-variant-p "dark:bg-gray-800"))
+  (should-not (etaf-tailwind-has-dark-variant-p "bg-white"))
+  (should (etaf-tailwind-has-dark-variant-p "md:dark:bg-gray-800")))
+
+(ert-deftest etaf-tailwind-test-class-applies-in-light-mode ()
+  "测试亮色模式下类名应用规则。"
+  ;; 在亮色模式下，非 dark 变体的类应该应用
+  (should (etaf-tailwind-class-applies-p "bg-white" :light))
+  (should (etaf-tailwind-class-applies-p "text-black" :light))
+  ;; 在亮色模式下，dark 变体的类不应该应用
+  (should-not (etaf-tailwind-class-applies-p "dark:bg-gray-800" :light))
+  (should-not (etaf-tailwind-class-applies-p "dark:text-white" :light)))
+
+(ert-deftest etaf-tailwind-test-class-applies-in-dark-mode ()
+  "测试暗色模式下类名应用规则。"
+  ;; 在暗色模式下，非 dark 变体的类应该应用
+  (should (etaf-tailwind-class-applies-p "bg-white" :dark))
+  (should (etaf-tailwind-class-applies-p "text-black" :dark))
+  ;; 在暗色模式下，dark 变体的类应该应用
+  (should (etaf-tailwind-class-applies-p "dark:bg-gray-800" :dark))
+  (should (etaf-tailwind-class-applies-p "dark:text-white" :dark)))
+
+(ert-deftest etaf-tailwind-test-filter-classes-by-mode ()
+  "测试根据模式过滤类名列表。"
+  (let ((classes "bg-white dark:bg-gray-800 text-black dark:text-white p-4"))
+    ;; 亮色模式：只保留非 dark 变体的类
+    (should-equal (etaf-tailwind-filter-classes-by-mode classes :light)
+                  '("bg-white" "text-black" "p-4"))
+    ;; 暗色模式：保留所有类（包括 dark 变体）
+    (should-equal (etaf-tailwind-filter-classes-by-mode classes :dark)
+                  '("bg-white" "dark:bg-gray-800" "text-black" "dark:text-white" "p-4"))))
+
+(ert-deftest etaf-tailwind-test-classes-to-css-light-mode ()
+  "测试亮色模式下的 CSS 转换。"
+  (let ((result (etaf-tailwind-classes-to-css-with-mode
+                 "bg-white dark:bg-gray-800" :light)))
+    ;; 亮色模式：应该使用 bg-white 的颜色
+    (should (equal (cdr (assq 'background-color result)) "#ffffff"))))
+
+(ert-deftest etaf-tailwind-test-classes-to-css-dark-mode ()
+  "测试暗色模式下的 CSS 转换。"
+  (let ((result (etaf-tailwind-classes-to-css-with-mode
+                 "bg-white dark:bg-gray-800" :dark)))
+    ;; 暗色模式：dark:bg-gray-800 应该覆盖 bg-white
+    (should (equal (cdr (assq 'background-color result)) "#1f2937"))))
+
+(ert-deftest etaf-tailwind-test-dark-mode-override ()
+  "测试暗色模式下 dark 变体类覆盖普通类的行为。"
+  (let ((result (etaf-tailwind-classes-to-css-with-mode
+                 "text-gray-900 dark:text-gray-100" :dark)))
+    ;; 暗色模式：dark:text-gray-100 应该覆盖 text-gray-900
+    (should (equal (cdr (assq 'color result)) "#f3f4f6"))))
+
+(ert-deftest etaf-tailwind-test-multiple-dark-properties ()
+  "测试多个 dark 模式属性。"
+  (let ((result (etaf-tailwind-classes-to-css-with-mode
+                 "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 border-slate-200 dark:border-slate-700"
+                 :dark)))
+    ;; 暗色模式：所有 dark 变体应该覆盖对应的普通类
+    (should (equal (cdr (assq 'background-color result)) "#1e293b"))
+    (should (equal (cdr (assq 'color result)) "#f1f5f9"))
+    (should (equal (cdr (assq 'border-color result)) "#334155"))))
+
 (provide 'etaf-tailwind-tests)
 
 ;;; etaf-tailwind-tests.el ends here

@@ -169,6 +169,7 @@
 
 (require 'cl-lib)
 (require 'etaf-dom)
+(require 'etaf-utils)
 
 ;;; Tailwind CSS patterns and utilities
 
@@ -601,6 +602,21 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
     ("gray-300" . "#d1d5db") ("gray-400" . "#9ca3af") ("gray-500" . "#6b7280")
     ("gray-600" . "#4b5563") ("gray-700" . "#374151") ("gray-800" . "#1f2937")
     ("gray-900" . "#111827") ("gray-950" . "#030712")
+    ;; Zinc
+    ("zinc-50" . "#fafafa") ("zinc-100" . "#f4f4f5") ("zinc-200" . "#e4e4e7")
+    ("zinc-300" . "#d4d4d8") ("zinc-400" . "#a1a1aa") ("zinc-500" . "#71717a")
+    ("zinc-600" . "#52525b") ("zinc-700" . "#3f3f46") ("zinc-800" . "#27272a")
+    ("zinc-900" . "#18181b") ("zinc-950" . "#09090b")
+    ;; Neutral
+    ("neutral-50" . "#fafafa") ("neutral-100" . "#f5f5f5") ("neutral-200" . "#e5e5e5")
+    ("neutral-300" . "#d4d4d4") ("neutral-400" . "#a3a3a3") ("neutral-500" . "#737373")
+    ("neutral-600" . "#525252") ("neutral-700" . "#404040") ("neutral-800" . "#262626")
+    ("neutral-900" . "#171717") ("neutral-950" . "#0a0a0a")
+    ;; Stone
+    ("stone-50" . "#fafaf9") ("stone-100" . "#f5f5f4") ("stone-200" . "#e7e5e4")
+    ("stone-300" . "#d6d3d1") ("stone-400" . "#a8a29e") ("stone-500" . "#78716c")
+    ("stone-600" . "#57534e") ("stone-700" . "#44403c") ("stone-800" . "#292524")
+    ("stone-900" . "#1c1917") ("stone-950" . "#0c0a09")
     ;; Red
     ("red-50" . "#fef2f2") ("red-100" . "#fee2e2") ("red-200" . "#fecaca")
     ("red-300" . "#fca5a5") ("red-400" . "#f87171") ("red-500" . "#ef4444")
@@ -611,16 +627,46 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
     ("orange-300" . "#fdba74") ("orange-400" . "#fb923c") ("orange-500" . "#f97316")
     ("orange-600" . "#ea580c") ("orange-700" . "#c2410c") ("orange-800" . "#9a3412")
     ("orange-900" . "#7c2d12") ("orange-950" . "#431407")
+    ;; Amber
+    ("amber-50" . "#fffbeb") ("amber-100" . "#fef3c7") ("amber-200" . "#fde68a")
+    ("amber-300" . "#fcd34d") ("amber-400" . "#fbbf24") ("amber-500" . "#f59e0b")
+    ("amber-600" . "#d97706") ("amber-700" . "#b45309") ("amber-800" . "#92400e")
+    ("amber-900" . "#78350f") ("amber-950" . "#451a03")
     ;; Yellow
     ("yellow-50" . "#fefce8") ("yellow-100" . "#fef9c3") ("yellow-200" . "#fef08a")
     ("yellow-300" . "#fde047") ("yellow-400" . "#facc15") ("yellow-500" . "#eab308")
     ("yellow-600" . "#ca8a04") ("yellow-700" . "#a16207") ("yellow-800" . "#854d0e")
     ("yellow-900" . "#713f12") ("yellow-950" . "#422006")
+    ;; Lime
+    ("lime-50" . "#f7fee7") ("lime-100" . "#ecfccb") ("lime-200" . "#d9f99d")
+    ("lime-300" . "#bef264") ("lime-400" . "#a3e635") ("lime-500" . "#84cc16")
+    ("lime-600" . "#65a30d") ("lime-700" . "#4d7c0f") ("lime-800" . "#3f6212")
+    ("lime-900" . "#365314") ("lime-950" . "#1a2e05")
     ;; Green
     ("green-50" . "#f0fdf4") ("green-100" . "#dcfce7") ("green-200" . "#bbf7d0")
     ("green-300" . "#86efac") ("green-400" . "#4ade80") ("green-500" . "#22c55e")
     ("green-600" . "#16a34a") ("green-700" . "#15803d") ("green-800" . "#166534")
     ("green-900" . "#14532d") ("green-950" . "#052e16")
+    ;; Emerald
+    ("emerald-50" . "#ecfdf5") ("emerald-100" . "#d1fae5") ("emerald-200" . "#a7f3d0")
+    ("emerald-300" . "#6ee7b7") ("emerald-400" . "#34d399") ("emerald-500" . "#10b981")
+    ("emerald-600" . "#059669") ("emerald-700" . "#047857") ("emerald-800" . "#065f46")
+    ("emerald-900" . "#064e3b") ("emerald-950" . "#022c22")
+    ;; Teal
+    ("teal-50" . "#f0fdfa") ("teal-100" . "#ccfbf1") ("teal-200" . "#99f6e4")
+    ("teal-300" . "#5eead4") ("teal-400" . "#2dd4bf") ("teal-500" . "#14b8a6")
+    ("teal-600" . "#0d9488") ("teal-700" . "#0f766e") ("teal-800" . "#115e59")
+    ("teal-900" . "#134e4a") ("teal-950" . "#042f2e")
+    ;; Cyan
+    ("cyan-50" . "#ecfeff") ("cyan-100" . "#cffafe") ("cyan-200" . "#a5f3fc")
+    ("cyan-300" . "#67e8f9") ("cyan-400" . "#22d3ee") ("cyan-500" . "#06b6d4")
+    ("cyan-600" . "#0891b2") ("cyan-700" . "#0e7490") ("cyan-800" . "#155e75")
+    ("cyan-900" . "#164e63") ("cyan-950" . "#083344")
+    ;; Sky
+    ("sky-50" . "#f0f9ff") ("sky-100" . "#e0f2fe") ("sky-200" . "#bae6fd")
+    ("sky-300" . "#7dd3fc") ("sky-400" . "#38bdf8") ("sky-500" . "#0ea5e9")
+    ("sky-600" . "#0284c7") ("sky-700" . "#0369a1") ("sky-800" . "#075985")
+    ("sky-900" . "#0c4a6e") ("sky-950" . "#082f49")
     ;; Blue
     ("blue-50" . "#eff6ff") ("blue-100" . "#dbeafe") ("blue-200" . "#bfdbfe")
     ("blue-300" . "#93c5fd") ("blue-400" . "#60a5fa") ("blue-500" . "#3b82f6")
@@ -631,20 +677,36 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
     ("indigo-300" . "#a5b4fc") ("indigo-400" . "#818cf8") ("indigo-500" . "#6366f1")
     ("indigo-600" . "#4f46e5") ("indigo-700" . "#4338ca") ("indigo-800" . "#3730a3")
     ("indigo-900" . "#312e81") ("indigo-950" . "#1e1b4b")
+    ;; Violet
+    ("violet-50" . "#f5f3ff") ("violet-100" . "#ede9fe") ("violet-200" . "#ddd6fe")
+    ("violet-300" . "#c4b5fd") ("violet-400" . "#a78bfa") ("violet-500" . "#8b5cf6")
+    ("violet-600" . "#7c3aed") ("violet-700" . "#6d28d9") ("violet-800" . "#5b21b6")
+    ("violet-900" . "#4c1d95") ("violet-950" . "#2e1065")
     ;; Purple
     ("purple-50" . "#faf5ff") ("purple-100" . "#f3e8ff") ("purple-200" . "#e9d5ff")
     ("purple-300" . "#d8b4fe") ("purple-400" . "#c084fc") ("purple-500" . "#a855f7")
     ("purple-600" . "#9333ea") ("purple-700" . "#7e22ce") ("purple-800" . "#6b21a8")
     ("purple-900" . "#581c87") ("purple-950" . "#3b0764")
+    ;; Fuchsia
+    ("fuchsia-50" . "#fdf4ff") ("fuchsia-100" . "#fae8ff") ("fuchsia-200" . "#f5d0fe")
+    ("fuchsia-300" . "#f0abfc") ("fuchsia-400" . "#e879f9") ("fuchsia-500" . "#d946ef")
+    ("fuchsia-600" . "#c026d3") ("fuchsia-700" . "#a21caf") ("fuchsia-800" . "#86198f")
+    ("fuchsia-900" . "#701a75") ("fuchsia-950" . "#4a044e")
     ;; Pink
     ("pink-50" . "#fdf2f8") ("pink-100" . "#fce7f3") ("pink-200" . "#fbcfe8")
     ("pink-300" . "#f9a8d4") ("pink-400" . "#f472b6") ("pink-500" . "#ec4899")
     ("pink-600" . "#db2777") ("pink-700" . "#be185d") ("pink-800" . "#9d174d")
     ("pink-900" . "#831843") ("pink-950" . "#500724")
+    ;; Rose
+    ("rose-50" . "#fff1f2") ("rose-100" . "#ffe4e6") ("rose-200" . "#fecdd3")
+    ("rose-300" . "#fda4af") ("rose-400" . "#fb7185") ("rose-500" . "#f43f5e")
+    ("rose-600" . "#e11d48") ("rose-700" . "#be123c") ("rose-800" . "#9f1239")
+    ("rose-900" . "#881337") ("rose-950" . "#4c0519")
     ;; Common colors
     ("white" . "#ffffff") ("black" . "#000000")
-    ("transparent" . "transparent") ("current" . "currentColor"))
-  "Tailwind CSS颜色调色板。")
+    ("transparent" . "transparent") ("current" . "currentColor")
+    ("inherit" . "inherit"))
+  "Tailwind CSS颜色调色板。包含所有官方 Tailwind CSS 颜色。")
 
 (defconst etaf-tailwind-spacing-scale
   '(("0" . "0") ("1" . "1") ("2" . "2") ("3" . "3")
@@ -1754,6 +1816,100 @@ CSS-PROPS是 ((property . value) ...) 格式的alist。
   (mapconcat (lambda (prop)
                (format "%s: %s" (car prop) (cdr prop)))
              css-props "; "))
+
+;;; Dark mode support
+
+(defun etaf-tailwind-has-dark-variant-p (class-name)
+  "检查Tailwind类名是否有dark变体。"
+  (member "dark" (etaf-tailwind-get-variants class-name)))
+
+(defun etaf-tailwind-class-applies-p (class-name &optional dark-mode)
+  "检查类名是否应该在当前模式下应用。
+DARK-MODE可以是:
+- t 或 :dark: 暗色模式
+- nil 或 :light: 亮色模式
+- :auto: 使用`etaf-theme-dark-p`检测当前主题模式（默认）
+
+类应用规则：
+- 无dark变体的类：始终应用
+- 有dark变体的类：仅在暗色模式下应用"
+  (let ((is-dark (cond
+                  ((eq dark-mode t) t)
+                  ((eq dark-mode :dark) t)
+                  ((eq dark-mode nil) nil)
+                  ((eq dark-mode :light) nil)
+                  ((eq dark-mode :auto) (etaf-theme-dark-p))
+                  (t (etaf-theme-dark-p))))
+        (has-dark (etaf-tailwind-has-dark-variant-p class-name)))
+    (if has-dark
+        is-dark
+      t)))
+
+(defun etaf-tailwind-filter-classes-by-mode (classes &optional dark-mode)
+  "根据主题模式过滤Tailwind类名列表。
+CLASSES是类名列表或空格分隔的字符串。
+DARK-MODE可以是:
+- t 或 :dark: 暗色模式
+- nil 或 :light: 亮色模式
+- :auto: 使用`etaf-theme-dark-p`检测当前主题模式（默认）
+
+返回应该在当前模式下应用的类名列表。"
+  (let ((class-list (if (stringp classes)
+                        (split-string classes)
+                      classes)))
+    (cl-remove-if-not
+     (lambda (class)
+       (etaf-tailwind-class-applies-p class dark-mode))
+     class-list)))
+
+(defun etaf-tailwind-classes-to-css-with-mode (class-names &optional dark-mode)
+  "将Tailwind类名转换为CSS属性列表，考虑dark模式。
+CLASS-NAMES是类名列表或空格分隔的字符串。
+DARK-MODE可以是:
+- t 或 :dark: 暗色模式
+- nil 或 :light: 亮色模式
+- :auto: 使用`etaf-theme-dark-p`检测当前主题模式（默认）
+
+此函数会：
+1. 根据当前主题模式过滤类名（dark:前缀的类只在暗色模式下应用）
+2. 将过滤后的类名转换为CSS属性
+3. 暗色模式下，dark:类的CSS属性会覆盖同名的普通类属性
+
+示例：
+  ;; 在亮色模式下
+  (etaf-tailwind-classes-to-css-with-mode \"bg-white dark:bg-gray-800\" nil)
+  ;; => ((background-color . \"#ffffff\"))
+
+  ;; 在暗色模式下
+  (etaf-tailwind-classes-to-css-with-mode \"bg-white dark:bg-gray-800\" t)
+  ;; => ((background-color . \"#1f2937\"))"
+  (let* ((classes (if (stringp class-names)
+                      (split-string class-names)
+                    class-names))
+         (filtered-classes (etaf-tailwind-filter-classes-by-mode classes dark-mode))
+         (css-props '()))
+    (dolist (class filtered-classes)
+      (let ((props (etaf-tailwind-to-css class)))
+        (when props
+          (dolist (prop props)
+            ;; 后面的类会覆盖前面的同名属性
+            (setq css-props (assq-delete-all (car prop) css-props))
+            (push prop css-props)))))
+    (nreverse css-props)))
+
+(defun etaf-tailwind-apply-css-to-node-with-mode (node class-names &optional dark-mode)
+  "将Tailwind类名转换为CSS并应用到DOM节点，考虑dark模式。
+NODE是DOM节点，CLASS-NAMES是Tailwind类名列表或字符串。
+DARK-MODE可以是:
+- t 或 :dark: 暗色模式
+- nil 或 :light: 亮色模式
+- :auto: 使用`etaf-theme-dark-p`检测当前主题模式（默认）
+
+示例：
+  (etaf-tailwind-apply-css-to-node-with-mode node \"bg-white dark:bg-gray-800\")"
+  (let ((css-props (etaf-tailwind-classes-to-css-with-mode class-names dark-mode)))
+    (when css-props
+      (etaf-dom-set-styles node css-props))))
 
 (provide 'etaf-tailwind)
 
