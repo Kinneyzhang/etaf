@@ -132,35 +132,6 @@ treating it as a standard property expression."
                class-name)
       nil)))
 
-(defun etaf-ecss--has-dark-variant-classes-p (class-string)
-  "Check if CLASS-STRING contains any dark: variant classes.
-CLASS-STRING is a space-separated string of Tailwind classes."
-  (when class-string
-    (let ((classes (split-string class-string)))
-      (cl-some #'etaf-tailwind-has-dark-variant-p classes))))
-
-(defun etaf-ecss--split-dark-classes (class-string)
-  "Split CLASS-STRING into base and dark variant classes.
-CLASS-STRING is a space-separated string of Tailwind classes.
-Returns a plist (:base BASE-CLASSES :dark DARK-CLASSES) where both
-BASE-CLASSES and DARK-CLASSES are space-separated strings."
-  (let* ((classes (split-string class-string))
-         (base-classes (cl-remove-if #'etaf-tailwind-has-dark-variant-p classes))
-         (dark-classes (cl-remove-if-not #'etaf-tailwind-has-dark-variant-p classes)))
-    (list :base (when base-classes (string-join base-classes " "))
-          :dark (when dark-classes (string-join dark-classes " ")))))
-
-(defun etaf-ecss--process-tailwind-string-for-mode (class-string mode)
-  "Process CLASS-STRING for a specific mode (light or dark).
-MODE is either :light or :dark.
-Returns a list of CSS declaration strings."
-  (let* ((css-props (etaf-tailwind-classes-to-css-with-mode
-                     class-string (if (eq mode :dark) :dark :light)))
-         (css-strings '()))
-    (dolist (prop css-props)
-      (push (format "%s: %s" (car prop) (cdr prop)) css-strings))
-    (nreverse css-strings)))
-
 ;;; CSS Selector Expressions
 
 (defun etaf-ecss-selector (expr)
@@ -444,54 +415,11 @@ Example:
 
 ;;; CSS Rule and Stylesheet
 
-(defun etaf-ecss--declarations-have-dark-variants (declarations)
-  "Check if any DECLARATIONS contain dark: variant classes.
-DECLARATIONS is a list of declaration items."
-  (cl-some (lambda (decl)
-             (and (stringp decl)
-                  (etaf-ecss--has-dark-variant-classes-p decl)))
-           declarations))
-
-(defun etaf-ecss--build-declaration-block-for-mode (declarations mode)
-  "Build CSS declaration block for a specific MODE.
-DECLARATIONS is a list of declaration items.
-MODE is either :light or :dark."
-  (let ((decl-strings '())
-        (string-decls '()))
-    (dolist (decl declarations)
-      (cond
-       ;; String: space-separated Tailwind classes
-       ((stringp decl)
-        (let ((css-strs (etaf-ecss--process-tailwind-string-for-mode decl mode)))
-          (dolist (css-str css-strs)
-            (push css-str string-decls))))
-       ;; Check if it's a Tailwind CSS utility class (single-element list)
-       ((etaf-ecss--tailwind-class-p decl)
-        (let ((css-str (or (etaf-ecss--process-tailwind-decl decl)
-                           (apply #'etaf-ecss-property decl))))
-          (push css-str decl-strings)))
-       ;; Standard cons/list declarations
-       ((consp decl)
-        (let ((css-str (if (listp (cdr decl))
-                           (apply #'etaf-ecss-property decl)
-                         (etaf-ecss-property (car decl) (cdr decl)))))
-          (push css-str decl-strings)))
-       ;; Other types - just convert to string
-       (t (push (format "%s" decl) decl-strings))))
-    ;; Combine: string declarations first (in order), then other declarations (reversed)
-    (let ((all-decls (nconc (nreverse string-decls) (nreverse decl-strings))))
-      (when all-decls
-        (format "{ %s; }" (mapconcat #'identity all-decls "; "))))))
-
 (defun etaf-ecss (selector &rest declarations)
   "Create a CSS rule with SELECTOR and DECLARATIONS.
 
 SELECTOR can be a string or selector expression.
 DECLARATIONS are property expressions.
-
-When declarations contain Tailwind classes with dark: variants,
-this function generates both a light mode rule and a dark mode rule
-wrapped in @media (prefers-color-scheme: dark).
 
 Example:
   (etaf-ecss \".box\"
@@ -503,29 +431,10 @@ Example:
   (etaf-ecss '(and (tag \"div\") (class \"container\"))
     '(width 800)
     '(margin 0 auto))
-  ;; => \"div.container { width: 800px; margin: 0 auto; }\"
-
-  ;; With dark: variants:
-  (etaf-ecss \".card\" \"bg-white dark:bg-gray-800 text-black dark:text-white\")
-  ;; => \".card { background-color: #ffffff; color: #000000; }
-  ;;     @media (prefers-color-scheme: dark) { .card { background-color: #1f2937; color: #ffffff; } }\""
-  (let ((sel-str (etaf-ecss-selector selector)))
-    (if (etaf-ecss--declarations-have-dark-variants declarations)
-        ;; Generate dual-mode CSS rules
-        (let ((light-block (etaf-ecss--build-declaration-block-for-mode declarations :light))
-              (dark-block (etaf-ecss--build-declaration-block-for-mode declarations :dark)))
-          (concat
-           ;; Light mode rule (base)
-           (when light-block
-             (format "%s %s" sel-str light-block))
-           ;; Dark mode rule (wrapped in @media)
-           (when (and dark-block
-                      (not (string= light-block dark-block)))
-             (format "\n@media (prefers-color-scheme: dark) { %s %s }"
-                     sel-str dark-block))))
-      ;; No dark variants, use original logic
-      (let ((decl-block (apply #'etaf-ecss-declaration-block declarations)))
-        (format "%s %s" sel-str decl-block)))))
+  ;; => \"div.container { width: 800px; margin: 0 auto; }\""
+  (let ((sel-str (etaf-ecss-selector selector))
+        (decl-block (apply #'etaf-ecss-declaration-block declarations)))
+    (format "%s %s" sel-str decl-block)))
 
 (defun etaf-ecss-stylesheet (&rest rules)
   "Create a stylesheet from multiple RULES.

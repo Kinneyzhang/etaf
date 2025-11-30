@@ -162,38 +162,6 @@
  (etaf-css-media-match-p nil '((type . screen)))
  t)
 
-;;; 测试 prefers-color-scheme 支持
-
-(should-equal
- (etaf-css-media-evaluate-feature 'prefers-color-scheme 'equal "dark"
-                                  '((prefers-color-scheme . "dark")))
- t)
-
-(should-equal
- (etaf-css-media-evaluate-feature 'prefers-color-scheme 'equal "dark"
-                                  '((prefers-color-scheme . "light")))
- nil)
-
-(should-equal
- (etaf-css-media-evaluate-feature 'prefers-color-scheme 'equal "light"
-                                  '((prefers-color-scheme . "light")))
- t)
-
-(should-equal
- (etaf-css-media-match-p "(prefers-color-scheme: dark)" 
-                         '((prefers-color-scheme . "dark")))
- t)
-
-(should-equal
- (etaf-css-media-match-p "(prefers-color-scheme: dark)" 
-                         '((prefers-color-scheme . "light")))
- nil)
-
-(should-equal
- (etaf-css-media-match-p "(prefers-color-scheme: light)" 
-                         '((prefers-color-scheme . "light")))
- t)
-
 (message "All etaf-css-media tests passed!")
 
 (provide 'etaf-css-media-tests)

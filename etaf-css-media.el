@@ -45,13 +45,6 @@
   "默认的媒体查询环境。
 包含媒体类型和特性值。")
 
-(defun etaf-css-media-get-color-scheme ()
-  "获取当前 Emacs 主题的颜色方案。
-返回 \"dark\" 或 \"light\"。"
-  (if (eq (frame-parameter nil 'background-mode) 'dark)
-      "dark"
-    "light"))
-
 (defun etaf-css-media-get-environment-value (feature &optional env)
   "获取媒体环境中的特性值。
 FEATURE 是特性名（symbol），如 'width、'height。
@@ -104,24 +97,18 @@ OPERATOR 是操作符（'min, 'max, 'equal）。
 VALUE 是要比较的值。
 ENV 是可选的环境 alist。
 返回 t 或 nil。"
-  ;; 特殊处理 prefers-color-scheme
-  (if (eq feature 'prefers-color-scheme)
-      (let ((current-scheme (or (alist-get 'prefers-color-scheme env)
-                                (etaf-css-media-get-color-scheme))))
-        (string= current-scheme value))
-    ;; 其他特性使用标准逻辑
-    (let ((current-value (etaf-css-media-get-environment-value feature env)))
-      (when current-value
-        (cond
-         ((eq operator 'min)
-          (>= current-value value))
-         ((eq operator 'max)
-          (<= current-value value))
-         ((eq operator 'equal)
-          (if (numberp value)
-              (= current-value value)
-            (equal current-value value)))
-         (t nil))))))
+  (let ((current-value (etaf-css-media-get-environment-value feature env)))
+    (when current-value
+      (cond
+       ((eq operator 'min)
+        (>= current-value value))
+       ((eq operator 'max)
+        (<= current-value value))
+       ((eq operator 'equal)
+        (if (numberp value)
+            (= current-value value)
+          (equal current-value value)))
+       (t nil)))))
 
 (defun etaf-css-media-match-query-p (query-str &optional env)
   "检查媒体查询是否匹配。
