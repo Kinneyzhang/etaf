@@ -1912,6 +1912,53 @@ DARK-MODE参数控制主题模式判断:
             (push prop css-props)))))
     (nreverse css-props)))
 
+(defun etaf-tailwind-classes-to-css-dual-mode (class-names)
+  "将Tailwind类名转换为亮色和暗色两套CSS属性。
+CLASS-NAMES是类名列表或空格分隔的字符串。
+
+返回一个plist: (:light LIGHT-CSS :dark DARK-CSS)
+其中LIGHT-CSS是亮色模式下的CSS属性alist，
+DARK-CSS是暗色模式下的CSS属性alist。
+
+此函数不依赖当前主题模式，而是同时计算两种模式的样式，
+用于生成支持自动切换的Emacs face spec。
+
+示例：
+  (etaf-tailwind-classes-to-css-dual-mode \"bg-white dark:bg-gray-800 text-black dark:text-white\")
+  ;; => (:light ((background-color . \"#ffffff\") (color . \"#000000\"))
+  ;;     :dark ((background-color . \"#1f2937\") (color . \"#ffffff\")))"
+  (let* ((classes (if (stringp class-names)
+                      (split-string class-names)
+                    class-names))
+         ;; 分离基础类和dark变体类
+         (base-classes (cl-remove-if #'etaf-tailwind-has-dark-variant-p classes))
+         (dark-classes (cl-remove-if-not #'etaf-tailwind-has-dark-variant-p classes))
+         ;; 计算亮色模式CSS（只使用基础类）
+         (light-css '())
+         ;; 计算暗色模式CSS（基础类 + dark变体类覆盖）
+         (dark-css '()))
+    ;; 处理基础类（同时用于light和dark的基础样式）
+    (dolist (class base-classes)
+      (let ((props (etaf-tailwind-to-css class)))
+        (when props
+          (dolist (prop props)
+            ;; 添加到light CSS
+            (setq light-css (assq-delete-all (car prop) light-css))
+            (push prop light-css)
+            ;; 也添加到dark CSS作为基础
+            (setq dark-css (assq-delete-all (car prop) dark-css))
+            (push prop dark-css)))))
+    ;; 处理dark变体类（只覆盖dark CSS）
+    (dolist (class dark-classes)
+      (let ((props (etaf-tailwind-to-css class)))
+        (when props
+          (dolist (prop props)
+            (setq dark-css (assq-delete-all (car prop) dark-css))
+            (push prop dark-css)))))
+    ;; 返回双模式CSS
+    (list :light (nreverse light-css)
+          :dark (nreverse dark-css))))
+
 (defun etaf-tailwind-apply-css-to-node-with-mode (node class-names &optional dark-mode)
   "将Tailwind类名转换为CSS并应用到DOM节点，考虑dark模式。
 NODE是DOM节点，CLASS-NAMES是Tailwind类名列表或字符串。

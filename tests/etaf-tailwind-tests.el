@@ -696,6 +696,41 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
                  "dark:bg-gray-800 bg-white" :light)))
     (should (equal (cdr (assq 'background-color result)) "#ffffff"))))
 
+;;; 新增: Dual mode 测试
+
+(ert-deftest etaf-tailwind-test-dual-mode-basic ()
+  "测试 etaf-tailwind-classes-to-css-dual-mode 基本功能。"
+  (let ((result (etaf-tailwind-classes-to-css-dual-mode "bg-white dark:bg-gray-800")))
+    ;; 亮色模式应该使用 bg-white
+    (should (equal (cdr (assq 'background-color (plist-get result :light))) "#ffffff"))
+    ;; 暗色模式应该使用 bg-gray-800
+    (should (equal (cdr (assq 'background-color (plist-get result :dark))) "#1f2937"))))
+
+(ert-deftest etaf-tailwind-test-dual-mode-multiple-properties ()
+  "测试 dual mode 多属性处理。"
+  (let ((result (etaf-tailwind-classes-to-css-dual-mode
+                 "bg-stone-600 dark:bg-gray-600 text-black dark:text-white")))
+    ;; 亮色模式
+    (should (equal (cdr (assq 'background-color (plist-get result :light))) "#57534e"))
+    (should (equal (cdr (assq 'color (plist-get result :light))) "#000000"))
+    ;; 暗色模式
+    (should (equal (cdr (assq 'background-color (plist-get result :dark))) "#4b5563"))
+    (should (equal (cdr (assq 'color (plist-get result :dark))) "#ffffff"))))
+
+(ert-deftest etaf-tailwind-test-dual-mode-no-dark-variant ()
+  "测试没有 dark 变体时的 dual mode 行为。"
+  (let ((result (etaf-tailwind-classes-to-css-dual-mode "bg-red-500 text-white")))
+    ;; 亮色和暗色模式应该相同
+    (should (equal (plist-get result :light) (plist-get result :dark)))))
+
+(ert-deftest etaf-tailwind-test-dual-mode-only-dark-variant ()
+  "测试只有 dark 变体时的 dual mode 行为。"
+  (let ((result (etaf-tailwind-classes-to-css-dual-mode "dark:bg-gray-800")))
+    ;; 亮色模式应该没有背景色（dark变体不应用）
+    (should (null (cdr (assq 'background-color (plist-get result :light)))))
+    ;; 暗色模式应该有背景色
+    (should (equal (cdr (assq 'background-color (plist-get result :dark))) "#1f2937"))))
+
 (provide 'etaf-tailwind-tests)
 
 ;;; etaf-tailwind-tests.el ends here
