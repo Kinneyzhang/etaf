@@ -112,10 +112,9 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
          (overflow-y (or (plist-get overflow :overflow-y) "visible"))
          (v-scroll-bar-type (plist-get overflow :v-scroll-bar-type))
          (v-scroll-bar-direction (or (plist-get overflow :v-scroll-bar-direction) 'right))
-         (scroll-thumb-color (or (plist-get overflow :scroll-thumb-color)
-                                 (face-attribute 'default :foreground)))
-         (scroll-track-color (or (plist-get overflow :scroll-track-color)
-                                 (face-attribute 'default :background)))
+         ;; 只获取显式设置的颜色，不提供默认值（让滚动条类型定义的颜色优先）
+         (scroll-thumb-color (plist-get overflow :scroll-thumb-color))
+         (scroll-track-color (plist-get overflow :scroll-track-color))
          
          ;; 处理子元素
          (children (dom-children layout-node))
@@ -513,7 +512,7 @@ V-SCROLL-BAR-P 是 \\='real 或 \\='blank。
 TRACK-HEIGHT 是轨道高度（内容区域显示高度）。
 PADDING-TOP 和 PADDING-BOTTOM 是上下内边距。
 CONTENT-LINUM 是内容的实际行数。
-SCROLL-THUMB-COLOR 和 SCROLL-TRACK-COLOR 是滑块和轨道颜色。
+SCROLL-THUMB-COLOR 和 SCROLL-TRACK-COLOR 是滑块和轨道颜色（可选，nil 时使用滚动条类型定义的颜色）。
 V-SCROLL-BAR-TYPE 是滚动条风格类型。"
   (when v-scroll-bar-p
     (let* ((scroll-bar (etaf-layout-string--create-scroll-bar v-scroll-bar-type))
@@ -522,9 +521,12 @@ V-SCROLL-BAR-TYPE 是滚动条风格类型。"
            (thumb-offset 0))  ;; 初始偏移为 0
       ;; 设置滚动条属性 - 必须捕获 plist-put 的返回值
       (setq scroll-bar (plist-put scroll-bar :track-height track-height))
-      (setq scroll-bar (plist-put scroll-bar :track-color scroll-track-color))
+      ;; 只有当显式提供颜色时才覆盖滚动条类型定义的颜色
+      (when scroll-track-color
+        (setq scroll-bar (plist-put scroll-bar :track-color scroll-track-color)))
       (setq scroll-bar (plist-put scroll-bar :thumb-height thumb-height))
-      (setq scroll-bar (plist-put scroll-bar :thumb-color scroll-thumb-color))
+      (when scroll-thumb-color
+        (setq scroll-bar (plist-put scroll-bar :thumb-color scroll-thumb-color)))
       (setq scroll-bar (plist-put scroll-bar :thumb-offset thumb-offset))
       (setq scroll-bar (plist-put scroll-bar :track-padding-top-height (floor padding-top)))
       (setq scroll-bar (plist-put scroll-bar :track-padding-bottom-height (floor padding-bottom)))
