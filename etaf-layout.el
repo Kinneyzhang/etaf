@@ -84,6 +84,9 @@ BOX-MODEL 是盒模型 plist。
   "从渲染树构建布局树。
 RENDER-TREE 是渲染树根节点。
 VIEWPORT 是视口大小 (:width w :height h)。
+  - width 和 height 可以为 nil，表示不限制根容器的该维度，使用内容的自然尺寸。
+  - 当 width 为 nil 时，块级元素的宽度将根据内容自动计算。
+  - 当 height 为 nil 时，容器的高度将根据内容自动计算。
 返回布局树根节点。"
   (let ((root-context (list :content-width (plist-get viewport :width)
                             :content-height (plist-get viewport :height))))
@@ -287,7 +290,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; 计算内容宽度
          (base-content-width
           (if (eq width-value 'auto)
-              (if (or is-inline is-in-flex-container)
+              (if (or is-inline is-in-flex-container (null parent-width))
                   0
                 (max 0 (- parent-width
                           padding-left-val padding-right-val
