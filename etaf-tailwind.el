@@ -869,7 +869,8 @@ VALUE can be a string number or from the spacing scale."
     (cond
      ;; Border color
      ((cdr (assoc value etaf-tailwind-color-palette))
-      (list (cons 'border-color (cdr (assoc value etaf-tailwind-color-palette)))))
+      (list (cons 'border-color
+                  (cdr (assoc value etaf-tailwind-color-palette)))))
      ;; Border width (Tailwind CSS uses: border-0, border-1, border-2, border-4, border-8)
      ((member value '("0" "1" "2" "4" "8"))
       (list (cons 'border-width (concat value "px"))))
