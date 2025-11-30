@@ -101,12 +101,12 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 
 1. Clone the repository:
 ```bash
-git clone https://github.com/Kinneyzhang/ETML.git
+git clone https://github.com/Kinneyzhang/etaf.git
 ```
 
 2. Add to your Emacs configuration:
 ```elisp
-(add-to-list 'load-path "/path/to/ETML")
+(add-to-list 'load-path "/path/to/etaf")
 (require 'etaf)
 ```
 
@@ -268,12 +268,12 @@ ETAF 支持 Vue 风格的模板指令：
 
 1. 克隆仓库：
 ```bash
-git clone https://github.com/Kinneyzhang/ETML.git
+git clone https://github.com/Kinneyzhang/etaf.git
 ```
 
 2. 添加到 Emacs 配置：
 ```elisp
-(add-to-list 'load-path "/path/to/ETML")
+(add-to-list 'load-path "/path/to/etaf")
 (require 'etaf)
 ```
 
