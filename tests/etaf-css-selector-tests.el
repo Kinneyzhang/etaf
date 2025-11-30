@@ -145,3 +145,39 @@
 (should-equal
   (etaf-css-selector-query etaf-dom-tests-dom "div#test-id > hr:only-of-type")
   '((hr ((class . "my-6 w-full")))))
+
+;;; 测试链式子组合器 (修复 #pannel-input > div > p 匹配问题)
+;; 确保链式子组合器正确工作，不会匹配嵌套更深的元素
+
+(setq etaf-css-selector-tests-nested-dom
+  (etaf-etml-to-dom
+   '(div :id "pannel-input"
+         (p :class "font-bold" "ETAF Playground - Input")
+         (div (p "ETML Structure:")
+              (div (p "111")))
+         (div (p "CSS Styles:")
+              (div (p "222")))
+         (div (p "Elisp Data:")
+              (div (p "333")))
+         (p "hint" "happy hacking emacs"))))
+
+;; #pannel-input > div > p 只应匹配直接子 div 的直接子 p
+;; 不应匹配 #pannel-input > div > div > p (如 "111", "222", "333")
+(should-equal
+  (length (etaf-css-selector-query etaf-css-selector-tests-nested-dom "#pannel-input > div > p"))
+  3)
+
+;; 验证匹配的是正确的元素
+(should-equal
+  (mapcar #'dom-texts (etaf-css-selector-query etaf-css-selector-tests-nested-dom "#pannel-input > div > p"))
+  '("ETML Structure:" "CSS Styles:" "Elisp Data:"))
+
+;; #pannel-input > div > div > p 应该匹配嵌套的 p 元素
+(should-equal
+  (length (etaf-css-selector-query etaf-css-selector-tests-nested-dom "#pannel-input > div > div > p"))
+  3)
+
+;; 验证嵌套匹配的是正确的元素
+(should-equal
+  (mapcar #'dom-texts (etaf-css-selector-query etaf-css-selector-tests-nested-dom "#pannel-input > div > div > p"))
+  '("111" "222" "333"))

@@ -978,17 +978,10 @@ CSS是输入字符串，START是单词的起始位置。返回单词的结束位
 (defun etaf-css-selector-child-match-p (node parent-nodes dom)
   "检查节点NODE的直接父节点是否匹配PARENT-NODES（子组合器）。
 返回匹配的父节点，如果没有匹配则返回nil。"
-  ;; 简化实现：遍历DOM查找包含node作为直接子节点的节点
-  (catch 'found
-    (dom-search
-     dom
-     (lambda (candidate)
-       (when (etaf-css-selector-part-match-p
-              candidate parent-nodes)
-         (let ((children (dom-non-text-children candidate)))
-           (when (memq node children)
-             (throw 'found candidate))))))
-    nil))
+  ;; 正确实现：获取node的直接父节点，检查它是否匹配parent-nodes
+  (let ((parent (etaf-dom-get-parent node dom)))
+    (when (and parent (etaf-css-selector-part-match-p parent parent-nodes))
+      parent)))
 
 (defun etaf-css-selector-adjacent-sibling-match-p
     (node prev-sibling-nodes dom)
@@ -1018,8 +1011,9 @@ RIGHTMOST-COMBINATOR是连接node到前一个部分的组合器。"
            (remaining-parts (butlast parts))
            (combinator (or rightmost-combinator (cdr current-part)))
            (selector-nodes (car current-part))
-           (next-combinator (and remaining-parts
-                                  (cdr (car (last remaining-parts))))))
+           ;; next-combinator 是当前部分存储的组合器，它连接当前部分到其左侧邻居
+           ;; 这将在递归调用时使用
+           (next-combinator (cdr current-part)))
       (cond
        ;; 后代组合器（空格）
        ((or (null combinator) (string= combinator " "))
