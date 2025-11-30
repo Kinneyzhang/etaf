@@ -169,6 +169,16 @@
   (should-equal (plist-get event :y) 200)
   (should (plist-get event :timestamp)))
 
+;; Test event text property from button children
+(let* ((instance (etaf-etml-tag-create-instance 'button nil '("Click Me")))
+       (event (etaf-etml-tag--make-event 'click instance nil)))
+  (should-equal (plist-get event :text) "Click Me"))
+
+;; Test event text property with multiple children
+(let* ((instance (etaf-etml-tag-create-instance 'button nil '("Hello" " " "World")))
+       (event (etaf-etml-tag--make-event 'click instance nil)))
+  (should-equal (plist-get event :text) "Hello World"))
+
 ;;; Test display types for different tags
 
 ;; Block elements

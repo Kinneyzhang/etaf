@@ -172,13 +172,30 @@ Returns a new alist with all properties from both, with override taking preceden
 
 ;;; Event Handling
 
+(defun etaf-etml-tag--get-text-content (tag-instance)
+  "Extract the text content from TAG-INSTANCE's children.
+Returns a string with all text content concatenated."
+  (let ((children (plist-get tag-instance :children)))
+    (when children
+      (mapconcat (lambda (child)
+                   (cond
+                    ((stringp child) child)
+                    ((and (listp child) (plist-get child :children))
+                     (etaf-etml-tag--get-text-content child))
+                    (t "")))
+                 children ""))))
+
 (defun etaf-etml-tag--make-event (type target &optional extra-data)
   "Create an event object with TYPE and TARGET.
-EXTRA-DATA is an optional alist of additional event properties."
-  (append (list :type type
-                :target target
-                :timestamp (current-time))
-          extra-data))
+EXTRA-DATA is an optional alist of additional event properties.
+The event includes a :text property with the target's text content."
+  (let ((text (when (and (listp target) (plist-get target :children))
+                (etaf-etml-tag--get-text-content target))))
+    (append (list :type type
+                  :target target
+                  :text text
+                  :timestamp (current-time))
+            extra-data)))
 
 (defun etaf-etml-tag--dispatch-event (tag-instance event-type &optional extra-data)
   "Dispatch an event of EVENT-TYPE for TAG-INSTANCE."

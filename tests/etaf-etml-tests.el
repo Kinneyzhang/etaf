@@ -57,9 +57,19 @@
   (should tag-instance)
   ;; tag-instance should have the button definition
   (should-equal (plist-get tag-instance :tag-name) 'button)
+  ;; tag-instance should have children with button text
+  (should-equal (plist-get tag-instance :children) '("Click"))
   ;; tag-instance should have definition with click handler
   (let ((definition (plist-get tag-instance :definition)))
     (should (plist-get definition :on-click))))
+
+;;; Test etaf-etml-tag integration - button tag text should be in event
+(let* ((result (etaf-etml-to-dom '(button "CLICK ME")))
+        (attrs (cadr result))
+        (tag-instance (cdr (assq 'etaf-tag-instance attrs)))
+        (event (etaf-etml-tag--make-event 'click tag-instance nil)))
+  ;; event should have text property with button text
+  (should-equal (plist-get event :text) "CLICK ME"))
 
 ;;; Test etaf-etml-tag integration - a tag should have tag-instance for events
 (let* ((result (etaf-etml-to-dom '(a :href "/test" "Link")))
