@@ -94,5 +94,72 @@ When CSS height is 3 lines, the rendered string should have 3 lines."
     (should (stringp buffer-string))
     (should (> (length buffer-string) 0))))
 
+;;; Tests for nil viewport dimensions
+
+(ert-deftest etaf-layout-test-parse-length-nil-reference ()
+  "Test parsing percentage values with nil reference width.
+When reference-width is nil, percentage values should return 'auto."
+  (should (eq (etaf-layout-parse-length "50%" nil) 'auto))
+  (should (eq (etaf-layout-parse-length "100%" nil) 'auto)))
+
+(ert-deftest etaf-layout-test-parse-height-nil-reference ()
+  "Test parsing percentage values with nil reference height.
+When reference-height is nil, percentage values should return 'auto."
+  (should (eq (etaf-layout-parse-height "50%" nil) 'auto))
+  (should (eq (etaf-layout-parse-height "100%" nil) 'auto)))
+
+(ert-deftest etaf-layout-test-nil-viewport-width ()
+  "Test layout building with nil viewport width.
+When viewport width is nil, block elements should use content width (0)."
+  (let* ((dom (etaf-etml-to-dom
+               '(html
+                 (head
+                  (style "div { height: 3lh; }"))
+                 (body
+                  (div "Content")))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         ;; Use nil width in viewport
+         (layout-tree (etaf-layout-build-tree render-tree '(:width nil :height 768))))
+    ;; Layout tree should be created successfully
+    (should layout-tree)
+    (should (etaf-layout-get-box-model layout-tree))))
+
+(ert-deftest etaf-layout-test-nil-viewport-height ()
+  "Test layout building with nil viewport height.
+When viewport height is nil, percentage heights should return auto."
+  (let* ((dom (etaf-etml-to-dom
+               '(html
+                 (head
+                  (style "div { width: 200px; height: 5lh; }"))
+                 (body
+                  (div "Content")))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         ;; Use nil height in viewport
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height nil)))
+         (body-node (car (dom-non-text-children layout-tree)))
+         (div-node (car (dom-non-text-children body-node)))
+         (box-model (etaf-layout-get-box-model div-node)))
+    ;; Layout tree should be created successfully
+    (should layout-tree)
+    ;; The div should have explicit height 5
+    (should-equal (etaf-layout-box-content-height box-model) 5)))
+
+(ert-deftest etaf-layout-test-nil-viewport-both ()
+  "Test layout building with both width and height as nil.
+When both viewport dimensions are nil, elements should use natural dimensions."
+  (let* ((dom (etaf-etml-to-dom
+               '(html
+                 (body
+                  (div "Some text content")))))
+         (cssom (etaf-css-build-cssom dom))
+         (render-tree (etaf-render-build-tree dom cssom))
+         ;; Use nil for both width and height
+         (layout-tree (etaf-layout-build-tree render-tree '(:width nil :height nil))))
+    ;; Layout tree should be created successfully
+    (should layout-tree)
+    (should (etaf-layout-get-box-model layout-tree))))
+
 (provide 'etaf-layout-dimension-tests)
 ;;; etaf-layout-dimension-tests.el ends here
