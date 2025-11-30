@@ -16,6 +16,8 @@
 
 ;;; Code:
 
+(require 'cl-lib)  ; for cl-loop
+
 ;; 尝试加载完整的 etaf，如果失败则使用简化渲染
 (defvar etaf-demo--full-render-available nil
   "是否可以使用完整的 ETAF 渲染。")
