@@ -963,7 +963,8 @@ CSS是输入字符串，START是单词的起始位置。返回单词的结束位
 ;;; 组合器匹配
 
 (defun etaf-css-selector-descendant-match-p (node ancestor-nodes dom)
-  "检查节点NODE是否有祖先匹配ANCESTOR-NODES（后代组合器）。"
+  "检查节点NODE是否有祖先匹配ANCESTOR-NODES（后代组合器）。
+返回匹配的祖先节点，如果没有匹配则返回nil。"
   (catch 'found
     (dom-search
      dom
@@ -971,11 +972,12 @@ CSS是输入字符串，START是单词的起始位置。返回单词的结束位
        (when (and (etaf-css-selector-part-match-p
                    candidate ancestor-nodes)
                   (etaf-dom-is-descendant-of node candidate))
-         (throw 'found t))))
+         (throw 'found candidate))))
     nil))
 
 (defun etaf-css-selector-child-match-p (node parent-nodes dom)
-  "检查节点NODE的直接父节点是否匹配PARENT-NODES（子组合器）。"
+  "检查节点NODE的直接父节点是否匹配PARENT-NODES（子组合器）。
+返回匹配的父节点，如果没有匹配则返回nil。"
   ;; 简化实现：遍历DOM查找包含node作为直接子节点的节点
   (catch 'found
     (dom-search
@@ -985,7 +987,7 @@ CSS是输入字符串，START是单词的起始位置。返回单词的结束位
               candidate parent-nodes)
          (let ((children (dom-non-text-children candidate)))
            (when (memq node children)
-             (throw 'found t))))))
+             (throw 'found candidate))))))
     nil))
 
 (defun etaf-css-selector-adjacent-sibling-match-p
@@ -1015,21 +1017,30 @@ RIGHTMOST-COMBINATOR是连接node到前一个部分的组合器。"
     (let* ((current-part (car (last parts)))
            (remaining-parts (butlast parts))
            (combinator (or rightmost-combinator (cdr current-part)))
-           (selector-nodes (car current-part)))
+           (selector-nodes (car current-part))
+           (next-combinator (and remaining-parts
+                                  (cdr (car (last remaining-parts))))))
       (cond
        ;; 后代组合器（空格）
        ((or (null combinator) (string= combinator " "))
-        (and (etaf-css-selector-descendant-match-p
-              node selector-nodes dom)
-             (if remaining-parts
-                 ;; 递归检查剩余部分（需要找到匹配的祖先）
-                 t  ; 简化实现
-               t)))
+        (let ((matching-ancestor (etaf-css-selector-descendant-match-p
+                                  node selector-nodes dom)))
+          (and matching-ancestor
+               (if remaining-parts
+                   ;; 递归检查剩余部分，从匹配的祖先继续
+                   (etaf-css-selector-combinator-match-p
+                    matching-ancestor remaining-parts next-combinator dom)
+                 t))))
        ;; 子组合器 (>)
        ((string= combinator ">")
-        (and (etaf-css-selector-child-match-p
-              node selector-nodes dom)
-             (if remaining-parts t t)))
+        (let ((matching-parent (etaf-css-selector-child-match-p
+                                node selector-nodes dom)))
+          (and matching-parent
+               (if remaining-parts
+                   ;; 递归检查剩余部分，从匹配的父节点继续
+                   (etaf-css-selector-combinator-match-p
+                    matching-parent remaining-parts next-combinator dom)
+                 t))))
        ;; 相邻兄弟组合器 (+)
        ((string= combinator "+")
         (and (etaf-css-selector-adjacent-sibling-match-p
