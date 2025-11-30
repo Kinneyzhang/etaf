@@ -106,6 +106,20 @@ Returns nil if the class cannot be converted."
               (format "%s: %s" (car prop) (cdr prop)))
             css-props)))
 
+(defun etaf-ecss--process-tailwind-decl (decl)
+  "Process a Tailwind CSS declaration DECL and return CSS string.
+DECL should be a single-element list like (flex) or (bg-red-500).
+Returns a CSS declaration string or nil if conversion fails.
+Logs a warning if the Tailwind class cannot be converted to CSS."
+  (let* ((class-name (symbol-name (car decl)))
+         (css-strings (etaf-ecss--convert-tailwind-to-css-string class-name)))
+    (if css-strings
+        (mapconcat #'identity css-strings "; ")
+      ;; Log warning for Tailwind class that couldn't be converted
+      (message "Warning: Tailwind class '%s' could not be converted to CSS, treating as property"
+               class-name)
+      nil)))
+
 ;;; CSS Selector Expressions
 
 (defun etaf-ecss-selector (expr)
@@ -344,12 +358,9 @@ Example:
                    (cond
                     ;; Check if it's a Tailwind CSS utility class
                     ((etaf-ecss--tailwind-class-p decl)
-                     (let* ((class-name (symbol-name (car decl)))
-                            (css-strings (etaf-ecss--convert-tailwind-to-css-string class-name)))
-                       (if css-strings
-                           (mapconcat #'identity css-strings "; ")
+                     (or (etaf-ecss--process-tailwind-decl decl)
                          ;; Fall back to treating it as a property if not recognized
-                         (apply #'etaf-ecss-property decl))))
+                         (apply #'etaf-ecss-property decl)))
                     ;; Standard cons/list declarations
                     ((consp decl)
                      (if (listp (cdr decl))
@@ -501,12 +512,9 @@ Returns: \"property1: value1; property2: value2\""
                    (cond
                     ;; Tailwind CSS utility class
                     ((etaf-ecss--tailwind-class-p decl)
-                     (let* ((class-name (symbol-name (car decl)))
-                            (css-strings (etaf-ecss--convert-tailwind-to-css-string class-name)))
-                       (if css-strings
-                           (mapconcat #'identity css-strings "; ")
+                     (or (etaf-ecss--process-tailwind-decl decl)
                          ;; Fall back to treating it as a property
-                         (apply #'etaf-ecss-property decl))))
+                         (apply #'etaf-ecss-property decl)))
                     ;; Standard property expression
                     (t (apply #'etaf-ecss-property decl))))
                  declarations)))
