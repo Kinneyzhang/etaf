@@ -236,7 +236,7 @@ ETAF 支持 Vue 风格的模板指令：
 (require 'etaf-ecss)
 
 ;; 创建 CSS 规则
-(ecss ".box"
+(etaf-ecss ".box"
   '(background "red")
   '(padding 10)
   '(border 1 solid "black"))
