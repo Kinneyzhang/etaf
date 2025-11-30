@@ -89,7 +89,8 @@ VIEWPORT 是视口大小 (:width w :height h)。
   - 当 height 为 nil 时，容器的高度将根据内容自动计算。
 返回布局树根节点。"
   (let ((root-context (list :content-width (plist-get viewport :width)
-                            :content-height (plist-get viewport :height))))
+                            :content-height (plist-get viewport :height)
+                            :is-root t)))
     (etaf-layout-node render-tree root-context)))
 
 (defun etaf-layout-walk (layout-tree func)
@@ -114,10 +115,12 @@ RENDER-NODE 是渲染节点。
 PARENT-CONTEXT 包含父容器的上下文信息：
   :content-width  - 可用内容宽度
   :content-height - 可用内容高度
+  :is-root        - 是否为根元素（可选）
 返回盒模型 plist。"
   (let* ((style (etaf-render-get-computed-style render-node))
          (parent-width (plist-get parent-context :content-width))
          (parent-height (plist-get parent-context :content-height))
+         (is-root (plist-get parent-context :is-root))
          
          ;; 提取样式值
          (box-sizing (etaf-layout-parse-style-value
@@ -301,10 +304,13 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (content-width (min (or max-width-val most-positive-fixnum)
                              (max min-width-val base-content-width)))
          
+         ;; 计算基础高度
+         ;; - 如果有显式 CSS 高度，使用该值
+         ;; - 如果是根元素且有视口高度约束，使用视口高度
+         ;; - 否则使用 0（后续根据内容计算）
          (base-content-height (if (eq height-value 'auto)
-                                  ;; 当高度为 auto 时，如果有父容器高度约束，则使用父容器高度
-                                  ;; 减去 padding/border/margin 作为基础高度（类似宽度的计算逻辑）
-                                  (if (and parent-height (not is-inline) (not is-in-flex-container))
+                                  (if (and is-root parent-height)
+                                      ;; 根元素使用视口高度作为约束
                                       (max 0 (- parent-height
                                                 padding-top-val padding-bottom-val
                                                 border-top-val border-bottom-val
