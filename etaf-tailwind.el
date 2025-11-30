@@ -1826,11 +1826,10 @@ CSS-PROPS是 ((property . value) ...) 格式的alist。
 (defun etaf-tailwind-class-applies-p (class-name &optional dark-mode)
   "检查类名是否应该在当前模式下应用。
 DARK-MODE参数控制主题模式判断:
-- 当参数未提供时: 使用`etaf-theme-dark-p`自动检测当前主题模式
+- 当参数未提供或为nil时: 使用`etaf-theme-dark-p`自动检测当前主题模式
 - t 或 :dark: 强制使用暗色模式
-- nil 或 :light: 强制使用亮色模式
+- :light: 强制使用亮色模式
 - :auto: 显式要求自动检测当前主题模式
-- 其他值: 回退到自动检测
 
 类应用规则：
 - 无dark变体的类：始终应用
@@ -1838,9 +1837,8 @@ DARK-MODE参数控制主题模式判断:
   (let ((is-dark (cond
                   ((eq dark-mode t) t)
                   ((eq dark-mode :dark) t)
-                  ((eq dark-mode nil) nil)
                   ((eq dark-mode :light) nil)
-                  ;; :auto 或其他任何值都回退到自动检测
+                  ;; nil, :auto 或其他任何值都回退到自动检测
                   (t (etaf-theme-dark-p))))
         (has-dark (etaf-tailwind-has-dark-variant-p class-name)))
     (if has-dark
@@ -1851,9 +1849,9 @@ DARK-MODE参数控制主题模式判断:
   "根据主题模式过滤Tailwind类名列表。
 CLASSES是类名列表或空格分隔的字符串。
 DARK-MODE参数控制主题模式判断:
-- 当参数未提供时: 使用`etaf-theme-dark-p`自动检测当前主题模式
+- 当参数未提供或为nil时: 使用`etaf-theme-dark-p`自动检测当前主题模式
 - t 或 :dark: 强制使用暗色模式
-- nil 或 :light: 强制使用亮色模式
+- :light: 强制使用亮色模式
 - :auto: 显式要求自动检测当前主题模式
 
 返回应该在当前模式下应用的类名列表。"
@@ -1869,9 +1867,9 @@ DARK-MODE参数控制主题模式判断:
   "将Tailwind类名转换为CSS属性列表，考虑dark模式。
 CLASS-NAMES是类名列表或空格分隔的字符串。
 DARK-MODE参数控制主题模式判断:
-- 当参数未提供时: 使用`etaf-theme-dark-p`自动检测当前主题模式
+- 当参数未提供或为nil时: 使用`etaf-theme-dark-p`自动检测当前主题模式
 - t 或 :dark: 强制使用暗色模式
-- nil 或 :light: 强制使用亮色模式
+- :light: 强制使用亮色模式
 - :auto: 显式要求自动检测当前主题模式
 
 此函数会：
@@ -1882,7 +1880,7 @@ DARK-MODE参数控制主题模式判断:
 
 示例：
   ;; 在亮色模式下
-  (etaf-tailwind-classes-to-css-with-mode \"bg-white dark:bg-gray-800\" nil)
+  (etaf-tailwind-classes-to-css-with-mode \"bg-white dark:bg-gray-800\" :light)
   ;; => ((background-color . \"#ffffff\"))
 
   ;; 在暗色模式下
@@ -1918,9 +1916,9 @@ DARK-MODE参数控制主题模式判断:
   "将Tailwind类名转换为CSS并应用到DOM节点，考虑dark模式。
 NODE是DOM节点，CLASS-NAMES是Tailwind类名列表或字符串。
 DARK-MODE参数控制主题模式判断:
-- 当参数未提供时: 使用`etaf-theme-dark-p`自动检测当前主题模式
+- 当参数未提供或为nil时: 使用`etaf-theme-dark-p`自动检测当前主题模式
 - t 或 :dark: 强制使用暗色模式
-- nil 或 :light: 强制使用亮色模式
+- :light: 强制使用亮色模式
 - :auto: 显式要求自动检测当前主题模式
 
 示例：
