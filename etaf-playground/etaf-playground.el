@@ -63,48 +63,48 @@
 
 ;;; Internal state
 
-(defvar etaf-playground--etml-content nil
+(defvar etaf-playground-etml-content nil
   "Current ETML content.")
 
-(defvar etaf-playground--css-content nil
+(defvar etaf-playground-css-content nil
   "Current CSS content.")
 
-(defvar etaf-playground--elisp-content nil
+(defvar etaf-playground-elisp-content nil
   "Current Elisp content.")
 
-(defvar etaf-playground--output-content nil
+(defvar etaf-playground-output-content nil
   "Current rendered output content.")
 
-(defvar etaf-playground--error-message nil
+(defvar etaf-playground-error-message nil
   "Current error message if any.")
 
 ;;; Default content
 
-(defconst etaf-playground--default-etml
+(defconst etaf-playground-etml-string
   "(div :class \"demo\"
-  (h1 \"{{ title }}\")
+  (p \"{{ title }}\")
   (p \"{{ message }}\")
   (ul :e-if \"items\"
     (li :e-for \"item in items\" 
         \"{{ item }}\")))"
   "Default ETML template.")
 
-(defconst etaf-playground--default-css
+(defconst etaf-playground-css-string
   ".demo {
   padding-left: 16px;
   padding-right: 16px;
-  padding-top: 12px;
-  padding-bottom: 12px;
+  padding-top: 1lh;
+  padding-bottom: 1lh;
 }
 h1 {
   color: #2563eb;
-  margin-bottom: 8px;
+  margin-bottom: 1lh;
 }
 p {
-  margin-bottom: 12px;
+  margin-bottom: 1lh;
 }
 li {
-  margin-bottom: 4px;
+  margin-bottom: 1lh;
 }"
   "Default CSS styles.")
 
@@ -116,61 +116,6 @@ li {
 
 ;;; ECSS styles for playground UI
 
-(defconst etaf-playground--ui-ecss
-  '((".playground"
-     (display "flex"))
-    (".left-panel"
-     (width 400)
-     (padding-right 16)
-     (border-right-width 1)
-     (border-right-color "#e5e7eb"))
-    (".right-panel"
-     (width 500)
-     (padding-left 16))
-    (".panel-title"
-     (color "#6366f1")
-     (margin-bottom 1)
-     (padding-bottom 0)
-     (border-bottom-width 1)
-     (border-bottom-color "#e5e7eb"))
-    (".section"
-     (margin-bottom 1))
-    (".section-title"
-     (color "#374151")
-     (margin-bottom 0))
-    (".code-block"
-     (padding-left 8)
-     (padding-right 8)
-     (padding-top 0)
-     (padding-bottom 0)
-     (background-color "#f9fafb")
-     (border-left-width 2)
-     (border-left-color "#6366f1"))
-    (".output-area"
-     (padding-left 12)
-     (padding-right 12)
-     (padding-top 0)
-     (padding-bottom 0)
-     (background-color "#f0fdf4")
-     (border-left-width 3)
-     (border-left-color "#10b981"))
-    (".error-area"
-     (padding-left 12)
-     (padding-right 12)
-     (padding-top 0)
-     (padding-bottom 0)
-     (background-color "#fef2f2")
-     (border-left-width 3)
-     (border-left-color "#ef4444")
-     (color "#dc2626"))
-    (".button-row"
-     (margin-top 1)
-     (margin-bottom 1))
-    (".hint"
-     (color "#9ca3af")
-     (margin-top 1)))
-  "ECSS styles for the playground UI.")
-
 ;;; Helper functions
 
 (defun etaf-playground--safe-read (str)
@@ -178,7 +123,7 @@ li {
   (condition-case err
       (read str)
     (error
-     (setq etaf-playground--error-message
+     (setq etaf-playground-error-message
            (format "Parse error: %s" (error-message-string err)))
      nil)))
 
@@ -194,20 +139,20 @@ evaluated expression."
   (condition-case err
       (eval expr t)  ; t enables lexical binding
     (error
-     (setq etaf-playground--error-message
+     (setq etaf-playground-error-message
            (format "Eval error: %s" (error-message-string err)))
      nil)))
 
 (defun etaf-playground--render-user-content ()
   "Render user's ETML with their CSS and data."
-  (setq etaf-playground--error-message nil)
-  (let* ((etml-sexp (etaf-playground--safe-read etaf-playground--etml-content))
-         (data-expr (etaf-playground--safe-read etaf-playground--elisp-content))
+  (setq etaf-playground-error-message nil)
+  (let* ((etml-sexp (etaf-playground--safe-read etaf-playground-etml-content))
+         (data-expr (etaf-playground--safe-read etaf-playground-elisp-content))
          (data (when data-expr (etaf-playground--safe-eval data-expr))))
-    (if etaf-playground--error-message
-        (setq etaf-playground--output-content nil)
+    (if etaf-playground-error-message
+        (setq etaf-playground-output-content nil)
       (condition-case err
-          (let* ((css etaf-playground--css-content)
+          (let* ((css etaf-playground-css-content)
                  ;; Wrap user ETML with html/head/style structure
                  (full-etml `(html
                               (head
@@ -215,11 +160,11 @@ evaluated expression."
                               (body ,etml-sexp)))
                  (rendered (etaf-string full-etml data nil
                                         etaf-playground-output-width nil)))
-            (setq etaf-playground--output-content rendered))
+            (setq etaf-playground-output-content rendered))
         (error
-         (setq etaf-playground--error-message
+         (setq etaf-playground-error-message
                (format "Render error: %s" (error-message-string err)))
-         (setq etaf-playground--output-content nil))))))
+         (setq etaf-playground-output-content nil))))))
 
 ;;; Build playground ETML
 
@@ -227,45 +172,34 @@ evaluated expression."
   "Build the playground UI as ETML structure."
   `(html
     (head
-     (style ,(apply #'etaf-ecss-stylesheet etaf-playground--ui-ecss)))
-    (body
-     (div :class "playground"
-          ;; Left panel - Input
-          (div :class "left-panel"
-               (div :class "panel-title" "ETAF Playground - Input")
-               
-               ;; ETML section
-               (div :class "section"
-                    (div :class "section-title" "ETML Structure:")
-                    (div :class "code-block"
-                         (pre ,etaf-playground--etml-content)))
-               
-               ;; CSS section
-               (div :class "section"
-                    (div :class "section-title" "CSS Styles:")
-                    (div :class "code-block"
-                         (pre ,etaf-playground--css-content)))
-               
-               ;; Elisp section
-               (div :class "section"
-                    (div :class "section-title" "Elisp Data:")
-                    (div :class "code-block"
-                         (pre ,etaf-playground--elisp-content)))
-               
-               ;; Hints
-               (div :class "hint"
-                    "Press C-c C-c to render | C-c C-e to edit | C-c C-r to reset"))
-          
-          ;; Right panel - Output
-          (div :class "right-panel"
-               (div :class "panel-title" "Rendered Output")
-               ,(if etaf-playground--error-message
-                    `(div :class "error-area"
-                          (div "Error:")
-                          (div ,etaf-playground--error-message))
-                  `(div :class "output-area"
-                        ,(or etaf-playground--output-content
-                             "(Click Run or press C-c C-c to render)"))))))))
+     (style (ecss "#pannel-input > div" "border-x border-t border-gray-500")
+            (ecss "#pannel-input > div > p" "px-10 bg-gray-600 dark:bg-gray-100")
+            (ecss "#pannel-input > div > div" "px-10 py-1")))
+    (body :class "ml-20 mt-1"
+          (div :class "flex justify-between pl-6 w-400"
+               (div "ETAF Playground")
+               (div (button "Format") " " (button "Run") " " (button "Clear")))
+          (div :class "flex w-1000 mt-1"
+               (div :id "pannel-input" :class "w-400"
+                    (div (p "ETML Structure:")
+                         (div (pre ,etaf-playground-etml-content)))
+                    (div (p "CSS Styles:")
+                         (div (pre ,etaf-playground-css-content)))
+                    (div :class "border-b border-gray-500"
+                         (p "Elisp Data:")
+                         (div (pre ,etaf-playground-elisp-content)))
+                    (p :class "mt-1 text-gray-300"
+                       "Press C-c C-c to render | C-c C-e to edit \
+| C-c C-r to reset"))
+               (div :id "pannel-output"
+                    :class "ml-20 w-400 border border-gray-500 px-10"
+                    ,(if etaf-playground-error-message
+                         `(div :class ""
+                               (div "Error:")
+                               (div ,etaf-playground-error-message))
+                       `(div :class ""
+                             ,(or etaf-playground-output-content
+                                  "(Click Run or press C-c C-c to render)"))))))))
 
 ;;; Render playground
 
@@ -277,11 +211,7 @@ evaluated expression."
       (let ((inhibit-read-only t)
             (etml (etaf-playground--build-etml)))
         (erase-buffer)
-        (insert (etaf-string etml nil nil
-                             (+ etaf-playground-input-width
-                                etaf-playground-output-width
-                                40)
-                             nil)))
+        (insert (etaf-string etml nil nil)))
       (goto-char (point-min))
       (setq buffer-read-only t))
     buffer))
@@ -296,11 +226,11 @@ evaluated expression."
 (defun etaf-playground--reset ()
   "Reset playground to default content."
   (interactive)
-  (setq etaf-playground--etml-content etaf-playground--default-etml)
-  (setq etaf-playground--css-content etaf-playground--default-css)
-  (setq etaf-playground--elisp-content etaf-playground--default-elisp)
-  (setq etaf-playground--output-content nil)
-  (setq etaf-playground--error-message nil)
+  (setq etaf-playground-etml-content etaf-playground-etml-string)
+  (setq etaf-playground-css-content etaf-playground-css-string)
+  (setq etaf-playground-elisp-content etaf-playground--default-elisp)
+  (setq etaf-playground-output-content nil)
+  (setq etaf-playground-error-message nil)
   (etaf-playground--refresh)
   (message "Playground reset to defaults."))
 
@@ -310,12 +240,12 @@ evaluated expression."
   (let ((edit-buffer (get-buffer-create "*ETAF Playground - Edit ETML*")))
     (with-current-buffer edit-buffer
       (erase-buffer)
-      (insert etaf-playground--etml-content)
+      (insert etaf-playground-etml-content)
       (emacs-lisp-mode)
       (local-set-key (kbd "C-c C-c")
                      (lambda ()
                        (interactive)
-                       (setq etaf-playground--etml-content (buffer-string))
+                       (setq etaf-playground-etml-content (buffer-string))
                        (kill-buffer)
                        (etaf-playground--run))))
     (switch-to-buffer-other-window edit-buffer)
@@ -327,12 +257,12 @@ evaluated expression."
   (let ((edit-buffer (get-buffer-create "*ETAF Playground - Edit CSS*")))
     (with-current-buffer edit-buffer
       (erase-buffer)
-      (insert etaf-playground--css-content)
+      (insert etaf-playground-css-content)
       (css-mode)
       (local-set-key (kbd "C-c C-c")
                      (lambda ()
                        (interactive)
-                       (setq etaf-playground--css-content (buffer-string))
+                       (setq etaf-playground-css-content (buffer-string))
                        (kill-buffer)
                        (etaf-playground--run))))
     (switch-to-buffer-other-window edit-buffer)
@@ -344,12 +274,12 @@ evaluated expression."
   (let ((edit-buffer (get-buffer-create "*ETAF Playground - Edit Elisp*")))
     (with-current-buffer edit-buffer
       (erase-buffer)
-      (insert etaf-playground--elisp-content)
+      (insert etaf-playground-elisp-content)
       (emacs-lisp-mode)
       (local-set-key (kbd "C-c C-c")
                      (lambda ()
                        (interactive)
-                       (setq etaf-playground--elisp-content (buffer-string))
+                       (setq etaf-playground-elisp-content (buffer-string))
                        (kill-buffer)
                        (etaf-playground--run))))
     (switch-to-buffer-other-window edit-buffer)
@@ -409,11 +339,11 @@ Key bindings:
   q        Quit"
   (interactive)
   ;; Initialize content
-  (setq etaf-playground--etml-content etaf-playground--default-etml)
-  (setq etaf-playground--css-content etaf-playground--default-css)
-  (setq etaf-playground--elisp-content etaf-playground--default-elisp)
-  (setq etaf-playground--output-content nil)
-  (setq etaf-playground--error-message nil)
+  (setq etaf-playground-etml-content etaf-playground-etml-string)
+  (setq etaf-playground-css-content etaf-playground-css-string)
+  (setq etaf-playground-elisp-content etaf-playground--default-elisp)
+  (setq etaf-playground-output-content nil)
+  (setq etaf-playground-error-message nil)
   ;; Render initial state
   (etaf-playground--render-user-content)
   (let ((buffer (etaf-playground--refresh)))

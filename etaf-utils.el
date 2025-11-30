@@ -3,6 +3,27 @@
 (require 'etaf-pixel)
 (require 'cl-lib)
 
+(defun etaf-theme-dark-p ()
+  (eq (frame-parameter nil 'background-mode) 'dark))
+
+(defun etaf-theme-light-p ()
+  (eq (frame-parameter nil 'background-mode) 'light))
+
+(defvar etaf-theme-background-change-hook nil
+  "Normal hook that is run after the background of theme changed.")
+
+(defun etaf-change-theme-background (orig-fun &rest args)
+  "Advice functon when load a theme."
+  (let ((before-bg (frame-parameter nil 'background-mode))
+        after-bg)
+    (apply orig-fun args)
+    (setq after-bg (frame-parameter nil 'background-mode))
+    (unless (eq before-bg after-bg)
+      (run-hooks 'etaf-theme-background-change-hook))))
+
+;;; use the following advice to detect theme background change.
+;; (advice-add #'load-theme :around #'etaf-change-theme-background)
+
 ;; Local replacements for dash functions to avoid external dependency
 (defun etaf-utils--interleave (list1 list2)
   "Interleave elements of LIST1 and LIST2.
