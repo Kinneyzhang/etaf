@@ -37,6 +37,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'etaf-utils)
 
 ;;; CSS 字体大小常量
 
@@ -248,6 +249,35 @@ DARK-STYLE 是暗色模式的 CSS 样式 alist。
           (add-face-text-property 0 (length result) face-spec t result)
           result)
       string)))
+
+(defun etaf-css-apply-face-with-dual-style (string light-style dark-style)
+  "将 CSS 样式应用到字符串，并保存双模式样式信息用于增量更新。
+STRING 是要添加 face 属性的字符串。
+LIGHT-STYLE 是亮色模式的 CSS 样式 alist。
+DARK-STYLE 是暗色模式的 CSS 样式 alist。
+
+此函数会：
+1. 根据当前主题模式应用对应的 face
+2. 如果亮色和暗色样式不同，添加 `etaf-dual-style` text property
+   保存双模式样式信息，用于主题切换时增量更新
+
+返回带有 face 和可能的 etaf-dual-style 属性的新字符串。"
+  (when (and string (> (length string) 0))
+    (let* ((result (copy-sequence string))
+           (light-face (etaf-css-style-to-face light-style))
+           (dark-face (etaf-css-style-to-face dark-style))
+           (is-dark (etaf-theme-dark-p))
+           (current-face (if is-dark dark-face light-face)))
+      ;; 应用当前主题对应的 face
+      (when current-face
+        (add-face-text-property 0 (length result) current-face t result))
+      ;; 如果亮色和暗色样式不同，保存双模式信息用于增量更新
+      (when (and light-face dark-face (not (equal light-face dark-face)))
+        (put-text-property 0 (length result)
+                           'etaf-dual-style
+                           (list :light light-face :dark dark-face)
+                           result))
+      result)))
 
 (provide 'etaf-css-face)
 ;;; etaf-css-face.el ends here

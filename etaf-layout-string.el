@@ -71,6 +71,7 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
   (let* ((box-model (or (etaf-layout-get-box-model layout-node)
                         (etaf-layout-box-create)))
          (computed-style (dom-attr layout-node 'render-style))
+         (computed-style-dark (dom-attr layout-node 'render-style-dark))
          (tag-instance (dom-attr layout-node 'etaf-tag-instance))
          (content-width (or (etaf-layout-box-content-width box-model) 0))
          (content-height-px
@@ -209,6 +210,35 @@ would otherwise appear as an extra space at the end of each line."
      lines
      "\n")))
 
+(defun etaf-layout-string--apply-dual-bgcolor-per-line (string bgcolor-light bgcolor-dark)
+  "Apply dual-mode background color to each line of STRING.
+
+STRING is a potentially multi-line string.
+BGCOLOR-LIGHT is the background color for light mode.
+BGCOLOR-DARK is the background color for dark mode.
+
+Applies the current mode's background color and saves dual-style info
+in `etaf-dual-style' text property for incremental updates on theme change."
+  (let ((lines (split-string string "\n"))
+        (is-dark (etaf-theme-dark-p))
+        (light-face `(:background ,bgcolor-light))
+        (dark-face `(:background ,bgcolor-dark)))
+    (mapconcat
+     (lambda (line)
+       (let ((result (copy-sequence line)))
+         (when (> (length result) 0)
+           ;; 应用当前主题对应的背景色
+           (add-face-text-property
+            0 (length result)
+            (if is-dark dark-face light-face) t result)
+           ;; 保存双模式信息用于增量更新
+           (put-text-property
+            0 (length result) 'etaf-dual-style
+            (list :light light-face :dark dark-face) result))
+         result))
+     lines
+     "\n")))
+
 (defun etaf-layout-string--build-box
     (inner-content effective-width content-height content-height-px
                    padding-top padding-right padding-bottom padding-left
@@ -254,15 +284,24 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                 (error inner-content))
             (etaf-pixel-blank effective-width content-height)))
          
-         ;; 1.5 应用文本样式
+         ;; 1.5 应用文本样式（支持双模式增量更新）
          (text-style (when computed-style
                        (cl-remove-if (lambda (pair)
                                        (eq (car pair) 'background-color))
                                      computed-style)))
+         (text-style-dark (when computed-style-dark
+                            (cl-remove-if (lambda (pair)
+                                            (eq (car pair) 'background-color))
+                                          computed-style-dark)))
          (styled-content
-          (if (and text-style (> (length sized-content) 0))
-              (etaf-css-apply-face-to-string sized-content text-style)
-            sized-content))
+          (cond
+           ;; 如果有双模式样式，使用带增量更新支持的函数
+           ((and text-style-dark (> (length sized-content) 0))
+            (etaf-css-apply-face-with-dual-style sized-content text-style text-style-dark))
+           ;; 否则使用普通函数
+           ((and text-style (> (length sized-content) 0))
+            (etaf-css-apply-face-to-string sized-content text-style))
+           (t sized-content)))
          
          ;; 计算渲染高度
          (styled-content-height (if (> (length styled-content) 0)
@@ -270,7 +309,7 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                                   0))
          (actual-content-height (if (> content-height-px 0)
                                     content-height-px
-                                  (max styled-content-height content-height)))
+                                  (max styled-content-height content-height))))
          
          ;; 计算是否溢出
          (is-overflow (and (> content-height-px 0)
@@ -388,18 +427,32 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                   with-h-padding))
             with-h-padding))
          
-         ;; 3.5 应用背景色
+         ;; 3.5 应用背景色（支持双模式增量更新）
          ;; 注意：背景色需要逐行应用，不能应用到换行符上，否则会导致每行结尾多一个空格的背景色
          (bgcolor (when computed-style
                     (cdr (assq 'background-color computed-style))))
+         (bgcolor-dark (when computed-style-dark
+                         (cdr (assq 'background-color computed-style-dark))))
          (with-bgcolor
-          (if (and bgcolor (> (length with-scroll-bar) 0))
-              (let ((emacs-color (etaf-css-color-to-emacs bgcolor)))
-                (if emacs-color
-                    (etaf-layout-string--apply-bgcolor-per-line
-                     with-scroll-bar emacs-color)
-                  with-scroll-bar))
-            with-scroll-bar))
+          (cond
+           ;; 如果有双模式背景色且不同，使用双模式函数
+           ((and bgcolor bgcolor-dark
+                 (not (equal bgcolor bgcolor-dark))
+                 (> (length with-scroll-bar) 0))
+            (let ((emacs-color-light (etaf-css-color-to-emacs bgcolor))
+                  (emacs-color-dark (etaf-css-color-to-emacs bgcolor-dark)))
+              (if (and emacs-color-light emacs-color-dark)
+                  (etaf-layout-string--apply-dual-bgcolor-per-line
+                   with-scroll-bar emacs-color-light emacs-color-dark)
+                with-scroll-bar)))
+           ;; 否则使用单一背景色
+           ((and bgcolor (> (length with-scroll-bar) 0))
+            (let ((emacs-color (etaf-css-color-to-emacs bgcolor)))
+              (if emacs-color
+                  (etaf-layout-string--apply-bgcolor-per-line
+                   with-scroll-bar emacs-color)
+                with-scroll-bar)))
+           (t with-scroll-bar)))
          
          ;; 4. 添加水平 border
          (with-border
