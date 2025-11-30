@@ -179,7 +179,7 @@ BOX-MODEL 是盒模型 plist。
 (defun etaf-layout-box-v-scroll-bar-type (box-model)
   "获取盒模型的垂直滚动条类型。
 BOX-MODEL 是盒模型 plist。
-返回滚动条类型符号，用于引用 `etaf-scroll-bar-alist' 中定义的滚动条风格。"
+返回滚动条类型符号，用于引用 `etaf-layout-scroll-bar-alist' 中定义的滚动条风格。"
   (let ((overflow (plist-get box-model :overflow)))
     (plist-get overflow :v-scroll-bar-type)))
 

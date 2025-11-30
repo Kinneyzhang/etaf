@@ -36,7 +36,7 @@
 (require 'etaf-css-face)
 (require 'etaf-layout-box)
 (require 'etaf-etml-tag)
-(require 'etaf-scroll-bar)
+(require 'etaf-layout-scroll)
 
 ;; Forward declarations
 (declare-function etaf-render-get-default-display "etaf-render")
@@ -465,19 +465,14 @@ IS-OVERFLOW 表示内容是否实际溢出。"
 
 (defun etaf-layout-string--create-scroll-bar (v-scroll-bar-type)
   "创建并配置滚动条对象。
-V-SCROLL-BAR-TYPE 是滚动条风格类型（符号），用于引用 etaf-scroll-bar-alist。
-返回配置好的 etaf-scroll-bar 对象。"
-  (let ((scroll-bar (etaf-scroll-bar)))
-    ;; 如果有定义的风格，应用风格设置
-    (when-let* ((type v-scroll-bar-type)
-                (kvs (alist-get type etaf-scroll-bar-alist)))
-      (apply #'etaf-oset scroll-bar kvs))
-    scroll-bar))
+V-SCROLL-BAR-TYPE 是滚动条风格类型（符号），用于引用 etaf-layout-scroll-bar-alist。
+返回配置好的滚动条 plist。"
+  (etaf-layout-scroll-bar-create v-scroll-bar-type))
 
 (defun etaf-layout-string--scroll-bar-pixel (v-scroll-bar-type)
   "获取滚动条的像素宽度。
 V-SCROLL-BAR-TYPE 是滚动条风格类型（符号）。"
-  (etaf-scroll-bar-pixel (etaf-layout-string--create-scroll-bar v-scroll-bar-type)))
+  (etaf-layout-scroll-bar-pixel (etaf-layout-string--create-scroll-bar v-scroll-bar-type)))
 
 (defun etaf-layout-string--compute-thumb-height (content-height content-linum)
   "根据内容高度和实际行数计算滚动条滑块高度。
@@ -514,24 +509,24 @@ V-SCROLL-BAR-TYPE 是滚动条风格类型。"
                           track-height content-linum))
            (thumb-offset 0))  ;; 初始偏移为 0
       ;; 设置滚动条属性
-      (oset scroll-bar track-height track-height)
-      (oset scroll-bar track-color scroll-track-color)
-      (oset scroll-bar thumb-height thumb-height)
-      (oset scroll-bar thumb-color scroll-thumb-color)
-      (oset scroll-bar thumb-offset thumb-offset)
-      (oset scroll-bar track-padding-top-height (floor padding-top))
-      (oset scroll-bar track-padding-bottom-height (floor padding-bottom))
+      (plist-put scroll-bar :track-height track-height)
+      (plist-put scroll-bar :track-color scroll-track-color)
+      (plist-put scroll-bar :thumb-height thumb-height)
+      (plist-put scroll-bar :thumb-color scroll-thumb-color)
+      (plist-put scroll-bar :thumb-offset thumb-offset)
+      (plist-put scroll-bar :track-padding-top-height (floor padding-top))
+      (plist-put scroll-bar :track-padding-bottom-height (floor padding-bottom))
       
       (pcase v-scroll-bar-p
         ('real
          ;; 真实滚动条
-         (etaf-scroll-bar-render scroll-bar nil nil))
+         (etaf-layout-scroll-bar-render scroll-bar nil nil))
         ('blank
          ;; 空白滚动条：将滑块颜色设为轨道颜色
-         (let ((color (oref scroll-bar track-color)))
-           (oset scroll-bar thumb-color color)
-           (oset scroll-bar thumb-border-color color)
-           (etaf-scroll-bar-render scroll-bar nil nil)))))))
+         (let ((color (plist-get scroll-bar :track-color)))
+           (plist-put scroll-bar :thumb-color color)
+           (plist-put scroll-bar :thumb-border-color color)
+           (etaf-layout-scroll-bar-render scroll-bar nil nil)))))))
 
 
 ;;; ============================================================
