@@ -75,8 +75,6 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
          (content-width (or (etaf-layout-box-content-width box-model) 0))
          (content-height-px
           (or (etaf-layout-box-content-height box-model) 0))
-
-         (_ (message "box-model:%S" box-model))
          
          ;; 获取盒模型各部分
          (padding (or (plist-get box-model :padding)
@@ -171,7 +169,6 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
                     (apply #'max (mapcar #'string-pixel-width lines))
                   (string-pixel-width inner-content)))
             content-width)))
-    (message "scroll-track-color in overflow:%S" scroll-track-color)
     (if (and (<= effective-width 0) (<= content-height 0))
         ""
       (etaf-layout-string--build-box
@@ -369,7 +366,6 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
             with-padding))
          
          ;; 3.3 添加垂直滚动条（在 padding 之后、border 之前）
-         (_ (message "scroll-track-color in box:%S" scroll-track-color))
          (with-scroll-bar
           (if v-scroll-bar-p
               (let* ((scroll-bar-str (etaf-layout-string--render-v-scroll-bar
@@ -590,7 +586,6 @@ SCROLL-UUID 是可选的滚动区域标识符，用于关联滚动条和内容�
       ;; 设置滚动条属性 - 必须捕获 plist-put 的返回值
       (setq scroll-bar (plist-put scroll-bar :track-height track-height))
       ;; 只有当显式提供颜色时才覆盖滚动条类型定义的颜色
-      (message "scroll-track-color:%S" scroll-track-color)
       (when scroll-track-color
         (setq scroll-bar
               (plist-put scroll-bar :track-color scroll-track-color)))
