@@ -179,7 +179,7 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
        border-top-color border-right-color
        border-bottom-color border-left-color
        margin-top margin-right margin-bottom margin-left
-       computed-style tag-instance
+       computed-style computed-style-dark tag-instance
        ;; 新增溢出相关参数
        overflow-y v-scroll-bar-type v-scroll-bar-direction
        scroll-thumb-color scroll-track-color
@@ -245,13 +245,16 @@ in `etaf-dual-style' text property for incremental updates on theme change."
                    border-top border-right border-bottom border-left
                    border-top-color border-right-color border-bottom-color border-left-color
                    margin-top margin-right margin-bottom margin-left
-                   computed-style
+                   computed-style computed-style-dark
                    &optional tag-instance overflow-y v-scroll-bar-type v-scroll-bar-direction
                    scroll-thumb-color scroll-track-color natural-content-height)
   "构建盒模型字符串，支持垂直溢出处理和滚动条。
 
 如果 TAG-INSTANCE 非空且包含事件处理器，则将 keymap 等文本属性应用到最终字符串上，
 使得按键事件在字符串插入到 buffer 后能够生效。
+
+COMPUTED-STYLE 是亮色模式的计算样式 alist。
+COMPUTED-STYLE-DARK 是暗色模式的计算样式 alist，用于支持双模式增量更新。
 
 OVERFLOW-Y 是垂直溢出处理方式:
   - \"visible\": 溢出内容正常显示（默认）
