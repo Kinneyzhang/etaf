@@ -125,7 +125,7 @@ the final string with keymap properties."
                                    (plist-get tag-def :on-keydown)
                                    (plist-get tag-def :hover-style))))
               (when has-events
-                (let ((tag-instance (etaf-etml-tag-create-instance tag attrs nil)))
+                (let ((tag-instance (etaf-etml-tag-create-instance tag attrs rest)))
                   (push (cons 'etaf-tag-instance tag-instance) attr-alist)))))
           (let ((children (mapcar #'etaf-etml-to-dom rest)))
             (cons tag (cons attr-alist children))))))))
