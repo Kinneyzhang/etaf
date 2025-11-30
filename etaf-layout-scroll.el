@@ -51,8 +51,8 @@
 ;;; ============================================================
 
 (defvar etaf-layout-scroll-bar-alist nil
-  "存储不同风格滚动栏的定义的 alist。
-car 是滚动栏的名称（符号），cdr 是滚动栏的 plist 配置。")
+  "存储不同风格滚动条的定义的 alist。
+car 是滚动条的名称（符号），cdr 是滚动条的 plist 配置。")
 
 (defmacro etaf-layout-scroll-bar-define (name &rest kvs)
   "定义不同风格滚动条。
