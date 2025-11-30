@@ -170,36 +170,36 @@ evaluated expression."
 
 (defun etaf-playground--build-etml ()
   "Build the playground UI as ETML structure."
-  `(html
-    (head
-     (style (ecss "#pannel-input > div" "border-x border-t border-gray-500")
-            (ecss "#pannel-input > div > p" "px-10 bg-gray-600 dark:bg-gray-100")
-            (ecss "#pannel-input > div > div" "px-10 py-1")))
-    (body :class "ml-20 mt-1"
-          (div :class "flex justify-between pl-6 w-400"
-               (div "ETAF Playground")
-               (div (button "Format") " " (button "Run") " " (button "Clear")))
-          (div :class "flex w-1000 mt-1"
-               (div :id "pannel-input" :class "w-400"
-                    (div (p "ETML Structure:")
-                         (div (pre ,etaf-playground-etml-content)))
-                    (div (p "CSS Styles:")
-                         (div (pre ,etaf-playground-css-content)))
-                    (div :class "border-b border-gray-500"
-                         (p "Elisp Data:")
-                         (div (pre ,etaf-playground-elisp-content)))
-                    (p :class "mt-1 text-gray-300"
-                       "Press C-c C-c to render | C-c C-e to edit \
-| C-c C-r to reset"))
-               (div :id "pannel-output"
-                    :class "ml-20 w-400 border border-gray-500 px-10"
-                    ,(if etaf-playground-error-message
-                         `(div :class ""
-                               (div "Error:")
-                               (div ,etaf-playground-error-message))
-                       `(div :class ""
-                             ,(or etaf-playground-output-content
-                                  "(Click Run or press C-c C-c to render)"))))))))
+  `(div
+    (style (ecss "#pannel-input > div"
+                 "border-x border-t border-gray-500")
+           (ecss "#pannel-input > div > p"
+                 "pl-10 dark:bg-gray-600 bg-stone-600 text-rose-400 italic")
+           (ecss "#pannel-input > div > div"
+                 "px-10 py-1"))
+    (div :class "ml-20 mt-1"
+         (div :class "flex justify-between pl-6 w-400"
+              (div "ETAF Playground")
+              (div (button "Format") " " (button "Run")
+                   " " (button "Clear")))
+         (div :class "flex w-1000 mt-1"
+              (div :id "pannel-input" :class "w-400"
+                   (div (p "ETML Structure")
+                        (div (p ,etaf-playground-etml-content)))
+                   (div (p "CSS Styles")
+                        (div (p ,etaf-playground-css-content)))
+                   (div :class "border-b border-gray-500"
+                        (p "Elisp Data")
+                        (div (p ,etaf-playground-elisp-content))))
+              (div :id "pannel-output"
+                   :class "ml-20 w-400 border border-gray-500 px-10"
+                   ,(if etaf-playground-error-message
+                        `(div :class ""
+                              (div "Error:")
+                              (div ,etaf-playground-error-message))
+                      `(div :class ""
+                            ,(or etaf-playground-output-content
+                                 "(Click Run or press C-c C-c to render)"))))))))
 
 ;;; Render playground
 
