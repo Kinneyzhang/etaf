@@ -1,8 +1,13 @@
 ;; -*- lexical-binding: t -*-
 ;;; String operation related to pixel
 
-(require 's)
 (require 'ekp)
+
+;; Local replacement for s-wrap to avoid external dependency
+(defun etaf-pixel--wrap-string (s left &optional right)
+  "Wrap string S with LEFT and RIGHT strings.
+If RIGHT is nil, use LEFT for both sides."
+  (concat left s (or right left)))
 
 (defun etaf-pixel-spacing (pixel)
   "Return a pixel spacing with a PIXEL pixel width."
@@ -13,8 +18,8 @@
 (defun etaf-pixel-pad (s prefix-pixel &optional suffix-pixel)
   "Pad the start of string S with PREFIX-PIXEL pixel width of
 pixel spacing, and the end of string S with SUFFIX-PIXEL pixel width."
-  (s-wrap s (etaf-pixel-spacing prefix-pixel)
-          (etaf-pixel-spacing (or suffix-pixel 0))))
+  (etaf-pixel--wrap-string s (etaf-pixel-spacing prefix-pixel)
+                           (etaf-pixel-spacing (or suffix-pixel 0))))
 
 (defun etaf-pixel--smart-offset (s total-pixel offset-pixel)
   "When OFFSET is a positive number, there is a offset pixel distance
