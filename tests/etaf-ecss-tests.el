@@ -316,5 +316,42 @@
     (should (string-match-p "width: 800px" result))
     (should (string-match-p "background-color: #ef4444" result))))
 
+;;; ETML Style Tag with (ecss ...) Tests
+
+(ert-deftest etaf-ecss-test-etml-style-tag-ecss ()
+  "Test (ecss ...) forms in style tags are converted to CSS."
+  (require 'etaf-etml)
+  (let* ((dom (etaf-etml-to-dom
+               '(html
+                 (head
+                  (style
+                   (ecss ".test" "flex items-center")
+                   (ecss "#main" "bg-red-500")))
+                 (body
+                  (div :class "test" "Hello")))))
+         (style-node (car (dom-by-tag dom 'style)))
+         (style-content (car (dom-children style-node))))
+    (should (stringp style-content))
+    (should (string-match-p "\\.test" style-content))
+    (should (string-match-p "display: flex" style-content))
+    (should (string-match-p "#main" style-content))
+    (should (string-match-p "background-color: #ef4444" style-content))))
+
+(ert-deftest etaf-ecss-test-etml-style-tag-ecss-with-props ()
+  "Test (ecss ...) with mixed Tailwind and properties in style tags."
+  (require 'etaf-etml)
+  (let* ((dom (etaf-etml-to-dom
+               '(html
+                 (head
+                  (style
+                   (ecss ".card" "flex items-center" (padding 20))))
+                 (body))))
+         (style-node (car (dom-by-tag dom 'style)))
+         (style-content (car (dom-children style-node))))
+    (should (stringp style-content))
+    (should (string-match-p "\\.card" style-content))
+    (should (string-match-p "display: flex" style-content))
+    (should (string-match-p "padding: 20px" style-content))))
+
 (provide 'etaf-ecss-tests)
 ;;; etaf-ecss-tests.el ends here
