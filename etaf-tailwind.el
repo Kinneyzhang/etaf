@@ -1878,6 +1878,7 @@ DARK-MODE参数控制主题模式判断:
 1. 根据当前主题模式过滤类名（dark:前缀的类只在暗色模式下应用）
 2. 将过滤后的类名转换为CSS属性
 3. 暗色模式下，dark:类的CSS属性会覆盖同名的普通类属性
+   （无论输入顺序如何，dark:类总是最后处理以确保正确覆盖）
 
 示例：
   ;; 在亮色模式下
@@ -1892,8 +1893,19 @@ DARK-MODE参数控制主题模式判断:
                     class-names))
          (filtered-classes (etaf-tailwind-filter-classes-by-mode
                             classes dark-mode))
+         ;; 将类名分为基础类和dark变体类，确保dark变体类最后处理
+         ;; 这样无论输入顺序如何，dark:类都能正确覆盖基础类
+         ;; 使用单次遍历进行分区以优化性能
+         (base-classes '())
+         (dark-classes '())
          (css-props '()))
+    ;; 单次遍历分区：基础类和dark变体类
     (dolist (class filtered-classes)
+      (if (etaf-tailwind-has-dark-variant-p class)
+          (push class dark-classes)
+        (push class base-classes)))
+    ;; 先处理基础类（逆序恢复原顺序），再处理dark类（逆序恢复原顺序）
+    (dolist (class (append (nreverse base-classes) (nreverse dark-classes)))
       (let ((props (etaf-tailwind-to-css class)))
         (when props
           (dolist (prop props)

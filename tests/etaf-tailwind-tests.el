@@ -684,6 +684,18 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
     (should (equal (cdr (assq 'color result)) "#f1f5f9"))
     (should (equal (cdr (assq 'border-color result)) "#334155"))))
 
+(ert-deftest etaf-tailwind-test-dark-variant-first-order ()
+  "测试 dark 变体在输入中排在前面时仍能正确覆盖基础类。
+这是问题 'dark:bg-gray-800 bg-white 在暗色模式下返回 #ffffff' 的修复测试。"
+  ;; 在暗色模式下，无论输入顺序如何，dark:bg-gray-800 都应该生效
+  (let ((result (etaf-tailwind-classes-to-css-with-mode
+                 "dark:bg-gray-800 bg-white" :dark)))
+    (should (equal (cdr (assq 'background-color result)) "#1f2937")))
+  ;; 在亮色模式下，dark:bg-gray-800 应该被忽略
+  (let ((result (etaf-tailwind-classes-to-css-with-mode
+                 "dark:bg-gray-800 bg-white" :light)))
+    (should (equal (cdr (assq 'background-color result)) "#ffffff"))))
+
 (provide 'etaf-tailwind-tests)
 
 ;;; etaf-tailwind-tests.el ends here
