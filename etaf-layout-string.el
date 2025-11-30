@@ -206,14 +206,15 @@ would otherwise appear as an extra space at the end of each line."
      lines
      "\n")))
 
-(defun etaf-layout-string--build-box (inner-content effective-width content-height content-height-px
-                                                     padding-top padding-right padding-bottom padding-left
-                                                     border-top border-right border-bottom border-left
-                                                     border-top-color border-right-color border-bottom-color border-left-color
-                                                     margin-top margin-right margin-bottom margin-left
-                                                     computed-style
-                                                     &optional tag-instance overflow-y v-scroll-bar-type v-scroll-bar-direction
-                                                     scroll-thumb-color scroll-track-color natural-content-height)
+(defun etaf-layout-string--build-box
+    (inner-content effective-width content-height content-height-px
+                   padding-top padding-right padding-bottom padding-left
+                   border-top border-right border-bottom border-left
+                   border-top-color border-right-color border-bottom-color border-left-color
+                   margin-top margin-right margin-bottom margin-left
+                   computed-style
+                   &optional tag-instance overflow-y v-scroll-bar-type v-scroll-bar-direction
+                   scroll-thumb-color scroll-track-color natural-content-height)
   "构建盒模型字符串，支持垂直溢出处理和滚动条。
 
 如果 TAG-INSTANCE 非空且包含事件处理器，则将 keymap 等文本属性应用到最终字符串上，
@@ -236,12 +237,15 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
   (let* (;; 设置默认值
          (overflow-y (or overflow-y "visible"))
          (v-scroll-bar-direction (or v-scroll-bar-direction 'right))
-         (scroll-thumb-color (or scroll-thumb-color (face-attribute 'default :foreground)))
-         (scroll-track-color (or scroll-track-color (face-attribute 'default :background)))
-         (natural-content-height (or natural-content-height
-                                     (if (> (length inner-content) 0)
-                                         (etaf-string-linum inner-content)
-                                       0)))
+         (scroll-thumb-color
+          (or scroll-thumb-color (face-attribute 'default :foreground)))
+         (scroll-track-color
+          (or scroll-track-color (face-attribute 'default :background)))
+         (natural-content-height
+          (or natural-content-height
+              (if (> (length inner-content) 0)
+                  (etaf-string-linum inner-content)
+                0)))
          
          ;; 1. 调整内容宽度
          (sized-content
@@ -256,9 +260,10 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                        (cl-remove-if (lambda (pair)
                                        (eq (car pair) 'background-color))
                                      computed-style)))
-         (styled-content (if (and text-style (> (length sized-content) 0))
-                             (etaf-css-apply-face-to-string sized-content text-style)
-                           sized-content))
+         (styled-content
+          (if (and text-style (> (length sized-content) 0))
+              (etaf-css-apply-face-to-string sized-content text-style)
+            sized-content))
          
          ;; 计算渲染高度
          (styled-content-height (if (> (length styled-content) 0)
@@ -292,32 +297,35 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
          ;; 重新计算实际内容高度（visible 模式下使用自然高度）
          (actual-display-height
           (if (string= overflow-y "visible")
-              (max natural-content-height (if (> content-height-px 0) content-height-px 0))
+              (max natural-content-height
+                   (if (> content-height-px 0) content-height-px 0))
             actual-content-height))
          
          (inner-height (+ actual-display-height padding-top padding-bottom))
          
          ;; 2. 添加垂直 padding
-         (with-padding (if (and (> effective-width 0)
-                                (or (> padding-top 0) (> padding-bottom 0)))
-                           (etaf-lines-stack
-                            (list (when (> padding-top 0)
-                                    (etaf-pixel-blank effective-width padding-top))
-                                  height-constrained-content
-                                  (when (> padding-bottom 0)
-                                    (etaf-pixel-blank effective-width padding-bottom))))
-                         height-constrained-content))
+         (with-padding
+          (if (and (> effective-width 0)
+                   (or (> padding-top 0) (> padding-bottom 0)))
+              (etaf-lines-stack
+               (list (when (> padding-top 0)
+                       (etaf-pixel-blank effective-width padding-top))
+                     height-constrained-content
+                     (when (> padding-bottom 0)
+                       (etaf-pixel-blank effective-width padding-bottom))))
+            height-constrained-content))
          
          ;; 3. 添加水平 padding
-         (with-h-padding (if (and (> inner-height 0)
-                                  (or (> padding-left 0) (> padding-right 0)))
-                             (etaf-lines-concat
-                              (list (when (> padding-left 0)
-                                      (etaf-pixel-blank padding-left inner-height))
-                                    with-padding
-                                    (when (> padding-right 0)
-                                      (etaf-pixel-blank padding-right inner-height))))
-                           with-padding))
+         (with-h-padding
+          (if (and (> inner-height 0)
+                   (or (> padding-left 0) (> padding-right 0)))
+              (etaf-lines-concat
+               (list (when (> padding-left 0)
+                       (etaf-pixel-blank padding-left inner-height))
+                     with-padding
+                     (when (> padding-right 0)
+                       (etaf-pixel-blank padding-right inner-height))))
+            with-padding))
          
          ;; 3.3 添加垂直滚动条（在 padding 之后、border 之前）
          (with-scroll-bar
@@ -331,10 +339,13 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                                       scroll-thumb-color
                                       scroll-track-color
                                       v-scroll-bar-type)))
+                (message "scroll-bar-str:%S" scroll-bar-str)
                 (if (and scroll-bar-str (> (length scroll-bar-str) 0))
                     (pcase v-scroll-bar-direction
-                      ('right (etaf-lines-concat (list with-h-padding scroll-bar-str)))
-                      ('left (etaf-lines-concat (list scroll-bar-str with-h-padding)))
+                      ('right (etaf-lines-concat
+                               (list with-h-padding scroll-bar-str)))
+                      ('left (etaf-lines-concat
+                              (list scroll-bar-str with-h-padding)))
                       (_ with-h-padding))
                   with-h-padding))
             with-h-padding))
@@ -343,13 +354,14 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
          ;; 注意：背景色需要逐行应用，不能应用到换行符上，否则会导致每行结尾多一个空格的背景色
          (bgcolor (when computed-style
                     (cdr (assq 'background-color computed-style))))
-         (with-bgcolor (if (and bgcolor (> (length with-scroll-bar) 0))
-                           (let ((emacs-color (etaf-css-color-to-emacs bgcolor)))
-                             (if emacs-color
-                                 (etaf-layout-string--apply-bgcolor-per-line
-                                  with-scroll-bar emacs-color)
-                               with-scroll-bar))
-                         with-scroll-bar))
+         (with-bgcolor
+          (if (and bgcolor (> (length with-scroll-bar) 0))
+              (let ((emacs-color (etaf-css-color-to-emacs bgcolor)))
+                (if emacs-color
+                    (etaf-layout-string--apply-bgcolor-per-line
+                     with-scroll-bar emacs-color)
+                  with-scroll-bar))
+            with-scroll-bar))
          
          ;; 4. 添加水平 border
          (with-border (if (and (> inner-height 0)
@@ -402,12 +414,12 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                       (add-text-properties
                        0 (length result)
                        `(etaf-tag-instance ,tag-instance
-                         keymap ,keymap
-                         ,@(when (or has-click has-hover)
-                             '(mouse-face highlight))
-                         ,@(when has-click
-                             '(pointer hand))
-                         help-echo ,#'etaf-etml-tag--help-echo-handler)
+                                           keymap ,keymap
+                                           ,@(when (or has-click has-hover)
+                                               '(mouse-face highlight))
+                                           ,@(when has-click
+                                               '(pointer hand))
+                                           help-echo ,#'etaf-etml-tag--help-echo-handler)
                        result)
                       result)
                   with-v-border))
