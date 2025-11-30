@@ -68,7 +68,7 @@ KVS 是滚动条的配置键值对，值会在定义时被求值。"
   :track-padding-right-pixel 3)
 
 (etaf-layout-scroll-bar-define s2
-  :thumb-color "red"
+  :thumb-color "blue"
   :track-color "#ddd"
   :thumb-pixel 10
   :thumb-border-p t

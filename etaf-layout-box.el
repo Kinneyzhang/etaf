@@ -71,11 +71,12 @@
                       :bottom-color (face-attribute 'default :foreground)
                       :left-color (face-attribute 'default :foreground))
         :margin (list :top 0 :right 0 :bottom 0 :left 0)
-        :overflow (list :overflow-y "visible"
-                        :v-scroll-bar-type nil
-                        :v-scroll-bar-direction 'right
-                        :scroll-thumb-color (face-attribute 'default :foreground)
-                        :scroll-track-color (face-attribute 'default :background))))
+        :overflow
+        (list :overflow-y "visible"
+              :v-scroll-bar-type nil
+              :v-scroll-bar-direction nil
+              :scroll-thumb-color nil
+              :scroll-track-color nil)))
 
 ;;; ============================================================
 ;;; 内容区域访问器

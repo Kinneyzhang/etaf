@@ -72,13 +72,15 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
          (computed-style (dom-attr layout-node 'render-style))
          (tag-instance (dom-attr layout-node 'etaf-tag-instance))
          (content-width (or (etaf-layout-box-content-width box-model) 0))
-         (content-height-px (or (etaf-layout-box-content-height box-model) 0))
+         (content-height-px
+          (or (etaf-layout-box-content-height box-model) 0))
          
          ;; 获取盒模型各部分
          (padding (or (plist-get box-model :padding)
                       '(:top 0 :right 0 :bottom 0 :left 0)))
          (border (or (plist-get box-model :border)
-                     '(:top-width 0 :right-width 0 :bottom-width 0 :left-width 0)))
+                     '( :top-width 0 :right-width 0
+                        :bottom-width 0 :left-width 0)))
          (margin (or (plist-get box-model :margin)
                      '(:top 0 :right 0 :bottom 0 :left 0)))
          (overflow (or (plist-get box-model :overflow)
@@ -111,7 +113,8 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
          ;; 溢出处理属性
          (overflow-y (or (plist-get overflow :overflow-y) "visible"))
          (v-scroll-bar-type (plist-get overflow :v-scroll-bar-type))
-         (v-scroll-bar-direction (or (plist-get overflow :v-scroll-bar-direction) 'right))
+         (v-scroll-bar-direction
+          (or (plist-get overflow :v-scroll-bar-direction) 'right))
          ;; 只获取显式设置的颜色，不提供默认值（让滚动条类型定义的颜色优先）
          (scroll-thumb-color (plist-get overflow :scroll-thumb-color))
          (scroll-track-color (plist-get overflow :scroll-track-color))
@@ -125,7 +128,8 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
                      ((listp child)
                       (cons (etaf-layout-string-render-node child)
                             (or (dom-attr child 'render-display)
-                                (etaf-render-get-default-display (dom-tag child)))))
+                                (etaf-render-get-default-display
+                                 (dom-tag child)))))
                      ((stringp child)
                       (cons child "inline"))
                      (t (cons "" "inline"))))
@@ -171,7 +175,8 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
        inner-content effective-width content-height content-height-px
        padding-top padding-right padding-bottom padding-left
        border-top border-right border-bottom border-left
-       border-top-color border-right-color border-bottom-color border-left-color
+       border-top-color border-right-color
+       border-bottom-color border-left-color
        margin-top margin-right margin-bottom margin-left
        computed-style tag-instance
        ;; 新增溢出相关参数
@@ -236,10 +241,6 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
   (let* (;; 设置默认值
          (overflow-y (or overflow-y "visible"))
          (v-scroll-bar-direction (or v-scroll-bar-direction 'right))
-         (scroll-thumb-color
-          (or scroll-thumb-color (face-attribute 'default :foreground)))
-         (scroll-track-color
-          (or scroll-track-color (face-attribute 'default :background)))
          (natural-content-height
           (or natural-content-height
               (if (> (length inner-content) 0)
@@ -363,38 +364,42 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
             with-scroll-bar))
          
          ;; 4. 添加水平 border
-         (with-border (if (and (> inner-height 0)
-                               (or (> border-left 0) (> border-right 0)))
-                          (etaf-lines-concat
-                           (list (when (> border-left 0)
-                                   (etaf-pixel-border border-left inner-height
-                                                      border-left-color))
-                                 with-bgcolor
-                                 (when (> border-right 0)
-                                   (etaf-pixel-border border-right inner-height
-                                                      border-right-color))))
-                        with-bgcolor))
+         (with-border
+          (if (and (> inner-height 0)
+                   (or (> border-left 0) (> border-right 0)))
+              (etaf-lines-concat
+               (list (when (> border-left 0)
+                       (etaf-pixel-border border-left inner-height
+                                          border-left-color))
+                     with-bgcolor
+                     (when (> border-right 0)
+                       (etaf-pixel-border border-right inner-height
+                                          border-right-color))))
+            with-bgcolor))
          
          (total-pixel (+ effective-width
                          padding-left padding-right
                          border-left border-right
                          ;; 加上滚动条宽度
                          (if v-scroll-bar-p
-                             (etaf-layout-string--scroll-bar-pixel v-scroll-bar-type)
+                             (etaf-layout-string--scroll-bar-pixel
+                              v-scroll-bar-type)
                            0)))
          
          ;; 4.5 添加垂直 border
-         (with-v-border (if (or (> border-top 0) (> border-bottom 0))
-                            (let ((lines (split-string with-border "\n")))
-                              (when (and lines (> border-top 0))
-                                (setf (car lines)
-                                      (etaf-propertize-overline (car lines) border-top-color)))
-                              (when (and lines (> border-bottom 0))
-                                (setf (car (last lines))
-                                      (etaf-propertize-underline (car (last lines))
-                                                                 border-bottom-color)))
-                              (string-join lines "\n"))
-                          with-border))
+         (with-v-border
+          (if (or (> border-top 0) (> border-bottom 0))
+              (let ((lines (split-string with-border "\n")))
+                (when (and lines (> border-top 0))
+                  (setf (car lines)
+                        (etaf-propertize-overline
+                         (car lines) border-top-color)))
+                (when (and lines (> border-bottom 0))
+                  (setf (car (last lines))
+                        (etaf-propertize-underline
+                         (car (last lines)) border-bottom-color)))
+                (string-join lines "\n"))
+            with-border))
          
          ;; 4.6 应用 keymap 等交互属性到内容区域（不包含 margin）
          ;; 如果 tag-instance 存在且有事件处理器，将 keymap 应用到内容区域
@@ -412,41 +417,44 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                           (result (copy-sequence with-v-border)))
                       (add-text-properties
                        0 (length result)
-                       `(etaf-tag-instance ,tag-instance
-                                           keymap ,keymap
-                                           ,@(when (or has-click has-hover)
-                                               '(mouse-face highlight))
-                                           ,@(when has-click
-                                               '(pointer hand))
-                                           help-echo ,#'etaf-etml-tag--help-echo-handler)
+                       `(etaf-tag-instance
+                         ,tag-instance
+                         keymap ,keymap
+                         ,@(when (or has-click has-hover)
+                             '(mouse-face highlight))
+                         ,@(when has-click
+                             '(pointer hand))
+                         help-echo ,#'etaf-etml-tag--help-echo-handler)
                        result)
                       result)
                   with-v-border))
             with-v-border))
          
          ;; 5. 添加水平 margin
-         (with-h-margin (if (and (> inner-height 0)
-                                 (or (> margin-left 0) (> margin-right 0)))
-                            (etaf-lines-concat
-                             (list (when (> margin-left 0)
-                                     (etaf-pixel-blank margin-left inner-height))
-                                   with-interaction
-                                   (when (> margin-right 0)
-                                     (etaf-pixel-blank margin-right inner-height))))
-                          with-interaction))
+         (with-h-margin
+          (if (and (> inner-height 0)
+                   (or (> margin-left 0) (> margin-right 0)))
+              (etaf-lines-concat
+               (list (when (> margin-left 0)
+                       (etaf-pixel-blank margin-left inner-height))
+                     with-interaction
+                     (when (> margin-right 0)
+                       (etaf-pixel-blank margin-right inner-height))))
+            with-interaction))
          
          (total-width (+ total-pixel margin-left margin-right))
          
          ;; 6. 添加垂直 margin
-         (final-string (if (and (> total-width 0)
-                                (or (> margin-top 0) (> margin-bottom 0)))
-                           (etaf-lines-stack
-                            (list (when (> margin-top 0)
-                                    (etaf-pixel-blank total-width margin-top))
-                                  with-h-margin
-                                  (when (> margin-bottom 0)
-                                    (etaf-pixel-blank total-width margin-bottom))))
-                         with-h-margin)))
+         (final-string
+          (if (and (> total-width 0)
+                   (or (> margin-top 0) (> margin-bottom 0)))
+              (etaf-lines-stack
+               (list (when (> margin-top 0)
+                       (etaf-pixel-blank total-width margin-top))
+                     with-h-margin
+                     (when (> margin-bottom 0)
+                       (etaf-pixel-blank total-width margin-bottom))))
+            with-h-margin)))
     
     final-string))
 
@@ -483,7 +491,8 @@ V-SCROLL-BAR-TYPE 是滚动条风格类型（符号），用于引用 etaf-layou
 (defun etaf-layout-string--scroll-bar-pixel (v-scroll-bar-type)
   "获取滚动条的像素宽度。
 V-SCROLL-BAR-TYPE 是滚动条风格类型（符号）。"
-  (etaf-layout-scroll-bar-pixel (etaf-layout-string--create-scroll-bar v-scroll-bar-type)))
+  (etaf-layout-scroll-bar-pixel
+   (etaf-layout-string--create-scroll-bar v-scroll-bar-type)))
 
 (defun etaf-layout-string--compute-thumb-height (content-height content-linum)
   "根据内容高度和实际行数计算滚动条滑块高度。
@@ -515,21 +524,31 @@ CONTENT-LINUM 是内容的实际行数。
 SCROLL-THUMB-COLOR 和 SCROLL-TRACK-COLOR 是滑块和轨道颜色（可选，nil 时使用滚动条类型定义的颜色）。
 V-SCROLL-BAR-TYPE 是滚动条风格类型。"
   (when v-scroll-bar-p
-    (let* ((scroll-bar (etaf-layout-string--create-scroll-bar v-scroll-bar-type))
+    (let* ((scroll-bar
+            (etaf-layout-string--create-scroll-bar v-scroll-bar-type))
            (thumb-height (etaf-layout-string--compute-thumb-height
                           track-height content-linum))
            (thumb-offset 0))  ;; 初始偏移为 0
       ;; 设置滚动条属性 - 必须捕获 plist-put 的返回值
       (setq scroll-bar (plist-put scroll-bar :track-height track-height))
       ;; 只有当显式提供颜色时才覆盖滚动条类型定义的颜色
+      (message "scroll-track-color:%S" scroll-track-color)
       (when scroll-track-color
-        (setq scroll-bar (plist-put scroll-bar :track-color scroll-track-color)))
-      (setq scroll-bar (plist-put scroll-bar :thumb-height thumb-height))
+        (setq scroll-bar
+              (plist-put scroll-bar :track-color scroll-track-color)))
+      (setq scroll-bar
+            (plist-put scroll-bar :thumb-height thumb-height))
       (when scroll-thumb-color
-        (setq scroll-bar (plist-put scroll-bar :thumb-color scroll-thumb-color)))
-      (setq scroll-bar (plist-put scroll-bar :thumb-offset thumb-offset))
-      (setq scroll-bar (plist-put scroll-bar :track-padding-top-height (floor padding-top)))
-      (setq scroll-bar (plist-put scroll-bar :track-padding-bottom-height (floor padding-bottom)))
+        (setq scroll-bar
+              (plist-put scroll-bar :thumb-color scroll-thumb-color)))
+      (setq scroll-bar
+            (plist-put scroll-bar :thumb-offset thumb-offset))
+      (setq scroll-bar
+            (plist-put scroll-bar
+                       :track-padding-top-height (floor padding-top)))
+      (setq scroll-bar
+            (plist-put scroll-bar
+                       :track-padding-bottom-height (floor padding-bottom)))
       
       (pcase v-scroll-bar-p
         ('real
@@ -593,7 +612,8 @@ CONTAINER-WIDTH 是容器宽度。"
                (lines '())
                (idx 0))
           (dolist (count line-breaks)
-            (let ((line-strings (seq-subseq inline-strings idx (+ idx count))))
+            (let ((line-strings
+                   (seq-subseq inline-strings idx (+ idx count))))
               (push (etaf-lines-concat line-strings) lines)
               (setq idx (+ idx count))))
           (if lines
@@ -604,11 +624,12 @@ CONTAINER-WIDTH 是容器宽度。"
 ;;; 内部函数：Flex 布局合并
 ;;; ============================================================
 
-(defun etaf-layout-string--merge-flex-children (child-strings flex-direction
-                                                              row-gap column-gap
-                                                              justify-content
-                                                              container-width container-height
-                                                              flex-wrap align-items align-content)
+(defun etaf-layout-string--merge-flex-children
+    (child-strings flex-direction
+                   row-gap column-gap
+                   justify-content
+                   container-width container-height
+                   flex-wrap align-items align-content)
   "根据 Flex 布局属性合并子元素字符串。
 CHILD-STRINGS 是子元素字符串列表。
 FLEX-DIRECTION 是主轴方向。
@@ -662,10 +683,11 @@ ALIGN-CONTENT 是多行对齐。"
          container-main-size container-cross-size
          justify-content flex-wrap align-items align-content)))))
 
-(defun etaf-layout-string--render-flex-lines (valid-strings items-units-lst wrap-lst
-                                                            is-row is-reversed main-gap cross-gap
-                                                            container-main-size container-cross-size
-                                                            justify-content flex-wrap align-items align-content)
+(defun etaf-layout-string--render-flex-lines
+    (valid-strings items-units-lst wrap-lst
+                   is-row is-reversed main-gap cross-gap
+                   container-main-size container-cross-size
+                   justify-content flex-wrap align-items align-content)
   "渲染 Flex 行。"
   (let ((lines-strings nil)
         (cross-max-units-lst nil)
@@ -677,17 +699,21 @@ ALIGN-CONTENT 是多行对齐。"
                (line-units-lst (seq-subseq items-units-lst prev (+ prev num)))
                (line-items-units (apply #'+ line-units-lst))
                (line-gaps-units (* main-gap (max 0 (1- num))))
-               (line-rest-units (if (> container-main-size 0)
-                                    (max 0 (- container-main-size line-items-units line-gaps-units))
-                                  0))
+               (line-rest-units
+                (if (> container-main-size 0)
+                    (max 0 (- container-main-size
+                              line-items-units line-gaps-units))
+                  0))
                (main-gaps-lst (etaf-layout-string--content-justify
                                num line-rest-units justify-content main-gap))
-               (line-cross-max-units (if is-row
-                                         (apply #'max (mapcar #'etaf-string-linum line-strings))
-                                       (apply #'max (mapcar #'string-pixel-width line-strings))))
-               (ordered-line-strings (if is-reversed
-                                         (nreverse (copy-sequence line-strings))
-                                       line-strings))
+               (line-cross-max-units
+                (if is-row
+                    (apply #'max (mapcar #'etaf-string-linum line-strings))
+                  (apply #'max (mapcar #'string-pixel-width line-strings))))
+               (ordered-line-strings
+                (if is-reversed
+                    (nreverse (copy-sequence line-strings))
+                  line-strings))
                (ordered-main-gaps (if is-reversed
                                       (nreverse (copy-sequence main-gaps-lst))
                                     main-gaps-lst))
@@ -717,14 +743,19 @@ ALIGN-CONTENT 是多行对齐。"
       (let* ((lines-count (length lines-strings))
              (total-cross-units (apply #'+ cross-max-units-lst))
              (total-cross-gaps (* cross-gap (max 0 (1- lines-count))))
-             (cross-rest-units (if (> container-cross-size 0)
-                                   (max 0 (- container-cross-size total-cross-units total-cross-gaps))
-                                 0))
-             (cross-gaps-lst (etaf-layout-string--content-justify
-                              lines-count cross-rest-units align-content cross-gap)))
+             (cross-rest-units
+              (if (> container-cross-size 0)
+                  (max 0 (- container-cross-size
+                            total-cross-units total-cross-gaps))
+                0))
+             (cross-gaps-lst
+              (etaf-layout-string--content-justify
+               lines-count cross-rest-units align-content cross-gap)))
         (if is-row
-            (etaf-layout-string--stack-lines-with-gaps lines-strings cross-gaps-lst)
-          (etaf-layout-string--concat-lines-with-gaps lines-strings cross-gaps-lst))))))
+            (etaf-layout-string--stack-lines-with-gaps
+             lines-strings cross-gaps-lst)
+          (etaf-layout-string--concat-lines-with-gaps
+           lines-strings cross-gaps-lst))))))
 
 ;;; ============================================================
 ;;; 内部函数：空间分配
@@ -760,7 +791,8 @@ ALIGN-CONTENT 是多行对齐。"
                    (make-list (1- items-num) gap)
                    (list (- rest-units half)))))
         ("space-between"
-         (let ((between (/ (+ rest-units (* gap (1- items-num))) (1- items-num))))
+         (let ((between (/ (+ rest-units (* gap (1- items-num)))
+                           (1- items-num))))
            (append (list 0)
                    (make-list (1- items-num) between)
                    (list 0))))
@@ -810,9 +842,10 @@ ALIGN-CONTENT 是多行对齐。"
                       (etaf-layout-string--align-cross-axis
                        str cross-max-units align-items nil))
                     strings))
-           (max-width (if aligned-strings
-                          (apply #'max (mapcar #'string-pixel-width aligned-strings))
-                        0))
+           (max-width
+            (if aligned-strings
+                (apply #'max (mapcar #'string-pixel-width aligned-strings))
+              0))
            (gap-blanks (mapcar (lambda (gap)
                                  (if (and gap (> gap 0) (> max-width 0))
                                      (etaf-string-duplines "" gap)
@@ -825,7 +858,8 @@ ALIGN-CONTENT 是多行对齐。"
   "使用间隙垂直堆叠多行。"
   (if (null line-strings)
       ""
-    (let* ((max-width (apply #'max (mapcar #'string-pixel-width line-strings)))
+    (let* ((max-width
+            (apply #'max (mapcar #'string-pixel-width line-strings)))
            (gap-blanks (mapcar (lambda (gap)
                                  (if (and gap (> gap 0) (> max-width 0))
                                      (etaf-string-duplines "" (floor gap))
@@ -869,14 +903,17 @@ IS-ROW 表示是否为行方向（交叉轴为垂直）。"
            (if is-row
                (etaf-lines-stack
                 (list string
-                      (etaf-pixel-blank (string-pixel-width string) rest-units)))
+                      (etaf-pixel-blank
+                       (string-pixel-width string) rest-units)))
              (etaf-lines-concat
               (list string
-                    (etaf-pixel-blank rest-units (etaf-string-linum string))))))
+                    (etaf-pixel-blank
+                     rest-units (etaf-string-linum string))))))
           ("flex-end"
            (if is-row
                (etaf-lines-stack
-                (list (etaf-pixel-blank (string-pixel-width string) rest-units)
+                (list (etaf-pixel-blank
+                       (string-pixel-width string) rest-units)
                       string))
              (etaf-lines-concat
               (list (etaf-pixel-blank rest-units (etaf-string-linum string))
@@ -887,26 +924,32 @@ IS-ROW 表示是否为行方向（交叉轴为垂直）。"
              (if is-row
                  (etaf-lines-stack
                   (list (when (> start-units 0)
-                          (etaf-pixel-blank (string-pixel-width string) start-units))
+                          (etaf-pixel-blank
+                           (string-pixel-width string) start-units))
                         string
                         (when (> end-units 0)
-                          (etaf-pixel-blank (string-pixel-width string) end-units))))
+                          (etaf-pixel-blank
+                           (string-pixel-width string) end-units))))
                (etaf-lines-concat
                 (list (when (> start-units 0)
-                        (etaf-pixel-blank start-units (etaf-string-linum string)))
+                        (etaf-pixel-blank
+                         start-units (etaf-string-linum string)))
                       string
                       (when (> end-units 0)
-                        (etaf-pixel-blank end-units (etaf-string-linum string))))))))
+                        (etaf-pixel-blank
+                         end-units (etaf-string-linum string))))))))
           ((or "stretch" "baseline" _)
            (if is-row
                (etaf-lines-stack
                 (list string
                       (when (> rest-units 0)
-                        (etaf-pixel-blank (string-pixel-width string) rest-units))))
+                        (etaf-pixel-blank
+                         (string-pixel-width string) rest-units))))
              (etaf-lines-concat
               (list string
                     (when (> rest-units 0)
-                      (etaf-pixel-blank rest-units (etaf-string-linum string))))))))))))
+                      (etaf-pixel-blank
+                       rest-units (etaf-string-linum string))))))))))))
 
 (provide 'etaf-layout-string)
 ;;; etaf-layout-string.el ends here
