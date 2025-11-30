@@ -353,5 +353,63 @@
     (should (string-match-p "display: flex" style-content))
     (should (string-match-p "padding: 20px" style-content))))
 
+;;; Dual-mode CSS Generation Tests (dark: variant support)
+
+(ert-deftest etaf-ecss-test-dark-variant-detection ()
+  "Test detection of dark: variant classes."
+  (should (etaf-ecss--has-dark-variant-classes-p "bg-white dark:bg-gray-800"))
+  (should (etaf-ecss--has-dark-variant-classes-p "dark:bg-gray-800"))
+  (should-not (etaf-ecss--has-dark-variant-classes-p "bg-white text-black"))
+  (should-not (etaf-ecss--has-dark-variant-classes-p nil)))
+
+(ert-deftest etaf-ecss-test-split-dark-classes ()
+  "Test splitting classes into base and dark variants."
+  (let ((result (etaf-ecss--split-dark-classes "bg-white dark:bg-gray-800 text-black")))
+    (should (string= (plist-get result :base) "bg-white text-black"))
+    (should (string= (plist-get result :dark) "dark:bg-gray-800"))))
+
+(ert-deftest etaf-ecss-test-dual-mode-css-generation ()
+  "Test that dark: variants generate @media (prefers-color-scheme: dark) rules."
+  (let ((result (etaf-ecss ".card" "bg-white dark:bg-gray-800")))
+    ;; Should contain light mode rule
+    (should (string-match-p "\\.card.*background-color: #ffffff" result))
+    ;; Should contain @media (prefers-color-scheme: dark) rule
+    (should (string-match-p "@media (prefers-color-scheme: dark)" result))
+    ;; Dark mode rule should have dark background color
+    (should (string-match-p "background-color: #1f2937" result))))
+
+(ert-deftest etaf-ecss-test-dual-mode-multiple-properties ()
+  "Test dual-mode generation with multiple dark: variants."
+  (let ((result (etaf-ecss "#panel > p" "bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400")))
+    ;; Should contain light mode styles
+    (should (string-match-p "background-color: #15803d" result))
+    (should (string-match-p "color: #ffffff" result))
+    ;; Should contain @media rule
+    (should (string-match-p "@media (prefers-color-scheme: dark)" result))
+    ;; Should contain dark mode styles
+    (should (string-match-p "background-color: #4b5563" result))
+    (should (string-match-p "color: #fb7185" result))))
+
+(ert-deftest etaf-ecss-test-no-dark-variants-no-media-query ()
+  "Test that rules without dark: variants don't generate @media rules."
+  (let ((result (etaf-ecss ".box" "bg-red-500 text-white")))
+    ;; Should contain styles
+    (should (string-match-p "background-color: #ef4444" result))
+    (should (string-match-p "color: #ffffff" result))
+    ;; Should NOT contain @media rule
+    (should-not (string-match-p "@media" result))))
+
+(ert-deftest etaf-ecss-test-dual-mode-with-standard-properties ()
+  "Test dual-mode with mixed Tailwind and standard properties."
+  (let ((result (etaf-ecss ".card"
+                  "bg-white dark:bg-gray-800"
+                  '(padding 20))))
+    ;; Should contain light mode styles
+    (should (string-match-p "background-color: #ffffff" result))
+    ;; Should contain standard property
+    (should (string-match-p "padding: 20px" result))
+    ;; Should contain @media rule
+    (should (string-match-p "@media (prefers-color-scheme: dark)" result))))
+
 (provide 'etaf-ecss-tests)
 ;;; etaf-ecss-tests.el ends here
