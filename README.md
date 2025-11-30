@@ -614,6 +614,7 @@ emacs -batch -l etaf-ert.el -l etaf-css-tests.el -f ert-run-tests-batch-and-exit
 ## 示例
 
 查看 `examples/` 目录获取更多示例：
+- `etaf-component-examples.el` - **组件系统完整示例**（从简单到复杂的 8 个示例）
 - `etaf-etml-tag-example.el` - ETML 标签定义系统示例
 - `etaf-tailwind-example.el` - Tailwind CSS 功能示例
 - `etaf-css-example.el` - CSS 功能演示
