@@ -254,5 +254,67 @@
     (should (string-match-p "background: white" result))
     (should (string-match-p "padding: 20px" result))))
 
+;;; String format Tailwind CSS Tests (simpler syntax)
+
+(ert-deftest etaf-ecss-test-tailwind-string-basic ()
+  "Test Tailwind CSS utilities as space-separated string."
+  (let ((result (etaf-ecss ".card" "flex items-center justify-center")))
+    (should (string-match-p "\\.card" result))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "align-items: center" result))
+    (should (string-match-p "justify-content: center" result))))
+
+(ert-deftest etaf-ecss-test-tailwind-string-colors ()
+  "Test Tailwind color utilities as string."
+  (let ((result (etaf-ecss ".box" "bg-red-500 text-white")))
+    (should (string-match-p "background-color: #ef4444" result))
+    (should (string-match-p "color: #ffffff" result))))
+
+(ert-deftest etaf-ecss-test-tailwind-string-mixed-with-props ()
+  "Test mixing Tailwind string with property expressions."
+  (let ((result (etaf-ecss ".container"
+                  "flex items-center bg-blue-500"
+                  '(padding 20)
+                  '(margin 0 auto))))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "align-items: center" result))
+    (should (string-match-p "background-color: #3b82f6" result))
+    (should (string-match-p "padding: 20px" result))
+    (should (string-match-p "margin: 0 auto" result))))
+
+(ert-deftest etaf-ecss-test-tailwind-string-in-style ()
+  "Test etaf-ecss-style with Tailwind string."
+  (let ((result (etaf-ecss-style "flex items-center bg-red-500")))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "align-items: center" result))
+    (should (string-match-p "background-color: #ef4444" result))))
+
+(ert-deftest etaf-ecss-test-tailwind-string-in-props ()
+  "Test etaf-ecss-props with Tailwind string."
+  (let ((result (etaf-ecss-props "flex items-center")))
+    (should (equal (cdr (assq 'display result)) "flex"))
+    (should (equal (cdr (assq 'align-items result)) "center"))))
+
+(ert-deftest etaf-ecss-test-tailwind-string-stylesheet ()
+  "Test etaf-ecss-stylesheet with Tailwind string."
+  (let ((result (etaf-ecss-stylesheet
+                 '(".header" "flex items-center bg-blue-500")
+                 '(".content" "p-4" (color "gray")))))
+    (should (string-match-p "\\.header" result))
+    (should (string-match-p "\\.content" result))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "background-color: #3b82f6" result))))
+
+(ert-deftest etaf-ecss-test-ecss-css-with-string ()
+  "Test etaf-ecss-css macro with string format."
+  (let ((result (etaf-ecss-css
+                 (".container" "flex items-center" (width 800))
+                 (".box" "bg-red-500 p-4"))))
+    (should (string-match-p "\\.container" result))
+    (should (string-match-p "\\.box" result))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "width: 800px" result))
+    (should (string-match-p "background-color: #ef4444" result))))
+
 (provide 'etaf-ecss-tests)
 ;;; etaf-ecss-tests.el ends here
