@@ -22,21 +22,38 @@
 ;; 2. Supports nested structures for related properties
 ;; 3. Provides shorthand notations for common patterns
 ;; 4. Converts to standard CSS strings for use with CSSOM
+;; 5. Supports Tailwind CSS utility classes as style declarations
 ;;
 ;; Basic Usage:
 ;;
 ;;   ;; Convert a single rule to CSS string
 ;;   (etaf-ecss ".box" 
-;;     (background "red")
-;;     (padding 10)
-;;     (border 1 'solid "black"))
+;;     '(background "red")
+;;     '(padding 10)
+;;     '(border 1 'solid "black"))
 ;;   ;; => ".box { background: red; padding: 10px; border: 1px solid black; }"
 ;;
 ;;   ;; Build a stylesheet from multiple rules
 ;;   (etaf-ecss-stylesheet
-;;     (".container" (width 800) (margin 0 'auto))
-;;     (".box" (background "blue") (padding 10)))
+;;     '(".container" (width 800) (margin 0 'auto))
+;;     '(".box" (background "blue") (padding 10)))
 ;;   ;; => ".container { width: 800px; margin: 0 auto; }\n.box { ... }"
+;;
+;; Tailwind CSS Support:
+;;
+;;   ;; Simple string format (recommended):
+;;   (etaf-ecss ".card" "flex items-center justify-center bg-red-500 p-4")
+;;   ;; => ".card { display: flex; align-items: center; ... }"
+;;
+;;   ;; Mix Tailwind string with standard properties:
+;;   (etaf-ecss ".card"
+;;     "flex items-center bg-red-500"
+;;     '(padding 10)
+;;     '(margin 0 auto))
+;;
+;;   ;; In :style attribute:
+;;   (div :style (etaf-ecss-style "flex items-center bg-blue-500")
+;;     "Hello")
 ;;
 ;; Selector Expressions:
 ;;
@@ -62,6 +79,49 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'etaf-tailwind)
+
+;;; Tailwind CSS Support
+
+(defun etaf-ecss--tailwind-class-p (decl)
+  "Check if DECL is a Tailwind CSS utility class declaration.
+A Tailwind declaration is a single-element list containing a symbol
+that is recognized as a valid Tailwind class.
+
+Examples of Tailwind declarations:
+  (flex)           ; standalone utility
+  (bg-red-500)     ; color utility
+  (p-4)            ; spacing utility
+  (hover:bg-blue)  ; variant utility (as symbol)"
+  (and (listp decl)
+       (= (length decl) 1)
+       (symbolp (car decl))
+       (let ((class-name (symbol-name (car decl))))
+         (etaf-tailwind-class-p class-name))))
+
+(defun etaf-ecss--convert-tailwind-to-css-string (class-name)
+  "Convert Tailwind CLASS-NAME to CSS declaration string(s).
+Returns a list of CSS declaration strings like (\"display: flex\" ...).
+Returns nil if the class cannot be converted."
+  (when-let ((css-props (etaf-tailwind-to-css class-name)))
+    (mapcar (lambda (prop)
+              (format "%s: %s" (car prop) (cdr prop)))
+            css-props)))
+
+(defun etaf-ecss--process-tailwind-decl (decl)
+  "Process a Tailwind CSS declaration DECL and return CSS string.
+DECL should be a single-element list like (flex) or (bg-red-500).
+Returns a CSS declaration string or nil if conversion fails.
+When conversion fails, returns nil and the caller falls back to
+treating it as a standard property expression."
+  (let* ((class-name (symbol-name (car decl)))
+         (css-strings (etaf-ecss--convert-tailwind-to-css-string class-name)))
+    (if css-strings
+        (mapconcat #'identity css-strings "; ")
+      ;; Log warning for Tailwind class that couldn't be converted
+      (message "Warning: Tailwind class '%s' could not be converted to CSS"
+               class-name)
+      nil)))
 
 ;;; CSS Selector Expressions
 
@@ -272,12 +332,31 @@ Returns \"px\" for most properties, \"lh\" for vertical spacing in Emacs."
    ;; Default to px
    (t "px")))
 
+(defun etaf-ecss--process-tailwind-string (class-string)
+  "Process a space-separated string of Tailwind CSS classes.
+CLASS-STRING is a string like \"flex items-center bg-red-500\".
+Returns a list of CSS declaration strings.
+Unrecognized classes are skipped with a warning message."
+  (let ((classes (split-string class-string))
+        (css-strings '()))
+    (dolist (class classes)
+      (when (and class (not (string-empty-p class)))
+        (let ((css-props (etaf-tailwind-to-css class)))
+          (if css-props
+              (dolist (prop css-props)
+                (push (format "%s: %s" (car prop) (cdr prop)) css-strings))
+            ;; Log warning and skip unrecognized class
+            (message "Warning: Tailwind class '%s' could not be converted to CSS, skipping" class)))))
+    (nreverse css-strings)))
+
 (defun etaf-ecss-declaration-block (&rest declarations)
   "Convert list of DECLARATIONS to CSS declaration block string.
 
-Each declaration is either:
-- A list like (property value ...)
+Each declaration can be:
+- A string of space-separated Tailwind classes: \"flex items-center bg-red-500\"
+- A list like (property value ...) for standard CSS properties
 - A cons cell like (property . value)
+- A single-element list like (tailwind-class) for Tailwind CSS utilities
 
 Returns string like \"{ property1: value1; property2: value2; }\"
 
@@ -286,18 +365,49 @@ Example:
     '(background \"red\")
     '(padding 10 20)
     '(margin 0 auto))
-  ;; => \"{ background: red; padding: 10px 20px; margin: 0 auto; }\""
-  (let ((decl-strings
-         (mapcar (lambda (decl)
-                   (if (consp decl)
-                       (if (listp (cdr decl))
+  ;; => \"{ background: red; padding: 10px 20px; margin: 0 auto; }\"
+
+  ;; With Tailwind CSS utilities as string (recommended):
+  (etaf-ecss-declaration-block \"flex items-center bg-red-500\" '(padding 10))
+  ;; => \"{ display: flex; align-items: center; background-color: #ef4444; padding: 10px; }\"
+
+  ;; With Tailwind CSS utilities as lists (verbose):
+  (etaf-ecss-declaration-block
+    '(flex)
+    '(items-center)
+    '(bg-red-500)
+    '(padding 10))
+  ;; => \"{ display: flex; align-items: center; background-color: #ef4444; padding: 10px; }\""
+  (let ((decl-strings '())
+        (string-decls '()))
+    ;; First pass: collect all string declarations' CSS
+    ;; Second pass: process other declarations
+    (dolist (decl declarations)
+      (cond
+       ;; String: space-separated Tailwind classes - collect separately
+       ((stringp decl)
+        (let ((css-strs (etaf-ecss--process-tailwind-string decl)))
+          (dolist (css-str css-strs)
+            (push css-str string-decls))))
+       ;; Check if it's a Tailwind CSS utility class (single-element list)
+       ((etaf-ecss--tailwind-class-p decl)
+        (let ((css-str (or (etaf-ecss--process-tailwind-decl decl)
+                           ;; Fall back to treating it as a property if not recognized
+                           (apply #'etaf-ecss-property decl))))
+          (push css-str decl-strings)))
+       ;; Standard cons/list declarations
+       ((consp decl)
+        (let ((css-str (if (listp (cdr decl))
                            ;; List: (prop val1 val2 ...)
                            (apply #'etaf-ecss-property decl)
                          ;; Cons: (prop . val)
-                         (etaf-ecss-property (car decl) (cdr decl)))
-                     decl))
-                 declarations)))
-    (format "{ %s; }" (mapconcat #'identity decl-strings "; "))))
+                         (etaf-ecss-property (car decl) (cdr decl)))))
+          (push css-str decl-strings)))
+       ;; Other types - just convert to string
+       (t (push (format "%s" decl) decl-strings))))
+    ;; Combine: string declarations first (in order), then other declarations (reversed)
+    (let ((all-decls (nconc (nreverse string-decls) (nreverse decl-strings))))
+      (format "{ %s; }" (mapconcat #'identity all-decls "; ")))))
 
 ;;; CSS Rule and Stylesheet
 
@@ -378,24 +488,50 @@ Returns the combined CSS string."
 
 (defun etaf-ecss-props (&rest props)
   "Convert property expressions to CSS declarations alist.
-PROPS are pairs of (property value ...).
+PROPS can be:
+- A string of space-separated Tailwind classes: \"flex items-center bg-red-500\"
+- Property expressions: (property value ...)
+- Single-element Tailwind classes: (flex), (bg-red-500)
 
 Useful for :style attribute (list format) in TML:
-  (div :style (etaf-ecss-props (background \"red\") (padding 10))
+  (div :style (etaf-ecss-props '(background \"red\") '(padding 10))
+    \"content\")
+
+With Tailwind CSS utilities as string (recommended):
+  (div :style (etaf-ecss-props \"flex items-center bg-red-500\")
     \"content\")
 
 Returns: ((background . \"red\") (padding . \"10px\"))"
   (let ((result '()))
     (dolist (prop props)
-      (let* ((name (car prop))
-             (values (cdr prop))
-             (name-str (etaf-ecss--to-string name))
-             (default-unit (etaf-ecss--property-default-unit
-                           (if (symbolp name) name (intern name-str))))
-             (value-str (mapconcat
-                        (lambda (v) (etaf-ecss--value-with-unit v default-unit))
-                        values " ")))
-        (push (cons (intern name-str) value-str) result)))
+      (cond
+       ;; String: space-separated Tailwind classes
+       ((stringp prop)
+        (let ((classes (split-string prop)))
+          (dolist (class classes)
+            (when (and class (not (string-empty-p class)))
+              (let ((css-props (etaf-tailwind-to-css class)))
+                (when css-props
+                  (dolist (css-prop css-props)
+                    (push css-prop result))))))))
+       ;; Tailwind CSS utility class (single-element list)
+       ((etaf-ecss--tailwind-class-p prop)
+        (let* ((class-name (symbol-name (car prop)))
+               (css-props (etaf-tailwind-to-css class-name)))
+          (when css-props
+            (dolist (css-prop css-props)
+              (push css-prop result)))))
+       ;; Standard property expression
+       (t
+        (let* ((name (car prop))
+               (values (cdr prop))
+               (name-str (etaf-ecss--to-string name))
+               (default-unit (etaf-ecss--property-default-unit
+                             (if (symbolp name) name (intern name-str))))
+               (value-str (mapconcat
+                          (lambda (v) (etaf-ecss--value-with-unit v default-unit))
+                          values " ")))
+          (push (cons (intern name-str) value-str) result)))))
     (nreverse result)))
 
 ;;; Integration with TML
@@ -404,15 +540,81 @@ Returns: ((background . \"red\") (padding . \"10px\"))"
   "Create style string from DECLARATIONS.
 Convenient for :style attribute in TML.
 
+Each declaration can be:
+- A string of space-separated Tailwind classes: \"flex items-center bg-red-500\"
+- A standard property expression: (color \"red\")
+- A Tailwind CSS utility: (flex), (bg-red-500), (p-4)
+
 Example:
-  (div :style (etaf-ecss-style (color \"red\") (padding 10))
+  (div :style (etaf-ecss-style '(color \"red\") '(padding 10))
     \"Hello\")
-  
-Returns: \"color: red; padding: 10px\""
-  (mapconcat
-   (lambda (decl)
-     (apply #'etaf-ecss-property decl))
-   declarations "; "))
+  ;; => \"color: red; padding: 10px\"
+
+  ;; With Tailwind CSS utilities as string (recommended):
+  (div :style (etaf-ecss-style \"flex items-center bg-red-500\")
+    \"Hello\")
+  ;; => \"display: flex; align-items: center; background-color: #ef4444\"
+
+  ;; Mixed:
+  (div :style (etaf-ecss-style \"flex items-center\" '(padding 10))
+    \"Hello\")
+  ;; => \"display: flex; align-items: center; padding: 10px\"
+
+Returns: \"property1: value1; property2: value2\""
+  (let ((decl-strings '())
+        (string-decls '()))
+    (dolist (decl declarations)
+      (cond
+       ;; String: space-separated Tailwind classes
+       ((stringp decl)
+        (let ((css-strs (etaf-ecss--process-tailwind-string decl)))
+          (dolist (css-str css-strs)
+            (push css-str string-decls))))
+       ;; Tailwind CSS utility class (single-element list)
+       ((etaf-ecss--tailwind-class-p decl)
+        (let ((css-str (or (etaf-ecss--process-tailwind-decl decl)
+                           (apply #'etaf-ecss-property decl))))
+          (push css-str decl-strings)))
+       ;; Standard property expression
+       (t (push (apply #'etaf-ecss-property decl) decl-strings))))
+    ;; Combine: string declarations first (in order), then other declarations (reversed)
+    (let ((all-decls (nconc (nreverse string-decls) (nreverse decl-strings))))
+      (mapconcat #'identity all-decls "; "))))
+
+;;; Support for ECSS in style tags
+
+(defmacro etaf-ecss-css (&rest rules)
+  "Convert ECSS rules to CSS stylesheet string for use in style tags.
+
+Each rule is an unquoted list: (selector declarations ...)
+Declarations can be:
+- A string of space-separated Tailwind classes (recommended)
+- Property expressions like (width 800)
+
+This macro is designed to be used within ETML style tags to write
+CSS using ECSS syntax.
+
+Example:
+  ;; In ETML (using string format for Tailwind - recommended):
+  (html
+    (head
+      (style (etaf-ecss-css
+              (\".container\" \"flex items-center\" (width 800) (margin 0 auto))
+              (\".box\" \"flex items-center bg-red-500 p-4\")
+              (\".title\" \"text-lg font-bold\" (color \"#333\")))))
+    (body
+      (div :class \"container\"
+        (div :class \"box\"
+          (h1 :class \"title\" \"Hello ETAF!\")))))
+
+  ;; The style tag content becomes:
+  ;; .container { display: flex; align-items: center; width: 800px; margin: 0 auto; }
+  ;; .box { display: flex; align-items: center; background-color: #ef4444; ... }
+  ;; .title { font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; color: #333; }"
+  `(etaf-ecss-stylesheet
+    ,@(mapcar (lambda (rule)
+                `'(,(car rule) ,@(cdr rule)))
+              rules)))
 
 (provide 'etaf-ecss)
 ;;; etaf-ecss.el ends here
