@@ -1890,7 +1890,8 @@ DARK-MODE参数控制主题模式判断:
   (let* ((classes (if (stringp class-names)
                       (split-string class-names)
                     class-names))
-         (filtered-classes (etaf-tailwind-filter-classes-by-mode classes dark-mode))
+         (filtered-classes (etaf-tailwind-filter-classes-by-mode
+                            classes dark-mode))
          (css-props '()))
     (dolist (class filtered-classes)
       (let ((props (etaf-tailwind-to-css class)))
@@ -1912,7 +1913,8 @@ DARK-MODE参数控制主题模式判断:
 
 示例：
   (etaf-tailwind-apply-css-to-node-with-mode node \"bg-white dark:bg-gray-800\")"
-  (let ((css-props (etaf-tailwind-classes-to-css-with-mode class-names dark-mode)))
+  (let ((css-props (etaf-tailwind-classes-to-css-with-mode
+                    class-names dark-mode)))
     (when css-props
       (etaf-dom-set-styles node css-props))))
 
