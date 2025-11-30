@@ -208,48 +208,6 @@ COMPUTED-STYLE 是 CSS 计算样式 alist。
           result)
       string)))
 
-(defun etaf-css-dual-style-to-face-spec (light-style dark-style)
-  "将亮色和暗色两套 CSS 样式转换为 Emacs face spec。
-LIGHT-STYLE 是亮色模式的 CSS 样式 alist。
-DARK-STYLE 是暗色模式的 CSS 样式 alist。
-
-返回一个 face spec，格式为:
-  ((((background light)) LIGHT-FACE-PLIST)
-   (((background dark)) DARK-FACE-PLIST))
-
-这种 face spec 可以让 Emacs 根据当前背景模式自动切换样式。
-
-示例：
-  (etaf-css-dual-style-to-face-spec
-    \\='((background-color . \"#ffffff\") (color . \"#000000\"))
-    \\='((background-color . \"#1f2937\") (color . \"#ffffff\")))
-  ;; => ((((background light)) :background \"#ffffff\" :foreground \"#000000\")
-  ;;     (((background dark)) :background \"#1f2937\" :foreground \"#ffffff\"))"
-  (let ((light-face (etaf-css-style-to-face light-style))
-        (dark-face (etaf-css-style-to-face dark-style)))
-    ;; 如果两种模式的 face 相同，直接返回单一 face
-    (if (equal light-face dark-face)
-        light-face
-      ;; 否则返回带有 display condition 的 face spec
-      ;; 格式: ((((background light)) :prop1 val1 ...) (((background dark)) :prop2 val2 ...))
-      `((((background light)) ,@light-face)
-        (((background dark)) ,@dark-face)))))
-
-(defun etaf-css-apply-dual-face-to-string (string light-style dark-style)
-  "将亮色和暗色两套 CSS 样式应用到字符串上，支持自动切换。
-STRING 是要添加 face 属性的字符串。
-LIGHT-STYLE 是亮色模式的 CSS 样式 alist。
-DARK-STYLE 是暗色模式的 CSS 样式 alist。
-
-返回带有支持自动切换的 face 属性的新字符串。
-当 Emacs 背景模式改变时，样式会自动更新。"
-  (let ((face-spec (etaf-css-dual-style-to-face-spec light-style dark-style)))
-    (if (and face-spec (> (length string) 0))
-        (let ((result (copy-sequence string)))
-          (add-face-text-property 0 (length result) face-spec t result)
-          result)
-      string)))
-
 (defun etaf-css-apply-face-with-dual-style (string light-style dark-style)
   "将 CSS 样式应用到字符串，并保存双模式样式信息用于增量更新。
 STRING 是要添加 face 属性的字符串。

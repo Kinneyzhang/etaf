@@ -300,7 +300,8 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
           (cond
            ;; 如果有双模式样式，使用带增量更新支持的函数
            ((and text-style-dark (> (length sized-content) 0))
-            (etaf-css-apply-face-with-dual-style sized-content text-style text-style-dark))
+            (etaf-css-apply-face-with-dual-style
+             sized-content text-style text-style-dark))
            ;; 否则使用普通函数
            ((and text-style (> (length sized-content) 0))
             (etaf-css-apply-face-to-string sized-content text-style))
