@@ -73,17 +73,15 @@ KVS 是滚动条的配置键值对，值会在定义时被求值。"
 ;; while override other attr setting.
 ;; if v-scroll-bar-type is set is not set, should set default value properly.
 (etaf-layout-scroll-bar-define s2
-  :thumb-color "green"
-  :track-color "#444"
-  :thumb-pixel 10
+  :thumb-color (face-attribute 'default :foreground)
+  :track-color (face-attribute 'default :background)
+  :thumb-pixel 2
   :thumb-border-p t
   :track-border-left-pixel 1
   :track-border-right-pixel 1
   :track-border-left-color "red"
   :track-border-right-color "red"
   :track-padding-left-pixel 1
-  :track-border-bottom-p t
-  :track-border-top-p t
   :track-padding-right-pixel 1)
 
 ;;; ============================================================
