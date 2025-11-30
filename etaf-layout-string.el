@@ -283,8 +283,12 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
          (v-scroll-bar-p (etaf-layout-string--v-scroll-bar-p
                           overflow-y is-overflow))
          
-         ;; 生成唯一标识符用于滚动缓存
-         (scroll-uuid (when (and v-scroll-bar-p is-overflow)
+         ;; 根据 overflow-y 策略确定是否允许滚动（包括 scroll-hidden）
+         (is-scrollable (etaf-layout-string--scrollable-p
+                         overflow-y is-overflow))
+         
+         ;; 生成唯一标识符用于滚动缓存（只要允许滚动就需要）
+         (scroll-uuid (when is-scrollable
                         (format "scroll-%s" (cl-gensym))))
          
          ;; 约束高度（根据 overflow-y 策略）
@@ -300,9 +304,9 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
             (etaf-lines-align styled-content content-height-px 'top))
            (t styled-content)))
          
-         ;; 3.1 为可滚动内容设置交互属性和缓存
+         ;; 3.1 为可滚动内容设置交互属性和缓存（只要允许滚动就设置）
          (scrollable-content
-          (if (and scroll-uuid is-overflow v-scroll-bar-p
+          (if (and scroll-uuid is-scrollable
                    (> (length height-constrained-content) 0))
               (let* ((original-lines (split-string styled-content "\n" t))
                      (display-height content-height-px))
@@ -519,6 +523,19 @@ IS-OVERFLOW 表示内容是否实际溢出。"
     ("scroll-hidden" nil)
     ;; visible 或 hidden: 不显示滚动条
     (_ nil)))
+
+(defun etaf-layout-string--scrollable-p (overflow-y is-overflow)
+  "根据 overflow-y 策略判断是否允许滚动（无论是否显示滚动条）。
+返回 t 表示允许滚动，nil 表示不允许滚动。
+
+OVERFLOW-Y 是溢出处理策略字符串。
+IS-OVERFLOW 表示内容是否实际溢出。"
+  (and is-overflow
+       (pcase overflow-y
+         ;; scroll, scroll-visible, scroll-hidden, scroll-auto, auto: 允许滚动
+         ((or "scroll" "scroll-visible" "scroll-hidden" "scroll-auto" "auto") t)
+         ;; visible 或 hidden: 不允许滚动
+         (_ nil))))
 
 (defun etaf-layout-string--create-scroll-bar (v-scroll-bar-type)
   "创建并配置滚动条对象。
