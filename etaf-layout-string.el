@@ -228,7 +228,7 @@ OVERFLOW-Y 是垂直溢出处理方式:
   - \"scroll-hidden\": 允许滚动，但不显示滚动条
   - \"scroll-auto\": 始终预留滚动条空间，溢出时显示真实滚动条
 
-V-SCROLL-BAR-TYPE 是滚动条风格类型（引用 etaf-scroll-bar-alist）。
+V-SCROLL-BAR-TYPE 是滚动条风格类型（引用 etaf-layout-scroll-bar-alist）。
 V-SCROLL-BAR-DIRECTION 是滚动条位置，\\='left 或 \\='right。
 SCROLL-THUMB-COLOR 是滚动条滑块颜色。
 SCROLL-TRACK-COLOR 是滚动条轨道颜色。
