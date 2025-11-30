@@ -57,9 +57,9 @@ car 是滚动条的名称（符号），cdr 是滚动条的 plist 配置。")
 (defmacro etaf-layout-scroll-bar-define (name &rest kvs)
   "定义不同风格滚动条。
 NAME 是滚动条风格名称（符号）。
-KVS 是滚动条的配置键值对。"
+KVS 是滚动条的配置键值对，值会在定义时被求值。"
   (declare (indent defun))
-  `(etaf-alist-set etaf-layout-scroll-bar-alist ',name ',kvs))
+  `(etaf-alist-set etaf-layout-scroll-bar-alist ',name (list ,@kvs)))
 
 ;; 预定义的滚动条风格
 (etaf-layout-scroll-bar-define simple
