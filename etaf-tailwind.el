@@ -366,9 +366,13 @@ Visually hides content while keeping it accessible to screen readers.")
                           (concat first-part "-" (match-string 1 rest)))
                          ;; gap-x, gap-y, space-x, space-y, overflow-x, overflow-y, etc.
                          ((and (member first-part '("gap" "space" "overflow" "overscroll"
-                                                    "scroll" "snap" "border" "divide"
+                                                    "scroll" "snap" "divide"
                                                     "ring" "col" "row"))
                                (string-match "^\\([xy]\\)-\\(.+\\)$" rest))
+                          (concat first-part "-" (match-string 1 rest)))
+                         ;; border-x, border-y, border-t, border-r, border-b, border-l, border-s, border-e
+                         ((and (string= first-part "border")
+                               (string-match "^\\([xytrbsel]\\)-\\(.+\\)$" rest))
                           (concat first-part "-" (match-string 1 rest)))
                          ;; not-* prefix
                          ((and (string= first-part "not")
@@ -883,7 +887,69 @@ VALUE can be a string number or from the spacing scale."
      ((string= value "dotted") '((border-style . "dotted")))
      ((string= value "double") '((border-style . "double")))
      ((string= value "hidden") '((border-style . "hidden")))
-     ((string= value "none") '((border-style . "none")))))
+     ((string= value "none") '((border-style . "none")))
+     ;; Directional border width without explicit value (e.g., border-x, border-t)
+     ;; These are parsed as property="border" value="x"/"t"/etc. (default 1px)
+     ;; Note: With explicit values (e.g., border-x-2), they are parsed as
+     ;; property="border-x" value="2" and handled by separate conditions below
+     ((string= value "x") '((border-left-width . "1px") (border-right-width . "1px")))
+     ((string= value "y") '((border-top-width . "1px") (border-bottom-width . "1px")))
+     ((string= value "t") '((border-top-width . "1px")))
+     ((string= value "r") '((border-right-width . "1px")))
+     ((string= value "b") '((border-bottom-width . "1px")))
+     ((string= value "l") '((border-left-width . "1px")))
+     ((string= value "s") '((border-inline-start-width . "1px")))
+     ((string= value "e") '((border-inline-end-width . "1px")))))
+   
+   ;; Border horizontal with explicit width (border-x-0, border-x-2, border-x-4, border-x-8)
+   ((string= property "border-x")
+    (let ((width (etaf-tailwind--get-border-width value)))
+      (when width
+        (list (cons 'border-left-width width)
+              (cons 'border-right-width width)))))
+   
+   ;; Border vertical with explicit width (border-y-0, border-y-2, border-y-4, border-y-8)
+   ((string= property "border-y")
+    (let ((width (etaf-tailwind--get-border-width value)))
+      (when width
+        (list (cons 'border-top-width width)
+              (cons 'border-bottom-width width)))))
+   
+   ;; Border top with explicit width (border-t-0, border-t-2, border-t-4, border-t-8)
+   ((string= property "border-t")
+    (let ((width (etaf-tailwind--get-border-width value)))
+      (when width
+        (list (cons 'border-top-width width)))))
+   
+   ;; Border right with explicit width (border-r-0, border-r-2, border-r-4, border-r-8)
+   ((string= property "border-r")
+    (let ((width (etaf-tailwind--get-border-width value)))
+      (when width
+        (list (cons 'border-right-width width)))))
+   
+   ;; Border bottom with explicit width (border-b-0, border-b-2, border-b-4, border-b-8)
+   ((string= property "border-b")
+    (let ((width (etaf-tailwind--get-border-width value)))
+      (when width
+        (list (cons 'border-bottom-width width)))))
+   
+   ;; Border left with explicit width (border-l-0, border-l-2, border-l-4, border-l-8)
+   ((string= property "border-l")
+    (let ((width (etaf-tailwind--get-border-width value)))
+      (when width
+        (list (cons 'border-left-width width)))))
+   
+   ;; Border inline-start with explicit width (border-s-0, border-s-2, border-s-4, border-s-8)
+   ((string= property "border-s")
+    (let ((width (etaf-tailwind--get-border-width value)))
+      (when width
+        (list (cons 'border-inline-start-width width)))))
+   
+   ;; Border inline-end with explicit width (border-e-0, border-e-2, border-e-4, border-e-8)
+   ((string= property "border-e")
+    (let ((width (etaf-tailwind--get-border-width value)))
+      (when width
+        (list (cons 'border-inline-end-width width)))))
    
    ;; Padding - expanded to handle ps and pe
    ((or (string= property "p")
@@ -1336,6 +1402,18 @@ VALUE can be a string number or from the spacing scale."
    (t nil)))
 
 ;;; Additional helper functions for Tailwind CSS conversion
+
+(defun etaf-tailwind--get-border-width (value)
+  "Convert border width VALUE to CSS pixel value.
+VALUE can be:
+- nil: returns '1px' (default for border without width value)
+- '0', '2', '4', '8': standard Tailwind border widths
+Returns a string like '1px', '2px', etc., or nil if VALUE is not recognized."
+  (cond
+   ((null value) "1px")
+   ((member value '("0" "2" "4" "8"))
+    (concat value "px"))
+   (t nil)))
 
 (defun etaf-tailwind--get-position-value (value)
   "Convert position VALUE to CSS.
