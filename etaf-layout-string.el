@@ -299,16 +299,44 @@ would otherwise appear as an extra space at the end of each line."
                               (string-join lines "\n"))
                           with-border))
          
+         ;; 4.6 应用 keymap 等交互属性到内容区域（不包含 margin）
+         ;; 如果 tag-instance 存在且有事件处理器，将 keymap 应用到内容区域
+         ;; 这样在 hover 时只会高亮按钮本身，而不是整行
+         (with-interaction
+          (if (and tag-instance (> (length with-v-border) 0))
+              (let* ((definition (plist-get tag-instance :definition))
+                     (has-click (plist-get definition :on-click))
+                     (has-hover (or (plist-get definition :on-hover-enter)
+                                    (plist-get definition :on-hover-leave)
+                                    (plist-get definition :hover-style)))
+                     (has-keydown (plist-get definition :on-keydown)))
+                (if (or has-click has-hover has-keydown)
+                    (let ((keymap (etaf-etml-tag-setup-keymap tag-instance))
+                          (result (copy-sequence with-v-border)))
+                      (add-text-properties
+                       0 (length result)
+                       `(etaf-tag-instance ,tag-instance
+                         keymap ,keymap
+                         ,@(when (or has-click has-hover)
+                             '(mouse-face highlight))
+                         ,@(when has-click
+                             '(pointer hand))
+                         help-echo ,#'etaf-etml-tag--help-echo-handler)
+                       result)
+                      result)
+                  with-v-border))
+            with-v-border))
+         
          ;; 5. 添加水平 margin
          (with-h-margin (if (and (> inner-height 0)
                                  (or (> margin-left 0) (> margin-right 0)))
                             (etaf-lines-concat
                              (list (when (> margin-left 0)
                                      (etaf-pixel-blank margin-left inner-height))
-                                   with-v-border
+                                   with-interaction
                                    (when (> margin-right 0)
                                      (etaf-pixel-blank margin-right inner-height))))
-                          with-v-border))
+                          with-interaction))
          
          (total-width (+ total-pixel margin-left margin-right))
          
@@ -322,28 +350,6 @@ would otherwise appear as an extra space at the end of each line."
                                   (when (> margin-bottom 0)
                                     (etaf-pixel-blank total-width margin-bottom))))
                          with-h-margin)))
-    
-    ;; 7. 应用 keymap 等交互属性
-    ;; 如果 tag-instance 存在且有事件处理器，将 keymap 应用到最终字符串上
-    (when (and tag-instance (> (length final-string) 0))
-      (let* ((definition (plist-get tag-instance :definition))
-             (has-click (plist-get definition :on-click))
-             (has-hover (or (plist-get definition :on-hover-enter)
-                            (plist-get definition :on-hover-leave)
-                            (plist-get definition :hover-style)))
-             (has-keydown (plist-get definition :on-keydown)))
-        (when (or has-click has-hover has-keydown)
-          (let ((keymap (etaf-etml-tag-setup-keymap tag-instance)))
-            (add-text-properties
-             0 (length final-string)
-             `(etaf-tag-instance ,tag-instance
-               keymap ,keymap
-               ,@(when (or has-click has-hover)
-                   '(mouse-face highlight))
-               ,@(when has-click
-                   '(pointer hand))
-               help-echo ,#'etaf-etml-tag--help-echo-handler)
-             final-string)))))
     
     final-string))
 
