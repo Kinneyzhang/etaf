@@ -112,13 +112,14 @@ Returns nil if the class cannot be converted."
   "Process a Tailwind CSS declaration DECL and return CSS string.
 DECL should be a single-element list like (flex) or (bg-red-500).
 Returns a CSS declaration string or nil if conversion fails.
-Logs a warning if the Tailwind class cannot be converted to CSS."
+When conversion fails, returns nil and the caller falls back to
+treating it as a standard property expression."
   (let* ((class-name (symbol-name (car decl)))
          (css-strings (etaf-ecss--convert-tailwind-to-css-string class-name)))
     (if css-strings
         (mapconcat #'identity css-strings "; ")
       ;; Log warning for Tailwind class that couldn't be converted
-      (message "Warning: Tailwind class '%s' could not be converted to CSS, treating as property"
+      (message "Warning: Tailwind class '%s' could not be converted to CSS"
                class-name)
       nil)))
 
@@ -334,7 +335,8 @@ Returns \"px\" for most properties, \"lh\" for vertical spacing in Emacs."
 (defun etaf-ecss--process-tailwind-string (class-string)
   "Process a space-separated string of Tailwind CSS classes.
 CLASS-STRING is a string like \"flex items-center bg-red-500\".
-Returns a list of CSS declaration strings."
+Returns a list of CSS declaration strings.
+Unrecognized classes are skipped with a warning message."
   (let ((classes (split-string class-string))
         (css-strings '()))
     (dolist (class classes)
@@ -343,8 +345,8 @@ Returns a list of CSS declaration strings."
           (if css-props
               (dolist (prop css-props)
                 (push (format "%s: %s" (car prop) (cdr prop)) css-strings))
-            ;; Log warning for unrecognized class
-            (message "Warning: Tailwind class '%s' could not be converted to CSS" class)))))
+            ;; Log warning and skip unrecognized class
+            (message "Warning: Tailwind class '%s' could not be converted to CSS, skipping" class)))))
     (nreverse css-strings)))
 
 (defun etaf-ecss-declaration-block (&rest declarations)
@@ -376,13 +378,17 @@ Example:
     '(bg-red-500)
     '(padding 10))
   ;; => \"{ display: flex; align-items: center; background-color: #ef4444; padding: 10px; }\""
-  (let ((decl-strings '()))
+  (let ((decl-strings '())
+        (string-decls '()))
+    ;; First pass: collect all string declarations' CSS
+    ;; Second pass: process other declarations
     (dolist (decl declarations)
       (cond
-       ;; String: space-separated Tailwind classes
+       ;; String: space-separated Tailwind classes - collect separately
        ((stringp decl)
         (let ((css-strs (etaf-ecss--process-tailwind-string decl)))
-          (setq decl-strings (append decl-strings css-strs))))
+          (dolist (css-str css-strs)
+            (push css-str string-decls))))
        ;; Check if it's a Tailwind CSS utility class (single-element list)
        ((etaf-ecss--tailwind-class-p decl)
         (let ((css-str (or (etaf-ecss--process-tailwind-decl decl)
@@ -399,8 +405,9 @@ Example:
           (push css-str decl-strings)))
        ;; Other types - just convert to string
        (t (push (format "%s" decl) decl-strings))))
-    (setq decl-strings (nreverse decl-strings))
-    (format "{ %s; }" (mapconcat #'identity decl-strings "; "))))
+    ;; Combine: string declarations first (in order), then other declarations (reversed)
+    (let ((all-decls (nconc (nreverse string-decls) (nreverse decl-strings))))
+      (format "{ %s; }" (mapconcat #'identity all-decls "; ")))))
 
 ;;; CSS Rule and Stylesheet
 
@@ -554,13 +561,15 @@ Example:
   ;; => \"display: flex; align-items: center; padding: 10px\"
 
 Returns: \"property1: value1; property2: value2\""
-  (let ((decl-strings '()))
+  (let ((decl-strings '())
+        (string-decls '()))
     (dolist (decl declarations)
       (cond
        ;; String: space-separated Tailwind classes
        ((stringp decl)
         (let ((css-strs (etaf-ecss--process-tailwind-string decl)))
-          (setq decl-strings (append decl-strings css-strs))))
+          (dolist (css-str css-strs)
+            (push css-str string-decls))))
        ;; Tailwind CSS utility class (single-element list)
        ((etaf-ecss--tailwind-class-p decl)
         (let ((css-str (or (etaf-ecss--process-tailwind-decl decl)
@@ -568,8 +577,9 @@ Returns: \"property1: value1; property2: value2\""
           (push css-str decl-strings)))
        ;; Standard property expression
        (t (push (apply #'etaf-ecss-property decl) decl-strings))))
-    (setq decl-strings (nreverse decl-strings))
-    (mapconcat #'identity decl-strings "; ")))
+    ;; Combine: string declarations first (in order), then other declarations (reversed)
+    (let ((all-decls (nconc (nreverse string-decls) (nreverse decl-strings))))
+      (mapconcat #'identity all-decls "; "))))
 
 ;;; Support for ECSS in style tags
 
