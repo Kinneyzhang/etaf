@@ -172,13 +172,44 @@ Returns a new alist with all properties from both, with override taking preceden
 
 ;;; Event Handling
 
+(defun etaf-etml-tag--get-text-content (tag-instance)
+  "Extract the text content from TAG-INSTANCE's children.
+TAG-INSTANCE should be a plist with a :children property.
+Children can be strings or nested tag instances (plists with :children).
+Returns a string with all text content concatenated."
+  (let ((children (plist-get tag-instance :children)))
+    (when children
+      (mapconcat (lambda (child)
+                   (cond
+                    ((stringp child) child)
+                    ;; Handle nested tag instances (plists with :children)
+                    ((and (listp child)
+                          (plist-member child :children))
+                     (etaf-etml-tag--get-text-content child))
+                    ;; Handle DOM nodes (lists like (tag ((attrs)) children...))
+                    ((and (listp child)
+                          (symbolp (car child))
+                          (listp (cadr child)))
+                     (let ((dom-children (cddr child)))
+                       (mapconcat (lambda (c)
+                                    (if (stringp c) c ""))
+                                  dom-children "")))
+                    (t "")))
+                 children ""))))
+
 (defun etaf-etml-tag--make-event (type target &optional extra-data)
   "Create an event object with TYPE and TARGET.
-EXTRA-DATA is an optional alist of additional event properties."
-  (append (list :type type
-                :target target
-                :timestamp (current-time))
-          extra-data))
+EXTRA-DATA is an optional plist of additional event properties.
+TARGET should be a tag-instance (plist with :tag-name, :children, etc.).
+The event includes a :text property with the target's text content."
+  (let ((text (when (and (listp target)
+                         (plist-member target :children))
+                (etaf-etml-tag--get-text-content target))))
+    (append (list :type type
+                  :target target
+                  :text text
+                  :timestamp (current-time))
+            extra-data)))
 
 (defun etaf-etml-tag--dispatch-event (tag-instance event-type &optional extra-data)
   "Dispatch an event of EVENT-TYPE for TAG-INSTANCE."
