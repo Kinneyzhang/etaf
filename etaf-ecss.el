@@ -55,12 +55,12 @@
 ;;   (div :style (etaf-ecss-style "flex items-center bg-blue-500")
 ;;     "Hello")
 ;;
-;;   ;; In style tags (IMPORTANT: use comma before etaf-ecss-css with backquote):
+;;   ;; In style tags - use (ecss ...) forms (recommended):
 ;;   `(html
 ;;      (head
-;;        (style ,(etaf-ecss-css
-;;                  (".header" "flex items-center bg-blue-500")
-;;                  (".content" "p-4" (color "gray")))))
+;;        (style
+;;          (ecss ".header" "flex items-center bg-blue-500")
+;;          (ecss ".content" "p-4" (color "gray"))))
 ;;      (body ...))
 ;;
 ;; Selector Expressions:
