@@ -223,6 +223,47 @@ DOM 是根 DOM 节点。
             (etaf-css-cache-set cache node final-style))
           final-style))))
 
+(defun etaf-css-get-computed-style-dual-mode (cssom node dom)
+  "计算指定节点的亮色和暗色两套最终样式。
+CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
+NODE 是要查询的 DOM 节点。
+DOM 是根 DOM 节点。
+
+返回一个 plist: (:light LIGHT-STYLE :dark DARK-STYLE)
+其中 LIGHT-STYLE 是亮色模式下的计算样式，
+DARK-STYLE 是暗色模式下的计算样式。
+
+此函数用于生成支持自动切换的 Emacs face，
+当背景模式改变时样式会自动更新。"
+  (let* ((rules (etaf-css-get-rules-for-node cssom node dom))
+         (computed-style (etaf-css-cascade-merge-rules rules))
+         ;; 获取 Tailwind 双模式样式
+         (class-attr (dom-attr node 'class))
+         (tailwind-dual (when class-attr
+                          (etaf-tailwind-classes-to-css-dual-mode class-attr)))
+         (tailwind-light (when tailwind-dual
+                           (etaf-css--expand-tailwind-shorthand
+                            (plist-get tailwind-dual :light))))
+         (tailwind-dark (when tailwind-dual
+                          (etaf-css--expand-tailwind-shorthand
+                           (plist-get tailwind-dual :dark))))
+         ;; 合并样式
+         (light-style (if tailwind-light
+                          (etaf-css--merge-style-alists computed-style tailwind-light)
+                        computed-style))
+         (dark-style (if tailwind-dark
+                         (etaf-css--merge-style-alists computed-style tailwind-dark)
+                       computed-style))
+         ;; 应用属性继承
+         (parent (dom-parent dom node)))
+    (when parent
+      (let ((parent-dual (etaf-css-get-computed-style-dual-mode cssom parent dom)))
+        (setq light-style (etaf-css-apply-inheritance
+                           light-style (plist-get parent-dual :light)))
+        (setq dark-style (etaf-css-apply-inheritance
+                          dark-style (plist-get parent-dual :dark)))))
+    (list :light light-style :dark dark-style)))
+
 ;;; 辅助函数
 
 (defun etaf-css--expand-tailwind-shorthand (style-alist)
