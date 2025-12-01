@@ -18,8 +18,13 @@
 ;; 本模块提供用于布局计算的 CSS 值解析功能。
 ;; 所有函数使用 `etaf-layout-parse-' 前缀。
 ;;
+;; 单位说明：
+;; - 垂直方向使用 lh（行高）作为基本单位，表示行数
+;; - 水平方向除了 px 像素外，新增 cw（character-width）相对单位，
+;;   使用 Emacs 的 (frame-char-width) 作为单位基本值
+;;
 ;; 公共接口：
-;; - `etaf-layout-parse-length' - 解析 CSS 长度值（px, %, em, lh）
+;; - `etaf-layout-parse-length' - 解析 CSS 长度值（px, %, em, lh, cw）
 ;; - `etaf-layout-parse-height' - 解析 CSS 高度值（行数单位）
 ;; - `etaf-layout-parse-style-value' - 从计算样式中获取属性值
 ;; - `etaf-layout-parse-flex-number' - 解析 flex 数值属性
@@ -50,6 +55,7 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算），可以为 nil。
 
 支持的单位：
 - px: 像素值
+- cw: 字符宽度单位（1cw = 1个字符宽度，使用 frame-char-width）
 - %: 百分比（相对于 REFERENCE-WIDTH）
 - em: 相对单位（1em = 16px）
 - lh: 行高单位
@@ -68,6 +74,8 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算），可以为 nil。
    ((string= value "0") 0)
    ((string-match "\\`\\([0-9.]+\\)px\\'" value)
     (string-to-number (match-string 1 value)))
+   ((string-match "\\`\\([0-9.]+\\)cw\\'" value)
+    (* (string-to-number (match-string 1 value)) (frame-char-width)))
    ((string-match "\\`\\([0-9.]+\\)%\\'" value)
     (if reference-width
         (* (/ (string-to-number (match-string 1 value)) 100.0)

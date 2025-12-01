@@ -83,6 +83,10 @@ FEATURE-STR 是形如 \"min-width: 768px\" 或 \"orientation: landscape\" 的字
                    ;; 解析像素值
                    ((string-match "^\\([0-9]+\\)px$" value-str)
                     (string-to-number (match-string 1 value-str)))
+                   ;; 解析字符宽度值（支持小数）
+                   ((string-match "^\\([0-9.]+\\)cw$" value-str)
+                    (* (string-to-number (match-string 1 value-str))
+                       (frame-char-width)))
                    ;; 解析数字
                    ((string-match "^[0-9]+$" value-str)
                     (string-to-number value-str))

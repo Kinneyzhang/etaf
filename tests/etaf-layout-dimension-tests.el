@@ -2,6 +2,7 @@
 
 ;;; Commentary:
 ;; Tests for CSS dimension properties: min-width, max-width, height, min-height, max-height
+;; Also tests for CSS units: px, cw (character-width), lh (line-height), etc.
 
 ;;; Code:
 
@@ -26,6 +27,17 @@
   (should (= (etaf-layout-parse-length "100px" 1000) 100))
   (should (= (etaf-layout-parse-length "50px" 1000) 50))
   (should (= (etaf-layout-parse-length "0" 1000) 0)))
+
+(ert-deftest etaf-layout-test-parse-length-cw ()
+  "Test parsing cw (character-width) values for length.
+The cw unit uses `frame-char-width' as the base value."
+  (let ((char-width (frame-char-width)))
+    ;; 1cw should equal frame-char-width
+    (should (= (etaf-layout-parse-length "1cw" 1000) char-width))
+    ;; 10cw should equal 10 * frame-char-width
+    (should (= (etaf-layout-parse-length "10cw" 1000) (* 10 char-width)))
+    ;; 2.5cw should equal 2.5 * frame-char-width
+    (should (= (etaf-layout-parse-length "2.5cw" 1000) (* 2.5 char-width)))))
 
 (ert-deftest etaf-layout-test-parse-length-percent ()
   "Test parsing percentage values for length."
