@@ -127,9 +127,10 @@ Emacs 的 :height 浮点数表示相对于默认字体的缩放比例。"
    ((stringp css-size)
     (let ((size (string-trim css-size)))
       (cond
-       ;; 纯数字字符串（无单位）：作为相对高度
-       ((string-match "^[0-9]+\\(\\.[0-9]+\\)?$" size)
+       ((string-match "^[0-9]+\\(\\.[0-9]+\\)?" size)
         (float (string-to-number size)))
+       ;; ((string-match "^[0-9]+\\(\\.[0-9]+\\)?lh" size)
+       ;;  (float (string-to-number (match-string 0 size))))
        ;; CSS 绝对关键字：基于 16px medium，相邻比例约为 1.2
        ;; https://www.w3.org/TR/css-fonts-3/#absolute-size-value
        ((string= size "xx-small") 0.5625)   ; 9px / 16px
