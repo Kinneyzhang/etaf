@@ -59,6 +59,7 @@
 (require 'etaf-css-shorthand)
 (require 'etaf-css-parse)
 (require 'etaf-tailwind)
+(require 'etaf-ua-stylesheet)
 
 ;;; 从 DOM 提取样式
 
@@ -110,20 +111,29 @@ MEDIA-ENV 是可选的媒体查询环境 alist。
 返回包含所有 CSS 规则、索引和缓存的 CSSOM 结构。
 
 CSSOM 结构：
-- :inline-rules - 内联样式规则列表
+- :ua-rules - User Agent 样式规则列表（最低优先级）
 - :style-rules - 样式表规则列表
-- :all-rules - 所有规则（按顺序）
+- :inline-rules - 内联样式规则列表（最高优先级）
+- :all-rules - 所有规则（按优先级顺序：UA < Author < Inline）
 - :rule-index - 规则索引（按标签、类、ID）
 - :cache - 计算样式缓存
-- :media-env - 媒体查询环境"
-  (let* ((inline-rules (etaf-css-extract-inline-styles dom))
+- :media-env - 媒体查询环境
+
+CSS 层叠顺序（从低到高）：
+1. User Agent Stylesheet (UA rules)
+2. Author Stylesheets (style tags)
+3. Inline Styles (style attribute)"
+  (let* ((ua-rules (etaf-ua-stylesheet-get-rules))
          (style-rules (etaf-css-extract-style-tags dom))
-         (all-rules (append style-rules inline-rules))
+         (inline-rules (etaf-css-extract-inline-styles dom))
+         ;; Order matters: UA rules first (lowest priority), then author, then inline
+         (all-rules (append ua-rules style-rules inline-rules))
          (rule-index (etaf-css-index-build all-rules))
          (cache (etaf-css-cache-create))
          (env (or media-env etaf-css-media-environment)))
-    (list :inline-rules inline-rules
+    (list :ua-rules ua-rules
           :style-rules style-rules
+          :inline-rules inline-rules
           :all-rules all-rules
           :rule-index rule-index
           :cache cache
@@ -160,8 +170,9 @@ DOM 是根 DOM 节点。
               (let ((rule-node (plist-get rule :node)))
                 (when (eq rule-node node)
                   (push rule matching-rules))))
-             ;; 外部样式通过选择器匹配
-             ((eq (plist-get rule :source) 'style-tag)
+             ;; UA 样式和外部样式通过选择器匹配
+             ((or (eq (plist-get rule :source) 'ua)
+                  (eq (plist-get rule :source) 'style-tag))
               (condition-case nil
                   (let* ((selector (plist-get rule :selector))
                          (ast (etaf-css-selector-parse selector)))

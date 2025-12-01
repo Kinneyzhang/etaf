@@ -17,14 +17,25 @@
 ;;
 ;; This module provides a system for defining ETML tags with:
 ;; - Content: The inner content of the tag
-;; - Style: CSS-like styling for the tag
 ;; - Interaction: Event handlers and interactive behaviors
+;; - Display: Block, inline, inline-block, etc.
+;;
+;; DEFAULT STYLES:
+;; Default styles for tags are NO LONGER defined on the tags themselves.
+;; Instead, they are provided by the User Agent Stylesheet (etaf-ua-stylesheet.el)
+;; which is integrated into the CSS system following browser standards.
+;;
+;; CSS Priority Order (low to high):
+;; 1. User Agent Stylesheet (etaf-ua-stylesheet.el)
+;; 2. Author Stylesheets (from <style> tags)
+;; 3. Inline Styles (from style attribute)
 ;;
 ;; Key Features:
 ;; - `define-etaf-etml-tag': Macro for defining custom tags
 ;; - Built-in tags: div, span, button, input, a, p, h1-h6, etc.
 ;; - Event handlers: on-click, on-hover, on-focus, on-change, etc.
 ;; - Style inheritance: Tags can inherit styles from parent tags
+;; - State-based styles: :hover-style, :active-style, :focus-style, :disabled-style
 ;;
 ;; Event Support Status (using Emacs native capabilities):
 ;;
@@ -51,11 +62,9 @@
 ;; Usage Example:
 ;;
 ;;   ;; Define a custom button tag
+;;   ;; Note: Default styles come from UA stylesheet, not tag definition
 ;;   (define-etaf-etml-tag my-button
 ;;     :display 'inline-block
-;;     :default-style '((background-color . "blue")
-;;                      (color . "white")
-;;                      (padding . "10px 20px"))
 ;;     :hover-style '((background-color . "darkblue"))
 ;;     :on-click (lambda (event) (message "Button clicked!")))
 ;;
@@ -372,11 +381,19 @@ NAME is the tag symbol (e.g., button, div, my-component).
 
 PROPS is a plist that can include:
 - :display - Display type (`block', `inline', `inline-block', `flex', `none')
-- :default-style - Default style alist ((property . value) ...)
 - :hover-style - Style when hovered (visual feedback via mouse-face)
 - :active-style - Style when active/pressed
 - :focus-style - Style when focused (not supported for text regions)
 - :disabled-style - Style when disabled
+
+IMPORTANT: Default styles are NO LONGER defined here via :default-style.
+They are provided by the User Agent Stylesheet (etaf-ua-stylesheet.el)
+which is integrated into the CSS system following browser standards.
+
+CSS Priority Order (low to high):
+1. User Agent Stylesheet - Provides default styles for all tags
+2. Author Stylesheets - From <style> tags or external CSS
+3. Inline Styles - From style attribute
 
 Event handlers (see Commentary for support status):
 - :on-click - Click handler (SUPPORTED: mouse-1, RET, SPC)
@@ -398,8 +415,6 @@ Other options:
 Example:
   (define-etaf-etml-tag button
     :display \\='inline-block
-    :default-style \\='((padding . \"5px 10px\")
-                      (cursor . \"pointer\"))
     :hover-style \\='((background-color . \"#e0e0e0\"))
     :on-click (lambda (event)
                 (message \"Button clicked!\")))"
@@ -418,20 +433,24 @@ Example:
 ;;; Tag Rendering
 
 (defun etaf-etml-tag-get-computed-style (tag-instance)
-  "Get the computed style for TAG-INSTANCE based on its current state."
+  "Get the computed style for TAG-INSTANCE based on its current state.
+
+Note: Default styles are no longer retrieved from tag definitions.
+They are now provided by the User Agent Stylesheet in the CSS system.
+This function only handles state-based styles (hover, focus, active, disabled)
+and inline styles from attributes.
+
+To get full computed styles including UA defaults, use the CSS pipeline:
+  (etaf-css-get-computed-style cssom node dom)"
   (let* ((definition (plist-get tag-instance :definition))
          (state (plist-get tag-instance :state))
          (attrs (plist-get tag-instance :attrs))
-         ;; Start with inherited + default style
-         (base-style (etaf-etml-tag--resolve-inherited-style
-                      (plist-get tag-instance :tag-name)))
-         ;; Apply inline styles from attrs
+         ;; Start with inline styles from attrs (no default-style)
          (inline-style (plist-get attrs :style))
-         (style (etaf-etml-tag--merge-styles
-                 base-style (when inline-style
-                              (if (stringp inline-style)
-                                  (etaf-etml-tag--parse-style-string inline-style)
-                                inline-style)))))
+         (style (when inline-style
+                  (if (stringp inline-style)
+                      (etaf-etml-tag--parse-style-string inline-style)
+                    inline-style))))
     ;; Apply state-based styles
     (when (plist-get state :hovered)
       (setq style (etaf-etml-tag--merge-styles
@@ -507,42 +526,28 @@ Returns (tag-name ((attrs...)) children...)."
 
 ;; Block-level tags
 (define-etaf-etml-tag div
-  :display 'block
-  :default-style nil)
+  :display 'block)
 
 (define-etaf-etml-tag p
-  :display 'block
-  :default-style nil)
+  :display 'block)
 
 (define-etaf-etml-tag h1
-  :display 'block
-  :default-style '((font-size . 1.6)
-                   (font-weight . "bold")))
+  :display 'block)
 
 (define-etaf-etml-tag h2
-  :display 'block
-  :default-style '((font-size . 1.4)
-                   (font-weight . "bold")))
+  :display 'block)
 
 (define-etaf-etml-tag h3
-  :display 'block
-  :default-style '((font-size . 1.3)
-                   (font-weight . "bold")))
+  :display 'block)
 
 (define-etaf-etml-tag h4
-  :display 'block
-  :default-style '((font-size . 1.2)
-                   (font-weight . "bold")))
+  :display 'block)
 
 (define-etaf-etml-tag h5
-  :display 'block
-  :default-style '((font-size . 1.1)
-                   (font-weight . "bold")))
+  :display 'block)
 
 (define-etaf-etml-tag h6
-  :display 'block
-  :default-style '((font-size . 1.0)
-                   (font-weight . "bold")))
+  :display 'block)
 
 (define-etaf-etml-tag header
   :display 'block)
@@ -566,41 +571,24 @@ Returns (tag-name ((attrs...)) children...)."
   :display 'block)
 
 (define-etaf-etml-tag ul
-  :display 'block
-  :default-style '((list-style-type . "disc")
-                   (margin-top . "1lh")
-                   (margin-bottom . "1lh")
-                   (padding-left . "10px")))
+  :display 'block)
 
 (define-etaf-etml-tag ol
-  :display 'block
-  :default-style '((list-style-type . "decimal")
-                   (margin-top . "1lh")
-                   (margin-bottom . "1lh")
-                   (padding-left . "10px")))
+  :display 'block)
 
 (define-etaf-etml-tag li
   :display 'list-item)
 
 (define-etaf-etml-tag blockquote
-  :display 'block
-  :default-style '((margin-top . "1lh")
-                   (margin-bottom . "1lh")
-                   (margin-left . "40px")
-                   (margin-right . "40px")))
+  :display 'block)
 
 (define-etaf-etml-tag pre
-  :display 'block
-  :default-style '((font-family . "monospace")
-                   (white-space . "pre")))
+  :display 'block)
 
 (define-etaf-etml-tag hr
   :display 'block
   :self-closing t
-  :children-allowed nil
-  :default-style '((border-top . "1px solid")
-                   (margin-top . "1lh")
-                   (margin-bottom . "1lh")))
+  :children-allowed nil)
 
 ;; Inline tags
 (define-etaf-etml-tag span
@@ -608,9 +596,6 @@ Returns (tag-name ((attrs...)) children...)."
 
 (define-etaf-etml-tag a
   :display 'inline
-  :default-style '((color . "blue")
-                   (text-decoration . "underline")
-                   (cursor . "pointer"))
   :hover-style '((color . "darkblue"))
   :on-click (lambda (event)
               (let* ((target (plist-get event :target))
@@ -620,78 +605,58 @@ Returns (tag-name ((attrs...)) children...)."
                   (browse-url href)))))
 
 (define-etaf-etml-tag em
-  :display 'inline
-  :default-style '((font-style . "italic")))
+  :display 'inline)
 
 (define-etaf-etml-tag strong
-  :display 'inline
-  :default-style '((font-weight . "bold")))
+  :display 'inline)
 
 (define-etaf-etml-tag b
-  :display 'inline
-  :default-style '((font-weight . "bold")))
+  :display 'inline)
 
 (define-etaf-etml-tag i
-  :display 'inline
-  :default-style '((font-style . "italic")))
+  :display 'inline)
 
 (define-etaf-etml-tag u
-  :display 'inline
-  :default-style '((text-decoration . "underline")))
+  :display 'inline)
 
 (define-etaf-etml-tag s
-  :display 'inline
-  :default-style '((text-decoration . "line-through")))
+  :display 'inline)
 
 (define-etaf-etml-tag del
-  :display 'inline
-  :default-style '((text-decoration . "line-through")))
+  :display 'inline)
 
 (define-etaf-etml-tag ins
-  :display 'inline
-  :default-style '((text-decoration . "underline")))
+  :display 'inline)
 
 (define-etaf-etml-tag mark
-  :display 'inline
-  :default-style '((background-color . "yellow")))
+  :display 'inline)
 
 (define-etaf-etml-tag small
-  :display 'inline
-  :default-style '((font-size . "smaller")))
+  :display 'inline)
 
 (define-etaf-etml-tag sub
-  :display 'inline
-  :default-style '((vertical-align . "sub")
-                   (font-size . "smaller")))
+  :display 'inline)
 
 (define-etaf-etml-tag sup
-  :display 'inline
-  :default-style '((vertical-align . "super")
-                   (font-size . "smaller")))
+  :display 'inline)
 
 (define-etaf-etml-tag code
-  :display 'inline
-  :default-style '((font-family . "monospace")))
+  :display 'inline)
 
 (define-etaf-etml-tag kbd
-  :display 'inline
-  :default-style '((font-family . "monospace")))
+  :display 'inline)
 
 (define-etaf-etml-tag samp
-  :display 'inline
-  :default-style '((font-family . "monospace")))
+  :display 'inline)
 
 (define-etaf-etml-tag var
-  :display 'inline
-  :default-style '((font-style . "italic")))
+  :display 'inline)
 
 (define-etaf-etml-tag abbr
-  :display 'inline
-  :default-style '((text-decoration . "dotted underline")))
+  :display 'inline)
 
 (define-etaf-etml-tag cite
-  :display 'inline
-  :default-style '((font-style . "italic")))
+  :display 'inline)
 
 (define-etaf-etml-tag q
   :display 'inline)
@@ -704,10 +669,6 @@ Returns (tag-name ((attrs...)) children...)."
 ;; Form elements
 (define-etaf-etml-tag button
   :display 'inline-block
-  :default-style '((padding-block . "0lh")
-                   (padding-inline . "10px")
-                   (border . "1px solid #ccc")
-                   (cursor . "pointer"))
   :hover-style '((background-color . "#e0e0e0"))
   :active-style '((background-color . "#d0d0d0"))
   :disabled-style '((background-color . "#f5f5f5")
@@ -727,11 +688,6 @@ Returns (tag-name ((attrs...)) children...)."
   :display 'inline-block
   :self-closing t
   :children-allowed nil
-  :default-style '((padding-top . "0lh")
-                   (padding-bottom . "0lh")
-                   (padding-left . "5px")
-                   (padding-right . "5px")
-                   (border . "1px solid #ccc"))
   :focus-style '((border-color . "blue")
                  (outline . "none"))
   :disabled-style '((background-color . "#f5f5f5")
@@ -739,52 +695,30 @@ Returns (tag-name ((attrs...)) children...)."
 
 (define-etaf-etml-tag textarea
   :display 'inline-block
-  :default-style '((padding-top . "0lh")
-                   (padding-bottom . "0lh")
-                   (padding-left . "5px")
-                   (padding-right . "5px")
-                   (border . "1px solid #ccc")
-                   (font-family . "inherit"))
   :focus-style '((border-color . "blue")
                  (outline . "none")))
 
 (define-etaf-etml-tag select
-  :display 'inline-block
-  :default-style '((padding-top . "0lh")
-                   (padding-bottom . "0lh")
-                   (padding-left . "5px")
-                   (padding-right . "5px")
-                   (border . "1px solid #ccc")))
+  :display 'inline-block)
 
 (define-etaf-etml-tag option
   :display 'block)
 
 (define-etaf-etml-tag label
-  :display 'inline
-  :default-style '((cursor . "pointer")))
+  :display 'inline)
 
 (define-etaf-etml-tag form
   :display 'block)
 
 (define-etaf-etml-tag fieldset
-  :display 'block
-  :default-style '((border . "1px solid #ccc")
-                   (padding-top . "1lh")
-                   (padding-bottom . "1lh")
-                   (padding-left . "10px")
-                   (padding-right . "10px")))
+  :display 'block)
 
 (define-etaf-etml-tag legend
-  :display 'block
-  :default-style '((padding-top . "0lh")
-                   (padding-bottom . "0lh")
-                   (padding-left . "5px")
-                   (padding-right . "5px")))
+  :display 'block)
 
 ;; Table elements
 (define-etaf-etml-tag table
-  :display 'table
-  :default-style '((border-collapse . "collapse")))
+  :display 'table)
 
 (define-etaf-etml-tag thead
   :display 'table-header-group)
@@ -799,20 +733,10 @@ Returns (tag-name ((attrs...)) children...)."
   :display 'table-row)
 
 (define-etaf-etml-tag th
-  :display 'table-cell
-  :default-style '((font-weight . "bold")
-                   (text-align . "center")
-                   (padding-top . "0lh")
-                   (padding-bottom . "0lh")
-                   (padding-left . "5px")
-                   (padding-right . "5px")))
+  :display 'table-cell)
 
 (define-etaf-etml-tag td
-  :display 'table-cell
-  :default-style '((padding-top . "0lh")
-                   (padding-bottom . "0lh")
-                   (padding-left . "5px")
-                   (padding-right . "5px")))
+  :display 'table-cell)
 
 (define-etaf-etml-tag caption
   :display 'table-caption)
@@ -837,11 +761,7 @@ Returns (tag-name ((attrs...)) children...)."
 
 ;; Semantic elements
 (define-etaf-etml-tag figure
-  :display 'block
-  :default-style '((margin-top . "1lh")
-                   (margin-bottom . "1lh")
-                   (margin-left . "40px")
-                   (margin-right . "40px")))
+  :display 'block)
 
 (define-etaf-etml-tag figcaption
   :display 'block)
@@ -851,7 +771,6 @@ Returns (tag-name ((attrs...)) children...)."
 
 (define-etaf-etml-tag summary
   :display 'list-item
-  :default-style '((cursor . "pointer"))
   :on-click (lambda (event)
               (let* ((target (plist-get event :target))
                      (state (plist-get target :state)))
@@ -860,14 +779,7 @@ Returns (tag-name ((attrs...)) children...)."
                            (not (plist-get state :expanded))))))
 
 (define-etaf-etml-tag dialog
-  :display 'block
-  :default-style '((position . "absolute")
-                   (border . "1px solid #ccc")
-                   (padding-top . "1lh")
-                   (padding-bottom . "1lh")
-                   (padding-left . "10px")
-                   (padding-right . "10px")
-                   (background-color . "white")))
+  :display 'block)
 
 (define-etaf-etml-tag progress
   :display 'inline-block
