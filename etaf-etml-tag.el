@@ -109,7 +109,7 @@ PROPS is a plist with the following keys:
 - :inherit - Parent tag to inherit from
 - :render - Custom render function"
   (let ((definition (list :name name
-                          :display (or (plist-get props :display) 'inline)
+                          :display (plist-get props :display)
                           :default-style (plist-get props :default-style)
                           :hover-style (plist-get props :hover-style)
                           :active-style (plist-get props :active-style)

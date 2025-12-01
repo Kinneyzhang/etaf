@@ -400,9 +400,12 @@
   ;; button should have padding and border from UA stylesheet
   (when button-node
     (let ((button-style (etaf-css-get-computed-style cssom button-node dom)))
-      (should (or (assq 'padding-block button-style)
+      ;; padding-block and padding-inline are expanded to longhand properties
+      (should (or (assq 'padding-top button-style)
                   (assq 'padding button-style)))
-      (should (assq 'border button-style))))
+      ;; border is expanded to longhand properties (border-top-width, etc.)
+      (should (or (assq 'border-top-width button-style)
+                  (assq 'border button-style)))))
   ;; code should have font-family from UA stylesheet
   (when code-node
     (let ((code-style (etaf-css-get-computed-style cssom code-node dom)))
@@ -416,7 +419,9 @@
        (button-node (car (dom-search dom (lambda (node) (eq (dom-tag node) 'button)))))
        (computed-style (etaf-css-get-computed-style cssom button-node dom)))
   ;; Inline padding should override UA padding
-  (should (assq 'padding computed-style)))
+  ;; padding shorthand is expanded to longhand properties
+  (should (assq 'padding-top computed-style))
+  (should-equal (cdr (assq 'padding-top computed-style)) "20px"))
 
 ;; Test CSS cascade: author style should override UA style
 (let* ((dom '(html nil
@@ -428,6 +433,8 @@
        (button-node (car (dom-search dom (lambda (node) (eq (dom-tag node) 'button)))))
        (computed-style (etaf-css-get-computed-style cssom button-node dom)))
   ;; Author padding should override UA padding
-  (should (assq 'padding computed-style)))
+  ;; padding shorthand is expanded to longhand properties
+  (should (assq 'padding-top computed-style))
+  (should-equal (cdr (assq 'padding-top computed-style)) "30px"))
 
 (provide 'etaf-etml-tag-tests)
