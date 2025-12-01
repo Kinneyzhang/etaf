@@ -192,11 +192,13 @@
 (ert-deftest etaf-ecss-test-tailwind-multi-property-utility ()
   "Test Tailwind utilities that generate multiple CSS properties."
   ;; p-4 generates multiple padding properties
+  ;; Note: Horizontal (left/right) uses cw (character width) units for Emacs compatibility
+  ;; Vertical (top/bottom) uses lh (line height) units
   (let ((result (etaf-ecss-declaration-block '(p-4))))
     (should (string-match-p "padding-top: 4lh" result))
-    (should (string-match-p "padding-right: 4px" result))
+    (should (string-match-p "padding-right: 4cw" result))
     (should (string-match-p "padding-bottom: 4lh" result))
-    (should (string-match-p "padding-left: 4px" result))))
+    (should (string-match-p "padding-left: 4cw" result))))
 
 (ert-deftest etaf-ecss-test-tailwind-typography ()
   "Test Tailwind typography utilities in ecss."
@@ -352,6 +354,83 @@
     (should (string-match-p "\\.card" style-content))
     (should (string-match-p "display: flex" style-content))
     (should (string-match-p "padding: 20px" style-content))))
+
+;;; Unified Format Tests
+
+(ert-deftest etaf-ecss-test-unified-format-basic ()
+  "Test the basic unified ECSS format: selector{tailwind-classes}."
+  (let ((result (etaf-ecss ".card{flex items-center bg-blue-500}")))
+    (should (string-match-p "^\\.card" result))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "align-items: center" result))
+    (should (string-match-p "background-color: #3b82f6" result))))
+
+(ert-deftest etaf-ecss-test-unified-format-complex-selector ()
+  "Test unified format with complex CSS selectors."
+  (let ((result (etaf-ecss "div>p:nth-child(odd){pl-6px pr-2 py-1}")))
+    (should (string-match-p "^div>p:nth-child(odd)" result))
+    (should (string-match-p "padding-left: 6px" result))
+    (should (string-match-p "padding-right: 2cw" result))
+    (should (string-match-p "padding-top: 1lh" result))))
+
+(ert-deftest etaf-ecss-test-unified-format-border ()
+  "Test unified format with border utilities."
+  (let ((result (etaf-ecss ".box{border border-gray-500}")))
+    (should (string-match-p "border-width: 1px" result))
+    (should (string-match-p "border-color: #6b7280" result))))
+
+(ert-deftest etaf-ecss-test-unified-format-parse ()
+  "Test etaf-ecss-parse function."
+  (let ((parsed (etaf-ecss-parse ".container{flex items-center}")))
+    (should (equal (plist-get parsed :selector) ".container"))
+    (should (string-match-p "display: flex" (plist-get parsed :css-string)))
+    (should (string-match-p "align-items: center" (plist-get parsed :css-string)))))
+
+(ert-deftest etaf-ecss-test-unified-format-predicate ()
+  "Test etaf-ecss-unified-p predicate."
+  (should (etaf-ecss-unified-p ".card{flex}"))
+  (should (etaf-ecss-unified-p "div>p:nth-child(odd){pl-6px}"))
+  (should (etaf-ecss-unified-p "#main{bg-red-500}"))
+  (should-not (etaf-ecss-unified-p ".card"))
+  (should-not (etaf-ecss-unified-p "flex items-center"))
+  ;; Empty selector or classes should fail
+  (should-not (etaf-ecss-unified-p "{flex}"))
+  (should-not (etaf-ecss-unified-p ".card{}"))
+  (should-not (etaf-ecss-unified-p "  {flex}"))
+  (should-not (etaf-ecss-unified-p ".card{  }")))
+
+(ert-deftest etaf-ecss-test-unified-stylesheet ()
+  "Test etaf-ecss-stylesheet with unified format strings."
+  (let ((result (etaf-ecss-stylesheet
+                 ".header{flex items-center bg-blue-500}"
+                 ".content{p-4}"
+                 "nav>a{text-white}")))
+    (should (string-match-p "\\.header" result))
+    (should (string-match-p "\\.content" result))
+    (should (string-match-p "nav>a" result))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "color: #ffffff" result))))
+
+(ert-deftest etaf-ecss-test-unified-stylesheet-mixed ()
+  "Test etaf-ecss-stylesheet with mixed unified and legacy formats."
+  (let ((result (etaf-ecss-stylesheet
+                 ".header{flex items-center}"
+                 '(".footer" (background "white") (padding 10)))))
+    (should (string-match-p "\\.header" result))
+    (should (string-match-p "\\.footer" result))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "background: white" result))))
+
+(ert-deftest etaf-ecss-test-legacy-format-still-works ()
+  "Test that legacy format still works after unified format addition."
+  ;; Legacy with property lists
+  (let ((result (etaf-ecss ".box" '(background "red") '(padding 10))))
+    (should (string-match-p "background: red" result))
+    (should (string-match-p "padding: 10px" result)))
+  ;; Legacy with Tailwind string
+  (let ((result (etaf-ecss ".card" "flex items-center")))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "align-items: center" result))))
 
 (provide 'etaf-ecss-tests)
 ;;; etaf-ecss-tests.el ends here

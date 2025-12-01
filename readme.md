@@ -233,15 +233,23 @@ ETAF 支持 Vue 风格的模板指令：
 
 ### ECSS：Emacs 风格 CSS
 
+ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 CSS 语法，样式属性使用 Tailwind 类名。
+
 ```elisp
 (require 'etaf-ecss)
 
-;; 创建 CSS 规则
-(etaf-ecss ".box"
-  '(background "red")
-  '(padding 10)
-  '(border 1 solid "black"))
-;; => ".box { background: red; padding: 10px; border: 1px solid black; }"
+;; 统一格式（推荐）：选择器{Tailwind类名}
+(etaf-ecss "div>p:nth-child(odd){pl-6px pr-2 py-1 border border-gray-500}")
+;; => "div>p:nth-child(odd) { padding-left: 6px; padding-right: 2cw; ... }"
+
+(etaf-ecss ".card{flex items-center bg-blue-500 p-4}")
+;; => ".card { display: flex; align-items: center; ... }"
+
+;; 构建样式表
+(etaf-ecss-stylesheet
+  ".container{flex items-center w-800px}"
+  ".box{bg-blue-500 p-4}"
+  "nav>a{text-white}")
 ```
 
 ## 文档
