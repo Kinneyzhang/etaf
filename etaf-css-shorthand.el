@@ -79,7 +79,7 @@
   "检查 VALUE 是否是 CSS 长度值。"
   (and (stringp value)
        (or ;; Number with optional decimal and optional unit
-        (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|lh\\|%\\)?$" value)
+        (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|lh\\|cw\\|%\\)?$" value)
         (string= value "0")
         (string= value "auto")
         (string= value "thin")
@@ -91,7 +91,7 @@
 无单位的数字不应被视为 flex-basis。"
   (and (stringp value)
        (or ;; 带单位的长度值
-        (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|lh\\|%\\)$" value)
+        (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?\\(px\\|lh\\|cw\\|%\\)$" value)
         ;; 0 可以是 flex-basis
         (string= value "0")
         ;; 关键字

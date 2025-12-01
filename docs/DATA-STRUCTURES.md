@@ -730,21 +730,33 @@ VIEWPORT 是视口大小 (:width w :height h)。"
     (message "  + 右外边距: %d" margin-right)
     (message "  = 总宽度: %d" total-width)))
 
-;; 辅助函数：解析 CSS 长度值
+;; 辅助函数：解析 CSS 长度值（简化示例）
+;; 注：实际实现使用更严格的正则表达式匹配
 (defun etaf-layout-parse-length (value)
   "解析 CSS 长度值，返回像素数。
-支持: px, %, em, rem, auto"
+支持: px, cw, %, em, lh, auto
+- px: 像素值
+- cw: 字符宽度单位，使用 (frame-char-width) 作为基本值
+- %: 百分比（需要根据父元素计算）
+- em: 相对单位（假设 1em = 16px）
+- lh: 行高单位（用于垂直方向）"
   (cond
    ((string= value "auto") 0)
    ((string= value "0") 0)
    ((string-match "\\([0-9.]+\\)px$" value)
     (string-to-number (match-string 1 value)))
+   ((string-match "\\([0-9.]+\\)cw$" value)
+    ;; cw 使用 frame-char-width 作为基本值
+    (* (string-to-number (match-string 1 value)) (frame-char-width)))
    ((string-match "\\([0-9.]+\\)%$" value)
     ;; 百分比需要根据父元素计算，这里简化处理
     (string-to-number (match-string 1 value)))
    ((string-match "\\([0-9.]+\\)em$" value)
     ;; em 需要根据字体大小计算，这里假设 1em = 16px
     (* (string-to-number (match-string 1 value)) 16))
+   ((string-match "\\([0-9.]+\\)lh$" value)
+    ;; lh 行高单位，用于垂直方向
+    (string-to-number (match-string 1 value)))
    (t 0)))
 ```
 
