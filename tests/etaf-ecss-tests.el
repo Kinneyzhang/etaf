@@ -441,6 +441,9 @@
                '(div
                  (ecss ".box" "bg-red-500")
                  (div :class "box" "Hello")))))
+    ;; Parent div should have scope class
+    (let ((class-attr (dom-attr dom 'class)))
+      (should (string-match-p "etaf-scope-[0-9]+" class-attr)))
     ;; Should have a style element as first child
     (let ((first-child (car (dom-children dom))))
       (should (eq (dom-tag first-child) 'style))
@@ -450,15 +453,17 @@
         ;; Should have scope class prefix
         (should (string-match-p "etaf-scope-[0-9]+ \\.box" style-content))
         (should (string-match-p "background-color: #ef4444" style-content))))
-    ;; Sibling div should have scope class added
+    ;; Sibling div should NOT need scope class (parent has it)
     (let ((second-child (cadr (dom-children dom))))
       (should (eq (dom-tag second-child) 'div))
       (let ((class-attr (dom-attr second-child 'class)))
+        ;; Should have original class but NOT scope class
         (should (string-match-p "box" class-attr))
-        (should (string-match-p "etaf-scope-[0-9]+" class-attr))))))
+        ;; Scope class is on parent, not siblings
+        (should-not (string-match-p "etaf-scope-[0-9]+" class-attr))))))
 
 (ert-deftest etaf-ecss-test-scoped-ecss-multiple-siblings ()
-  "Test ecss scopes CSS to multiple sibling elements."
+  "Test ecss scopes CSS to multiple sibling elements via parent scope."
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(div
@@ -466,16 +471,20 @@
                  (span :class "item" "First")
                  (span :class "item" "Second")
                  (span :class "item" "Third")))))
-    ;; All sibling spans should have scope class
+    ;; Parent div should have scope class
+    (let ((class-attr (dom-attr dom 'class)))
+      (should (string-match-p "etaf-scope-[0-9]+" class-attr)))
+    ;; Children should be processed
     (let ((children (dom-children dom)))
       ;; First child is style
       (should (eq (dom-tag (car children)) 'style))
-      ;; Other children are spans with scope class
+      ;; Other children are spans, scope class is on parent not children
       (dolist (child (cdr children))
         (when (eq (dom-tag child) 'span)
           (let ((class-attr (dom-attr child 'class)))
             (should (string-match-p "item" class-attr))
-            (should (string-match-p "etaf-scope-[0-9]+" class-attr))))))))
+            ;; Scope class is on parent, not siblings
+            (should-not (string-match-p "etaf-scope-[0-9]+" class-attr))))))))
 
 (ert-deftest etaf-ecss-test-scoped-ecss-multiple-rules ()
   "Test multiple ecss tags in same scope."
