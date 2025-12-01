@@ -171,16 +171,24 @@ PROPS is a plist with the following keys:
     ;; Inline elements (display: inline by default)
     span em strong b i u s del ins mark small sub sup
     code kbd samp var abbr cite q label
-    ;; Other elements  
-    option legend caption li
+    ;; Inline-block media elements (display: inline-block in UA stylesheet)
+    video audio canvas svg
+    ;; Form elements
+    select
+    ;; Dialog
+    dialog
     ;; Table elements (display: table-* in UA stylesheet)
-    thead tbody tfoot)
+    table tr th td thead tbody tfoot caption
+    ;; Other elements  
+    option legend li)
   "List of built-in HTML-like tags that don't require special behavior.
 These tags are automatically registered and get their styles from the UA stylesheet.
 They don't need event handlers, special metadata, or custom rendering.
 
 Following browser architecture: tags are recognized by name, with all styling
-coming from the UA stylesheet (display, padding, colors, etc.).")
+coming from the UA stylesheet (display, padding, colors, etc.).
+
+Note: br is NOT in this list because it's self-closing and needs metadata.")
 
 (defun etaf-etml-tag-register-builtin ()
   "Register all built-in tags with minimal definitions.
@@ -614,23 +622,10 @@ Returns (tag-name ((attrs...)) children...)."
   :focus-style '((border-color . "blue")
                  (outline . "none")))
 
-;; Table structure tags
-(define-etaf-etml-tag table)
-(define-etaf-etml-tag tr)
-(define-etaf-etml-tag th)
-(define-etaf-etml-tag td)
-
-;; Media elements
-(define-etaf-etml-tag video)
-(define-etaf-etml-tag audio)
-(define-etaf-etml-tag canvas)
-(define-etaf-etml-tag svg)
-
-;; Other elements
-(define-etaf-etml-tag select)
-(define-etaf-etml-tag dialog)
+;; Elements that don't allow children
 (define-etaf-etml-tag progress
   :children-allowed nil)
+
 (define-etaf-etml-tag meter
   :children-allowed nil)
 
