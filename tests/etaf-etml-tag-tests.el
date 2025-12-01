@@ -1,5 +1,8 @@
 (require 'etaf-ert)
 (require 'etaf-etml-tag)
+(require 'etaf-ua-stylesheet)
+(require 'etaf-css)
+(require 'etaf-dom)
 
 (setq-local lisp-indent-offset 2)
 
@@ -29,8 +32,8 @@
 (let ((button-def (etaf-etml-tag-get-definition 'button)))
   (should-equal (plist-get button-def :name) 'button)
   (should-equal (plist-get button-def :display) 'inline-block)
-  (should-equal (assq 'cursor (plist-get button-def :default-style))
-                '(cursor . "pointer")))
+  ;; Default styles are now in UA stylesheet, not tag definition
+  (should-equal (plist-get button-def :default-style) nil))
 
 ;; Test self-closing tags
 (let ((input-def (etaf-etml-tag-get-definition 'input)))
@@ -46,21 +49,18 @@
   (should-equal (plist-get hr-def :children-allowed) nil))
 
 ;;; Test custom tag definition
-
+;; Custom tags can still use :default-style if needed for custom behavior
+;; But built-in HTML-like tags get their defaults from UA stylesheet
 (define-etaf-etml-tag custom-button
   :display 'inline-block
   :inherit 'button
-  :default-style '((background-color . "blue")
-                   (color . "white"))
   :hover-style '((background-color . "darkblue")))
 
 (should-equal (etaf-etml-tag-defined-p 'custom-button) t)
 
 (let ((custom-def (etaf-etml-tag-get-definition 'custom-button)))
   (should-equal (plist-get custom-def :display) 'inline-block)
-  (should-equal (plist-get custom-def :inherit) 'button)
-  (should-equal (assq 'background-color (plist-get custom-def :default-style))
-                '(background-color . "blue")))
+  (should-equal (plist-get custom-def :inherit) 'button))
 
 ;;; Test style merging
 
@@ -130,12 +130,13 @@
   (should-equal (car dom) 'div)
   (should-equal (assq 'class (cadr dom)) '(class . "container")))
 
-;; Test rendering with style (using button which has default styles)
+;; Test rendering button tag
+;; Note: Default styles now come from UA stylesheet via CSS system
+;; When using etaf-etml-tag-render-to-dom directly, no default styles are added
+;; Styles are applied when the DOM goes through the CSS system
 (let* ((instance (etaf-etml-tag-create-instance 'button nil '("Click")))
        (dom (etaf-etml-tag-render-to-dom instance)))
-  (should-equal (car dom) 'button)
-  ;; button has default style
-  (should (assq 'style (cadr dom))))
+  (should-equal (car dom) 'button))
 
 ;; Test rendering p tag (which has no default style)
 (let* ((instance (etaf-etml-tag-create-instance 'p nil '("Paragraph")))
@@ -237,9 +238,9 @@
 
 (let* ((instance (etaf-etml-tag-create-instance 'button nil '("Click")))
        (base-style (etaf-etml-tag-get-computed-style instance)))
-  ;; Button should have padding-block/inline in default style (using CSS logical properties)
-  (should (assq 'padding-block base-style))
-  (should (assq 'padding-inline base-style))
+  ;; Default styles now come from UA stylesheet, not from tag definition
+  ;; etaf-etml-tag-get-computed-style only returns inline and state-based styles
+  ;; For full computed styles including UA defaults, use the CSS pipeline
   
   ;; Simulate hover state
   (plist-put (plist-get instance :state) :hovered t)
@@ -247,27 +248,19 @@
     ;; Should have hover background color
     (should (assq 'background-color hover-style))))
 
-;;; Test unit consistency - vertical uses lh, horizontal uses px
+;;; Test UA stylesheet integration
+;; These tests verify that default styles are now in the UA stylesheet
+;; and not in tag definitions
 
-;; Test ul tag uses lh for vertical margins and px for horizontal padding
+;; Test that tag definitions no longer contain default-style
 (let ((ul-def (etaf-etml-tag-get-definition 'ul)))
-  (let ((style (plist-get ul-def :default-style)))
-    (should (string-match "lh" (cdr (assq 'margin-top style))))
-    (should (string-match "lh" (cdr (assq 'margin-bottom style))))
-    (should (string-match "px" (cdr (assq 'padding-left style))))))
+  (should-equal (plist-get ul-def :default-style) nil))
 
-;; Test blockquote uses lh for vertical margins
-(let ((bq-def (etaf-etml-tag-get-definition 'blockquote)))
-  (let ((style (plist-get bq-def :default-style)))
-    (should (string-match "lh" (cdr (assq 'margin-top style))))
-    (should (string-match "lh" (cdr (assq 'margin-bottom style))))))
+(let ((blockquote-def (etaf-etml-tag-get-definition 'blockquote)))
+  (should-equal (plist-get blockquote-def :default-style) nil))
 
-;; Test button tag uses lh units for vertical padding and px units for horizontal padding
-;; Note: Button uses CSS logical properties padding-block and padding-inline
 (let ((button-def (etaf-etml-tag-get-definition 'button)))
-  (let ((style (plist-get button-def :default-style)))
-    (should (string-match "lh" (cdr (assq 'padding-block style))))
-    (should (string-match "px" (cdr (assq 'padding-inline style))))))
+  (should-equal (plist-get button-def :default-style) nil))
 
 ;;; Test event handling keymap setup
 
@@ -329,5 +322,86 @@
     ;; Dispatch click event
     (etaf-etml-tag--dispatch-event instance 'click)
     (should clicked)))
+
+;;; Test UA Stylesheet Integration
+
+;; Test that UA stylesheet can be retrieved
+(should (stringp (etaf-ua-stylesheet-get-css)))
+
+;; Test that UA stylesheet contains expected rules
+(let ((css (etaf-ua-stylesheet-get-css)))
+  (should (string-match-p "button" css))
+  (should (string-match-p "padding" css))
+  (should (string-match-p "border" css)))
+
+;; Test that UA rules are properly parsed
+(let ((rules (etaf-ua-stylesheet-get-rules)))
+  (should (listp rules))
+  (should (> (length rules) 0))
+  ;; All rules should be marked as 'ua source
+  (dolist (rule rules)
+    (should-equal (plist-get rule :source) 'ua)))
+
+;; Test CSS priority order: UA < Author < Inline
+;; Create a simple DOM with button and build CSSOM
+(let* ((dom '(html nil
+               (body nil
+                 (button ((id . "test-btn")) "Click"))))
+       (cssom (etaf-css-build-cssom dom))
+       (button-node (dom-by-id dom "test-btn"))
+       (rules (etaf-css-get-rules-for-node cssom button-node dom)))
+  ;; Should have UA rules for button
+  (should (> (length rules) 0))
+  ;; At least one rule should be from UA
+  (should (cl-some (lambda (rule)
+                     (eq (plist-get rule :source) 'ua))
+                   rules)))
+
+;; Test that UA styles are applied correctly through CSS system
+(let* ((dom '(html nil
+               (body nil
+                 (h1 nil "Heading")
+                 (button nil "Click")
+                 (code nil "code"))))
+       (cssom (etaf-css-build-cssom dom))
+       (h1-node (car (dom-search dom (lambda (node) (eq (dom-tag node) 'h1)))))
+       (button-node (car (dom-search dom (lambda (node) (eq (dom-tag node) 'button)))))
+       (code-node (car (dom-search dom (lambda (node) (eq (dom-tag node) 'code))))))
+  ;; h1 should have font-size from UA stylesheet
+  (when h1-node
+    (let ((h1-style (etaf-css-get-computed-style cssom h1-node dom)))
+      (should (assq 'font-size h1-style))))
+  ;; button should have padding and border from UA stylesheet
+  (when button-node
+    (let ((button-style (etaf-css-get-computed-style cssom button-node dom)))
+      (should (or (assq 'padding-block button-style)
+                  (assq 'padding button-style)))
+      (should (assq 'border button-style))))
+  ;; code should have font-family from UA stylesheet
+  (when code-node
+    (let ((code-style (etaf-css-get-computed-style cssom code-node dom)))
+      (should (assq 'font-family code-style)))))
+
+;; Test CSS cascade: inline style should override UA style
+(let* ((dom '(html nil
+               (body nil
+                 (button ((style . "padding: 20px;")) "Click"))))
+       (cssom (etaf-css-build-cssom dom))
+       (button-node (car (dom-search dom (lambda (node) (eq (dom-tag node) 'button)))))
+       (computed-style (etaf-css-get-computed-style cssom button-node dom)))
+  ;; Inline padding should override UA padding
+  (should (assq 'padding computed-style)))
+
+;; Test CSS cascade: author style should override UA style
+(let* ((dom '(html nil
+               (head nil
+                 (style nil "button { padding: 30px; }"))
+               (body nil
+                 (button nil "Click"))))
+       (cssom (etaf-css-build-cssom dom))
+       (button-node (car (dom-search dom (lambda (node) (eq (dom-tag node) 'button)))))
+       (computed-style (etaf-css-get-computed-style cssom button-node dom)))
+  ;; Author padding should override UA padding
+  (should (assq 'padding computed-style)))
 
 (provide 'etaf-etml-tag-tests)

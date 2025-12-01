@@ -53,21 +53,21 @@
     (message "\nbutton display: %s" (plist-get button-def :display))
     (message "button has click handler: %s"
              (functionp (plist-get button-def :on-click)))
-    (message "button default style: %S" (plist-get button-def :default-style))
+    ;; Note: Default styles now come from UA stylesheet, not tag definition
+    (message "button default style (in tag def): %S" (plist-get button-def :default-style))
     (message "button hover style: %S" (plist-get button-def :hover-style))))
 
 ;;; Example 3: Custom Tag Definition
+
+;; Note: For custom tags, you can still use :default-style if you want
+;; tag-specific styles that don't belong in the global UA stylesheet.
+;; However, HTML-like built-in tags (button, input, etc.) now get their
+;; default styles from the User Agent Stylesheet.
 
 ;; Define a custom primary button tag
 (define-etaf-etml-tag primary-button
   :display 'inline-block
   :inherit 'button
-  :default-style '((background-color . "#007bff")
-                   (color . "white")
-                   (border . "none")
-                   (padding . "10px 20px")
-                   (border-radius . "5px")
-                   (cursor . "pointer"))
   :hover-style '((background-color . "#0056b3"))
   :active-style '((background-color . "#004494"))
   :on-click (lambda (event)
@@ -81,34 +81,18 @@
 (define-etaf-etml-tag danger-button
   :display 'inline-block
   :inherit 'button
-  :default-style '((background-color . "#dc3545")
-                   (color . "white")
-                   (border . "none")
-                   (padding . "10px 20px")
-                   (border-radius . "5px")
-                   (cursor . "pointer"))
   :hover-style '((background-color . "#c82333"))
   :on-click (lambda (event)
               (message "Danger button clicked! Be careful!")))
 
 ;; Define a custom card component
+;; Custom components can use :default-style for their unique styling
 (define-etaf-etml-tag card
-  :display 'block
-  :default-style '((border . "1px solid #ddd")
-                   (border-radius . "8px")
-                   (padding . "16px")
-                   (margin . "8px 0")
-                   (background-color . "white")
-                   (box-shadow . "0 2px 4px rgba(0,0,0,0.1)")))
+  :display 'block)
 
 ;; Define a custom badge/chip component
 (define-etaf-etml-tag badge
-  :display 'inline-block
-  :default-style '((background-color . "#6c757d")
-                   (color . "white")
-                   (padding . "2px 8px")
-                   (border-radius . "12px")
-                   (font-size . "0.875em")))
+  :display 'inline-block)
 
 (defun etaf-etml-tag-example-custom ()
   "Demonstrate custom tag definitions."
@@ -123,8 +107,7 @@
   
   ;; Get custom tag definition
   (let ((primary-def (etaf-etml-tag-get-definition 'primary-button)))
-    (message "\nprimary-button inherits from: %s" (plist-get primary-def :inherit))
-    (message "primary-button style: %S" (plist-get primary-def :default-style))))
+    (message "\nprimary-button inherits from: %s" (plist-get primary-def :inherit))))
 
 ;;; Example 4: Rendering Tags to DOM
 
