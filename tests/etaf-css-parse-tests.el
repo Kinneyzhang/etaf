@@ -47,7 +47,7 @@ The cw unit uses `frame-char-width' as the base value."
 
 (ert-deftest etaf-css-parse-test-length-percent-nil-reference ()
   "Test parsing percentage values with nil reference width.
-When reference-width is nil, percentage values should return 'auto."
+When reference-width is nil, percentage values should return auto"
   (should (eq (etaf-css-parse-length "50%" nil) 'auto))
   (should (eq (etaf-css-parse-length "100%" nil) 'auto)))
 
@@ -96,7 +96,7 @@ When reference-width is nil, percentage values should return 'auto."
 
 (ert-deftest etaf-css-parse-test-height-percent-nil-reference ()
   "Test parsing percentage values with nil reference height.
-When reference-height is nil, percentage values should return 'auto."
+When reference-height is nil, percentage values should return auto"
   (should (eq (etaf-css-parse-height "50%" nil) 'auto))
   (should (eq (etaf-css-parse-height "100%" nil) 'auto)))
 
@@ -105,7 +105,8 @@ When reference-height is nil, percentage values should return 'auto."
   ;; px values are converted to line numbers using pixels-per-line (default 20)
   (should (= (etaf-css-parse-height "20px" 100) 1))
   (should (= (etaf-css-parse-height "40px" 100) 2))
-  (should (= (etaf-css-parse-height "50px" 100) 3))) ; ceiling(50/20) = 3
+  (should (= (etaf-css-parse-height "50px" 100)
+             (ceiling (/ 50.0 etaf-css-parse-pixels-per-line)))))
 
 (ert-deftest etaf-css-parse-test-height-em ()
   "Test parsing em values for height."
