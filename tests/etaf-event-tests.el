@@ -123,14 +123,14 @@
     (etaf-event-init)
     (etaf-event-register-element "test-uuid" '(div nil) 1 10)
     
-    (let ((called nil)
-          (callback (lambda (uuid data)
-                      (setq called (list uuid data)))))
-      (etaf-event-add-listener "test-uuid" 'test-event callback)
-      
-      ;; Dispatch event
-      (etaf-event-dispatch "test-uuid" 'test-event '(:foo bar))
-      (should (equal called '("test-uuid" (:foo bar)))))
+    (let ((called-ref (list nil)))  ; Use a mutable list
+      (let ((callback (lambda (uuid data)
+                        (setcar called-ref (list uuid data)))))
+        (etaf-event-add-listener "test-uuid" 'test-event callback)
+        
+        ;; Dispatch event
+        (etaf-event-dispatch "test-uuid" 'test-event '(:foo bar))
+        (should (equal (car called-ref) '("test-uuid" (:foo bar))))))
     
     (etaf-event-cleanup)))
 
@@ -140,15 +140,15 @@
     (etaf-event-init)
     (etaf-event-register-element "test-uuid" '(div nil) 1 10)
     
-    (let ((called nil)
-          (callback (lambda (uuid data)
-                      (setq called t))))
-      (etaf-event-add-listener "test-uuid" 'test-event callback)
-      (etaf-event-remove-listener "test-uuid" 'test-event callback)
-      
-      ;; Dispatch event - should not call removed listener
-      (etaf-event-dispatch "test-uuid" 'test-event '(:foo bar))
-      (should (null called)))
+    (let ((called-ref (list nil)))  ; Use a mutable list
+      (let ((callback (lambda (uuid data)
+                        (setcar called-ref t))))
+        (etaf-event-add-listener "test-uuid" 'test-event callback)
+        (etaf-event-remove-listener "test-uuid" 'test-event callback)
+        
+        ;; Dispatch event - should not call removed listener
+        (etaf-event-dispatch "test-uuid" 'test-event '(:foo bar))
+        (should (null (car called-ref)))))
     
     (etaf-event-cleanup)))
 
@@ -158,20 +158,22 @@
     (etaf-event-init)
     (etaf-event-register-element "test-uuid" '(div nil) 1 10)
     
-    (let ((state-changes '()))
-      (etaf-event-add-listener "test-uuid" 'state-change
-        (lambda (uuid data)
-          (push (list uuid data) state-changes)))
-      
-      ;; Change state
-      (etaf-event-set-state "test-uuid" :hover t)
-      (etaf-event-set-state "test-uuid" :active t)
-      
-      (should (= (length state-changes) 2))
-      (let ((first-change (cadr (nth 1 state-changes))))
-        (should (eq (plist-get first-change :key) :hover))
-        (should (eq (plist-get first-change :old-value) nil))
-        (should (eq (plist-get first-change :new-value) t))))
+    (let ((state-changes-ref (list '())))  ; Use a mutable list
+      (let ((listener (lambda (uuid data)
+                        (setcar state-changes-ref 
+                                (cons (list uuid data) (car state-changes-ref))))))
+        (etaf-event-add-listener "test-uuid" 'state-change listener)
+        
+        ;; Change state
+        (etaf-event-set-state "test-uuid" :hover t)
+        (etaf-event-set-state "test-uuid" :active t)
+        
+        (let ((state-changes (car state-changes-ref)))
+          (should (= (length state-changes) 2))
+          (let ((first-change (cadr (nth 1 state-changes))))
+            (should (eq (plist-get first-change :key) :hover))
+            (should (eq (plist-get first-change :old-value) nil))
+            (should (eq (plist-get first-change :new-value) t))))))
     
     (etaf-event-cleanup)))
 
