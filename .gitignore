@@ -7,3 +7,6 @@
 
 # Package directory
 elpa/
+
+# External dependencies (cloned for development)
+ekp-lib/
