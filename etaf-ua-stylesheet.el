@@ -62,7 +62,8 @@
    "button, input, textarea, select, img, video, canvas, svg { display: inline-block; }"
    
    ;; Inline elements have display: inline by default (browser default)
-   ;; No need to explicitly set for: span, a, em, strong, b, i, u, s, del, ins, mark, small, sub, sup, code, kbd, samp, var, abbr, cite, q, br, label, audio, option, summary, progress, meter
+   ;; No need to explicitly set for: span, a, em, strong, b, i, u, s, del, ins, mark, small, sub, sup, code, kbd, samp, var, abbr, cite, q, label, audio, option, summary, progress, meter
+   ;; Note: br is also inline but is defined as self-closing tag in tag definitions
    
    ;; Headings - font-size as ratio for em-based sizing
    "h1 { font-size: 1.6em; font-weight: bold; }"
