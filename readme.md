@@ -47,7 +47,7 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 
 ;; With Tailwind CSS classes
 (etaf-render-to-buffer "*demo*"
-  '(div :class "flex items-center p-4 bg-blue-500"
+  '(div :class "flex items-center p-2 bg-blue-500"
      (span :class "text-white font-bold" "Styled with Tailwind!")))
 ```
 
@@ -161,7 +161,7 @@ TML → DOM 树 → CSSOM → 渲染树 → 布局树 → Buffer 字符串
 
 ;; 使用 Tailwind CSS 类
 (etaf-render-to-buffer "*demo*"
-  '(div :class "flex items-center p-4 bg-blue-500"
+  '(div :class "flex items-center p-2 bg-blue-500"
      (span :class "text-white font-bold" "Tailwind 样式!")))
 ```
 
@@ -219,9 +219,9 @@ ETAF 支持 Vue 风格的模板指令：
 ```elisp
 ;; 直接使用 Tailwind 类
 (etaf-render-to-buffer "*demo*"
-  '(div :class "flex items-center justify-between bg-white rounded-lg shadow-md p-4"
+  '(div :class "flex items-center justify-between bg-white rounded-lg shadow-md p-2"
      (h1 :class "text-lg font-bold text-gray-900" "标题")
-     (button :class "bg-blue-500 text-white px-4 py-2 rounded" "按钮")))
+     (button :class "bg-blue-500 text-white px-2 py-1 rounded" "按钮")))
 ```
 
 支持的 Tailwind 功能：
@@ -229,6 +229,7 @@ ETAF 支持 Vue 风格的模板指令：
 - 状态变体：`hover:`, `focus:`, `active:`
 - 颜色系统：完整的 Tailwind 调色板
 - 间距、Flexbox、圆角、阴影等
+- 水平方向默认使用字符宽度(cw)，使用px后缀指定像素（如 `w-20px`）
 
 ### ECSS：Emacs 风格 CSS
 
