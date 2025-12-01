@@ -2,6 +2,7 @@
 
 (require 'etaf-dom-tests)
 (require 'etaf-ert)
+(require 'etaf-css-selector)
 
 (defvar etaf-dom-tests-dom
   (etaf-etml-to-dom
@@ -181,3 +182,137 @@
 (should-equal
   (mapcar #'dom-texts (etaf-css-selector-query etaf-css-selector-tests-nested-dom "#pannel-input > div > div > p"))
   '("111" "222" "333"))
+
+;;; Interactive Pseudo-Class Tests (with etaf-event integration)
+
+;; Test :hover pseudo-class matching with event system
+(require 'etaf-event)
+(with-temp-buffer
+  (etaf-event-init)
+  
+  ;; Create a test DOM with UUID attribute
+  (let ((test-node '(button ((uuid . "btn-1") (class . "primary")) "Click Me")))
+    ;; Register the element with the event system
+    (etaf-event-register-element "btn-1" test-node 1 10)
+    
+    ;; Initially, :hover should not match
+    (should-not
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button:hover") :nodes))))
+    
+    ;; Set hover state
+    (etaf-event-set-state "btn-1" :hover t)
+    
+    ;; Now :hover should match
+    (should
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button:hover") :nodes)))))
+  
+  (etaf-event-cleanup))
+
+;; Test :active pseudo-class matching
+(with-temp-buffer
+  (etaf-event-init)
+  
+  (let ((test-node '(button ((uuid . "btn-2") (class . "primary")) "Click Me")))
+    (etaf-event-register-element "btn-2" test-node 1 10)
+    
+    ;; Initially, :active should not match
+    (should-not
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button:active") :nodes))))
+    
+    ;; Set active state
+    (etaf-event-set-state "btn-2" :active t)
+    
+    ;; Now :active should match
+    (should
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button:active") :nodes)))))
+  
+  (etaf-event-cleanup))
+
+;; Test :focus pseudo-class matching
+(with-temp-buffer
+  (etaf-event-init)
+  
+  (let ((test-node '(input ((uuid . "input-1") (type . "text")) "")))
+    (etaf-event-register-element "input-1" test-node 1 10)
+    
+    ;; Initially, :focus should not match
+    (should-not
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "input:focus") :nodes))))
+    
+    ;; Set focus
+    (etaf-event-set-focus "input-1")
+    
+    ;; Now :focus should match
+    (should
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "input:focus") :nodes)))))
+  
+  (etaf-event-cleanup))
+
+;; Test :disabled and :enabled pseudo-classes
+(with-temp-buffer
+  (etaf-event-init)
+  
+  (let ((test-node '(button ((uuid . "btn-3") (class . "primary")) "Submit")))
+    (etaf-event-register-element "btn-3" test-node 1 10)
+    
+    ;; Initially, button is enabled
+    (should
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button:enabled") :nodes))))
+    
+    (should-not
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button:disabled") :nodes))))
+    
+    ;; Disable button
+    (etaf-event-set-state "btn-3" :disabled t)
+    (etaf-event-set-state "btn-3" :enabled nil)
+    
+    ;; Now it should match :disabled
+    (should
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button:disabled") :nodes))))
+    
+    (should-not
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button:enabled") :nodes)))))
+  
+  (etaf-event-cleanup))
+
+;; Test combined pseudo-classes with structural selectors
+(with-temp-buffer
+  (etaf-event-init)
+  
+  (let ((test-node '(button ((uuid . "btn-4") (class . "btn primary")) "Click")))
+    (etaf-event-register-element "btn-4" test-node 1 10)
+    (etaf-event-set-state "btn-4" :hover t)
+    
+    ;; Should match complex selector button.primary:hover
+    (should
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button.primary:hover") :nodes))))
+    
+    ;; Should not match if class doesn't match
+    (should-not
+     (etaf-css-selector-basic-match-p
+      test-node
+      (car (plist-get (etaf-css-selector-parse "button.secondary:hover") :nodes)))))
+  
+  (etaf-event-cleanup))
