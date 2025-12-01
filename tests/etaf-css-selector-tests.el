@@ -3,6 +3,7 @@
 (load-file "./etaf-dom-tests.el")
 (require 'etaf-dom-tests)
 (require 'etaf-ert)
+(require 'etaf-css-selector)
 
 (defvar etaf-dom-tests-dom
   (etaf-etml-to-dom
