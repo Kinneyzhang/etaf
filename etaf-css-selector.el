@@ -34,6 +34,10 @@
 ;;; Code:
 
 (require 'cl-lib)
+;; Optional: Load etaf-event for interactive pseudo-class support
+;; The selector matching will still work without it, but interactive
+;; pseudo-classes (:hover, :active, :focus) will not match
+(require 'etaf-event nil t)
 
 (defconst etaf-css-selector-token-types
   '((ampersand . 38)          ; &
@@ -837,10 +841,29 @@ CSS是输入字符串，START是单词的起始位置。返回单词的结束位
 
 (defun etaf-css-selector-pseudo-match-p (node pseudo-node)
   "检查DOM节点NODE是否匹配伪类选择器PSEUDO-NODE。
-目前支持基本的结构伪类。"
+支持结构伪类和交互伪类（:hover, :active, :focus等）。
+交互伪类需要通过 etaf-event 模块跟踪元素状态。"
   (when (and node (listp node))
     (let ((pseudo-value (plist-get pseudo-node :value)))
       (cond
+       ;; Interactive pseudo-classes (require event model)
+       ;; :hover - Element is being hovered by mouse
+       ((string= pseudo-value ":hover")
+        (etaf-css-selector-check-interactive-state node :hover))
+       ;; :active - Element is being activated (mouse pressed)
+       ((string= pseudo-value ":active")
+        (etaf-css-selector-check-interactive-state node :active))
+       ;; :focus - Element has focus
+       ((string= pseudo-value ":focus")
+        (etaf-css-selector-check-interactive-state node :focus))
+       ;; :disabled - Element is disabled
+       ((string= pseudo-value ":disabled")
+        (etaf-css-selector-check-interactive-state node :disabled))
+       ;; :enabled - Element is enabled
+       ((string= pseudo-value ":enabled")
+        (etaf-css-selector-check-interactive-state node :enabled))
+       
+       ;; Structural pseudo-classes (existing implementation)
        ;; :first-child
        ((string= pseudo-value ":first-child")
         (etaf-dom-is-first-child node))
@@ -950,6 +973,20 @@ CSS是输入字符串，START是单词的起始位置。返回单词的结束位
                       node first-selector)))))))
        ;; 其他伪类暂不支持，返回t以避免过滤
        (t t)))))
+
+(defun etaf-css-selector-check-interactive-state (node state-key)
+  "Check if NODE matches the interactive STATE-KEY (:hover, :active, etc.).
+This function integrates with the etaf-event module to check element state.
+If the event module is not loaded or the element is not registered,
+returns nil (element doesn't match the pseudo-class)."
+  (when (and node (listp node))
+    ;; Check if etaf-event module is available
+    (when (featurep 'etaf-event)
+      ;; Try to get the element's UUID from its attributes
+      (let ((uuid (dom-attr node 'uuid)))
+        (when uuid
+          ;; Query the event system for this element's state
+          (etaf-event-matches-pseudo-class-p uuid state-key))))))
 
 (defun etaf-css-selector-part-match-p (node selector-nodes)
   "检查DOM节点是否匹配选择器节点列表 SELECTOR-NODES。"
