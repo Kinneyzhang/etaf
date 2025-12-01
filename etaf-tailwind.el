@@ -777,8 +777,9 @@ If VALUE ends with 'px' suffix (e.g., \"20px\"), use pixels instead."
   (etaf-tailwind-to-css \"text-lg\")
   ;; => ((font-size . \"1.125rem\") (line-height . \"1.75rem\"))
   
-  (etaf-tailwind-to-css \"p-4\")
-  ;; => ((padding . \"1rem\"))"
+  (etaf-tailwind-to-css \"p-2\")
+  ;; => ((padding-top . \"2lh\") (padding-right . \"2cw\")
+  ;;     (padding-bottom . \"2lh\") (padding-left . \"2cw\"))"
   (let* ((parsed (etaf-tailwind-parse-class class-name))
          (property (plist-get parsed :property))
          (value (plist-get parsed :value))
@@ -1809,9 +1810,11 @@ CLASS-NAMES是类名列表或空格分隔的字符串。
 返回合并后的CSS属性alist。
 
 示例：
-  (etaf-tailwind-classes-to-css \"flex items-center bg-red-500 p-4\")
+  (etaf-tailwind-classes-to-css \"flex items-center bg-red-500 p-2\")
   ;; => ((display . \"flex\") (align-items . \"center\") 
-  ;;     (background-color . \"#ef4444\") (padding . \"1rem\"))"
+  ;;     (background-color . \"#ef4444\")
+  ;;     (padding-top . \"2lh\") (padding-right . \"2cw\")
+  ;;     (padding-bottom . \"2lh\") (padding-left . \"2cw\"))"
   (let ((classes (if (stringp class-names)
                      (split-string class-names)
                    class-names))
@@ -1831,7 +1834,7 @@ NODE是DOM节点，CLASS-NAMES是Tailwind类名列表或字符串。
 这会将Tailwind类转换为内联样式添加到节点的style属性。
 
 示例：
-  (etaf-tailwind-apply-css-to-node node \"flex items-center bg-blue-500 p-4\")"
+  (etaf-tailwind-apply-css-to-node node \"flex items-center bg-blue-500 p-2\")"
   (let ((css-props (etaf-tailwind-classes-to-css class-names)))
     (when css-props
       (etaf-dom-set-styles node css-props))))
