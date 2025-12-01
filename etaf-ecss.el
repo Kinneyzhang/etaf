@@ -14,17 +14,37 @@
 ;;; Commentary:
 
 ;; This module provides an Emacs-specific way to express CSS using list
-;; structures, similar to how Emacs's `rx' macro converts list expressions
-;; to regular expression strings.
+;; structures and unified string syntax, similar to how Emacs's `rx' macro
+;; converts list expressions to regular expression strings.
 ;;
 ;; The goal is to provide a more Lisp-friendly way to write CSS that:
-;; 1. Uses symbols instead of strings for property names
-;; 2. Supports nested structures for related properties
-;; 3. Provides shorthand notations for common patterns
-;; 4. Converts to standard CSS strings for use with CSSOM
-;; 5. Supports Tailwind CSS utility classes as style declarations
+;; 1. Supports a unified string format combining CSS selectors and Tailwind
+;; 2. Uses symbols instead of strings for property names
+;; 3. Supports nested structures for related properties
+;; 4. Provides shorthand notations for common patterns
+;; 5. Converts to standard CSS strings for use with CSSOM
+;; 6. Supports Tailwind CSS utility classes as style declarations
 ;;
-;; Basic Usage:
+;; ==== UNIFIED FORMAT (Recommended) ====
+;;
+;; The unified format combines CSS selector and Tailwind-style declarations
+;; in a single string: "selector{tailwind-classes}"
+;;
+;;   (etaf-ecss "div>p:nth-child(odd){pl-6px pr-2 py-1 border border-gray-500}")
+;;   ;; => "div>p:nth-child(odd) { padding-left: 6px; padding-right: 2cw; ... }"
+;;
+;;   (etaf-ecss ".card{flex items-center bg-blue-500 p-4}")
+;;   ;; => ".card { display: flex; align-items: center; ... }"
+;;
+;;   ;; Build a stylesheet using unified format:
+;;   (etaf-ecss-stylesheet
+;;     ".container{flex items-center w-800px}"
+;;     ".box{bg-blue-500 p-4}"
+;;     "nav>a{text-white}")
+;;
+;; ==== LEGACY FORMAT ====
+;;
+;; The legacy format uses separate selector and declaration arguments:
 ;;
 ;;   ;; Convert a single rule to CSS string
 ;;   (etaf-ecss ".box" 
@@ -39,9 +59,9 @@
 ;;     '(".box" (background "blue") (padding 10)))
 ;;   ;; => ".container { width: 800px; margin: 0 auto; }\n.box { ... }"
 ;;
-;; Tailwind CSS Support:
+;; Tailwind CSS Support (with legacy format):
 ;;
-;;   ;; Simple string format (recommended):
+;;   ;; Simple string format:
 ;;   (etaf-ecss ".card" "flex items-center justify-center bg-red-500 p-4")
 ;;   ;; => ".card { display: flex; align-items: center; ... }"
 ;;
@@ -55,7 +75,7 @@
 ;;   (div :style (etaf-ecss-style "flex items-center bg-blue-500")
 ;;     "Hello")
 ;;
-;;   ;; In style tags - use (ecss ...) forms (recommended):
+;;   ;; In style tags - use (ecss ...) forms:
 ;;   `(html
 ;;      (head
 ;;        (style
@@ -418,45 +438,111 @@ Example:
 
 ;;; CSS Rule and Stylesheet
 
+(defun etaf-ecss-parse (ecss-string)
+  "Parse unified ECSS string into selector and CSS declarations.
+
+The unified format uses a single string containing both selector and
+Tailwind-style declarations: \"selector{tailwind-classes}\"
+
+The selector uses native CSS syntax, and the style declarations use
+Tailwind utility class syntax.
+
+Returns a plist with :selector and :css-string keys.
+
+Example:
+  (etaf-ecss-parse \"div>p:nth-child(odd){pl-6px pr-2 py-1 border border-gray-500}\")
+  ;; => (:selector \"div>p:nth-child(odd)\"
+  ;;     :css-string \"div>p:nth-child(odd) { padding-left: 6px; padding-right: 2cw; ... }\")"
+  (when (and (stringp ecss-string)
+             (string-match "\\`\\([^{]+\\){\\([^}]*\\)}\\'" ecss-string))
+    (let* ((selector (string-trim (match-string 1 ecss-string)))
+           (tailwind-classes (string-trim (match-string 2 ecss-string)))
+           (css-props (etaf-tailwind-classes-to-css-with-mode tailwind-classes))
+           (css-decls (mapcar (lambda (prop)
+                                (format "%s: %s" (car prop) (cdr prop)))
+                              css-props))
+           (css-body (mapconcat #'identity css-decls "; ")))
+      (list :selector selector
+            :css-string (format "%s { %s; }" selector css-body)))))
+
+(defun etaf-ecss-unified-p (arg)
+  "Check if ARG is a unified ECSS string format.
+Returns t if ARG matches the pattern \"selector{tailwind-classes}\"."
+  (and (stringp arg)
+       (string-match-p "\\`[^{]+{[^}]*}\\'" arg)))
+
 (defun etaf-ecss (selector &rest declarations)
   "Create a CSS rule with SELECTOR and DECLARATIONS.
 
-SELECTOR can be a string or selector expression.
-DECLARATIONS are property expressions.
+This function supports two formats:
 
-Example:
-  (etaf-ecss \".box\"
-    '(background \"red\")
-    '(padding 10)
-    '(border 1 solid \"black\"))
-  ;; => \".box { background: red; padding: 10px; border: 1px solid black; }\"
+1. UNIFIED FORMAT (recommended):
+   A single string \"selector{tailwind-classes}\" where the selector uses
+   native CSS syntax and declarations use Tailwind utility classes.
 
-  (etaf-ecss '(and (tag \"div\") (class \"container\"))
-    '(width 800)
-    '(margin 0 auto))
-  ;; => \"div.container { width: 800px; margin: 0 auto; }\""
-  (let ((sel-str (etaf-ecss-selector selector))
-        (decl-block (apply #'etaf-ecss-declaration-block declarations)))
-    (format "%s %s" sel-str decl-block)))
+   Example:
+     (etaf-ecss \"div>p:nth-child(odd){pl-6px pr-2 py-1 border border-gray-500}\")
+     ;; => \"div>p:nth-child(odd) { padding-left: 6px; padding-right: 2cw; ... }\"
+
+     (etaf-ecss \".card{flex items-center bg-blue-500 p-4}\")
+     ;; => \".card { display: flex; align-items: center; ... }\"
+
+2. LEGACY FORMAT:
+   SELECTOR can be a string or selector expression.
+   DECLARATIONS are property expressions or Tailwind class strings.
+
+   Example:
+     (etaf-ecss \".box\"
+       '(background \"red\")
+       '(padding 10))
+     ;; => \".box { background: red; padding: 10px; }\"
+
+     (etaf-ecss \".card\" \"flex items-center bg-red-500\")
+     ;; => \".card { display: flex; align-items: center; ... }\""
+  (if (and (etaf-ecss-unified-p selector) (null declarations))
+      ;; Unified format: "selector{tailwind-classes}"
+      (let ((parsed (etaf-ecss-parse selector)))
+        (plist-get parsed :css-string))
+    ;; Legacy format: selector + declarations
+    (let ((sel-str (etaf-ecss-selector selector))
+          (decl-block (apply #'etaf-ecss-declaration-block declarations)))
+      (format "%s %s" sel-str decl-block))))
 
 (defun etaf-ecss-stylesheet (&rest rules)
   "Create a stylesheet from multiple RULES.
 
-Each rule is a list: (selector declarations ...)
+This function supports two formats:
 
-Example:
-  (etaf-ecss-stylesheet
-    '(\".container\" (width 800) (margin 0 auto))
-    '(\".box\" (background \"blue\") (padding 10))
-    '((descendant \"nav\" \"a\") (color \"white\")))
-  ;; => \".container { width: 800px; margin: 0 auto; }
-  ;;     .box { background: blue; padding: 10px; }
-  ;;     nav a { color: white; }\""
+1. UNIFIED FORMAT (recommended):
+   Each rule is a unified ECSS string \"selector{tailwind-classes}\".
+
+   Example:
+     (etaf-ecss-stylesheet
+       \".container{flex items-center w-800px}\"
+       \".box{bg-blue-500 p-4}\"
+       \"nav>a{text-white}\")
+     ;; => \".container { display: flex; ... }
+     ;;     .box { background-color: #3b82f6; ... }
+     ;;     nav>a { color: #ffffff; }\"
+
+2. LEGACY FORMAT:
+   Each rule is a list: (selector declarations ...)
+
+   Example:
+     (etaf-ecss-stylesheet
+       '(\".container\" (width 800) (margin 0 auto))
+       '(\".box\" (background \"blue\") (padding 10)))
+     ;; => \".container { width: 800px; margin: 0 auto; }
+     ;;     .box { background: blue; padding: 10px; }\""
   (mapconcat
    (lambda (rule)
-     (let ((selector (car rule))
-           (declarations (cdr rule)))
-       (apply #'etaf-ecss selector declarations)))
+     (if (stringp rule)
+         ;; Unified format: "selector{tailwind-classes}"
+         (etaf-ecss rule)
+       ;; Legacy format: (selector declarations ...)
+       (let ((selector (car rule))
+             (declarations (cdr rule)))
+         (apply #'etaf-ecss selector declarations))))
    rules "\n"))
 
 ;;; Macros for more convenient usage
