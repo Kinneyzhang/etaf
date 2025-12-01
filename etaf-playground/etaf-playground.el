@@ -171,12 +171,14 @@ evaluated expression."
 (defun etaf-playground--build-etml ()
   "Build the playground UI as ETML structure."
   `(div
-    (style (ecss "#pannel-input > div"
-                 "border-x border-t border-gray-500")
-           (ecss "#pannel-input > div > p"
-                 "pl-2 bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400 italic")
-           (ecss "#pannel-input > div > div"
-                 "px-2 py-1"))
+    (style
+     ;;; 下面注释的几种方式写法都支持
+     ;; "#pannel-input > div {border-left:1px solid grey;}"
+     ;; (ecss "#pannel-input > div" "border-x")
+     ;; (ecss "#pannel-input > div" (border-left "1px") (border-right "1px red"))
+     (ecss "#pannel-input > div {border-x border-t border-gray-500}")
+     (ecss "#pannel-input > div > p {pl-2 bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400 italic}")
+     (ecss "#pannel-input > div > div {px-2 py-1}"))
     (div :class "ml-2 mt-1"
          (div :class "flex justify-between w-50"
               (div "ETAF Playground")
