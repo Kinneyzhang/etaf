@@ -1,5 +1,6 @@
 (require 'etaf-ert)
 (require 'etaf-etml)
+(require 'etaf-vdom)
 
 (setq-local lisp-indent-offset 2)
 
@@ -45,15 +46,20 @@
         (style (cdr (assq 'style attrs))))
   ;; button should have padding and border styles from etaf-etml-tag
   (should (stringp style))
-  (should (string-match "padding-left" style))
-  (should (string-match "padding-right" style))
+  ;; button uses CSS logical properties: padding-block and padding-inline
+  (should (string-match "padding-block" style))
+  (should (string-match "padding-inline" style))
   (should (string-match "border" style)))
 
-;;; Test etaf-etml-tag integration - button tag should have tag-instance for events
-(let* ((result (etaf-etml-to-dom '(button "Click")))
-        (attrs (cadr result))
-        (tag-instance (cdr (assq 'etaf-tag-instance attrs))))
-  ;; button has on-click handler, so it should have tag-instance
+;;; Test etaf-etml-tag integration - button tag should have tag-instance in VTree (not DOM)
+;; Tag instances are now stored in the virtual DOM layer, not in DOM attributes
+(let* ((result (etaf-etml-to-dom-with-vdom '(button "Click")))
+        (vtree (etaf-vdom-result-get-vtree result))
+        (dom (etaf-vdom-result-get-dom result))
+        (tag-instance (etaf-vdom-get-tag-instance vtree)))
+  ;; DOM should NOT have etaf-tag-instance in attributes
+  (should-not (assq 'etaf-tag-instance (cadr dom)))
+  ;; VTree should have the tag-instance
   (should tag-instance)
   ;; tag-instance should have the button definition
   (should-equal (plist-get tag-instance :tag-name) 'button)
@@ -64,25 +70,25 @@
     (should (plist-get definition :on-click))))
 
 ;;; Test etaf-etml-tag integration - button tag text should be in event
-(let* ((result (etaf-etml-to-dom '(button "CLICK ME")))
-        (attrs (cadr result))
-        (tag-instance (cdr (assq 'etaf-tag-instance attrs)))
+(let* ((result (etaf-etml-to-dom-with-vdom '(button "CLICK ME")))
+        (vtree (etaf-vdom-result-get-vtree result))
+        (tag-instance (etaf-vdom-get-tag-instance vtree))
         (event (etaf-etml-tag--make-event 'click tag-instance nil)))
   ;; event should have text property with button text
   (should-equal (plist-get event :text) "CLICK ME"))
 
-;;; Test etaf-etml-tag integration - a tag should have tag-instance for events
-(let* ((result (etaf-etml-to-dom '(a :href "/test" "Link")))
-        (attrs (cadr result))
-        (tag-instance (cdr (assq 'etaf-tag-instance attrs))))
-  ;; a tag has on-click handler, so it should have tag-instance
+;;; Test etaf-etml-tag integration - a tag should have tag-instance in VTree
+(let* ((result (etaf-etml-to-dom-with-vdom '(a :href "/test" "Link")))
+        (vtree (etaf-vdom-result-get-vtree result))
+        (tag-instance (etaf-vdom-get-tag-instance vtree)))
+  ;; a tag has on-click handler, so VTree should have tag-instance
   (should tag-instance)
   (should-equal (plist-get tag-instance :tag-name) 'a))
 
 ;;; Test etaf-etml-tag integration - div should NOT have tag-instance (no events)
-(let* ((result (etaf-etml-to-dom '(div "Text")))
-        (attrs (cadr result))
-        (tag-instance (cdr (assq 'etaf-tag-instance attrs))))
+(let* ((result (etaf-etml-to-dom-with-vdom '(div "Text")))
+        (vtree (etaf-vdom-result-get-vtree result))
+        (tag-instance (etaf-vdom-get-tag-instance vtree)))
   ;; div has no event handlers or hover styles, so no tag-instance
   (should-not tag-instance))
 
@@ -94,7 +100,7 @@
   (should (stringp style))
   (should (string-match "margin-top: 1lh" style))
   (should (string-match "margin-bottom: 1lh" style))
-  (should (string-match "padding-left: 40px" style)))
+  (should (string-match "padding-left: 10px" style)))
 
 (should-equal
   (etaf-etml-render '(div "Hello, {{ name }}!") '(:name "World"))

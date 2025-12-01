@@ -237,9 +237,9 @@
 
 (let* ((instance (etaf-etml-tag-create-instance 'button nil '("Click")))
        (base-style (etaf-etml-tag-get-computed-style instance)))
-  ;; Button should have padding-left/right in default style
-  (should (assq 'padding-left base-style))
-  (should (assq 'padding-right base-style))
+  ;; Button should have padding-block/inline in default style (using CSS logical properties)
+  (should (assq 'padding-block base-style))
+  (should (assq 'padding-inline base-style))
   
   ;; Simulate hover state
   (plist-put (plist-get instance :state) :hovered t)
@@ -263,13 +263,11 @@
     (should (string-match "lh" (cdr (assq 'margin-bottom style))))))
 
 ;; Test button tag uses lh units for vertical padding and px units for horizontal padding
-;; Note: vertical padding values are "0lh" which still uses the lh unit
+;; Note: Button uses CSS logical properties padding-block and padding-inline
 (let ((button-def (etaf-etml-tag-get-definition 'button)))
   (let ((style (plist-get button-def :default-style)))
-    (should (string-match "lh" (cdr (assq 'padding-top style))))
-    (should (string-match "lh" (cdr (assq 'padding-bottom style))))
-    (should (string-match "px" (cdr (assq 'padding-left style))))
-    (should (string-match "px" (cdr (assq 'padding-right style))))))
+    (should (string-match "lh" (cdr (assq 'padding-block style))))
+    (should (string-match "px" (cdr (assq 'padding-inline style))))))
 
 ;;; Test event handling keymap setup
 
