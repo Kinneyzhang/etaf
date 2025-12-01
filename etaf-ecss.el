@@ -109,6 +109,12 @@
 (require 'cl-lib)
 (require 'etaf-tailwind)
 
+;;; Constants
+
+(defconst etaf-ecss--unified-regex "\\`\\([^{]+\\){\\([^}]*\\)}\\'"
+  "Regex pattern for unified ECSS format: \"selector{tailwind-classes}\".
+Group 1 captures the selector, group 2 captures the Tailwind classes.")
+
 ;;; Tailwind CSS Support
 
 (defun etaf-ecss--tailwind-class-p (decl)
@@ -448,28 +454,41 @@ The selector uses native CSS syntax, and the style declarations use
 Tailwind utility class syntax.
 
 Returns a plist with :selector and :css-string keys.
+Returns nil if the input is invalid or has empty selector/classes.
 
 Example:
   (etaf-ecss-parse \"div>p:nth-child(odd){pl-6px pr-2 py-1 border border-gray-500}\")
   ;; => (:selector \"div>p:nth-child(odd)\"
   ;;     :css-string \"div>p:nth-child(odd) { padding-left: 6px; padding-right: 2cw; ... }\")"
   (when (and (stringp ecss-string)
-             (string-match "\\`\\([^{]+\\){\\([^}]*\\)}\\'" ecss-string))
+             (string-match etaf-ecss--unified-regex ecss-string))
     (let* ((selector (string-trim (match-string 1 ecss-string)))
-           (tailwind-classes (string-trim (match-string 2 ecss-string)))
-           (css-props (etaf-tailwind-classes-to-css-with-mode tailwind-classes))
-           (css-decls (mapcar (lambda (prop)
-                                (format "%s: %s" (car prop) (cdr prop)))
-                              css-props))
-           (css-body (mapconcat #'identity css-decls "; ")))
-      (list :selector selector
-            :css-string (format "%s { %s; }" selector css-body)))))
+           (tailwind-classes (string-trim (match-string 2 ecss-string))))
+      ;; Validate that both selector and classes are non-empty
+      (when (and (not (string-empty-p selector))
+                 (not (string-empty-p tailwind-classes)))
+        (let* ((css-props (etaf-tailwind-classes-to-css-with-mode tailwind-classes))
+               (css-decls (mapcar (lambda (prop)
+                                    (format "%s: %s" (car prop) (cdr prop)))
+                                  css-props))
+               (css-body (mapconcat #'identity css-decls "; ")))
+          (list :selector selector
+                :css-string (if (string-empty-p css-body)
+                                (format "%s { }" selector)
+                              (format "%s { %s; }" selector css-body))))))))
 
 (defun etaf-ecss-unified-p (arg)
   "Check if ARG is a unified ECSS string format.
-Returns t if ARG matches the pattern \"selector{tailwind-classes}\"."
+Returns t if ARG matches the pattern \"selector{tailwind-classes}\"
+with non-empty selector and classes."
   (and (stringp arg)
-       (string-match-p "\\`[^{]+{[^}]*}\\'" arg)))
+       (string-match-p etaf-ecss--unified-regex arg)
+       ;; Additional validation to ensure non-empty parts
+       (when (string-match etaf-ecss--unified-regex arg)
+         (let ((selector (string-trim (match-string 1 arg)))
+               (classes (string-trim (match-string 2 arg))))
+           (and (not (string-empty-p selector))
+                (not (string-empty-p classes)))))))
 
 (defun etaf-ecss (selector &rest declarations)
   "Create a CSS rule with SELECTOR and DECLARATIONS.

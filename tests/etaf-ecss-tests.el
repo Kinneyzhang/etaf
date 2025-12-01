@@ -192,8 +192,8 @@
 (ert-deftest etaf-ecss-test-tailwind-multi-property-utility ()
   "Test Tailwind utilities that generate multiple CSS properties."
   ;; p-4 generates multiple padding properties
-  ;; Note: Horizontal (left/right) uses cw (character-width) units for Emacs compatibility
-  ;; Vertical (top/bottom) uses lh (line-height) units
+  ;; Note: Horizontal (left/right) uses cw (character width) units for Emacs compatibility
+  ;; Vertical (top/bottom) uses lh (line height) units
   (let ((result (etaf-ecss-declaration-block '(p-4))))
     (should (string-match-p "padding-top: 4lh" result))
     (should (string-match-p "padding-right: 4cw" result))
@@ -392,7 +392,12 @@
   (should (etaf-ecss-unified-p "div>p:nth-child(odd){pl-6px}"))
   (should (etaf-ecss-unified-p "#main{bg-red-500}"))
   (should-not (etaf-ecss-unified-p ".card"))
-  (should-not (etaf-ecss-unified-p "flex items-center")))
+  (should-not (etaf-ecss-unified-p "flex items-center"))
+  ;; Empty selector or classes should fail
+  (should-not (etaf-ecss-unified-p "{flex}"))
+  (should-not (etaf-ecss-unified-p ".card{}"))
+  (should-not (etaf-ecss-unified-p "  {flex}"))
+  (should-not (etaf-ecss-unified-p ".card{  }")))
 
 (ert-deftest etaf-ecss-test-unified-stylesheet ()
   "Test etaf-ecss-stylesheet with unified format strings."
