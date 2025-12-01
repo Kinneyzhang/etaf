@@ -274,7 +274,11 @@ the final string with keymap properties."
           (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
           ;; NOTE: Tag instances are no longer embedded in DOM attributes.
           ;; They are stored in the virtual DOM layer (see etaf-vdom.el).
-          ;; Use etaf-etml-to-dom-with-vdom to get both clean DOM and VTree.
+          ;; To access tag instances with event handlers, use:
+          ;;   (etaf-etml-to-dom-with-vdom template data)
+          ;; This returns an etaf-vdom-result with:
+          ;;   - :dom - Clean DOM without tag-instances
+          ;;   - :vtree - Virtual DOM tree with tag-instances and event handlers
           ;; Process children based on tag type and content
           ;; Check for ecss children first to handle scoping properly
           (let* ((has-ecss-children (and rest 
@@ -1341,7 +1345,6 @@ Example:
     ;; dom is clean: (a ((href . \"/test\")) \"Link\")
     ;; vtree contains the tag-instance for event handling
     )"
-  (require 'etaf-etml)
   (let* ((rendered (etaf-etml-render template data))
          (vnode (etaf-etml--to-vdom-node rendered))
          (dom (etaf-vdom-get-dom vnode)))
