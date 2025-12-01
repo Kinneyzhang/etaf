@@ -174,16 +174,16 @@ evaluated expression."
     (style (ecss "#pannel-input > div"
                  "border-x border-t border-gray-500")
            (ecss "#pannel-input > div > p"
-                 "pl-10 bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400 italic")
+                 "pl-2 bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400 italic")
            (ecss "#pannel-input > div > div"
-                 "px-10 py-1"))
-    (div :class "ml-20 mt-1"
-         (div :class "flex justify-between pl-6 w-400"
+                 "px-2 py-1"))
+    (div :class "ml-2 mt-1"
+         (div :class "flex justify-between w-50"
               (div "ETAF Playground")
               (div (button "Format") " " (button "Run")
                    " " (button "Clear")))
-         (div :class "flex w-1000 mt-1"
-              (div :id "pannel-input" :class "w-400"
+         (div :class "flex w-200 mt-1"
+              (div :id "pannel-input" :class "w-50"
                    (div (p "ETML Structure")
                         (div (p ,etaf-playground-etml-content)))
                    (div (p "CSS Styles")
@@ -192,7 +192,7 @@ evaluated expression."
                         (p "Elisp Data")
                         (div (p ,etaf-playground-elisp-content))))
               (div :id "pannel-output"
-                   :class "ml-20 w-400 border border-gray-500 px-10"
+                   :class "ml-2 w-100 border border-gray-500 px-1"
                    ,(if etaf-playground-error-message
                         `(div :class ""
                               (div "Error:")
