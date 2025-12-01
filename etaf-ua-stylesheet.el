@@ -93,24 +93,24 @@
    "cite { font-style: italic; }"
    
    ;; Form elements
-   "button { padding-block: 0lh; padding-inline: 10px; border: 1px solid #ccc; cursor: pointer; }"
-   "input { padding-top: 0lh; padding-bottom: 0lh; padding-left: 5px; padding-right: 5px; border: 1px solid #ccc; }"
-   "textarea { padding-top: 0lh; padding-bottom: 0lh; padding-left: 5px; padding-right: 5px; border: 1px solid #ccc; font-family: inherit; }"
-   "select { padding-top: 0lh; padding-bottom: 0lh; padding-left: 5px; padding-right: 5px; border: 1px solid #ccc; }"
+   "button { padding-block: 0; padding-inline: 10px; border: 1px solid #ccc; cursor: pointer; }"
+   "input { padding-block: 0; padding-inline: 5px; border: 1px solid #ccc; }"
+   "textarea { padding-block: 0; padding-inline: 5px; border: 1px solid #ccc; font-family: inherit; }"
+   "select { padding-block: 0; padding-inline: 5px; border: 1px solid #ccc; }"
    "label { cursor: pointer; }"
-   "fieldset { border: 1px solid #ccc; padding-top: 1lh; padding-bottom: 1lh; padding-left: 10px; padding-right: 10px; }"
-   "legend { padding-top: 0lh; padding-bottom: 0lh; padding-left: 5px; padding-right: 5px; }"
+   "fieldset { border: 1px solid #ccc; padding-block: 1lh; padding-inline: 10px; }"
+   "legend { padding-block: 0; padding-inline: 5px; }"
    
    ;; Tables
    "table { border-collapse: collapse; }"
-   "th { font-weight: bold; text-align: center; padding-top: 0lh; padding-bottom: 0lh; padding-left: 5px; padding-right: 5px; }"
-   "td { padding-top: 0lh; padding-bottom: 0lh; padding-left: 5px; padding-right: 5px; }"
+   "th { font-weight: bold; text-align: center; padding-block: 0; padding-inline: 5px; }"
+   "td { padding-block: 0; padding-inline: 5px; }"
    
    ;; Figures
    "figure { margin-top: 1lh; margin-bottom: 1lh; margin-left: 40px; margin-right: 40px; }"
    
    ;; Dialog
-   "dialog { position: absolute; border: 1px solid #ccc; padding-top: 1lh; padding-bottom: 1lh; padding-left: 10px; padding-right: 10px; background-color: white; }"
+   "dialog { position: absolute; border: 1px solid #ccc; padding-block: 1lh; padding-inline: 10px; background-color: white; }"
    
    ;; Summary
    "summary { cursor: pointer; }")

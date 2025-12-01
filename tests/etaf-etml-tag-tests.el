@@ -50,7 +50,8 @@
 
 ;;; Test custom tag definition
 ;; Custom tags can still use :default-style if needed for custom behavior
-;; But built-in HTML-like tags get their defaults from UA stylesheet
+;; In this test, custom-button inherits from button and adds custom hover behavior
+;; Default styles (like padding, border) now come from UA stylesheet
 (define-etaf-etml-tag custom-button
   :display 'inline-block
   :inherit 'button
@@ -235,14 +236,12 @@
   (should (plist-get a-def :hover-style)))
 
 ;;; Test computed style with state
+;; Note: Default styles are now provided by UA stylesheet via CSS pipeline
+;; etaf-etml-tag-get-computed-style only handles inline and state-based styles
 
 (let* ((instance (etaf-etml-tag-create-instance 'button nil '("Click")))
        (base-style (etaf-etml-tag-get-computed-style instance)))
-  ;; Default styles now come from UA stylesheet, not from tag definition
-  ;; etaf-etml-tag-get-computed-style only returns inline and state-based styles
-  ;; For full computed styles including UA defaults, use the CSS pipeline
-  
-  ;; Simulate hover state
+  ;; Simulate hover state - should add hover-style
   (plist-put (plist-get instance :state) :hovered t)
   (let ((hover-style (etaf-etml-tag-get-computed-style instance)))
     ;; Should have hover background color
