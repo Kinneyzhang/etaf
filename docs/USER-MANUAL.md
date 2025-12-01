@@ -512,6 +512,29 @@ ECSS provides Lisp-style CSS expressions, similar to `rx` for regex.
 (etaf-ecss-property 'height 5)         ;; => "height: 5lh" (vertical uses lh)
 ```
 
+### CSS Units / CSS 单位
+
+ETAF supports the following CSS units:
+
+| Unit | Direction | Description |
+|------|-----------|-------------|
+| `px` | Horizontal | Pixel value |
+| `cw` | Horizontal | Character width (uses `frame-char-width` as base value) |
+| `lh` | Vertical | Line height (number of lines) |
+| `%` | Both | Percentage (relative to parent) |
+| `em` | Both | Relative unit (1em = 16px for width, 1 line for height) |
+
+```elisp
+;; Horizontal dimension examples
+"100px"   ;; 100 pixels
+"10cw"    ;; 10 character widths (10 * frame-char-width)
+"50%"     ;; 50% of parent width
+
+;; Vertical dimension examples (use line count)
+"5lh"     ;; 5 lines
+"3"       ;; 3 lines (number without unit)
+```
+
 ### Integration with TML / 与 TML 集成
 
 ```elisp

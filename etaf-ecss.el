@@ -322,9 +322,12 @@ Examples:
 
 (defun etaf-ecss--property-default-unit (prop)
   "Get default unit for property PROP.
-Returns \"px\" for most properties, \"lh\" for vertical spacing in Emacs."
+Returns \"px\" for most properties, \"lh\" for vertical spacing in Emacs.
+Note: Users can also use \"cw\" (character-width) for horizontal spacing,
+which uses `frame-char-width' as the base value."
   ;; For Emacs compatibility, we use:
   ;; - px for horizontal properties (width, padding-left, etc.)
+  ;;   - cw (character-width) is also available as a relative unit
   ;; - lh for vertical properties (height, padding-top, etc.)
   (cond
    ;; Vertical properties - use lh (line-height units)
