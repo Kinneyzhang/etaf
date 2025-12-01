@@ -145,15 +145,52 @@ PROPS is a plist with the following keys:
   (remhash name etaf-etml-tag-definitions))
 
 (defun etaf-etml-tag-defined-p (name)
-  "Check if a tag with NAME is defined."
-  (not (null (gethash name etaf-etml-tag-definitions))))
+  "Check if a tag with NAME is defined or registered."
+  (or (not (null (gethash name etaf-etml-tag-definitions)))
+      (memq name etaf-etml-builtin-tags)))
 
 (defun etaf-etml-tag-list-all ()
-  "Return a list of all defined tag names."
+  "Return a list of all defined and registered tag names."
   (let ((tags nil))
     (maphash (lambda (key _value) (push key tags))
              etaf-etml-tag-definitions)
+    ;; Add builtin tags that don't have full definitions
+    (dolist (tag etaf-etml-builtin-tags)
+      (unless (memq tag tags)
+        (push tag tags)))
     (nreverse tags)))
+
+;;; Simple Tag Registry
+
+(defconst etaf-etml-builtin-tags
+  '(;; Block-level elements (display: block in UA stylesheet)
+    div p h1 h2 h3 h4 h5 h6
+    header footer section article aside nav main
+    ul ol blockquote pre form fieldset
+    figure figcaption details
+    ;; Inline elements (display: inline by default)
+    span em strong b i u s del ins mark small sub sup
+    code kbd samp var abbr cite q label
+    ;; Other elements  
+    option legend caption li
+    ;; Table elements (display: table-* in UA stylesheet)
+    thead tbody tfoot)
+  "List of built-in HTML-like tags that don't require special behavior.
+These tags are automatically registered and get their styles from the UA stylesheet.
+They don't need event handlers, special metadata, or custom rendering.
+
+Following browser architecture: tags are recognized by name, with all styling
+coming from the UA stylesheet (display, padding, colors, etc.).")
+
+(defun etaf-etml-tag-register-builtin ()
+  "Register all built-in tags with minimal definitions.
+This creates empty tag definitions for tags that only need to be recognized,
+with all their styling coming from the UA stylesheet."
+  (dolist (tag etaf-etml-builtin-tags)
+    (unless (etaf-etml-tag-get-definition tag)
+      ;; Create minimal definition - just mark it as defined
+      (let ((definition (list :name tag)))
+        (etaf-etml-tag-register tag definition)))))
 
 ;;; Style Merging
 
@@ -513,78 +550,25 @@ Returns (tag-name ((attrs...)) children...)."
 
 ;;; Built-in Tags
 
-;; Block-level tags
-(define-etaf-etml-tag div
-  :display 'block)
+;; Most tags don't need full definitions - they're registered in etaf-etml-builtin-tags
+;; and get all their styling from the UA stylesheet.
+;; Only tags with special behavior need definitions here.
 
-(define-etaf-etml-tag p
-  :display 'block)
-
-(define-etaf-etml-tag h1
-  :display 'block)
-
-(define-etaf-etml-tag h2
-  :display 'block)
-
-(define-etaf-etml-tag h3
-  :display 'block)
-
-(define-etaf-etml-tag h4
-  :display 'block)
-
-(define-etaf-etml-tag h5
-  :display 'block)
-
-(define-etaf-etml-tag h6
-  :display 'block)
-
-(define-etaf-etml-tag header
-  :display 'block)
-
-(define-etaf-etml-tag footer
-  :display 'block)
-
-(define-etaf-etml-tag section
-  :display 'block)
-
-(define-etaf-etml-tag article
-  :display 'block)
-
-(define-etaf-etml-tag aside
-  :display 'block)
-
-(define-etaf-etml-tag nav
-  :display 'block)
-
-(define-etaf-etml-tag main
-  :display 'block)
-
-(define-etaf-etml-tag ul
-  :display 'block)
-
-(define-etaf-etml-tag ol
-  :display 'block)
-
-(define-etaf-etml-tag li
-  :display 'list-item)
-
-(define-etaf-etml-tag blockquote
-  :display 'block)
-
-(define-etaf-etml-tag pre
-  :display 'block)
-
+;; Self-closing tags
 (define-etaf-etml-tag hr
-  :display 'block
   :self-closing t
   :children-allowed nil)
 
-;; Inline tags
-(define-etaf-etml-tag span
-  :display 'inline)
+(define-etaf-etml-tag br
+  :self-closing t
+  :children-allowed nil)
 
+(define-etaf-etml-tag img
+  :self-closing t
+  :children-allowed nil)
+
+;; Interactive elements with event handlers
 (define-etaf-etml-tag a
-  :display 'inline
   :hover-style '((color . "darkblue"))
   :on-click (lambda (event)
               (let* ((target (plist-get event :target))
@@ -593,71 +577,7 @@ Returns (tag-name ((attrs...)) children...)."
                 (when href
                   (browse-url href)))))
 
-(define-etaf-etml-tag em
-  :display 'inline)
-
-(define-etaf-etml-tag strong
-  :display 'inline)
-
-(define-etaf-etml-tag b
-  :display 'inline)
-
-(define-etaf-etml-tag i
-  :display 'inline)
-
-(define-etaf-etml-tag u
-  :display 'inline)
-
-(define-etaf-etml-tag s
-  :display 'inline)
-
-(define-etaf-etml-tag del
-  :display 'inline)
-
-(define-etaf-etml-tag ins
-  :display 'inline)
-
-(define-etaf-etml-tag mark
-  :display 'inline)
-
-(define-etaf-etml-tag small
-  :display 'inline)
-
-(define-etaf-etml-tag sub
-  :display 'inline)
-
-(define-etaf-etml-tag sup
-  :display 'inline)
-
-(define-etaf-etml-tag code
-  :display 'inline)
-
-(define-etaf-etml-tag kbd
-  :display 'inline)
-
-(define-etaf-etml-tag samp
-  :display 'inline)
-
-(define-etaf-etml-tag var
-  :display 'inline)
-
-(define-etaf-etml-tag abbr
-  :display 'inline)
-
-(define-etaf-etml-tag cite
-  :display 'inline)
-
-(define-etaf-etml-tag q
-  :display 'inline)
-
-(define-etaf-etml-tag br
-  :display 'inline
-  :self-closing t
-  :children-allowed nil)
-
-;; Form elements
 (define-etaf-etml-tag button
-  :display 'inline-block
   :hover-style '((background-color . "#e0e0e0"))
   :active-style '((background-color . "#d0d0d0"))
   :disabled-style '((background-color . "#f5f5f5")
@@ -673,8 +593,16 @@ Returns (tag-name ((attrs...)) children...)."
                     (when (functionp custom-handler)
                       (funcall custom-handler event)))))))
 
+(define-etaf-etml-tag summary
+  :on-click (lambda (event)
+              (let* ((target (plist-get event :target))
+                     (state (plist-get target :state)))
+                ;; Toggle expanded state
+                (plist-put state :expanded
+                           (not (plist-get state :expanded))))))
+
+;; Form elements with special metadata or state styles
 (define-etaf-etml-tag input
-  :display 'inline-block
   :self-closing t
   :children-allowed nil
   :focus-style '((border-color . "blue")
@@ -683,100 +611,31 @@ Returns (tag-name ((attrs...)) children...)."
                     (color . "#999")))
 
 (define-etaf-etml-tag textarea
-  :display 'inline-block
   :focus-style '((border-color . "blue")
                  (outline . "none")))
 
-(define-etaf-etml-tag select
-  :display 'inline-block)
-
-(define-etaf-etml-tag option
-  :display 'block)
-
-(define-etaf-etml-tag label
-  :display 'inline)
-
-(define-etaf-etml-tag form
-  :display 'block)
-
-(define-etaf-etml-tag fieldset
-  :display 'block)
-
-(define-etaf-etml-tag legend
-  :display 'block)
-
-;; Table elements
-(define-etaf-etml-tag table
-  :display 'table)
-
-(define-etaf-etml-tag thead
-  :display 'table-header-group)
-
-(define-etaf-etml-tag tbody
-  :display 'table-row-group)
-
-(define-etaf-etml-tag tfoot
-  :display 'table-footer-group)
-
-(define-etaf-etml-tag tr
-  :display 'table-row)
-
-(define-etaf-etml-tag th
-  :display 'table-cell)
-
-(define-etaf-etml-tag td
-  :display 'table-cell)
-
-(define-etaf-etml-tag caption
-  :display 'table-caption)
+;; Table structure tags
+(define-etaf-etml-tag table)
+(define-etaf-etml-tag tr)
+(define-etaf-etml-tag th)
+(define-etaf-etml-tag td)
 
 ;; Media elements
-(define-etaf-etml-tag img
-  :display 'inline-block
-  :self-closing t
-  :children-allowed nil)
+(define-etaf-etml-tag video)
+(define-etaf-etml-tag audio)
+(define-etaf-etml-tag canvas)
+(define-etaf-etml-tag svg)
 
-(define-etaf-etml-tag video
-  :display 'inline-block)
-
-(define-etaf-etml-tag audio
-  :display 'inline)
-
-(define-etaf-etml-tag canvas
-  :display 'inline-block)
-
-(define-etaf-etml-tag svg
-  :display 'inline-block)
-
-;; Semantic elements
-(define-etaf-etml-tag figure
-  :display 'block)
-
-(define-etaf-etml-tag figcaption
-  :display 'block)
-
-(define-etaf-etml-tag details
-  :display 'block)
-
-(define-etaf-etml-tag summary
-  :display 'list-item
-  :on-click (lambda (event)
-              (let* ((target (plist-get event :target))
-                     (state (plist-get target :state)))
-                ;; Toggle expanded state
-                (plist-put state :expanded
-                           (not (plist-get state :expanded))))))
-
-(define-etaf-etml-tag dialog
-  :display 'block)
-
+;; Other elements
+(define-etaf-etml-tag select)
+(define-etaf-etml-tag dialog)
 (define-etaf-etml-tag progress
-  :display 'inline-block
+  :children-allowed nil)
+(define-etaf-etml-tag meter
   :children-allowed nil)
 
-(define-etaf-etml-tag meter
-  :display 'inline-block
-  :children-allowed nil)
+;; Register all simple built-in tags
+(etaf-etml-tag-register-builtin)
 
 ;;; High-level API
 

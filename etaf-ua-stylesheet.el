@@ -44,6 +44,26 @@
 
 (defconst etaf-ua-stylesheet-css
   (etaf-ecss-stylesheet
+   ;; Display property for block-level elements
+   "div, p, h1, h2, h3, h4, h5, h6 { display: block; }"
+   "header, footer, section, article, aside, nav, main { display: block; }"
+   "ul, ol, blockquote, pre, hr, form, fieldset { display: block; }"
+   "figure, figcaption, details, dialog { display: block; }"
+   "table { display: table; }"
+   "thead { display: table-header-group; }"
+   "tbody { display: table-row-group; }"
+   "tfoot { display: table-footer-group; }"
+   "tr { display: table-row; }"
+   "th, td { display: table-cell; }"
+   "caption { display: table-caption; }"
+   "li { display: list-item; }"
+   
+   ;; Display property for inline-block elements
+   "button, input, textarea, select, img, video, canvas, svg { display: inline-block; }"
+   
+   ;; Inline elements have display: inline by default (browser default)
+   ;; No need to explicitly set for: span, a, em, strong, b, i, u, s, del, ins, mark, small, sub, sup, code, kbd, samp, var, abbr, cite, q, br, label, audio, option, summary, progress, meter
+   
    ;; Headings - font-size as ratio for em-based sizing
    "h1 { font-size: 1.6em; font-weight: bold; }"
    "h2 { font-size: 1.4em; font-weight: bold; }"
