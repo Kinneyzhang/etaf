@@ -173,8 +173,10 @@ COMPUTED-STYLE 是 CSS 计算样式 alist，如 ((color . \"red\") (font-weight 
       (when-let ((emacs-slant (etaf-css-font-style-to-emacs style)))
         (setq face (plist-put face :slant emacs-slant))))
     
-    ;; 处理 text-decoration
-    (when-let ((decoration (cdr (assq 'text-decoration computed-style))))
+    ;; 处理 text-decoration 和 text-decoration-line
+    ;; Tailwind CSS 使用 text-decoration-line，标准 CSS 使用 text-decoration
+    (when-let ((decoration (or (cdr (assq 'text-decoration computed-style))
+                               (cdr (assq 'text-decoration-line computed-style)))))
       (let ((decoration-face (etaf-css-text-decoration-to-emacs decoration)))
         (dolist (prop '(:underline :strike-through :overline))
           (when (plist-get decoration-face prop)
