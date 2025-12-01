@@ -305,36 +305,36 @@ BASE-STYLE 是基础样式 alist ((property . value) ...)。
 ADDITIONAL-STYLE 是要合并的样式 alist。
 返回合并后的样式 alist。
 
-Special handling for text-decoration-line:
-- Multiple values are combined (e.g., \"underline\" + \"overline\" = \"underline overline\")
-- \"none\" value resets all decorations
-- Duplicate values are removed automatically"
+特殊处理 text-decoration-line 属性：
+- 多个值会被组合（例如：\"underline\" + \"overline\" = \"underline overline\"）
+- \"none\" 值会重置所有装饰
+- 重复的值会被自动去除"
   (let ((result (copy-alist base-style)))
     (dolist (prop additional-style)
       (let ((key (car prop))
             (new-value (cdr prop)))
         (if (and (eq key 'text-decoration-line)
                  (not (string= new-value "none")))
-            ;; Special handling for text-decoration-line: combine values
+            ;; 特殊处理 text-decoration-line：组合多个值
             (let* ((existing (assq key result))
                    (existing-value (and existing (cdr existing))))
-              ;; Remove the existing entry
+              ;; 删除现有条目
               (setq result (assq-delete-all key result))
-              ;; Combine values if both exist and neither is "none"
+              ;; 如果两个值都存在且都不是 "none"，则组合它们
               (let ((combined-value
                      (if (and existing-value
                               (not (string= existing-value "none")))
-                         ;; Combine and deduplicate values
-                         (let* ((existing-parts (split-string existing-value))
-                                (new-parts (split-string new-value))
+                         ;; 组合值并去重
+                         (let* ((existing-parts (split-string existing-value nil t))
+                                (new-parts (split-string new-value nil t))
                                 (all-parts (append existing-parts new-parts))
                                 (unique-parts (delete-dups all-parts)))
                            (mapconcat #'identity unique-parts " "))
-                       ;; No existing value or existing is "none", use new value
+                       ;; 没有现有值或现有值为 "none"，使用新值
                        new-value)))
-                ;; Append the combined value
+                ;; 追加组合后的值
                 (setq result (append result (list (cons key combined-value))))))
-          ;; Standard handling: overwrite
+          ;; 标准处理：覆盖
           (progn
             ;; 删除已存在的同名属性
             (setq result (assq-delete-all key result))
