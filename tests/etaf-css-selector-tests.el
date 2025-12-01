@@ -1,6 +1,5 @@
 ;; -*- lexical-binding: t; -*-
 
-(load-file "./etaf-dom-tests.el")
 (require 'etaf-dom-tests)
 (require 'etaf-ert)
 
@@ -14,8 +13,7 @@
              (p :class "ml-3" "Customizing your theme with"
                (code :class "text-gray-950" "@theme")))
            (li :id "2"
-             (p :style "color:red;padding:2"
-               :class "ml-3" :id "test-p"
+             (p :class "ml-3"
                "Adding custom utilities with"
                (code :class "text-gray-950" "@utility")))
            (li :id "3"

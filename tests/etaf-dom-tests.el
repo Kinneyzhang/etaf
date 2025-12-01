@@ -4,7 +4,7 @@
 (require 'cl-lib)
 
 (setq-local lisp-indent-offset 2)
-(setq etaf-dom-tests-dom
+(setq etaf-dom-tests-dom-1
       (etaf-etml-to-dom
        '(div :class "rounded-xl bg-white p-10" :id "test-id"
              (div :class "space-y-6"
@@ -32,7 +32,7 @@
 
 ;; Note: DOM-to-TML conversion preserves all attributes including default styles from etaf-etml-tag
 ;; The main requirement is that etaf-tag-instance is NOT embedded in the DOM (moved to virtual DOM layer)
-(let ((tml (etaf-dom-to-tml etaf-dom-tests-dom)))
+(let ((tml (etaf-dom-to-tml etaf-dom-tests-dom-1)))
   ;; Check basic structure
   (should (eq (car tml) 'div))
   (should (string= (plist-get (cdr tml) :class) "rounded-xl bg-white p-10"))
@@ -45,10 +45,10 @@
                               (plist-get (cdr elem) :etaf-tag-instance)))
                        (cl-remove-if-not #'listp (flatten-tree tml)))))
 
-(should (etaf-dom-tag-match-p etaf-dom-tests-dom "div"))
+(should (etaf-dom-tag-match-p etaf-dom-tests-dom-1 "div"))
 
-(should (etaf-dom-class-match-p etaf-dom-tests-dom "p-10"))
+(should (etaf-dom-class-match-p etaf-dom-tests-dom-1 "p-10"))
 
-(should (etaf-dom-id-match-p etaf-dom-tests-dom "test-id"))
+(should (etaf-dom-id-match-p etaf-dom-tests-dom-1 "test-id"))
 
 (provide 'etaf-dom-tests)
