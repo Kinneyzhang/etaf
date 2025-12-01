@@ -81,7 +81,7 @@
 输入：render-node + parent-context
 处理：
   1. 从 computed-style 提取 CSS 属性
-  2. 解析长度值（px、%、em、auto）
+  2. 解析长度值（px、cw、%、em、lh、auto）
   3. 计算 content width/height
   4. 处理 auto 值
 输出：box-model plist
@@ -125,7 +125,7 @@
 
 ```elisp
 ;; CSS 值解析
-etaf-layout-parse-length          ; 解析 px/%, em, auto
+etaf-layout-parse-length          ; 解析 px/cw/%, em, lh, auto
 etaf-layout-parse-style-value        ; 从样式中获取值
 
 ;; 盒模型查询
@@ -147,10 +147,17 @@ etaf-layout-to-string              ; 转换为可读字符串
 支持多种 CSS 值格式：
 
 - **像素值**：`"100px"` → `100`
+- **字符宽度**：`"10cw"` → `10 * (frame-char-width)` (相对于字符宽度)
 - **百分比**：`"50%"` → `parent-width * 0.5`
 - **em 单位**：`"2em"` → `32` (假设 1em = 16px)
+- **行高单位**：`"3lh"` → `3` (垂直方向使用行数)
 - **auto**：`"auto"` → `'auto` (符号)
 - **数字**：`0` → `0`
+
+**单位说明**：
+- 垂直方向使用 `lh` (line-height) 作为基本单位，表示行数
+- 水平方向除了 `px` 像素外，可使用 `cw` (character-width) 作为相对单位
+- `cw` 单位使用 Emacs 的 `(frame-char-width)` 作为基本值
 
 ### 2. width: auto 的处理
 
