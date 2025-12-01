@@ -168,17 +168,6 @@ Returns a new alist with all properties from both, with override taking preceden
           (push pair result))))
     result))
 
-(defun etaf-etml-tag--resolve-inherited-style (tag-name)
-  "Resolve the complete style for TAG-NAME including inherited styles."
-  (let* ((definition (etaf-etml-tag-get-definition tag-name))
-         (inherit (plist-get definition :inherit))
-         (own-style (plist-get definition :default-style)))
-    (if (and inherit (etaf-etml-tag-defined-p inherit))
-        (etaf-etml-tag--merge-styles
-         (etaf-etml-tag--resolve-inherited-style inherit)
-         own-style)
-      own-style)))
-
 ;;; Event Handling
 
 (defun etaf-etml-tag--get-text-content (tag-instance)
