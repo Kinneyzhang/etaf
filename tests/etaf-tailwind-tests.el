@@ -105,17 +105,21 @@
 
 (ert-deftest etaf-tailwind-test-to-css-padding ()
   "测试内边距转换。
-Emacs特有：水平方向使用px，垂直方向使用lh。"
+Emacs特有：水平方向使用cw（字符宽度），垂直方向使用lh。
+如果需要像素，需要使用px后缀（如 px-4px）。"
   ;; p-4 expands to all four directions with appropriate units
   (should-equal (etaf-tailwind-to-css "p-4")
-                '((padding-top . "4lh") (padding-right . "4px")
-                  (padding-bottom . "4lh") (padding-left . "4px")))
-  ;; px-2 is horizontal only - uses px
+                '((padding-top . "4lh") (padding-right . "4cw")
+                  (padding-bottom . "4lh") (padding-left . "4cw")))
+  ;; px-2 is horizontal only - uses cw
   (should-equal (etaf-tailwind-to-css "px-2")
-                '((padding-left . "2px") (padding-right . "2px")))
+                '((padding-left . "2cw") (padding-right . "2cw")))
   ;; py-2 is vertical only - uses lh
   (should-equal (etaf-tailwind-to-css "py-2")
-                '((padding-top . "2lh") (padding-bottom . "2lh"))))
+                '((padding-top . "2lh") (padding-bottom . "2lh")))
+  ;; px-2px uses explicit pixels
+  (should-equal (etaf-tailwind-to-css "px-2px")
+                '((padding-left . "2px") (padding-right . "2px"))))
 
 (ert-deftest etaf-tailwind-test-to-css-display ()
   "测试显示属性转换。"
@@ -300,7 +304,7 @@ p-4 被展开为 padding-top/right/bottom/left。"
 
 (ert-deftest etaf-tailwind-test-cssom-integration ()
   "测试 Tailwind 类在 CSSOM 中的正确解析。
-Emacs特有：padding使用px（水平）和lh（垂直）。"
+Emacs特有：padding使用cw（水平字符宽度）和lh（垂直行高）。"
   (require 'etaf-etml)
   (require 'etaf-css)
   (let* ((dom (etaf-etml-to-dom
@@ -312,9 +316,9 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
     (should (equal (cdr (assq 'display div-style)) "flex"))
     (should (equal (cdr (assq 'background-color div-style)) "#ef4444"))
     ;; padding 应该被展开为 padding-top, padding-right, etc.
-    ;; 垂直方向使用 lh，水平方向使用 px
+    ;; 垂直方向使用 lh，水平方向使用 cw
     (should (equal (cdr (assq 'padding-top div-style)) "4lh"))
-    (should (equal (cdr (assq 'padding-right div-style)) "4px"))))
+    (should (equal (cdr (assq 'padding-right div-style)) "4cw"))))
 
 (ert-deftest etaf-tailwind-test-border-cssom-integration ()
   "测试 Tailwind 边框类在 CSSOM 中的正确展开和解析。
@@ -402,16 +406,20 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
                 '((letter-spacing . "0.025em"))))
 
 (ert-deftest etaf-tailwind-test-to-css-position ()
-  "测试定位属性转换。"
-  ;; 位置值
+  "测试定位属性转换。
+水平方向默认使用cw（字符宽度），使用px后缀指定像素。"
+  ;; 位置值 - 现在使用 cw 作为默认单位
   (should-equal (etaf-tailwind-to-css "top-0")
-                '((top . "0px")))
+                '((top . "0cw")))
   (should-equal (etaf-tailwind-to-css "right-4")
-                '((right . "4px")))
+                '((right . "4cw")))
   (should-equal (etaf-tailwind-to-css "left-auto")
                 '((left . "auto")))
   (should-equal (etaf-tailwind-to-css "inset-0")
-                '((top . "0px") (right . "0px") (bottom . "0px") (left . "0px"))))
+                '((top . "0cw") (right . "0cw") (bottom . "0cw") (left . "0cw")))
+  ;; 使用px后缀指定像素
+  (should-equal (etaf-tailwind-to-css "top-10px")
+                '((top . "10px"))))
 
 (ert-deftest etaf-tailwind-test-to-css-flex-grid ()
   "测试 Flexbox 和 Grid 属性转换。"
@@ -438,14 +446,18 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
                 '((grid-column . "1 / -1"))))
 
 (ert-deftest etaf-tailwind-test-to-css-gap ()
-  "测试 gap 属性转换。"
+  "测试 gap 属性转换。
+column-gap使用cw（字符宽度），row-gap使用lh（行高）。"
   (let ((gap-result (etaf-tailwind-to-css "gap-4")))
-    (should (equal (cdr (assq 'column-gap gap-result)) "4px"))
+    (should (equal (cdr (assq 'column-gap gap-result)) "4cw"))
     (should (equal (cdr (assq 'row-gap gap-result)) "4lh")))
   (should-equal (etaf-tailwind-to-css "gap-x-4")
-                '((column-gap . "4px")))
+                '((column-gap . "4cw")))
   (should-equal (etaf-tailwind-to-css "gap-y-4")
-                '((row-gap . "4lh"))))
+                '((row-gap . "4lh")))
+  ;; 使用px后缀指定像素
+  (should-equal (etaf-tailwind-to-css "gap-x-10px")
+                '((column-gap . "10px"))))
 
 (ert-deftest etaf-tailwind-test-to-css-content-self ()
   "测试 content 和 self 对齐属性转换。"
@@ -459,9 +471,10 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
                 '((align-self . "flex-start"))))
 
 (ert-deftest etaf-tailwind-test-to-css-min-max-size ()
-  "测试 min/max 尺寸属性转换。"
+  "测试 min/max 尺寸属性转换。
+min-width/max-width使用cw（字符宽度）。"
   (should-equal (etaf-tailwind-to-css "min-w-0")
-                '((min-width . "0px")))
+                '((min-width . "0cw")))
   (should-equal (etaf-tailwind-to-css "min-w-full")
                 '((min-width . "100%")))
   (should-equal (etaf-tailwind-to-css "max-w-md")
@@ -471,27 +484,35 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
   (should-equal (etaf-tailwind-to-css "min-h-full")
                 '((min-height . "100%")))
   (should-equal (etaf-tailwind-to-css "max-h-full")
-                '((max-height . "100%"))))
+                '((max-height . "100%")))
+  ;; 使用px后缀指定像素
+  (should-equal (etaf-tailwind-to-css "min-w-100px")
+                '((min-width . "100px"))))
 
 (ert-deftest etaf-tailwind-test-to-css-size ()
-  "测试 size 属性转换（同时设置 width 和 height）。"
+  "测试 size 属性转换（同时设置 width 和 height）。
+width使用cw，height使用lh。"
   (let ((size-result (etaf-tailwind-to-css "size-4")))
-    (should (equal (cdr (assq 'width size-result)) "4px"))
+    (should (equal (cdr (assq 'width size-result)) "4cw"))
     (should (equal (cdr (assq 'height size-result)) "4lh")))
   (let ((size-full (etaf-tailwind-to-css "size-full")))
     (should (equal (cdr (assq 'width size-full)) "100%"))
     (should (equal (cdr (assq 'height size-full)) "100%"))))
 
 (ert-deftest etaf-tailwind-test-to-css-logical-spacing ()
-  "测试逻辑间距属性转换 (ps, pe, ms, me)。"
+  "测试逻辑间距属性转换 (ps, pe, ms, me)。
+水平方向使用cw（字符宽度）。"
   (should-equal (etaf-tailwind-to-css "ps-4")
-                '((padding-inline-start . "4px")))
+                '((padding-inline-start . "4cw")))
   (should-equal (etaf-tailwind-to-css "pe-4")
-                '((padding-inline-end . "4px")))
+                '((padding-inline-end . "4cw")))
   (should-equal (etaf-tailwind-to-css "ms-4")
-                '((margin-inline-start . "4px")))
+                '((margin-inline-start . "4cw")))
   (should-equal (etaf-tailwind-to-css "me-4")
-                '((margin-inline-end . "4px"))))
+                '((margin-inline-end . "4cw")))
+  ;; 使用px后缀指定像素
+  (should-equal (etaf-tailwind-to-css "ps-10px")
+                '((padding-inline-start . "10px"))))
 
 (ert-deftest etaf-tailwind-test-to-css-table ()
   "测试表格属性转换。"
@@ -730,6 +751,61 @@ Emacs特有：padding使用px（水平）和lh（垂直）。"
     (should (null (cdr (assq 'background-color (plist-get result :light)))))
     ;; 暗色模式应该有背景色
     (should (equal (cdr (assq 'background-color (plist-get result :dark))) "#1f2937"))))
+
+;;; 新增: 水平距离单位测试 (cw 默认, px 后缀)
+
+(ert-deftest etaf-tailwind-test-width-default-cw ()
+  "测试 width 默认使用 cw（字符宽度）单位。
+w-20 应该产生 20cw 而不是 20px。"
+  (should-equal (etaf-tailwind-to-css "w-20")
+                '((width . "20cw")))
+  (should-equal (etaf-tailwind-to-css "w-4")
+                '((width . "4cw")))
+  (should-equal (etaf-tailwind-to-css "w-0")
+                '((width . "0cw"))))
+
+(ert-deftest etaf-tailwind-test-width-explicit-px ()
+  "测试 width 使用 px 后缀指定像素。
+w-20px 应该产生 20px。"
+  (should-equal (etaf-tailwind-to-css "w-20px")
+                '((width . "20px")))
+  (should-equal (etaf-tailwind-to-css "w-100px")
+                '((width . "100px")))
+  (should-equal (etaf-tailwind-to-css "w-0px")
+                '((width . "0px"))))
+
+(ert-deftest etaf-tailwind-test-height-default-lh ()
+  "测试 height 默认使用 lh（行高）单位。"
+  (should-equal (etaf-tailwind-to-css "h-20")
+                '((height . "20lh")))
+  (should-equal (etaf-tailwind-to-css "h-4")
+                '((height . "4lh"))))
+
+(ert-deftest etaf-tailwind-test-margin-default-cw ()
+  "测试 margin 水平方向默认使用 cw 单位。"
+  (should-equal (etaf-tailwind-to-css "ml-4")
+                '((margin-left . "4cw")))
+  (should-equal (etaf-tailwind-to-css "mr-8")
+                '((margin-right . "8cw")))
+  (should-equal (etaf-tailwind-to-css "mx-4")
+                '((margin-left . "4cw") (margin-right . "4cw"))))
+
+(ert-deftest etaf-tailwind-test-margin-explicit-px ()
+  "测试 margin 使用 px 后缀指定像素。"
+  (should-equal (etaf-tailwind-to-css "ml-10px")
+                '((margin-left . "10px")))
+  (should-equal (etaf-tailwind-to-css "mx-20px")
+                '((margin-left . "20px") (margin-right . "20px"))))
+
+(ert-deftest etaf-tailwind-test-flex-basis-default-cw ()
+  "测试 flex-basis 默认使用 cw 单位。"
+  (should-equal (etaf-tailwind-to-css "basis-20")
+                '((flex-basis . "20cw"))))
+
+(ert-deftest etaf-tailwind-test-flex-basis-explicit-px ()
+  "测试 flex-basis 使用 px 后缀指定像素。"
+  (should-equal (etaf-tailwind-to-css "basis-100px")
+                '((flex-basis . "100px"))))
 
 (provide 'etaf-tailwind-tests)
 

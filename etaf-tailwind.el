@@ -719,28 +719,35 @@ FILTER-FN是一个函数，接受解析后的类信息，返回t表示保留。
     ("52" . "52") ("56" . "56") ("60" . "60") ("64" . "64")
     ("72" . "72") ("80" . "80") ("96" . "96"))
   "Tailwind CSS间距数值（不含单位）。
-单位由方向决定：水平方向使用px，垂直方向使用lh。")
+单位由方向决定：水平方向使用cw（字符宽度），垂直方向使用lh。
+如果要使用像素，需要在数值后面加上px后缀（如 w-20px）。")
 
 (defun etaf-tailwind--spacing-value (value direction)
   "Convert spacing VALUE to CSS value based on DIRECTION.
 DIRECTION is either 'horizontal, 'vertical, or 'all.
 For Emacs compatibility:
-- Horizontal (left/right): value in px (pixels)
+- Horizontal (left/right): value in cw (character width) by default
 - Vertical (top/bottom): value in lh (line-height units)
-- All: use px for horizontal, lh for vertical components
-VALUE can be a string number or from the spacing scale."
-  (let ((num-str (or (cdr (assoc value etaf-tailwind-spacing-scale))
-                     ;; Support arbitrary numeric values
-                     (when (and value
-                                (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$"
-                                                value))
-                       value))))
-    (when num-str
-      (pcase direction
-        ('horizontal (concat num-str "px"))
-        ('vertical (concat num-str "lh"))
-        ('all num-str)  ; Used for shorthand properties
-        (_ (concat num-str "px"))))))
+- All: use cw for horizontal, lh for vertical components
+VALUE can be a string number (e.g., \"20\") or from the spacing scale.
+If VALUE ends with 'px' suffix (e.g., \"20px\"), use pixels instead."
+  ;; Check if value explicitly ends with 'px'
+  (if (and value (string-match "^\\([0-9]+\\(?:\\.[0-9]+\\)?\\)px$" value))
+      ;; Explicit px suffix - use pixels directly
+      (concat (match-string 1 value) "px")
+    ;; Normal case - use cw/lh units
+    (let ((num-str (or (cdr (assoc value etaf-tailwind-spacing-scale))
+                       ;; Support arbitrary numeric values
+                       (when (and value
+                                  (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$"
+                                                  value))
+                         value))))
+      (when num-str
+        (pcase direction
+          ('horizontal (concat num-str "cw"))
+          ('vertical (concat num-str "lh"))
+          ('all num-str)  ; Used for shorthand properties
+          (_ (concat num-str "cw")))))))
 
 (defconst etaf-tailwind-font-sizes
   '(("xs" . ("0.75rem" "1rem"))
@@ -1479,14 +1486,19 @@ Returns a string like '1px', '2px', etc., or nil if VALUE is not recognized."
 
 (defun etaf-tailwind--get-position-value (value)
   "Convert position VALUE to CSS.
-VALUE can be a number from spacing scale or special keywords."
+VALUE can be a number from spacing scale or special keywords.
+Default unit for horizontal positions is cw (character width).
+Use px suffix for explicit pixels (e.g., \"20px\")."
   (cond
+   ;; Explicit px suffix
+   ((and value (string-match "^\\([0-9]+\\(?:\\.[0-9]+\\)?\\)px$" value))
+    (concat (match-string 1 value) "px"))
    ;; Numeric values from spacing scale
    ((cdr (assoc value etaf-tailwind-spacing-scale))
     (etaf-tailwind--spacing-value value 'horizontal))
-   ;; Direct numeric values
-   ((string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
-    (concat value "px"))
+   ;; Direct numeric values - use cw
+   ((and value (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value))
+    (concat value "cw"))
    ;; Auto and special values
    ((string= value "auto") "auto")
    ((string= value "full") "100%")
@@ -1533,16 +1545,21 @@ PROP is one of 'top, 'right, 'bottom, 'left."
 
 (defun etaf-tailwind--convert-min-max-size (prop value)
   "Convert min/max size property PROP with VALUE.
-PROP is one of 'min-width, 'max-width, 'min-height, 'max-height."
+PROP is one of 'min-width, 'max-width, 'min-height, 'max-height.
+Horizontal properties use cw (character width) by default.
+Use px suffix for explicit pixels (e.g., \"20px\")."
   (let* ((is-width (or (eq prop 'min-width) (eq prop 'max-width)))
          (direction (if is-width 'horizontal 'vertical))
          (size (cond
+                ;; Explicit px suffix
+                ((and value (string-match "^\\([0-9]+\\(?:\\.[0-9]+\\)?\\)px$" value))
+                 (concat (match-string 1 value) "px"))
                 ;; Numeric values from spacing scale
                 ((cdr (assoc value etaf-tailwind-spacing-scale))
                  (etaf-tailwind--spacing-value value direction))
-                ;; Direct numeric values
-                ((string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
-                 (if is-width (concat value "px") (concat value "lh")))
+                ;; Direct numeric values - use cw/lh
+                ((and value (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value))
+                 (if is-width (concat value "cw") (concat value "lh")))
                 ;; Special keywords
                 ((string= value "0") "0")
                 ((string= value "full") "100%")
@@ -1577,17 +1594,21 @@ PROP is one of 'min-width, 'max-width, 'min-height, 'max-height."
   "Tailwind max-width preset scale.")
 
 (defun etaf-tailwind--convert-max-width (value)
-  "Convert max-width VALUE to CSS."
+  "Convert max-width VALUE to CSS.
+Default unit is cw (character width). Use px suffix for explicit pixels."
   (let ((size (cond
+               ;; Explicit px suffix
+               ((and value (string-match "^\\([0-9]+\\(?:\\.[0-9]+\\)?\\)px$" value))
+                (concat (match-string 1 value) "px"))
                ;; Named sizes
                ((cdr (assoc value etaf-tailwind-max-width-scale))
                 (cdr (assoc value etaf-tailwind-max-width-scale)))
                ;; Standard size conversions
                ((cdr (assoc value etaf-tailwind-spacing-scale))
                 (etaf-tailwind--spacing-value value 'horizontal))
-               ;; Direct numeric values
-               ((string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
-                (concat value "px"))
+               ;; Direct numeric values - use cw
+               ((and value (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value))
+                (concat value "cw"))
                ;; Special keywords
                ((string= value "none") "none")
                ((string= value "full") "100%")
@@ -1599,14 +1620,18 @@ PROP is one of 'min-width, 'max-width, 'min-height, 'max-height."
       (list (cons 'max-width size)))))
 
 (defun etaf-tailwind--convert-flex-basis (value)
-  "Convert flex-basis VALUE to CSS."
+  "Convert flex-basis VALUE to CSS.
+Default unit is cw (character width). Use px suffix for explicit pixels."
   (let ((size (cond
+               ;; Explicit px suffix
+               ((and value (string-match "^\\([0-9]+\\(?:\\.[0-9]+\\)?\\)px$" value))
+                (concat (match-string 1 value) "px"))
                ;; Numeric values from spacing scale
                ((cdr (assoc value etaf-tailwind-spacing-scale))
                 (etaf-tailwind--spacing-value value 'horizontal))
-               ;; Direct numeric values
-               ((string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value)
-                (concat value "px"))
+               ;; Direct numeric values - use cw
+               ((and value (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value))
+                (concat value "cw"))
                ;; Fractions
                ((string-match "^\\([0-9]+\\)/\\([0-9]+\\)$" value)
                 (let ((num (string-to-number (match-string 1 value)))
@@ -1736,9 +1761,13 @@ Emacs特有的单位处理：
 
 (defun etaf-tailwind-convert-size (property value)
   "转换尺寸类（width/height）到CSS。
-Width使用px（水平方向），Height使用lh（垂直方向）。"
+Width使用cw（水平方向字符宽度），Height使用lh（垂直方向行高）。
+如果值以px结尾（如20px），则使用像素。"
   (let* ((direction (if (eq property 'width) 'horizontal 'vertical))
          (size (cond
+                ;; 检查是否是带px后缀的值
+                ((and value (string-match "^[0-9]+\\(\\.[0-9]+\\)?px$" value))
+                 (etaf-tailwind--spacing-value value direction))
                 ;; 使用spacing scale或任意数值
                 ((or (cdr (assoc value etaf-tailwind-spacing-scale))
                      (string-match-p "^[0-9]+\\(\\.[0-9]+\\)?$" value))
