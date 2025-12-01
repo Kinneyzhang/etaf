@@ -1707,8 +1707,9 @@ VALUE是间距值（如'4', '8'等）。
 TYPE是'padding或'margin。
 
 Emacs特有的单位处理：
-- 水平方向（left/right）使用px像素
-- 垂直方向（top/bottom）使用lh行高单位"
+- 水平方向（left/right）使用cw字符宽度
+- 垂直方向（top/bottom）使用lh行高单位
+- 如果要使用像素，需要在数值后面加上px后缀（如 px-4px）"
   (cond
    ;; 全部方向 - 使用方向特定的单位
    ((string= property (if (eq type 'padding) "p" "m"))
@@ -1719,7 +1720,7 @@ Emacs特有的单位处理：
               (cons (intern (concat (symbol-name type) "-right")) h-spacing)
               (cons (intern (concat (symbol-name type) "-bottom")) v-spacing)
               (cons (intern (concat (symbol-name type) "-left")) h-spacing)))))
-   ;; 水平方向 - 使用px
+   ;; 水平方向 - 使用cw（字符宽度）
    ((string= property (if (eq type 'padding) "px" "mx"))
     (let ((spacing (etaf-tailwind--spacing-value value 'horizontal)))
       (when spacing
