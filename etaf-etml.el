@@ -27,6 +27,7 @@
 
 (require 'cl-lib)
 (require 'etaf-etml-tag)
+(require 'etaf-vdom)
 
 ;; Declare etaf-ecss functions to avoid warnings
 (declare-function etaf-ecss "etaf-ecss")
@@ -271,17 +272,9 @@ the final string with keymap properties."
               (setcdr style-attr style-string)))
           ;; Merge etaf-etml-tag default styles if tag is defined
           (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
-          ;; Create tag-instance for tags with event handlers
-          (when (etaf-etml-tag-defined-p tag)
-            (let* ((tag-def (etaf-etml-tag-get-definition tag))
-                   (has-events (or (plist-get tag-def :on-click)
-                                   (plist-get tag-def :on-hover-enter)
-                                   (plist-get tag-def :on-hover-leave)
-                                   (plist-get tag-def :on-keydown)
-                                   (plist-get tag-def :hover-style))))
-              (when has-events
-                (let ((tag-instance (etaf-etml-tag-create-instance tag attrs rest)))
-                  (push (cons 'etaf-tag-instance tag-instance) attr-alist)))))
+          ;; NOTE: Tag instances are no longer embedded in DOM attributes.
+          ;; They are stored in the virtual DOM layer (see etaf-vdom.el).
+          ;; Use etaf-etml-to-dom-with-vdom to get both clean DOM and VTree.
           ;; Process children based on tag type and content
           ;; Check for ecss children first to handle scoping properly
           (let* ((has-ecss-children (and rest 
@@ -1195,6 +1188,164 @@ CALLBACK receives (reactive key value) when data changes.
 \(Legacy function - works with `etaf-etml-create-reactive' objects.)"
   (let ((watchers (plist-get reactive :watchers)))
     (plist-put reactive :watchers (delete callback watchers))))
+
+;;; ============================================================================
+;;; Virtual DOM Integration
+;;; ============================================================================
+
+;; The following functions provide integration with the virtual DOM layer
+;; (etaf-vdom.el). The virtual DOM allows storing tag instances and event
+;; handlers separately from the clean DOM structure.
+
+(defun etaf-etml--to-vdom-node (sexp)
+  "Convert SEXP to both VNode and clean DOM, recursively.
+Returns a VNode with :dom set to clean DOM and :tag-instance if applicable.
+SEXP can be:
+- An atom (string, number, etc.) - returned as-is
+- An ecss tag - converted to style element
+- An element (tag attrs... children...)"
+  (cond
+   ;; Atom (string, number, etc.) - create text VNode
+   ((atom sexp)
+    (etaf-vdom-text sexp))
+   
+   ;; ecss tag at top level - convert to style element
+   ((etaf-etml--ecss-tag-p sexp)
+    (require 'etaf-ecss)
+    (let* ((css (apply #'etaf-ecss (cdr sexp)))
+           (dom (list 'style nil css))
+           (vnode (etaf-vdom-element 'style
+                                     :props nil
+                                     :dom dom)))
+      vnode))
+   
+   ;; Element
+   (t
+    (let ((tag (car sexp))
+          (rest (cdr sexp))
+          (attrs nil))
+      ;; Parse attributes from plist
+      (while (and rest (keywordp (car rest)))
+        (push (car rest) attrs)
+        (setq rest (cdr rest))
+        (when rest
+          (push (car rest) attrs)
+          (setq rest (cdr rest))))
+      (setq attrs (nreverse attrs))
+      
+      ;; Process :style attribute - handle both string and list formats
+      (let* ((attr-alist (etaf-plist-to-alist attrs))
+             (style-attr (assq 'style attr-alist)))
+        ;; If :style is present and is a list (alist), convert it to string
+        (when (and style-attr (listp (cdr style-attr)))
+          (let ((style-string (etaf-css-alist-to-string (cdr style-attr))))
+            (setcdr style-attr style-string)))
+        
+        ;; Merge etaf-etml-tag default styles if tag is defined
+        (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
+        
+        ;; Create tag-instance for tags with event handlers (for VNode only, not DOM)
+        (let ((tag-instance nil))
+          (when (etaf-etml-tag-defined-p tag)
+            (let* ((tag-def (etaf-etml-tag-get-definition tag))
+                   (has-events (or (plist-get tag-def :on-click)
+                                   (plist-get tag-def :on-hover-enter)
+                                   (plist-get tag-def :on-hover-leave)
+                                   (plist-get tag-def :on-keydown)
+                                   (plist-get tag-def :hover-style))))
+              (when has-events
+                (setq tag-instance (etaf-etml-tag-create-instance tag attrs rest)))))
+          
+          ;; Process children based on tag type and content
+          (let* ((has-ecss-children (and rest 
+                                         (not (eq tag 'style))
+                                         (cl-some #'etaf-etml--ecss-tag-p rest)))
+                 (scope-id (when has-ecss-children
+                             (etaf-etml--generate-scope-id))))
+            ;; Add scope class to parent element's attributes if needed
+            (when scope-id
+              (let ((class-attr (assq 'class attr-alist)))
+                (if class-attr
+                    (setcdr class-attr (concat (cdr class-attr) " " scope-id))
+                  (setq attr-alist (cons (cons 'class scope-id) attr-alist)))))
+            
+            ;; Process children recursively
+            (let* ((child-vnodes
+                    (cond
+                     ;; Style tag with (ecss ...) forms - global scope CSS
+                     ((and (eq tag 'style)
+                           rest
+                           (cl-some #'etaf-etml--ecss-item-p rest))
+                      (list (etaf-vdom-text (etaf-etml--process-style-children rest))))
+                     ;; Other tags with ecss children - local scope CSS
+                     (has-ecss-children
+                      (etaf-etml--process-children-with-ecss-vdom rest scope-id))
+                     ;; Normal processing
+                     (t (mapcar #'etaf-etml--to-vdom-node rest))))
+                   ;; Build clean DOM (without tag-instance)
+                   (child-doms (mapcar #'etaf-vdom-get-dom child-vnodes))
+                   (dom (cons tag (cons attr-alist child-doms)))
+                   ;; Create VNode
+                   (vnode (etaf-vdom-element tag
+                                             :props attrs
+                                             :dom dom)))
+              ;; Set tag-instance in VNode if present
+              (when tag-instance
+                (etaf-vdom-set-tag-instance vnode tag-instance))
+              ;; Set children
+              (etaf-vdom-set-children vnode child-vnodes)
+              vnode))))))))
+
+(defun etaf-etml--process-children-with-ecss-vdom (children scope-id)
+  "Process CHILDREN list with ecss tags, returning VNodes.
+Similar to `etaf-etml--process-children-with-ecss' but returns VNodes."
+  (let ((ecss-tags nil)
+        (other-children nil))
+    ;; First pass: separate ecss tags from other children
+    (dolist (child children)
+      (if (etaf-etml--ecss-tag-p child)
+          (push child ecss-tags)
+        (push child other-children)))
+    (setq ecss-tags (nreverse ecss-tags))
+    (setq other-children (nreverse other-children))
+    
+    (if (null ecss-tags)
+        ;; No ecss tags, process children normally
+        (mapcar #'etaf-etml--to-vdom-node children)
+      ;; Has ecss tags: create scoped CSS
+      (let* ((css-parts (mapcar (lambda (ecss-form)
+                                  (etaf-etml--process-ecss-content ecss-form scope-id))
+                                ecss-tags))
+             (css-string (mapconcat #'identity css-parts "\n"))
+             (style-dom (list 'style nil css-string))
+             (style-vnode (etaf-vdom-element 'style
+                                             :props nil
+                                             :dom style-dom
+                                             :children (list (etaf-vdom-text css-string))))
+             (processed-children (mapcar #'etaf-etml--to-vdom-node other-children)))
+        (cons style-vnode processed-children)))))
+
+(defun etaf-etml-to-dom-with-vdom (template &optional data)
+  "Render TEMPLATE with DATA and convert to both clean DOM and VTree.
+Returns an `etaf-vdom-result' structure containing:
+- :vtree - The root VNode of the virtual DOM tree
+- :dom - The clean DOM (without tag-instances in attributes)
+
+This function should be used when you need access to tag instances
+and event handlers through the virtual DOM layer.
+
+Example:
+  (let* ((result (etaf-etml-to-dom-with-vdom \\='(a :href \"/test\" \"Link\")))
+         (dom (etaf-vdom-result-get-dom result))
+         (vtree (etaf-vdom-result-get-vtree result)))
+    ;; dom is clean: (a ((href . \"/test\")) \"Link\")
+    ;; vtree contains the tag-instance for event handling
+    )"
+  (require 'etaf-etml)
+  (let* ((rendered (etaf-etml-render template data))
+         (vnode (etaf-etml--to-vdom-node rendered))
+         (dom (etaf-vdom-get-dom vnode)))
+    (etaf-vdom-make-result :vtree vnode :dom dom)))
 
 (provide 'etaf-etml)
 ;;; etaf-etml.el ends here
