@@ -730,7 +730,8 @@ VIEWPORT 是视口大小 (:width w :height h)。"
     (message "  + 右外边距: %d" margin-right)
     (message "  = 总宽度: %d" total-width)))
 
-;; 辅助函数：解析 CSS 长度值
+;; 辅助函数：解析 CSS 长度值（简化示例）
+;; 注：实际实现使用更严格的正则表达式匹配
 (defun etaf-layout-parse-length (value)
   "解析 CSS 长度值，返回像素数。
 支持: px, cw, %, em, lh, auto
