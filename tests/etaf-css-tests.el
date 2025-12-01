@@ -212,5 +212,65 @@
         (equal (alist-get 'font-weight style-2) "bold")  ; child-2 should get font-weight
         (equal (alist-get 'font-weight style-3) "bold")))) ; child-3 should get font-weight
 
+;;; 测试 text-decoration-line 值的合并
+
+;; 测试单个 text-decoration-line 值
+(should-equal
+ (etaf-css--merge-style-alists
+  '((color . "red"))
+  '((text-decoration-line . "underline")))
+ '((color . "red")
+   (text-decoration-line . "underline")))
+
+;; 测试多个 text-decoration-line 值合并
+(should-equal
+ (etaf-css--merge-style-alists
+  '((text-decoration-line . "underline"))
+  '((text-decoration-line . "overline")))
+ '((text-decoration-line . "underline overline")))
+
+;; 测试三个 text-decoration-line 值合并
+(should-equal
+ (etaf-css--merge-style-alists
+  '((text-decoration-line . "underline overline"))
+  '((text-decoration-line . "line-through")))
+ '((text-decoration-line . "underline overline line-through")))
+
+;; 测试重复值去重
+(should-equal
+ (etaf-css--merge-style-alists
+  '((text-decoration-line . "underline"))
+  '((text-decoration-line . "underline overline")))
+ '((text-decoration-line . "underline overline")))
+
+;; 测试 "none" 值重置装饰
+(should-equal
+ (etaf-css--merge-style-alists
+  '((text-decoration-line . "underline overline"))
+  '((text-decoration-line . "none")))
+ '((text-decoration-line . "none")))
+
+;; 测试 "none" 后再添加装饰
+(should-equal
+ (etaf-css--merge-style-alists
+  '((text-decoration-line . "none"))
+  '((text-decoration-line . "underline")))
+ '((text-decoration-line . "underline")))
+
+;; 测试完整场景：多个 Tailwind 类组合
+(should
+ (let* ((dom (etaf-etml-to-dom
+              '(div
+                (p :class "underline overline line-through"
+                   "Multi-decoration text"))))
+        (cssom (etaf-css-build-cssom dom))
+        (p-node (car (dom-by-tag dom 'p)))
+        (style (etaf-css-get-computed-style cssom p-node dom))
+        (decoration (alist-get 'text-decoration-line style)))
+   ;; Should have all three decoration values
+   (and (string-match-p "underline" decoration)
+        (string-match-p "overline" decoration)
+        (string-match-p "line-through" decoration))))
+
 (provide 'etaf-css-tests)
 ;;; etaf-css-tests.el ends here

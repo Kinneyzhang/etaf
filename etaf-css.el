@@ -303,14 +303,43 @@ STYLE-ALIST 是 ((property . value) ...) 格式的样式 alist。
   "合并两个样式 alist，后者覆盖前者的同名属性。
 BASE-STYLE 是基础样式 alist ((property . value) ...)。
 ADDITIONAL-STYLE 是要合并的样式 alist。
-返回合并后的样式 alist。"
+返回合并后的样式 alist。
+
+Special handling for text-decoration-line:
+- Multiple values are combined (e.g., \"underline\" + \"overline\" = \"underline overline\")
+- \"none\" value resets all decorations
+- Duplicate values are removed automatically"
   (let ((result (copy-alist base-style)))
     (dolist (prop additional-style)
-      (let ((key (car prop)))
-        ;; 删除已存在的同名属性
-        (setq result (assq-delete-all key result))
-        ;; 追加到末尾
-        (setq result (append result (list prop)))))
+      (let ((key (car prop))
+            (new-value (cdr prop)))
+        (if (and (eq key 'text-decoration-line)
+                 (not (string= new-value "none")))
+            ;; Special handling for text-decoration-line: combine values
+            (let* ((existing (assq key result))
+                   (existing-value (and existing (cdr existing))))
+              ;; Remove the existing entry
+              (setq result (assq-delete-all key result))
+              ;; Combine values if both exist and neither is "none"
+              (let ((combined-value
+                     (if (and existing-value
+                              (not (string= existing-value "none")))
+                         ;; Combine and deduplicate values
+                         (let* ((existing-parts (split-string existing-value))
+                                (new-parts (split-string new-value))
+                                (all-parts (append existing-parts new-parts))
+                                (unique-parts (delete-dups all-parts)))
+                           (mapconcat #'identity unique-parts " "))
+                       ;; No existing value or existing is "none", use new value
+                       new-value)))
+                ;; Append the combined value
+                (setq result (append result (list (cons key combined-value))))))
+          ;; Standard handling: overwrite
+          (progn
+            ;; 删除已存在的同名属性
+            (setq result (assq-delete-all key result))
+            ;; 追加到末尾
+            (setq result (append result (list prop)))))))
     result))
 
 (defun etaf-css-rule-to-string (rule)
