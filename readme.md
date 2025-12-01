@@ -96,6 +96,7 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 | [Developer Manual](docs/DEVELOPER-MANUAL.md) | Architecture and extension guide |
 | [Architecture](docs/ARCHITECTURE.md) | System architecture and module relationships |
 | [Data Structures](docs/DATA-STRUCTURES.md) | Detailed data structure documentation |
+| [Event Model](docs/EVENT-MODEL.md) | Interactive pseudo-classes and event system |
 
 ## Installation
 
@@ -226,10 +227,42 @@ ETAF 支持 Vue 风格的模板指令：
 
 支持的 Tailwind 功能：
 - 响应式前缀：`sm:`, `md:`, `lg:`, `xl:`, `2xl:`
-- 状态变体：`hover:`, `focus:`, `active:`
+- 状态变体：`hover:`, `focus:`, `active:` (需要 etaf-event 模块)
 - 颜色系统：完整的 Tailwind 调色板
 - 间距、Flexbox、圆角、阴影等
 - 水平方向默认使用字符宽度(cw)，使用px后缀指定像素（如 `w-20px`）
+
+### 交互式伪类和事件模型
+
+ETAF 提供完整的事件模型来支持交互式伪类选择器：
+
+```elisp
+(require 'etaf-event)
+
+;; 初始化事件系统
+(etaf-event-init)
+
+;; 注册可交互元素（需要 uuid 属性）
+(let ((button '(button ((uuid . "btn-1") (class . "primary")) "Click Me")))
+  (etaf-event-register-element "btn-1" button 100 120)
+  
+  ;; 添加事件监听器
+  (etaf-event-add-listener "btn-1" 'hover-enter
+    (lambda (uuid data)
+      (message "Button hovered!")))
+  
+  ;; CSS 选择器会自动使用事件状态
+  ;; button:hover 只在鼠标悬停时匹配
+  (etaf-css-selector-query dom "button:hover"))
+```
+
+支持的交互式伪类：
+- `:hover` - 鼠标悬停
+- `:active` - 激活状态（鼠标按下）
+- `:focus` - 焦点状态
+- `:disabled` / `:enabled` - 禁用/启用状态
+
+详见 [事件模型文档](docs/EVENT-MODEL.md)。
 
 ### ECSS：Emacs 风格 CSS
 
@@ -260,6 +293,7 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 | [开发者手册](docs/DEVELOPER-MANUAL.md) | 架构和扩展指南 |
 | [架构文档](docs/ARCHITECTURE.md) | 系统架构和模块关系 |
 | [数据结构](docs/DATA-STRUCTURES.md) | 详细的数据结构文档 |
+| [事件模型](docs/EVENT-MODEL.md) | 交互式伪类和事件系统 |
 
 ## 核心模块
 
@@ -267,6 +301,7 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 |------|------|
 | `etaf.el` | 主入口，高层 API |
 | `etaf-etml.el` | TML 到 DOM 转换、模板指令、组件系统、响应式系统 |
+| `etaf-event.el` | 事件模型，支持交互式伪类（:hover, :focus 等） |
 | `etaf-css.el` | CSS 对象模型（CSSOM）主入口 |
 | `etaf-render.el` | 渲染树构建 |
 | `etaf-layout.el` | 盒模型和布局计算 |
