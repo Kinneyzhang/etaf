@@ -57,21 +57,22 @@
    '("th, td" (display table-cell))
    '("caption" (display table-caption))
    '("li" (display list-item))
+
+   '("button" (display inline))
    
    ;; Display property for inline-block elements
-   '("button, input, textarea, select, img, video, canvas, svg" (display inline-block))
+   '("input, textarea, select, img, video, canvas, svg" (display inline-block))
    
    ;; Inline elements have display: inline by default (browser default)
    ;; No need to explicitly set for: span, a, em, strong, b, i, u, s, del, ins, mark, small, sub, sup, code, kbd, samp, var, abbr, cite, q, label, audio, option, summary, progress, meter
    ;; Note: br is also inline but is defined as self-closing tag in tag definitions
    
-   ;; Headings - font-size as ratio for em-based sizing
    '("h1" (font-size "1.6em") (font-weight bold))
-   '("h2" (font-size "1.4em") (font-weight bold))
-   '("h3" (font-size "1.3em") (font-weight bold))
-   '("h4" (font-size "1.2em") (font-weight bold))
-   '("h5" (font-size "1.1em") (font-weight bold))
-   '("h6" (font-size "1.0em") (font-weight bold))
+   '("h2" (font-size "1.4lh") (font-weight bold))
+   '("h3" (font-size "1.3lh") (font-weight bold))
+   '("h4" (font-size "1.2lh") (font-weight bold))
+   '("h5" (font-size "1.1lh") (font-weight bold))
+   '("h6" (font-size "1.0lh") (font-weight bold))
    
    ;; Lists
    '("ul" (list-style-type disc) (margin-top 1) (margin-bottom 1) (padding-left 10))
@@ -114,7 +115,7 @@
    '("cite" (font-style italic))
    
    ;; Form elements
-   '("button" (padding-block 0) (padding-inline 10) (border "1px solid #ccc") (cursor pointer))
+   ;; '("button" (padding-block 0) (padding-inline 10) (border "1px solid #ccc") (cursor pointer))
    '("input" (padding-block 0) (padding-inline 5) (border "1px solid #ccc"))
    '("textarea" (padding-block 0) (padding-inline 5) (border "1px solid #ccc") (font-family inherit))
    '("select" (padding-block 0) (padding-inline 5) (border "1px solid #ccc"))
