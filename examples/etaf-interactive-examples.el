@@ -587,7 +587,7 @@ WIDTH 是可选的视口宽度。"
             (insert "|")
             (cl-loop for cell in row
                      for width in col-widths
-                     do (insert (format " %-*s |" width cell)))
+                     do (insert (format " %s-%s |" width cell)))
             (insert "\n")
             (when (eq row (car data))  ; 表头后加分隔线
               (insert separator)))
