@@ -432,5 +432,104 @@
     (should (string-match-p "display: flex" result))
     (should (string-match-p "align-items: center" result))))
 
+;;; Scoped ecss Tag Tests (ecss at any position with local scope)
+
+(ert-deftest etaf-ecss-test-scoped-ecss-basic ()
+  "Test ecss tag at element level creates scoped CSS."
+  (require 'etaf-etml)
+  (let* ((dom (etaf-etml-to-dom
+               '(div
+                 (ecss ".box" "bg-red-500")
+                 (div :class "box" "Hello")))))
+    ;; Should have a style element as first child
+    (let ((first-child (car (dom-children dom))))
+      (should (eq (dom-tag first-child) 'style))
+      ;; Style content should have scoped selector
+      (let ((style-content (car (dom-children first-child))))
+        (should (stringp style-content))
+        ;; Should have scope class prefix
+        (should (string-match-p "etaf-scope-[0-9]+ \\.box" style-content))
+        (should (string-match-p "background-color: #ef4444" style-content))))
+    ;; Sibling div should have scope class added
+    (let ((second-child (cadr (dom-children dom))))
+      (should (eq (dom-tag second-child) 'div))
+      (let ((class-attr (dom-attr second-child 'class)))
+        (should (string-match-p "box" class-attr))
+        (should (string-match-p "etaf-scope-[0-9]+" class-attr))))))
+
+(ert-deftest etaf-ecss-test-scoped-ecss-multiple-siblings ()
+  "Test ecss scopes CSS to multiple sibling elements."
+  (require 'etaf-etml)
+  (let* ((dom (etaf-etml-to-dom
+               '(div
+                 (ecss ".item" "p-4")
+                 (span :class "item" "First")
+                 (span :class "item" "Second")
+                 (span :class "item" "Third")))))
+    ;; All sibling spans should have scope class
+    (let ((children (dom-children dom)))
+      ;; First child is style
+      (should (eq (dom-tag (car children)) 'style))
+      ;; Other children are spans with scope class
+      (dolist (child (cdr children))
+        (when (eq (dom-tag child) 'span)
+          (let ((class-attr (dom-attr child 'class)))
+            (should (string-match-p "item" class-attr))
+            (should (string-match-p "etaf-scope-[0-9]+" class-attr))))))))
+
+(ert-deftest etaf-ecss-test-scoped-ecss-multiple-rules ()
+  "Test multiple ecss tags in same scope."
+  (require 'etaf-etml)
+  (let* ((dom (etaf-etml-to-dom
+               '(div
+                 (ecss ".header" "bg-blue-500")
+                 (ecss ".content" "p-4")
+                 (div :class "header" "Header")
+                 (div :class "content" "Content")))))
+    (let ((style-child (car (dom-children dom))))
+      (should (eq (dom-tag style-child) 'style))
+      (let ((style-content (car (dom-children style-child))))
+        ;; Both rules should be in the style
+        (should (string-match-p "\\.header" style-content))
+        (should (string-match-p "\\.content" style-content))
+        ;; Both should have same scope prefix
+        (should (string-match-p "background-color: #3b82f6" style-content))))))
+
+(ert-deftest etaf-ecss-test-scoped-ecss-vs-global-style ()
+  "Test that ecss in style tag remains global while ecss outside is scoped."
+  (require 'etaf-etml)
+  ;; Global ecss in style tag
+  (let* ((dom (etaf-etml-to-dom
+               '(html
+                 (head
+                  (style
+                   (ecss ".global" "bg-red-500")))
+                 (body
+                  (div :class "global" "Global"))))))
+    (let* ((style-node (car (dom-by-tag dom 'style)))
+           (style-content (car (dom-children style-node))))
+      ;; Should NOT have scope prefix
+      (should (string-match-p "^\\.global" style-content))
+      (should-not (string-match-p "etaf-scope" style-content))))
+  
+  ;; Scoped ecss outside style tag
+  (let* ((dom (etaf-etml-to-dom
+               '(div
+                 (ecss ".scoped" "bg-blue-500")
+                 (span :class "scoped" "Scoped")))))
+    (let* ((style-node (car (dom-children dom)))
+           (style-content (car (dom-children style-node))))
+      ;; SHOULD have scope prefix
+      (should (string-match-p "etaf-scope-[0-9]+ \\.scoped" style-content)))))
+
+(ert-deftest etaf-ecss-test-ecss-tag-p ()
+  "Test etaf-etml--ecss-tag-p predicate."
+  (require 'etaf-etml)
+  (should (etaf-etml--ecss-tag-p '(ecss ".box" "bg-red-500")))
+  (should (etaf-etml--ecss-tag-p '(ecss ".card{flex}")))
+  (should-not (etaf-etml--ecss-tag-p '(div :class "box")))
+  (should-not (etaf-etml--ecss-tag-p "not a list"))
+  (should-not (etaf-etml--ecss-tag-p '(style (ecss ".x" "p-4")))))
+
 (provide 'etaf-ecss-tests)
 ;;; etaf-ecss-tests.el ends here
