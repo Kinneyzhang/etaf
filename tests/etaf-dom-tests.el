@@ -1,6 +1,7 @@
 (require 'etaf-etml)
 (require 'etaf-dom)
 (require 'etaf-ert)
+(require 'cl-lib)
 
 (setq-local lisp-indent-offset 2)
 (setq etaf-dom-tests-dom
@@ -42,7 +43,7 @@
                          (and (listp elem)
                               (eq (car elem) 'a)
                               (plist-get (cdr elem) :etaf-tag-instance)))
-                       (flatten-list tml))))
+                       (cl-remove-if-not #'listp (flatten-tree tml)))))
 
 (should (etaf-dom-tag-match-p etaf-dom-tests-dom "div"))
 
