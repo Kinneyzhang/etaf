@@ -33,13 +33,28 @@
 
 ;;; Scoped CSS (ecss tag) support
 ;; ecss tags can be used at any position in ETML to define locally scoped CSS.
-;; The scope includes all sibling nodes and their descendants.
+;; The scope includes the parent element and all its descendants.
 ;;
 ;; How scoping works:
 ;; - When an ecss tag is found among children, a unique scope ID is generated
-;; - The scope class is added to direct sibling elements
+;; - The scope class is added to the parent element (the element containing ecss)
 ;; - The CSS selectors are prefixed with the scope class (e.g., ".scope-1 .box")
-;; - This CSS selector naturally matches any descendant of the scoped element
+;; - This CSS selector matches any element matching the selector within the scope
+;;
+;; Example:
+;;   (div :id "parent"
+;;     (ecss "p{text-red-200}")
+;;     (ecss "ul p{italic}")
+;;     (p "Direct child p")
+;;     (ul (li (p "Nested p"))))
+;;
+;; Becomes:
+;;   (div :id "parent" :class "etaf-scope-1"
+;;     (style ".etaf-scope-1 p { color: #fecaca; }\n.etaf-scope-1 ul p { ... }")
+;;     (p "Direct child p")
+;;     (ul (li (p "Nested p"))))
+;;
+;; Both p elements will be styled because they are descendants of .etaf-scope-1
 
 (defvar etaf-etml--scope-counter 0
   "Counter for generating unique scope IDs.")
@@ -47,6 +62,7 @@
 (defun etaf-etml--generate-scope-id ()
   "Generate a unique scope ID for scoped CSS."
   (format "etaf-scope-%d" (cl-incf etaf-etml--scope-counter)))
+
 
 (defun etaf-etml--ecss-tag-p (item)
   "Check if ITEM is an ecss tag (not inside style tag).
@@ -74,9 +90,9 @@ Returns CSS string with selectors prefixed by scope class."
 (defun etaf-etml--add-scope-class (node scope-id)
   "Add SCOPE-ID class to NODE's class attribute.
 NODE is in DOM format: (tag ((attrs...) children...)).
-The scope class only needs to be added to direct siblings because
-the CSS selector (e.g., '.scope-id .target') naturally applies to
-all descendants within the scoped element.
+Note: This function is kept for utility purposes but is no longer used
+in the main ecss scoping flow. Scope classes are now added to parent
+elements directly in `etaf-etml--to-dom'.
 Returns modified node."
   (when (and (listp node) (symbolp (car node)))
     (let* ((attrs (cadr node))
@@ -161,11 +177,11 @@ Returns the updated ATTR-ALIST with merged style attribute."
             attr-alist)))))
   attr-alist)
 
-(defun etaf-etml--process-children-with-ecss (children)
+(defun etaf-etml--process-children-with-ecss (children &optional scope-id)
   "Process CHILDREN list, handling ecss tags for local scope CSS.
-When ecss tags are found, they are converted to style elements with scoped CSS,
-and sibling elements receive the scope class.
-Returns processed children list."
+When ecss tags are found, they are converted to style elements with scoped CSS.
+The SCOPE-ID is provided by the caller and should be added to the parent element.
+Returns processed children list (style element followed by other children)."
   (let ((ecss-tags nil)
         (other-children nil))
     ;; First pass: separate ecss tags from other children
@@ -180,22 +196,17 @@ Returns processed children list."
         ;; No ecss tags, process children normally
         (mapcar #'etaf-etml-to-dom children)
       ;; Has ecss tags: create scoped CSS
-      (let* ((scope-id (etaf-etml--generate-scope-id))
+      ;; Note: scope-id should be provided by caller and added to parent element
+      (let* ((effective-scope-id (or scope-id (etaf-etml--generate-scope-id)))
              ;; Generate scoped CSS from all ecss tags
              (css-parts (mapcar (lambda (ecss-form)
-                                  (etaf-etml--process-ecss-content ecss-form scope-id))
+                                  (etaf-etml--process-ecss-content ecss-form effective-scope-id))
                                 ecss-tags))
              (css-string (mapconcat #'identity css-parts "\n"))
              ;; Create style element for scoped CSS
              (style-element (list 'style nil css-string))
-             ;; Process other children and add scope class to them
-             (processed-children 
-              (mapcar (lambda (child)
-                        (let ((dom-child (etaf-etml-to-dom child)))
-                          (when (and (listp dom-child) (symbolp (car dom-child)))
-                            (etaf-etml--add-scope-class dom-child scope-id))
-                          dom-child))
-                      other-children)))
+             ;; Process other children (no need to add scope class - parent has it)
+             (processed-children (mapcar #'etaf-etml-to-dom other-children)))
         ;; Return style element followed by processed children
         (cons style-element processed-children)))))
 
@@ -274,18 +285,33 @@ the final string with keymap properties."
                 (let ((tag-instance (etaf-etml-tag-create-instance tag attrs rest)))
                   (push (cons 'etaf-tag-instance tag-instance) attr-alist)))))
           ;; Process children based on tag type and content
-          (let ((children
-                 (cond
-                  ;; Style tag with (ecss ...) forms - global scope CSS
-                  ((and (eq tag 'style)
-                        rest
-                        (cl-some #'etaf-etml--ecss-item-p rest))
-                   (list (etaf-etml--process-style-children rest)))
-                  ;; Other tags with ecss children - local scope CSS
-                  ((and rest (cl-some #'etaf-etml--ecss-tag-p rest))
-                   (etaf-etml--process-children-with-ecss rest))
-                  ;; Normal processing
-                  (t (mapcar #'etaf-etml-to-dom rest)))))
+          ;; Check for ecss children first to handle scoping properly
+          (let* ((has-ecss-children (and rest 
+                                         (not (eq tag 'style))
+                                         (cl-some #'etaf-etml--ecss-tag-p rest)))
+                 ;; Generate scope-id if needed and add to parent's class
+                 (scope-id (when has-ecss-children
+                             (etaf-etml--generate-scope-id)))
+                 ;; Add scope class to parent element's attributes
+                 (_ (when scope-id
+                      (let ((class-attr (assq 'class attr-alist)))
+                        (if class-attr
+                            ;; Append scope ID to existing class
+                            (setcdr class-attr (concat (cdr class-attr) " " scope-id))
+                          ;; Add new class attribute with scope ID
+                          (setq attr-alist (cons (cons 'class scope-id) attr-alist))))))
+                 (children
+                  (cond
+                   ;; Style tag with (ecss ...) forms - global scope CSS
+                   ((and (eq tag 'style)
+                         rest
+                         (cl-some #'etaf-etml--ecss-item-p rest))
+                    (list (etaf-etml--process-style-children rest)))
+                   ;; Other tags with ecss children - local scope CSS (scope-id added to parent)
+                   (has-ecss-children
+                    (etaf-etml--process-children-with-ecss rest scope-id))
+                   ;; Normal processing
+                   (t (mapcar #'etaf-etml-to-dom rest)))))
             (cons tag (cons attr-alist children))))))))
 
 ;;; Text Interpolation (Mustache syntax)
