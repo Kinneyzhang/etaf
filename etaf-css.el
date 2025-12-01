@@ -23,6 +23,7 @@
 ;; - etaf-css-cache: 计算样式缓存
 ;; - etaf-css-index: 规则索引（性能优化）
 ;; - etaf-css-media: 媒体查询支持
+;; - etaf-css-parse: CSS 值解析（单位转换：px, %, em, lh, cw）
 ;;
 ;; CSSOM 结构：
 ;; - inline-rules: 内联样式规则
@@ -56,6 +57,7 @@
 (require 'etaf-css-cache)
 (require 'etaf-css-index)
 (require 'etaf-css-shorthand)
+(require 'etaf-css-parse)
 (require 'etaf-tailwind)
 
 ;;; 从 DOM 提取样式
