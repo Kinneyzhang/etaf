@@ -34,6 +34,12 @@
 ;;; Scoped CSS (ecss tag) support
 ;; ecss tags can be used at any position in ETML to define locally scoped CSS.
 ;; The scope includes all sibling nodes and their descendants.
+;;
+;; How scoping works:
+;; - When an ecss tag is found among children, a unique scope ID is generated
+;; - The scope class is added to direct sibling elements
+;; - The CSS selectors are prefixed with the scope class (e.g., ".scope-1 .box")
+;; - This CSS selector naturally matches any descendant of the scoped element
 
 (defvar etaf-etml--scope-counter 0
   "Counter for generating unique scope IDs.")
@@ -68,6 +74,9 @@ Returns CSS string with selectors prefixed by scope class."
 (defun etaf-etml--add-scope-class (node scope-id)
   "Add SCOPE-ID class to NODE's class attribute.
 NODE is in DOM format: (tag ((attrs...) children...)).
+The scope class only needs to be added to direct siblings because
+the CSS selector (e.g., '.scope-id .target') naturally applies to
+all descendants within the scoped element.
 Returns modified node."
   (when (and (listp node) (symbolp (car node)))
     (let* ((attrs (cadr node))
@@ -77,18 +86,6 @@ Returns modified node."
           (setcdr class-attr (concat (cdr class-attr) " " scope-id))
         ;; Add new class attribute
         (setcar (cdr node) (cons (cons 'class scope-id) attrs)))))
-  node)
-
-(defun etaf-etml--add-scope-class-recursive (node scope-id)
-  "Add SCOPE-ID class to NODE and all its element children.
-NODE is in DOM format."
-  (when (and (listp node) (symbolp (car node)))
-    (etaf-etml--add-scope-class node scope-id)
-    ;; Process children
-    (let ((children (cddr node)))
-      (dolist (child children)
-        (when (and (listp child) (symbolp (car child)))
-          (etaf-etml--add-scope-class-recursive child scope-id)))))
   node)
 
 (defun etaf-plist-to-alist (plist)
