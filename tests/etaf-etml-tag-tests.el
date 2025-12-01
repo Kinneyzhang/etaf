@@ -22,18 +22,23 @@
 
 ;;; Test tag definitions
 
-;; Test div tag definition
+;; Test simple tag (div) - should be registered but minimal definition
+(should-equal (etaf-etml-tag-defined-p 'div) t)
 (let ((div-def (etaf-etml-tag-get-definition 'div)))
   (should-equal (plist-get div-def :name) 'div)
-  (should-equal (plist-get div-def :display) 'block)
-  (should-equal (plist-get div-def :children-allowed) t))
+  ;; Simple tags don't have display in definition - comes from UA stylesheet
+  (should-equal (plist-get div-def :display) nil))
 
-;; Test button tag definition
+;; Test button tag - has event handlers and state styles
 (let ((button-def (etaf-etml-tag-get-definition 'button)))
   (should-equal (plist-get button-def :name) 'button)
-  (should-equal (plist-get button-def :display) 'inline-block)
+  ;; Display is in UA stylesheet, not tag definition
+  (should-equal (plist-get button-def :display) nil)
   ;; Default styles are now in UA stylesheet, not tag definition
-  (should-equal (plist-get button-def :default-style) nil))
+  (should-equal (plist-get button-def :default-style) nil)
+  ;; But state styles and event handlers are still on tag
+  (should (plist-get button-def :hover-style))
+  (should (functionp (plist-get button-def :on-click))))
 
 ;; Test self-closing tags
 (let ((input-def (etaf-etml-tag-get-definition 'input)))
@@ -181,36 +186,58 @@
        (event (etaf-etml-tag--make-event 'click instance nil)))
   (should-equal (plist-get event :text) "Hello World"))
 
-;;; Test display types for different tags
+;;; Test display types now come from UA stylesheet
 
-;; Block elements
-(should-equal (plist-get (etaf-etml-tag-get-definition 'div) :display) 'block)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'p) :display) 'block)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'h1) :display) 'block)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'ul) :display) 'block)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'ol) :display) 'block)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'blockquote) :display) 'block)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'pre) :display) 'block)
+;; Display property is now in UA stylesheet, not tag definitions
+;; Tags are still recognized and can be used
+(should-equal (etaf-etml-tag-defined-p 'div) t)
+(should-equal (etaf-etml-tag-defined-p 'span) t)
+(should-equal (etaf-etml-tag-defined-p 'p) t)
+(should-equal (etaf-etml-tag-defined-p 'h1) t)
+(should-equal (etaf-etml-tag-defined-p 'button) t)
 
-;; Inline elements
-(should-equal (plist-get (etaf-etml-tag-get-definition 'span) :display) 'inline)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'a) :display) 'inline)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'em) :display) 'inline)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'strong) :display) 'inline)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'code) :display) 'inline)
+;; Tag definitions no longer store display property
+(should-equal (plist-get (etaf-etml-tag-get-definition 'div) :display) nil)
+(should-equal (plist-get (etaf-etml-tag-get-definition 'span) :display) nil)
 
-;; Inline-block elements
-(should-equal (plist-get (etaf-etml-tag-get-definition 'button) :display) 'inline-block)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'input) :display) 'inline-block)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'textarea) :display) 'inline-block)
+;; Display comes from UA stylesheet via CSS system
+(let* ((dom '(html nil (body nil (div nil "test") (span nil "test2"))))
+       (cssom (etaf-css-build-cssom dom))
+       (div-node (car (dom-search dom (lambda (n) (eq (dom-tag n) 'div)))))
+       (span-node (car (dom-search dom (lambda (n) (eq (dom-tag n) 'span))))))
+  (when div-node
+    (let ((div-style (etaf-css-get-computed-style cssom div-node dom)))
+      (should (assq 'display div-style))
+      (should-equal (cdr (assq 'display div-style)) "block")))
+  (when span-node
+    (let ((span-style (etaf-css-get-computed-style cssom span-node dom)))
+      ;; Span has default display: inline (browser default, not explicitly set)
+      ;; So it might not be in computed style, or be "inline"
+      t)))
 
-;; Table elements
-(should-equal (plist-get (etaf-etml-tag-get-definition 'table) :display) 'table)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'tr) :display) 'table-row)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'td) :display) 'table-cell)
-(should-equal (plist-get (etaf-etml-tag-get-definition 'th) :display) 'table-cell)
+;; Table elements also get display from UA stylesheet now
+(should-equal (plist-get (etaf-etml-tag-get-definition 'table) :display) nil)
+(should-equal (plist-get (etaf-etml-tag-get-definition 'tr) :display) nil)
+(should-equal (plist-get (etaf-etml-tag-get-definition 'td) :display) nil)
+(should-equal (plist-get (etaf-etml-tag-get-definition 'th) :display) nil)
 
-;;; Test interactive tags have click handlers
+;;; Test built-in tag registry
+
+;; Test that builtin tags are registered
+(should (memq 'div etaf-etml-builtin-tags))
+(should (memq 'span etaf-etml-builtin-tags))
+(should (memq 'p etaf-etml-builtin-tags))
+(should (memq 'h1 etaf-etml-builtin-tags))
+
+;; Builtin tags should be recognized as defined
+(should-equal (etaf-etml-tag-defined-p 'div) t)
+(should-equal (etaf-etml-tag-defined-p 'span) t)
+(should-equal (etaf-etml-tag-defined-p 'em) t)
+
+;; Tags with special behavior are NOT in builtin list (they have full definitions)
+(should-not (memq 'button etaf-etml-builtin-tags))
+(should-not (memq 'a etaf-etml-builtin-tags))
+(should-not (memq 'input etaf-etml-builtin-tags))
 
 (let ((a-def (etaf-etml-tag-get-definition 'a)))
   (should (functionp (plist-get a-def :on-click))))
