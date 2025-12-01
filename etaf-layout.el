@@ -20,7 +20,7 @@
 ;;
 ;; 模块结构：
 ;; - etaf-layout.el (本模块): 主协调器和布局树构建
-;; - etaf-layout-parse.el: CSS 值解析
+;; - etaf-css-parse.el: CSS 值解析（由 CSS 模块提供）
 ;; - etaf-layout-box.el: 盒模型数据结构和操作
 ;; - etaf-layout-flex.el: Flex 布局格式化上下文
 ;; - etaf-layout-string.el: 布局到字符串转换
@@ -53,7 +53,7 @@
 (require 'etaf-utils)
 
 ;; 引入子模块
-(require 'etaf-layout-parse)
+(require 'etaf-css-parse)
 (require 'etaf-layout-box)
 
 ;; Forward declarations
@@ -123,115 +123,115 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (is-root (plist-get parent-context :is-root))
          
          ;; 提取样式值
-         (box-sizing (etaf-layout-parse-style-value
+         (box-sizing (etaf-css-parse-style-value
                       style 'box-sizing "content-box"))
          
          ;; Padding
-         (padding-top (etaf-layout-parse-length 
-                       (etaf-layout-parse-style-value
+         (padding-top (etaf-css-parse-length 
+                       (etaf-css-parse-style-value
                         style 'padding-top "0") 
                        parent-width))
-         (padding-right (etaf-layout-parse-length 
-                         (etaf-layout-parse-style-value
+         (padding-right (etaf-css-parse-length 
+                         (etaf-css-parse-style-value
                           style 'padding-right "0") 
                          parent-width))
-         (padding-bottom (etaf-layout-parse-length 
-                          (etaf-layout-parse-style-value
+         (padding-bottom (etaf-css-parse-length 
+                          (etaf-css-parse-style-value
                            style 'padding-bottom "0") 
                           parent-width))
-         (padding-left (etaf-layout-parse-length 
-                        (etaf-layout-parse-style-value
+         (padding-left (etaf-css-parse-length 
+                        (etaf-css-parse-style-value
                          style 'padding-left "0") 
                         parent-width))
          
          ;; Border
-         (border-top (etaf-layout-parse-length 
-                      (etaf-layout-parse-style-value
+         (border-top (etaf-css-parse-length 
+                      (etaf-css-parse-style-value
                        style 'border-top-width "0") 
                       parent-width))
-         (border-right (etaf-layout-parse-length 
-                        (etaf-layout-parse-style-value
+         (border-right (etaf-css-parse-length 
+                        (etaf-css-parse-style-value
                          style 'border-right-width "0") 
                         parent-width))
-         (border-bottom (etaf-layout-parse-length 
-                         (etaf-layout-parse-style-value
+         (border-bottom (etaf-css-parse-length 
+                         (etaf-css-parse-style-value
                           style 'border-bottom-width "0") 
                          parent-width))
-         (border-left (etaf-layout-parse-length 
-                       (etaf-layout-parse-style-value
+         (border-left (etaf-css-parse-length 
+                       (etaf-css-parse-style-value
                         style 'border-left-width "0") 
                        parent-width))
          
-         (border-top-color (etaf-layout-parse-style-value
+         (border-top-color (etaf-css-parse-style-value
                             style 'border-top-color
                             (face-attribute 'default :foreground)))
-         (border-right-color (etaf-layout-parse-style-value
+         (border-right-color (etaf-css-parse-style-value
                               style 'border-right-color
                               (face-attribute 'default :foreground)))
-         (border-bottom-color (etaf-layout-parse-style-value
+         (border-bottom-color (etaf-css-parse-style-value
                                style 'border-bottom-color
                                (face-attribute 'default :foreground)))
-         (border-left-color (etaf-layout-parse-style-value
+         (border-left-color (etaf-css-parse-style-value
                              style 'border-left-color
                              (face-attribute 'default :foreground)))
          
          ;; Margin
-         (margin-top (etaf-layout-parse-length 
-                      (etaf-layout-parse-style-value
+         (margin-top (etaf-css-parse-length 
+                      (etaf-css-parse-style-value
                        style 'margin-top "0") 
                       parent-width))
-         (margin-right (etaf-layout-parse-length 
-                        (etaf-layout-parse-style-value
+         (margin-right (etaf-css-parse-length 
+                        (etaf-css-parse-style-value
                          style 'margin-right "0") 
                         parent-width))
          (margin-bottom
-          (etaf-layout-parse-length 
-           (etaf-layout-parse-style-value style 'margin-bottom "0") 
+          (etaf-css-parse-length 
+           (etaf-css-parse-style-value style 'margin-bottom "0") 
            parent-width))
-         (margin-left (etaf-layout-parse-length 
-                       (etaf-layout-parse-style-value style 'margin-left "0") 
+         (margin-left (etaf-css-parse-length 
+                       (etaf-css-parse-style-value style 'margin-left "0") 
                        parent-width))
          
          ;; Width and Height
-         (width-value (etaf-layout-parse-length 
-                       (etaf-layout-parse-style-value style 'width "auto") 
+         (width-value (etaf-css-parse-length 
+                       (etaf-css-parse-style-value style 'width "auto") 
                        parent-width))
-         (height-value (etaf-layout-parse-height 
-                        (etaf-layout-parse-style-value style 'height "auto") 
+         (height-value (etaf-css-parse-height 
+                        (etaf-css-parse-style-value style 'height "auto") 
                         parent-height))
          
          ;; min-width, max-width
-         (min-width-value (etaf-layout-parse-length
-                           (etaf-layout-parse-style-value
+         (min-width-value (etaf-css-parse-length
+                           (etaf-css-parse-style-value
                             style 'min-width "0")
                            parent-width))
-         (max-width-value (etaf-layout-parse-length
-                           (etaf-layout-parse-style-value
+         (max-width-value (etaf-css-parse-length
+                           (etaf-css-parse-style-value
                             style 'max-width "none")
                            parent-width))
          
          ;; min-height, max-height
-         (min-height-value (etaf-layout-parse-height
-                            (etaf-layout-parse-style-value
+         (min-height-value (etaf-css-parse-height
+                            (etaf-css-parse-style-value
                              style 'min-height "0")
                             parent-height))
-         (max-height-value (etaf-layout-parse-height
-                            (etaf-layout-parse-style-value
+         (max-height-value (etaf-css-parse-height
+                            (etaf-css-parse-style-value
                              style 'max-height "none")
                             parent-height))
          
          ;; 溢出处理属性
-         (overflow-y (etaf-layout-parse-style-value
+         (overflow-y (etaf-css-parse-style-value
                       style 'overflow-y "visible"))
          (v-scroll-bar-type
-          (when-let ((val (etaf-layout-parse-style-value
+          (when-let ((val (etaf-css-parse-style-value
                            style 'v-scroll-bar-type nil)))
             (if (symbolp val) val (intern val))))
          (v-scroll-bar-type-plist
           (when v-scroll-bar-type
             (etaf-layout-scroll-bar-create v-scroll-bar-type)))
          (v-scroll-bar-direction
-          (when-let ((val (etaf-layout-parse-style-value
+          (when-let ((val (etaf-css-parse-style-value
                            style 'v-scroll-bar-direction "right")))
             (if (symbolp val) val (intern val))))
          (scroll-thumb-color
@@ -239,7 +239,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
             (when-let ((color (plist-get
                                v-scroll-bar-type-plist :thumb-color)))
               (or color
-                  (etaf-layout-parse-style-value
+                  (etaf-css-parse-style-value
                    style 'scroll-thumb-color
                    (face-attribute 'default :foreground))))))
          (scroll-track-color
@@ -247,7 +247,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
             (when-let ((color (plist-get
                                v-scroll-bar-type-plist :track-color)))
               (or color
-                  (etaf-layout-parse-style-value
+                  (etaf-css-parse-style-value
                    style 'scroll-track-color
                    (face-attribute 'default :background))))))
          

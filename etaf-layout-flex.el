@@ -44,7 +44,7 @@
 
 (require 'cl-lib)
 (require 'dom)
-(require 'etaf-layout-parse)
+(require 'etaf-css-parse)
 (require 'etaf-layout-box)
 
 ;; Forward declarations
@@ -78,20 +78,20 @@ PARENT-CONTEXT 包含父容器的上下文信息。
          (content-height (etaf-layout-box-content-height box-model))
          
          ;; Flex 容器属性
-         (flex-direction (or (etaf-layout-parse-style-value computed-style 'flex-direction)
+         (flex-direction (or (etaf-css-parse-style-value computed-style 'flex-direction)
                              "row"))
-         (flex-wrap (or (etaf-layout-parse-style-value computed-style 'flex-wrap)
+         (flex-wrap (or (etaf-css-parse-style-value computed-style 'flex-wrap)
                         "nowrap"))
-         (justify-content (or (etaf-layout-parse-style-value computed-style 'justify-content)
+         (justify-content (or (etaf-css-parse-style-value computed-style 'justify-content)
                               "flex-start"))
-         (align-items (or (etaf-layout-parse-style-value computed-style 'align-items)
+         (align-items (or (etaf-css-parse-style-value computed-style 'align-items)
                           "stretch"))
-         (align-content (or (etaf-layout-parse-style-value computed-style 'align-content)
+         (align-content (or (etaf-css-parse-style-value computed-style 'align-content)
                             "stretch"))
-         (row-gap-str (etaf-layout-parse-style-value computed-style 'row-gap "0"))
-         (column-gap-str (etaf-layout-parse-style-value computed-style 'column-gap "0"))
-         (row-gap-parsed (etaf-layout-parse-length row-gap-str content-width))
-         (column-gap-parsed (etaf-layout-parse-length column-gap-str content-width))
+         (row-gap-str (etaf-css-parse-style-value computed-style 'row-gap "0"))
+         (column-gap-str (etaf-css-parse-style-value computed-style 'column-gap "0"))
+         (row-gap-parsed (etaf-css-parse-length row-gap-str content-width))
+         (column-gap-parsed (etaf-css-parse-length column-gap-str content-width))
          (row-gap (if (eq row-gap-parsed 'auto) 0 row-gap-parsed))
          (column-gap (if (eq column-gap-parsed 'auto) 0 column-gap-parsed))
          
@@ -135,21 +135,21 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                 (push child-layout child-layouts)
                 ;; 收集 flex item 信息
                 (let* ((child-style (etaf-render-get-computed-style child))
-                       (order (or (etaf-layout-parse-flex-number
-                                   (etaf-layout-parse-style-value child-style 'order))
+                       (order (or (etaf-css-parse-flex-number
+                                   (etaf-css-parse-style-value child-style 'order))
                                   0))
                        (flex-grow
-                        (or (etaf-layout-parse-flex-number
-                             (etaf-layout-parse-style-value child-style 'flex-grow))
+                        (or (etaf-css-parse-flex-number
+                             (etaf-css-parse-style-value child-style 'flex-grow))
                             0))
                        (flex-shrink
-                        (or (etaf-layout-parse-flex-number
-                             (etaf-layout-parse-style-value child-style 'flex-shrink))
+                        (or (etaf-css-parse-flex-number
+                             (etaf-css-parse-style-value child-style 'flex-shrink))
                             1))
-                       (flex-basis (etaf-layout-parse-style-value
+                       (flex-basis (etaf-css-parse-style-value
                                     child-style 'flex-basis "auto"))
                        (align-self
-                        (etaf-layout-parse-style-value child-style 'align-self)))
+                        (etaf-css-parse-style-value child-style 'align-self)))
                   ;; 添加 flex item 属性到子布局节点
                   (dom-set-attribute child-layout 'layout-order order)
                   (dom-set-attribute child-layout 'layout-flex-grow flex-grow)
