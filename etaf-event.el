@@ -272,8 +272,8 @@ EVENT-DATA is passed to each listener function."
   "Start tracking mouse position and updating hover states."
   (unless etaf-event--tracking-timer
     (setq-local etaf-event--tracking-timer
-                (run-with-idle-timer
-                 etaf-event-hover-delay t
+                (run-with-timer
+                 etaf-event-hover-delay etaf-event-hover-delay
                  #'etaf-event-update-hover-state))))
 
 (defun etaf-event-stop-tracking ()
@@ -286,12 +286,26 @@ EVENT-DATA is passed to each listener function."
   "Update hover state based on current mouse position.
 This is called periodically by the tracking timer."
   (when (and etaf-event--elements
-             (not (minibufferp))
-             (eq (current-buffer) (window-buffer (selected-window))))
-    (let* ((mouse-pos (mouse-position))
-           (frame (car mouse-pos))
-           (pos (when (and frame (eq frame (selected-frame)))
-                  (window-point (selected-window))))
+             (not (minibufferp)))
+    (let* ((mouse-pixel-pos (mouse-pixel-position))
+           (frame (car mouse-pixel-pos))
+           (window (when (eq frame (selected-frame))
+                    (window-at (cadr mouse-pixel-pos) 
+                              (cddr mouse-pixel-pos) 
+                              frame)))
+           (pos (when (and window 
+                          (eq (window-buffer window) (current-buffer)))
+                  ;; Get buffer position at mouse location
+                  (save-excursion
+                    (save-selected-window
+                      (select-window window)
+                      (let* ((edges (window-inside-pixel-edges window))
+                             (x (- (cadr mouse-pixel-pos) (nth 0 edges)))
+                             (y (- (cddr mouse-pixel-pos) (nth 1 edges))))
+                        (when (and (>= x 0) (>= y 0))
+                          ;; Convert pixel coordinates to buffer position
+                          (posn-point
+                           (posn-at-x-y x y window))))))))
            (new-hover-uuid nil))
       
       ;; Find which element the mouse is over

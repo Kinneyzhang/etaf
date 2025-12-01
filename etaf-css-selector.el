@@ -36,7 +36,8 @@
 (require 'cl-lib)
 ;; Optional: Load etaf-event for interactive pseudo-class support
 ;; The selector matching will still work without it, but interactive
-;; pseudo-classes (:hover, :active, :focus) will not match
+;; pseudo-classes (:hover, :active, :focus) will not match.
+;; This is intentional to keep the CSS selector module independent.
 (require 'etaf-event nil t)
 
 (defconst etaf-css-selector-token-types
