@@ -177,13 +177,18 @@ DOM 是根 DOM 节点。
                   (let* ((selector (plist-get rule :selector))
                          (ast (etaf-css-selector-parse selector)))
                     (when ast
-                      (let ((first-selector (car (plist-get ast :nodes))))
-                        (when (and first-selector
-                                  (eq (plist-get first-selector :type) 'selector))
-                          ;; 使用支持组合器的匹配函数
-                          (when (etaf-css-selector-node-matches-p
-                                 node dom first-selector)
-                            (push rule matching-rules))))))
+                      ;; 处理逗号分隔的选择器组（如 "div, p, h1"）
+                      ;; AST 的 :nodes 包含所有选择器，需要检查每一个
+                      (let ((selectors (plist-get ast :nodes))
+                            (matched nil))
+                        (dolist (sel selectors)
+                          (when (and sel
+                                    (eq (plist-get sel :type) 'selector))
+                            ;; 使用支持组合器的匹配函数
+                            (when (etaf-css-selector-node-matches-p node dom sel)
+                              (setq matched t))))
+                        (when matched
+                          (push rule matching-rules)))))
                 (error nil))))))))
     (nreverse matching-rules)))
 
