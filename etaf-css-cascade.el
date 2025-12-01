@@ -143,7 +143,7 @@ SELECTOR 可以是字符串或包含 :selector 属性的 plist。
 每个声明格式: (value specificity source important order)
 - value: 属性值
 - specificity: 选择器特异性 (id class type)
-- source: 来源 (inline 或 style-tag)
+- source: 来源 (ua, style-tag, 或 inline)
 - important: 是否为 !important
 - order: 文档顺序（可选，用于同等情况下后定义优先）
 
@@ -151,7 +151,8 @@ SELECTOR 可以是字符串或包含 :selector 属性的 plist。
 1. !important 声明优先于普通声明
 2. 内联样式优先于样式表
 3. 高特异性优先于低特异性
-4. 同等情况下，后定义优先"
+4. 同等特异性下，author 样式表优先于 UA 样式表
+5. 同等情况下，后定义优先"
   (let ((value1 (nth 0 decl1))
         (spec1 (nth 1 decl1))
         (source1 (nth 2 decl1))
@@ -176,7 +177,11 @@ SELECTOR 可以是字符串或包含 :selector 属性的 plist。
      ((etaf-css-specificity> spec1 spec2) t)
      ((etaf-css-specificity> spec2 spec1) nil)
      
-     ;; 4. 特异性相同，比较文档顺序（后定义优先）
+     ;; 4. 特异性相同时，author 样式优先于 UA 样式
+     ((and (eq source1 'style-tag) (eq source2 'ua)) t)
+     ((and (eq source2 'style-tag) (eq source1 'ua)) nil)
+     
+     ;; 5. 特异性和来源都相同，比较文档顺序（后定义优先）
      (t (> order1 order2)))))
 
 (defun etaf-css-cascade-apply (declarations-by-property)
