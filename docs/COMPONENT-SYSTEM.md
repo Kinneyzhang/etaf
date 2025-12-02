@@ -887,7 +887,7 @@ To update existing code:
    etaf-etml-reactive-get → etaf-reactive-get
    etaf-etml-reactive-set → etaf-reactive-set
    etaf-etml-reactive-to-plist → etaf-reactive-to-plist
-   etaf-etml-component-* → etaf-component-*
+   etaf-component-* → etaf-component-*
    ```
 
 3. Test your code after updating all function names

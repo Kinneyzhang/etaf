@@ -592,136 +592,136 @@ Returns (RENDERED-NODES . SKIP-COUNT) where SKIP-COUNT is siblings to skip."
       
       ;; Check if this is a component first
       (if (etaf-etml--is-component-p tag)
-          (let* ((component (etaf-etml-component-get tag))
+          (let* ((component (etaf-component-get tag))
                  (rendered (etaf-etml--render-component
                             component attrs children data)))
             (cons (list rendered) 0))
         
         ;; Check for e-for (list rendering)
-      (if-let ((for-expr (etaf-etml--get-directive attrs :e-for)))
-          (let* ((for-parsed (etaf-etml--parse-e-for for-expr))
-                 (item-var (nth 0 for-parsed))
-                 (index-var (nth 1 for-parsed))
-                 (collection-expr (nth 2 for-parsed))
-                 (collection (etaf-etml--eval-expr collection-expr data))
-                 (new-attrs (etaf-etml--remove-directive attrs :e-for))
-                 (results '())
-                 (index 0)
-                 ;; Ensure collection is a list; nil becomes empty list
-                 (items (cond
-                         ((null collection) nil)
-                         ((listp collection) collection)
-                         (t (error "e-for requires a list, got: %S" collection)))))
-            (dolist (item items)
-              (let* ((item-key (intern (concat ":" item-var)))
-                     (new-data (copy-sequence data)))
-                (setq new-data (plist-put new-data item-key item))
-                (when index-var
-                  (let ((idx-key (intern (concat ":" index-var))))
-                    (setq new-data (plist-put new-data idx-key index))))
-                (let* ((new-node (cons tag (append new-attrs children)))
-                       (rendered (etaf-etml--render-node new-node new-data nil)))
-                  (push (car rendered) results)))
-              (cl-incf index))
-            (cons (apply #'append (nreverse results)) 0))
-        
-        ;; Check for e-if (conditional rendering)
-        (if-let ((if-expr (etaf-etml--get-directive attrs :e-if)))
-            (let ((condition (etaf-etml--eval-expr if-expr data)))
-              (if (etaf-etml--truthy-p condition)
-                  ;; Condition true - render this node, skip else siblings
-                  (let* ((new-attrs (etaf-etml--remove-directive attrs :e-if))
-                         (skip-count 0))
-                    ;; Count consecutive e-else-if and e-else siblings to skip
-                    (let ((remaining siblings))
-                      (while (etaf-etml--find-else-sibling remaining)
-                        (cl-incf skip-count)
-                        (setq remaining (cdr remaining))))
-                    (let ((rendered (etaf-etml--render-element
-                                     tag new-attrs children data)))
-                      (cons rendered skip-count)))
-                ;; Condition false - check for e-else-if or e-else
-                (let ((else-info (etaf-etml--find-else-sibling siblings)))
-                  (if else-info
-                      (let* ((else-node (car else-info))
-                             (else-tag (car else-node))
-                             (else-parsed (etaf-etml--split-attrs-and-children
-                                           (cdr else-node)))
-                             (else-attrs (car else-parsed))
-                             (else-children (cdr else-parsed))
-                             (remaining-siblings (cdr else-info)))
-                        (if-let ((else-if-expr (etaf-etml--get-directive
-                                                else-attrs :e-else-if)))
-                            ;; Process e-else-if
-                            (let* ((stripped-else-attrs
-                                    (etaf-etml--remove-directive else-attrs :e-else-if))
-                                   (else-if-attrs
-                                    (append (list :e-if else-if-expr) stripped-else-attrs))
-                                   (new-else-node
-                                    (cons else-tag
-                                          (append else-if-attrs else-children)))
-                                   ;; Render the e-else-if with its remaining siblings
-                                   (result (etaf-etml--render-node
-                                            new-else-node data remaining-siblings)))
-                              ;; Skip count is 1 (for this e-else-if) plus what it skips
-                              (cons (car result) (+ 1 (cdr result))))
-                          ;; Process e-else - render it directly (strip e-else attr)
-                          (let* ((stripped-else-attrs (etaf-etml--remove-directive
-                                                       else-attrs :e-else))
-                                 (rendered (etaf-etml--render-element
-                                            else-tag stripped-else-attrs else-children data)))
-                            (cons rendered 1))))
-                    ;; No else sibling - render nothing
-                    (cons nil 0)))))
+        (if-let ((for-expr (etaf-etml--get-directive attrs :e-for)))
+            (let* ((for-parsed (etaf-etml--parse-e-for for-expr))
+                   (item-var (nth 0 for-parsed))
+                   (index-var (nth 1 for-parsed))
+                   (collection-expr (nth 2 for-parsed))
+                   (collection (etaf-etml--eval-expr collection-expr data))
+                   (new-attrs (etaf-etml--remove-directive attrs :e-for))
+                   (results '())
+                   (index 0)
+                   ;; Ensure collection is a list; nil becomes empty list
+                   (items (cond
+                           ((null collection) nil)
+                           ((listp collection) collection)
+                           (t (error "e-for requires a list, got: %S" collection)))))
+              (dolist (item items)
+                (let* ((item-key (intern (concat ":" item-var)))
+                       (new-data (copy-sequence data)))
+                  (setq new-data (plist-put new-data item-key item))
+                  (when index-var
+                    (let ((idx-key (intern (concat ":" index-var))))
+                      (setq new-data (plist-put new-data idx-key index))))
+                  (let* ((new-node (cons tag (append new-attrs children)))
+                         (rendered (etaf-etml--render-node new-node new-data nil)))
+                    (push (car rendered) results)))
+                (cl-incf index))
+              (cons (apply #'append (nreverse results)) 0))
           
-          ;; Check for e-else-if without preceding e-if (standalone)
-          (if-let ((else-if-expr (etaf-etml--get-directive attrs :e-else-if)))
-              ;; This shouldn't normally happen, treat as e-if
-              (let* ((new-attrs (etaf-etml--remove-directive attrs :e-else-if))
-                     (new-attrs (append (list :e-if else-if-expr) new-attrs))
-                     (new-node (cons tag (append new-attrs children))))
-                (etaf-etml--render-node new-node data siblings))
+          ;; Check for e-if (conditional rendering)
+          (if-let ((if-expr (etaf-etml--get-directive attrs :e-if)))
+              (let ((condition (etaf-etml--eval-expr if-expr data)))
+                (if (etaf-etml--truthy-p condition)
+                    ;; Condition true - render this node, skip else siblings
+                    (let* ((new-attrs (etaf-etml--remove-directive attrs :e-if))
+                           (skip-count 0))
+                      ;; Count consecutive e-else-if and e-else siblings to skip
+                      (let ((remaining siblings))
+                        (while (etaf-etml--find-else-sibling remaining)
+                          (cl-incf skip-count)
+                          (setq remaining (cdr remaining))))
+                      (let ((rendered (etaf-etml--render-element
+                                       tag new-attrs children data)))
+                        (cons rendered skip-count)))
+                  ;; Condition false - check for e-else-if or e-else
+                  (let ((else-info (etaf-etml--find-else-sibling siblings)))
+                    (if else-info
+                        (let* ((else-node (car else-info))
+                               (else-tag (car else-node))
+                               (else-parsed (etaf-etml--split-attrs-and-children
+                                             (cdr else-node)))
+                               (else-attrs (car else-parsed))
+                               (else-children (cdr else-parsed))
+                               (remaining-siblings (cdr else-info)))
+                          (if-let ((else-if-expr (etaf-etml--get-directive
+                                                  else-attrs :e-else-if)))
+                              ;; Process e-else-if
+                              (let* ((stripped-else-attrs
+                                      (etaf-etml--remove-directive else-attrs :e-else-if))
+                                     (else-if-attrs
+                                      (append (list :e-if else-if-expr) stripped-else-attrs))
+                                     (new-else-node
+                                      (cons else-tag
+                                            (append else-if-attrs else-children)))
+                                     ;; Render the e-else-if with its remaining siblings
+                                     (result (etaf-etml--render-node
+                                              new-else-node data remaining-siblings)))
+                                ;; Skip count is 1 (for this e-else-if) plus what it skips
+                                (cons (car result) (+ 1 (cdr result))))
+                            ;; Process e-else - render it directly (strip e-else attr)
+                            (let* ((stripped-else-attrs (etaf-etml--remove-directive
+                                                         else-attrs :e-else))
+                                   (rendered (etaf-etml--render-element
+                                              else-tag stripped-else-attrs else-children data)))
+                              (cons rendered 1))))
+                      ;; No else sibling - render nothing
+                      (cons nil 0)))))
             
-            ;; Check for e-else without preceding e-if (standalone)
-            (if (etaf-etml--has-directive-p attrs :e-else)
-                ;; Render as-is (remove e-else attr)
-                (let* ((new-attrs (etaf-etml--remove-directive attrs :e-else))
-                       (rendered (etaf-etml--render-element
-                                  tag new-attrs children data)))
-                  (cons rendered 0))
+            ;; Check for e-else-if without preceding e-if (standalone)
+            (if-let ((else-if-expr (etaf-etml--get-directive attrs :e-else-if)))
+                ;; This shouldn't normally happen, treat as e-if
+                (let* ((new-attrs (etaf-etml--remove-directive attrs :e-else-if))
+                       (new-attrs (append (list :e-if else-if-expr) new-attrs))
+                       (new-node (cons tag (append new-attrs children))))
+                  (etaf-etml--render-node new-node data siblings))
               
-              ;; Check for e-show (visibility)
-              (if-let ((show-expr (etaf-etml--get-directive attrs :e-show)))
-                  (let ((visible (etaf-etml--eval-expr show-expr data))
-                        (new-attrs (etaf-etml--remove-directive attrs :e-show)))
-                    (if (etaf-etml--truthy-p visible)
-                        (let ((rendered (etaf-etml--render-element
-                                         tag new-attrs children data)))
-                          (cons rendered 0))
-                      ;; Add display: none style
-                      (let* ((style (etaf-etml--get-attr new-attrs :style))
-                             (new-style (if style
-                                            (concat style "; display: none")
-                                          "display: none"))
-                             (new-attrs (etaf-etml--remove-attr new-attrs :style))
-                             (new-attrs (append new-attrs (list :style new-style)))
-                             (rendered (etaf-etml--render-element
-                                        tag new-attrs children data)))
-                        (cons rendered 0))))
+              ;; Check for e-else without preceding e-if (standalone)
+              (if (etaf-etml--has-directive-p attrs :e-else)
+                  ;; Render as-is (remove e-else attr)
+                  (let* ((new-attrs (etaf-etml--remove-directive attrs :e-else))
+                         (rendered (etaf-etml--render-element
+                                    tag new-attrs children data)))
+                    (cons rendered 0))
                 
-                ;; Check for e-text
-                (if-let ((text-expr (etaf-etml--get-directive attrs :e-text)))
-                    (let* ((text-value (etaf-etml--to-string
-                                        (etaf-etml--eval-expr text-expr data)))
-                           (new-attrs (etaf-etml--remove-directive attrs :e-text))
-                           (rendered (etaf-etml--render-element
-                                      tag new-attrs (list text-value) data)))
-                      (cons rendered 0))
+                ;; Check for e-show (visibility)
+                (if-let ((show-expr (etaf-etml--get-directive attrs :e-show)))
+                    (let ((visible (etaf-etml--eval-expr show-expr data))
+                          (new-attrs (etaf-etml--remove-directive attrs :e-show)))
+                      (if (etaf-etml--truthy-p visible)
+                          (let ((rendered (etaf-etml--render-element
+                                           tag new-attrs children data)))
+                            (cons rendered 0))
+                        ;; Add display: none style
+                        (let* ((style (etaf-etml--get-attr new-attrs :style))
+                               (new-style (if style
+                                              (concat style "; display: none")
+                                            "display: none"))
+                               (new-attrs (etaf-etml--remove-attr new-attrs :style))
+                               (new-attrs (append new-attrs (list :style new-style)))
+                               (rendered (etaf-etml--render-element
+                                          tag new-attrs children data)))
+                          (cons rendered 0))))
                   
-                  ;; No special directives - render normally
-                  (let ((rendered (etaf-etml--render-element
-                                   tag attrs children data)))
-                    (cons rendered 0)))))))))))))
+                  ;; Check for e-text
+                  (if-let ((text-expr (etaf-etml--get-directive attrs :e-text)))
+                      (let* ((text-value (etaf-etml--to-string
+                                          (etaf-etml--eval-expr text-expr data)))
+                             (new-attrs (etaf-etml--remove-directive attrs :e-text))
+                             (rendered (etaf-etml--render-element
+                                        tag new-attrs (list text-value) data)))
+                        (cons rendered 0))
+                    
+                    ;; No special directives - render normally
+                    (let ((rendered (etaf-etml--render-element
+                                     tag attrs children data)))
+                      (cons rendered 0)))))))))))))
 
 (defun etaf-etml--render-element (tag attrs children data)
   "Render element with TAG, ATTRS, CHILDREN using DATA.
@@ -779,13 +779,12 @@ This is a convenience function combining template rendering and TML-to-DOM."
 ;; This module now uses those functions via the etaf-component require.
 ;;
 ;; For component-related functions, see etaf-component.el:
-;; - etaf-define-component (and etaf-etml-define-component alias)
+;; - etaf-define-component
 ;; - etaf-component-* functions for component management
 ;;
 ;; For reactive system functions, see etaf-component.el:
 ;; - etaf-ref, etaf-computed, etaf-watch, etaf-watch-effect
 ;; - etaf-reactive for reactive objects
-;; - All etaf-etml-* aliases for backward compatibility
 ;;
 ;; The following helper functions remain in this module for template rendering:
 
