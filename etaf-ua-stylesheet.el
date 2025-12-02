@@ -79,11 +79,11 @@
    "h6{text-1.0 font-bold}"
    
    ;; Lists
-   "ul{mt-1 mb-1 pl-10}"
-   "ol{mt-1 mb-1 pl-10}"
+   "ul{mt-1 mb-1 pl-1}"
+   "ol{mt-1 mb-1 pl-1}"
    
    ;; Block quotes
-   "blockquote{mt-1 mb-1 ml-40 mr-40}"
+   "blockquote{mt-1 mb-1 ml-4 mr-4}"
    
    ;; Preformatted text
    "pre{font-mono whitespace-pre}"
@@ -136,7 +136,7 @@
    ;; Note: td would use padding which could be added if needed
    
    ;; Figures
-   "figure{mt-1 mb-1 ml-40 mr-40}"
+   "figure{mt-1 mb-1 ml-4 mr-4}"
    
    ;; Dialog
    "dialog{absolute border border-gray-300 bg-white}"
