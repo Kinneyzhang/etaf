@@ -1,6 +1,5 @@
 (require 'etaf-etml)
 (require 'etaf-css)
-(require 'etaf-render)
 (require 'etaf-layout)
 (require 'etaf-tailwind)
 (require 'etaf-ecss)
@@ -28,10 +27,9 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。
                        ""))
          (cssom (etaf-css-build-cssom dom))
          (cssom (etaf-css-add-stylesheet cssom stylesheet))
-         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree
           (etaf-layout-build-tree
-           render-tree (list :width width :height height))))
+           dom cssom (list :width width :height height))))
     (etaf-layout-to-string layout-tree)))
 
 ;;;###autoload

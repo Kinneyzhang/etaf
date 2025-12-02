@@ -1,15 +1,17 @@
-;;; etaf-render-example.el --- Render tree usage examples -*- lexical-binding: t; -*-
+;;; etaf-layout-example.el --- Layout tree usage examples (formerly layout tree) -*- lexical-binding: t; -*-
 
 ;;; Commentary:
-;; Examples demonstrating render tree construction and usage
+;; Examples demonstrating layout tree construction.
+;; Note: The layout tree has been merged into the layout tree.
+;; These examples now demonstrate layout tree operations.
 
 ;;; Code:
 
-(require 'etaf-render)
+(require 'etaf-layout)
 (require 'etaf-etml)
 (require 'etaf-css)
 
-;;; Example 1: Basic render tree construction
+;;; Example 1: Basic layout tree construction
 
 (message "=== Example 1: Basic Render Tree ===")
 
@@ -26,10 +28,10 @@
            (span "Text 2"))))))
 
 (setq example-cssom (etaf-css-build-cssom example-dom))
-(setq example-render-tree (etaf-render-build-tree example-dom example-cssom))
+(setq example-layout-tree (etaf-layout-build-tree example-dom example-cssom '(:width 1024 :height 768)))
 
-(message "\nRender tree structure:")
-(message "%s" (etaf-render-to-string example-render-tree))
+(message "\nLayout tree structure:")
+(message "%s" (etaf-layout-to-string example-layout-tree))
 
 ;;; Example 2: Filtering invisible elements
 
@@ -47,13 +49,13 @@
           (div "Visible 2")))))
 
 (setq hidden-cssom (etaf-css-build-cssom hidden-dom))
-(setq hidden-render-tree (etaf-render-build-tree hidden-dom hidden-cssom))
+(setq hidden-layout-tree (etaf-layout-build-tree hidden-dom hidden-cssom '(:width 1024 :height 768)))
 
-(message "\nVisible nodes in render tree:")
-(etaf-render-walk hidden-render-tree
+(message "\nVisible nodes in layout tree:")
+(etaf-layout-walk hidden-layout-tree
   (lambda (node)
     (when (eq (dom-tag node) 'div)
-      (message "  <div> display: %s" (etaf-render-get-display node)))))
+      (message "  <div> display: %s" (etaf-layout-get-display node)))))
 
 ;;; Example 3: Querying computed styles
 
@@ -70,17 +72,17 @@
           (div :id "special" "Special div")))))
 
 (setq styled-cssom (etaf-css-build-cssom styled-dom))
-(setq styled-render-tree (etaf-render-build-tree styled-dom styled-cssom))
+(setq styled-layout-tree (etaf-layout-build-tree styled-dom styled-cssom '(:width 1024 :height 768)))
 
 (message "\nComputed styles for each div:")
-(dolist (div-node (etaf-render-find-by-tag styled-render-tree 'div))
+(dolist (div-node (etaf-layout-find-by-tag styled-layout-tree 'div))
   (message "  <div>:")
-  (message "    color: %s" (etaf-render-get-style div-node 'color))
-  (message "    font-size: %s" (etaf-render-get-style div-node 'font-size))
-  (when-let ((bg (etaf-render-get-style div-node 'background)))
+  (message "    color: %s" (etaf-layout-get-style div-node 'color))
+  (message "    font-size: %s" (etaf-layout-get-style div-node 'font-size))
+  (when-let ((bg (etaf-layout-get-style div-node 'background)))
     (message "    background: %s" bg)))
 
-;;; Example 4: Render tree statistics
+;;; Example 4: Layout tree statistics
 
 (message "\n=== Example 4: Render Tree Statistics ===")
 
@@ -99,10 +101,10 @@
             (span "More text")))))))
 
 (setq stats-cssom (etaf-css-build-cssom stats-dom))
-(setq stats-render-tree (etaf-render-build-tree stats-dom stats-cssom))
-(setq stats (etaf-render-stats stats-render-tree))
+(setq stats-layout-tree (etaf-layout-build-tree stats-dom stats-cssom '(:width 1024 :height 768)))
+(setq stats (etaf-layout-stats stats-layout-tree))
 
-(message "\nRender tree statistics:")
+(message "\nLayout tree statistics:")
 (message "  Total nodes: %d" (plist-get stats :node-count))
 (message "  Max depth: %d" (plist-get stats :max-depth))
 (message "  Display types:")
@@ -126,17 +128,17 @@
           (div "Block 2")))))
 
 (setq search-cssom (etaf-css-build-cssom search-dom))
-(setq search-render-tree (etaf-render-build-tree search-dom search-cssom))
+(setq search-layout-tree (etaf-layout-build-tree search-dom search-cssom '(:width 1024 :height 768)))
 
 (message "\nAll block-level elements:")
-(dolist (node (etaf-render-find-by-display search-render-tree "block"))
+(dolist (node (etaf-layout-find-by-display search-layout-tree "block"))
   (message "  <%s>" (dom-tag node)))
 
 (message "\nAll inline elements:")
-(dolist (node (etaf-render-find-by-display search-render-tree "inline"))
+(dolist (node (etaf-layout-find-by-display search-layout-tree "inline"))
   (message "  <%s>" (dom-tag node)))
 
 (message "\n=== Examples Complete ===")
 
-(provide 'etaf-render-example)
-;;; etaf-render-example.el ends here
+(provide 'etaf-layout-example)
+;;; etaf-layout-example.el ends here
