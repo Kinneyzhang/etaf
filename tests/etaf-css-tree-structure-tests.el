@@ -45,13 +45,14 @@
                    '(html (body (div "Test")))))
         (cssom (etaf-css-build-cssom test-dom)))
    ;; CSSOM 应该包含所有必要的属性
-   (and (plist-get cssom :ua-rules)
-        (plist-get cssom :style-rules)
-        (plist-get cssom :inline-rules)
-        (plist-get cssom :all-rules)
-        (plist-get cssom :rule-index)
-        (plist-get cssom :cache)
-        (plist-get cssom :media-env))))
+   ;; 注意：空列表 '() 在 plist-get 中返回 nil，所以我们检查 plist-member
+   (and (plist-member cssom :ua-rules)
+        (plist-member cssom :style-rules)
+        (plist-member cssom :inline-rules)
+        (plist-member cssom :all-rules)
+        (plist-member cssom :rule-index)
+        (plist-member cssom :cache)
+        (plist-member cssom :media-env))))
 
 ;;; 测试 CSSOM 属性类型正确
 
@@ -61,12 +62,14 @@
                      (head (style ".test { color: blue; }"))
                      (body (div :class "test" :style "margin: 10px;" "Text")))))
         (cssom (etaf-css-build-cssom test-dom)))
-   (and (listp (plist-get cssom :ua-rules))
-        (listp (plist-get cssom :style-rules))
-        (listp (plist-get cssom :inline-rules))
-        (listp (plist-get cssom :all-rules))
+   ;; 检查属性类型
+   ;; plist-member 返回从该key开始的plist子列表，所以我们使用cadr获取值
+   (and (listp (cadr (plist-member cssom :ua-rules)))
+        (listp (cadr (plist-member cssom :style-rules)))
+        (listp (cadr (plist-member cssom :inline-rules)))
+        (listp (cadr (plist-member cssom :all-rules)))
         (hash-table-p (plist-get cssom :cache))
-        (listp (plist-get cssom :media-env)))))
+        (listp (cadr (plist-member cssom :media-env))))))
 
 ;;; 测试 CSSOM 扁平结构不包含 DOM 树
 
@@ -152,11 +155,12 @@
                            (p "Text")))
                        (footer :id "footer"
                          (p "Footer"))))))
-        (cssom (etaf-css-build-cssom test-dom)))
+        (cssom (etaf-css-build-cssom test-dom))
+        (all-rules (plist-get cssom :all-rules)))
    ;; CSSOM 应该包含规则集合
-   (and (listp (plist-get cssom :all-rules))
+   (and (listp all-rules)
         ;; 至少应该有 UA 规则和样式表规则
-        (> (length (plist-get cssom :all-rules)) 0))))
+        (> (length all-rules) 0))))
 
 ;;; 测试 CSSOM 扁平结构设计理念
 
