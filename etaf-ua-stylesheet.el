@@ -101,7 +101,7 @@
    "del{line-through}"
    "ins{underline}"
    "mark{bg-yellow}"
-   "small{}"
+   ;; Note: small, sub, sup would use font-size which requires custom values
    "sub{align-sub}"
    "sup{align-super}"
    
@@ -112,7 +112,7 @@
    "var{italic}"
    
    ;; Abbreviations and citations
-   "abbr{}"
+   ;; Note: abbr would use text-decoration: dotted underline (no Tailwind equivalent)
    "cite{italic}"
    
    ;; Form elements
@@ -121,12 +121,12 @@
    "select{border border-gray-300}"
    "label{cursor-pointer}"
    "fieldset{border border-gray-300}"
-   "legend{}"
+   ;; Note: legend would use padding which could be added if needed
    
    ;; Tables
    "table{border-collapse}"
    "th{font-bold text-center}"
-   "td{}"
+   ;; Note: td would use padding which could be added if needed
    
    ;; Figures
    "figure{mt-1 mb-1 ml-40 mr-40}"
