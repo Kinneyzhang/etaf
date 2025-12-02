@@ -49,6 +49,16 @@
   (etaf-etml-to-dom '(div :id "main" :class ("flex" "items-center") :style "color: blue" "Content"))
   '(div ((id . "main") (class . "flex items-center") (style . "color: blue")) "Content"))
 
+;;; :class attribute tests - list format with empty strings (edge case)
+(should-equal
+  (etaf-etml-to-dom '(div :class ("w-20" "" "h-4") "Hello"))
+  '(div ((class . "w-20 h-4")) "Hello"))
+
+;;; :class attribute tests - empty list (edge case)
+(should-equal
+  (etaf-etml-to-dom '(div :class () "Hello"))
+  '(div ((class . "")) "Hello"))
+
 ;;; Test etaf-etml-tag integration - p tag should NOT have default styles
 ;; (p tag has :default-style nil, so no styles are merged)
 (let* ((result (etaf-etml-to-dom '(p "Hello")))
