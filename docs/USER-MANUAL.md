@@ -46,7 +46,7 @@ git clone https://github.com/Kinneyzhang/ETML.git
 
 3. Verify installation:
 ```elisp
-(etaf-render-to-buffer "*test*"
+(etaf-paint-to-buffer "*test*"
   '(div "Hello ETAF!"))
 ```
 
@@ -74,10 +74,10 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 
 ```elisp
 ;; Render TML to a buffer
-(etaf-render-to-buffer BUFFER-NAME TML &optional DATA ECSS WIDTH HEIGHT)
+(etaf-paint-to-buffer BUFFER-NAME TML &optional DATA ECSS WIDTH HEIGHT)
 
 ;; Convert TML to styled string
-(etaf-string TML &optional DATA ECSS WIDTH HEIGHT)
+(etaf-paint-string TML &optional DATA ECSS WIDTH HEIGHT)
 ```
 
 ---
@@ -187,7 +187,7 @@ ETAF supports Vue-style template directives for dynamic content.
 ```elisp
 (setq data '(:name "Alice" :count 42))
 
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(div
      (p "Hello, {{ name }}!")
      (p "Count: {{ count }}"))
@@ -556,8 +556,8 @@ ETAF supports the following CSS units:
 
 | Function | Description |
 |----------|-------------|
-| `etaf-render-to-buffer` | Render TML to a buffer |
-| `etaf-string` | Convert TML to styled string |
+| `etaf-paint-to-buffer` | Render TML to a buffer |
+| `etaf-paint-string | Convert TML to styled string |
 | `etaf-etml-to-dom` | Convert TML to DOM |
 | `etaf-etml-render` | Render template with data |
 

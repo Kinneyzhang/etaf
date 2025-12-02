@@ -50,7 +50,7 @@ DATA 是可选的模板数据。"
               (condition-case err
                   (if data
                       (etaf-string-with-data etml data width nil)
-                    (etaf-string etml width nil))
+                    (etaf-paint-string etml width nil))
                 (error (format "渲染错误: %S\n\n使用简化输出:\n%S" err etml)))
             ;; 简化渲染：直接输出 ETML 结构
             (format "（完整渲染需要 's' 库，显示 ETML 结构）\n\n%s"
@@ -102,7 +102,7 @@ WIDTH 是可选的视口宽度。"
           (let* ((label (car item))
                  (etml (cdr item))
                  (rendered (condition-case err
-                               (etaf-string etml width nil)
+                               (etaf-paint-string etml width nil)
                              (error (format "渲染错误: %S" err)))))
             (insert (propertize (concat "▶ " label "\n")
                                 'face '(:weight bold :foreground "blue")))

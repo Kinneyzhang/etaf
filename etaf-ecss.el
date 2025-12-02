@@ -692,7 +692,7 @@ comma (,) before etaf-ecss-css to evaluate it:
 
 Example:
   ;; CORRECT - Using comma to evaluate the macro:
-  (etaf-render-to-buffer \"*demo*\"
+  (etaf-paint-to-buffer \"*demo*\"
     `(html
        (head
          (style ,(etaf-ecss-css
@@ -706,7 +706,7 @@ Example:
   (let ((css (etaf-ecss-css
                (\".header\" \"flex items-center bg-blue-500\")
                (\".content\" \"p-4\" (color \"gray\")))))
-    (etaf-render-to-buffer \"*demo*\"
+    (etaf-paint-to-buffer \"*demo*\"
       `(html
          (head (style ,css))
          (body ...))))

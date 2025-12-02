@@ -13,7 +13,7 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         etaf.el (入口)                           │
-│                    etaf-string: TML → 渲染字符串                  │
+│                    etaf-paint-string TML → 渲染字符串                  │
 └───────────────────────────────┬─────────────────────────────────┘
                                 │
         ┌───────────────────────┼───────────────────────┐
@@ -103,7 +103,7 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
 
 | 函数 | 功能 | 调用关系 |
 |------|------|----------|
-| `etaf-string` | 将 TML 转换为可渲染的字符串 | 调用: `etaf-etml-to-dom` → `etaf-css-build-cssom` → `etaf-render-build-tree` → `etaf-layout-build-tree` → `etaf-layout-to-string` |
+| `etaf-paint-string | 将 TML 转换为可渲染的字符串 | 调用: `etaf-etml-to-dom` → `etaf-css-build-cssom` → `etaf-render-build-tree` → `etaf-layout-build-tree` → `etaf-layout-to-string` |
 
 ---
 
@@ -898,7 +898,7 @@ DOM + <style> 标签
 ### 完整渲染流程
 
 ```
-etaf-string (etaf.el)
+etaf-paint-string(etaf.el)
 ├── etaf-etml-to-dom (etaf-etml.el)
 │   └── etaf-plist-to-alist
 │
@@ -1009,7 +1009,7 @@ etaf-layout-to-string (etaf-layout.el)
      (p "This is a paragraph.")))
 
 ;; 2. 渲染为字符串
-(setq result (etaf-string my-tml 400))  ; 宽度 400 像素
+(setq result (etaf-paint-string my-tml 400))  ; 宽度 400 像素
 
 ;; 3. 插入到 buffer
 (insert result)
@@ -1043,7 +1043,7 @@ etaf-layout-to-string (etaf-layout.el)
      (button :class "bg-white text-blue-500 px-4 py-2 rounded" "Click")))
 
 ;; Tailwind 类会自动转换为 CSS
-(etaf-string tw-tml 600)
+(etaf-paint-string tw-tml 600)
 ```
 
 ### 底层 Box 渲染

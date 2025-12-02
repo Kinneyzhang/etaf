@@ -40,9 +40,9 @@ Line 10: Last line"))
 - n 键或鼠标滚轮向下滚动
 - p 键或鼠标滚轮向上滚动"
   (interactive)
-  (etaf-render-to-buffer "*etaf-scroll-example*"
-                         etaf-scroll-example-etml
-                         400 300))
+  (etaf-paint-to-buffer "*etaf-scroll-example*"
+    etaf-scroll-example-etml
+    400 300))
 
 ;;; ============================================================
 ;;; 2. 增量更新示例
@@ -96,20 +96,20 @@ Line 10: Last line"))
   "渲染带数据的可滚动列表。"
   (interactive)
   (let ((data '(:title "可滚动列表"
-                :items ("项目 1: 第一项内容"
-                        "项目 2: 第二项内容"
-                        "项目 3: 第三项内容"
-                        "项目 4: 第四项内容"
-                        "项目 5: 第五项内容"
-                        "项目 6: 第六项内容"
-                        "项目 7: 第七项内容"
-                        "项目 8: 第八项内容"
-                        "项目 9: 第九项内容"
-                        "项目 10: 第十项内容"))))
-    (etaf-render-to-buffer-with-data "*etaf-scroll-data-example*"
-                                      etaf-scroll-data-example-template
-                                      data
-                                      500 400)))
+                       :items ("项目 1: 第一项内容"
+                               "项目 2: 第二项内容"
+                               "项目 3: 第三项内容"
+                               "项目 4: 第四项内容"
+                               "项目 5: 第五项内容"
+                               "项目 6: 第六项内容"
+                               "项目 7: 第七项内容"
+                               "项目 8: 第八项内容"
+                               "项目 9: 第九项内容"
+                               "项目 10: 第十项内容"))))
+    (etaf-paint-to-buffer-with-data "*etaf-scroll-data-example*"
+                                    etaf-scroll-data-example-template
+                                    data
+                                    500 400)))
 
 ;;; ============================================================
 ;;; 使用说明
