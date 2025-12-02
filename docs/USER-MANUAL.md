@@ -487,7 +487,7 @@ ECSS provides Lisp-style CSS expressions, similar to `rx` for regex.
 ;; => ".card { background: white; padding: 20px; border: 1px solid #ccc; }"
 
 ;; Stylesheet
-(etaf-ecss-stylesheet
+(etaf-ecss
   '(".container" (width 800) (margin 0 auto))
   '(".card" (background "white") (padding 20))
   '(".btn" (padding 10 20) (background "blue") (color "white")))
