@@ -97,6 +97,7 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 |----------|-------------|
 | [User Manual](docs/USER-MANUAL.md) | Complete guide for using ETAF |
 | [Developer Manual](docs/DEVELOPER-MANUAL.md) | Architecture and extension guide |
+| [Component System](docs/COMPONENT-SYSTEM.md) | Vue 3-style component system and reactive state management |
 | [Architecture](docs/ARCHITECTURE.md) | System architecture and module relationships |
 | [Data Structures](docs/DATA-STRUCTURES.md) | Detailed data structure documentation |
 | [Event Model](docs/EVENT-MODEL.md) | Interactive pseudo-classes and event system |
@@ -298,6 +299,7 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 |------|------|
 | [用户手册](docs/USER-MANUAL.md) | 完整的使用指南 |
 | [开发者手册](docs/DEVELOPER-MANUAL.md) | 架构和扩展指南 |
+| [组件系统](docs/COMPONENT-SYSTEM-CN.md) | Vue 3 风格的组件系统和响应式状态管理 |
 | [架构文档](docs/ARCHITECTURE.md) | 系统架构和模块关系 |
 | [数据结构](docs/DATA-STRUCTURES.md) | 详细的数据结构文档 |
 | [事件模型](docs/EVENT-MODEL.md) | 交互式伪类和事件系统 |
@@ -308,7 +310,8 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 | 模块 | 说明 |
 |------|------|
 | `etaf.el` | 主入口，高层 API |
-| `etaf-etml.el` | TML 到 DOM 转换、模板指令、组件系统、响应式系统 |
+| `etaf-etml.el` | TML 到 DOM 转换、模板指令 |
+| `etaf-component.el` | 组件系统、响应式系统（ref、computed、watch） |
 | `etaf-event.el` | 事件模型，支持交互式伪类（:hover, :focus 等） |
 | `etaf-css.el` | CSS 对象模型（CSSOM）主入口 |
 | `etaf-render.el` | 渲染树构建 |
