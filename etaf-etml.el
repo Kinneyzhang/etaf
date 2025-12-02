@@ -73,20 +73,32 @@ An ecss tag is (ecss ...) used at the element level."
 
 (defun etaf-etml--process-ecss-content (ecss-form scope-id)
   "Process ECSS-FORM and return CSS string with selectors scoped by SCOPE-ID.
-ECSS-FORM is (ecss selector declarations...) or (ecss \"unified-format\").
+ECSS-FORM must be in unified format: (ecss \"selector{tailwind-classes}\" ...).
+Multiple unified format strings can be provided.
 Returns CSS string with selectors prefixed by scope class."
   (require 'etaf-ecss)
-  (let* ((args (cdr ecss-form))
-         ;; Get the raw CSS string first
-         (raw-css (apply #'etaf-ecss args)))
-    ;; Add scope prefix to the selector
-    ;; CSS format is: "selector { declarations }"
-    ;; We need to transform it to ".scope-id selector { declarations }"
-    (if (string-match "^\\([^{]+\\)\\({.*\\)$" raw-css)
-        (let ((selector (string-trim (match-string 1 raw-css)))
-              (rest (match-string 2 raw-css)))
-          (format ".%s %s %s" scope-id selector rest))
-      raw-css)))
+  (let* ((args (cdr ecss-form)))
+    ;; Validate that all arguments are in unified format
+    (dolist (arg args)
+      (unless (and (stringp arg)
+                   (etaf-ecss-unified-p arg))
+        (error "ecss tag only supports unified format: \"selector{tailwind-classes}\". Got: %S" arg)))
+    ;; Get the raw CSS string
+    (let ((raw-css (apply #'etaf-ecss args)))
+      ;; Handle multiple rules (separated by newlines)
+      (mapconcat
+       (lambda (rule)
+         (when (not (string-empty-p (string-trim rule)))
+           ;; Add scope prefix to the selector
+           ;; CSS format is: "selector { declarations }"
+           ;; We need to transform it to ".scope-id selector { declarations }"
+           (if (string-match "^\\([^{]+\\)\\({.*\\)$" rule)
+               (let ((selector (string-trim (match-string 1 rule)))
+                     (rest (match-string 2 rule)))
+                 (format ".%s %s %s" scope-id selector rest))
+             rule)))
+       (split-string raw-css "\n" t)
+       "\n"))))
 
 (defun etaf-etml--add-scope-class (node scope-id)
   "Add SCOPE-ID class to NODE's class attribute.
@@ -149,7 +161,8 @@ Returns t if ITEM is a list starting with symbol `ecss'."
   "Process style tag children, converting (ecss ...) forms to CSS string.
 CHILDREN can be:
 - A single CSS string
-- A list containing (ecss selector declarations...) forms
+- A list containing (ecss \"selector{tailwind-classes}\" ...) forms
+Only unified format is supported for ecss forms.
 Returns a CSS string."
   (let ((css-parts '()))
     (dolist (child children)
@@ -157,11 +170,17 @@ Returns a CSS string."
        ;; String - add as-is
        ((stringp child)
         (push child css-parts))
-       ;; (ecss selector declarations...) form
+       ;; (ecss ...) form - validate unified format
        ((etaf-etml--ecss-item-p child)
         (require 'etaf-ecss)
-        (let ((css (apply #'etaf-ecss (cdr child))))
-          (push css css-parts)))
+        (let ((args (cdr child)))
+          ;; Validate that all arguments are in unified format
+          (dolist (arg args)
+            (unless (and (stringp arg)
+                         (etaf-ecss-unified-p arg))
+              (error "ecss tag only supports unified format: \"selector{tailwind-classes}\". Got: %S" arg)))
+          (let ((css (apply #'etaf-ecss args)))
+            (push css css-parts))))
        ;; Other - ignore or convert to string
        (t nil)))
     (mapconcat #'identity (nreverse css-parts) "\n")))
