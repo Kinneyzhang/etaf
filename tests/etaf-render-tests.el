@@ -52,7 +52,7 @@
   "测试简单布局树构建。"
   (let* ((dom etaf-render-tests-dom-simple)
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom) '(:width 1024 :height 768)))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
     (should layout-tree)
     (should (eq (dom-tag layout-tree) 'html))
     ;; computed-style 可以是 nil（空列表）或包含样式的 alist

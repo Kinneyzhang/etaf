@@ -1,8 +1,8 @@
-;;; etaf-layout-example.el --- Layout tree usage examples (formerly layout tree) -*- lexical-binding: t; -*-
+;;; etaf-render-example.el --- Layout tree usage examples (formerly render tree) -*- lexical-binding: t; -*-
 
 ;;; Commentary:
 ;; Examples demonstrating layout tree construction.
-;; Note: The layout tree has been merged into the layout tree.
+;; Note: The render tree has been merged into the layout tree.
 ;; These examples now demonstrate layout tree operations.
 
 ;;; Code:
@@ -13,7 +13,7 @@
 
 ;;; Example 1: Basic layout tree construction
 
-(message "=== Example 1: Basic Render Tree ===")
+(message "=== Example 1: Basic Layout Tree ===")
 
 (setq example-dom
       (etaf-etml-to-dom
