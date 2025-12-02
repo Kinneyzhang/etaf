@@ -22,6 +22,7 @@ ETAF (Emacs Text-based Application Framework) is a comprehensive framework for b
 - 🎨 **CSS Support** - Full CSS parsing, cascade algorithm, and computed styles
 - 📦 **Component System** - Vue3-style reactive components with props, setup, and templates
 - 🔄 **Reactive System** - ref, computed, watch, and watchEffect for state management
+- 🌳 **Virtual DOM** - Vue 3-inspired virtual DOM with diff/patch algorithm for efficient updates
 - 🎯 **Tailwind CSS** - Built-in support for Tailwind utility classes
 - 📐 **Layout Engine** - Box model and Flexbox layout support
 - ⚡ **Performance Optimized** - Rule indexing and style caching
@@ -30,6 +31,8 @@ ETAF (Emacs Text-based Application Framework) is a comprehensive framework for b
 
 ```
 TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
+      ↓
+   Virtual DOM (VNode Tree) - For efficient updates and lifecycle management
 ```
 
 ## Quick Start
@@ -97,6 +100,7 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 | [Architecture](docs/ARCHITECTURE.md) | System architecture and module relationships |
 | [Data Structures](docs/DATA-STRUCTURES.md) | Detailed data structure documentation |
 | [Event Model](docs/EVENT-MODEL.md) | Interactive pseudo-classes and event system |
+| [Virtual DOM](docs/VIRTUAL-DOM.md) | Vue 3-inspired virtual DOM system |
 
 ## Installation
 
@@ -137,6 +141,7 @@ ETAF（Emacs Text-based Application Framework）是一个在 Emacs 中构建丰�
 - 🎨 **CSS 支持** - 完整的 CSS 解析、层叠算法和计算样式
 - 📦 **组件系统** - Vue3 风格的响应式组件，支持 props、setup 和 templates
 - 🔄 **响应式系统** - ref、computed、watch 和 watchEffect 状态管理
+- 🌳 **虚拟 DOM** - 参考 Vue 3 设计的虚拟 DOM，支持 diff/patch 算法实现高效更新
 - 🎯 **Tailwind CSS** - 内置 Tailwind 工具类支持
 - 📐 **布局引擎** - 盒模型和 Flexbox 布局支持
 - ⚡ **性能优化** - 规则索引和样式缓存
@@ -145,6 +150,8 @@ ETAF（Emacs Text-based Application Framework）是一个在 Emacs 中构建丰�
 
 ```
 TML → DOM 树 → CSSOM → 渲染树 → 布局树 → Buffer 字符串
+       ↓
+   虚拟 DOM (VNode 树) - 用于高效更新和生命周期管理
 ```
 
 ## 快速开始
@@ -294,6 +301,7 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 | [架构文档](docs/ARCHITECTURE.md) | 系统架构和模块关系 |
 | [数据结构](docs/DATA-STRUCTURES.md) | 详细的数据结构文档 |
 | [事件模型](docs/EVENT-MODEL.md) | 交互式伪类和事件系统 |
+| [虚拟 DOM](docs/VIRTUAL-DOM.md) | 参考 Vue 3 设计的虚拟 DOM 系统 |
 
 ## 核心模块
 
