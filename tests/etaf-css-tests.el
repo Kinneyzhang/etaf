@@ -39,8 +39,14 @@
  (let ((rule (etaf-css-parse-rule ".button
  { background: blue; padding: 10px; }")))
    (and (equal (plist-get rule :selector) ".button")
-        (equal (plist-get rule :declarations) 
-               '((background "blue" nil) (padding "10px" nil))))))
+        ;; padding shorthand is expanded to individual properties
+        (cl-every (lambda (prop)
+                    (member prop '((background "blue" nil)
+                                   (padding-top "10px" nil)
+                                   (padding-right "10px" nil)
+                                   (padding-bottom "10px" nil)
+                                   (padding-left "10px" nil))))
+                  (plist-get rule :declarations)))))
 
 ;;; 测试 CSS 样式表解析
 
@@ -60,11 +66,14 @@
              (span "No style"))))
 
 (should
- (let ((rules (etaf-css-extract-inline-styles
-               etaf-css-tests-dom-with-inline)))
+ (let* ((stylesheet (etaf-css-extract-inline-styles
+                etaf-css-tests-dom-with-inline))
+        (rules (dom-children stylesheet)))
    (and (= (length rules) 2)
-        (eq (plist-get (nth 0 rules) :source) 'inline)
-        (equal (plist-get (nth 0 rules) :declarations)
+        (eq (dom-tag stylesheet) 'stylesheet)
+        (eq (dom-attr stylesheet 'source) 'inline)
+        (eq (dom-attr (nth 0 rules) 'source) 'inline)
+        (equal (dom-attr (nth 0 rules) 'declarations)
                '((color "red" nil) (font-size "14px" nil))))))
 
 ;;; 测试 style 标签提取
@@ -78,11 +87,14 @@
           (div :class "test" "Content")))))
 
 (should
- (let ((rules (etaf-css-extract-style-tags
-               etaf-css-tests-dom-with-style-tag)))
-   (and (= (length rules) 2)
-        (equal (plist-get (nth 0 rules) :selector) "div")
-        (equal (plist-get (nth 1 rules) :selector) ".test"))))
+ (let* ((stylesheets (etaf-css-extract-style-tags
+                etaf-css-tests-dom-with-style-tag))
+        (first-sheet (nth 0 stylesheets))
+        (rules (dom-children first-sheet)))
+   (and (= (length stylesheets) 1)
+        (= (length rules) 2)
+        (equal (dom-attr (nth 0 rules) 'selector) "div")
+        (equal (dom-attr (nth 1 rules) 'selector) ".test"))))
 
 ;;; 测试 CSSOM 构建
 
@@ -98,9 +110,10 @@
 
 (should
  (let ((cssom (etaf-css-build-cssom etaf-css-tests-dom-full)))
-   (and (plist-get cssom :inline-rules)
-        (plist-get cssom :style-rules)
-        (plist-get cssom :all-rules))))
+   (and (eq (dom-tag cssom) 'cssom)
+        (dom-attr cssom 'cache)
+        (> (length (etaf-css-get-stylesheets cssom)) 0)
+        (> (length (etaf-css-get-all-rules cssom)) 0))))
 
 ;;; 测试节点样式查询
 
