@@ -63,13 +63,14 @@
                      (body (div :class "test" :style "margin: 10px;" "Text")))))
         (cssom (etaf-css-build-cssom test-dom)))
    ;; 检查属性类型
-   ;; plist-member 返回从该key开始的plist子列表，所以我们使用cadr获取值
-   (and (listp (cadr (plist-member cssom :ua-rules)))
-        (listp (cadr (plist-member cssom :style-rules)))
-        (listp (cadr (plist-member cssom :inline-rules)))
-        (listp (cadr (plist-member cssom :all-rules)))
-        (hash-table-p (plist-get cssom :cache))
-        (listp (cadr (plist-member cssom :media-env))))))
+   ;; 注意：空列表在 plist-get 中返回 nil，但 (listp nil) => t
+   ;; 所以我们可以统一使用 plist-get 检查类型
+   (and (listp (plist-get cssom :ua-rules))      ; UA规则非空
+        (listp (plist-get cssom :style-rules))   ; 可能为空(nil)，但类型仍是list
+        (listp (plist-get cssom :inline-rules))  ; 可能为空(nil)，但类型仍是list
+        (listp (plist-get cssom :all-rules))     ; 非空
+        (hash-table-p (plist-get cssom :cache))  ; hash-table非空
+        (listp (plist-get cssom :media-env)))))
 
 ;;; 测试 CSSOM 扁平结构不包含 DOM 树
 
