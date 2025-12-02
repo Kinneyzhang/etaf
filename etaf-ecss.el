@@ -491,11 +491,11 @@ with non-empty selector and classes."
                 (not (string-empty-p classes)))))))
 
 (defun etaf-ecss (selector &rest declarations)
-  "Create a CSS rule with SELECTOR and DECLARATIONS.
+  "Create CSS rule(s) with SELECTOR and DECLARATIONS.
 
-This function supports two formats:
+This function supports multiple formats:
 
-1. UNIFIED FORMAT (recommended):
+1. UNIFIED FORMAT - SINGLE RULE (recommended):
    A single string \"selector{tailwind-classes}\" where the selector uses
    native CSS syntax and declarations use Tailwind utility classes.
 
@@ -506,7 +506,18 @@ This function supports two formats:
      (etaf-ecss \".card{flex items-center bg-blue-500 p-4}\")
      ;; => \".card { display: flex; align-items: center; ... }\"
 
-2. LEGACY FORMAT:
+2. UNIFIED FORMAT - MULTIPLE RULES:
+   Multiple unified format strings to create a complete stylesheet.
+
+   Example:
+     (etaf-ecss \".header{flex items-center}\"
+                \".content{p-4}\"
+                \"nav>a{text-white}\")
+     ;; => \".header { display: flex; ... }
+     ;;     .content { padding-top: 4lh; ... }
+     ;;     nav>a { color: #ffffff; }\"
+
+3. LEGACY FORMAT (deprecated):
    SELECTOR can be a string or selector expression.
    DECLARATIONS are property expressions or Tailwind class strings.
 
@@ -516,19 +527,45 @@ This function supports two formats:
        '(padding 10))
      ;; => \".box { background: red; padding: 10px; }\"
 
-     (etaf-ecss \".card\" \"flex items-center bg-red-500\")
-     ;; => \".card { display: flex; align-items: center; ... }\""
-  (if (and (etaf-ecss-unified-p selector) (null declarations))
-      ;; Unified format: "selector{tailwind-classes}"
-      (let ((parsed (etaf-ecss-parse selector)))
-        (plist-get parsed :css-string))
-    ;; Legacy format: selector + declarations
+Note: When using multiple unified format strings, all arguments must be
+unified format strings. Mixing formats is not supported."
+  (cond
+   ;; Multiple unified format strings
+   ((and (etaf-ecss-unified-p selector)
+         (cl-every #'etaf-ecss-unified-p declarations))
+    (mapconcat
+     (lambda (rule-str)
+       (let ((parsed (etaf-ecss-parse rule-str)))
+         (plist-get parsed :css-string)))
+     (cons selector declarations)
+     "\n"))
+   ;; Single unified format string
+   ((and (etaf-ecss-unified-p selector) (null declarations))
+    (let ((parsed (etaf-ecss-parse selector)))
+      (plist-get parsed :css-string)))
+   ;; Legacy format: selector + declarations
+   (t
     (let ((sel-str (etaf-ecss-selector selector))
           (decl-block (apply #'etaf-ecss-declaration-block declarations)))
-      (format "%s %s" sel-str decl-block))))
+      (format "%s %s" sel-str decl-block)))))
 
 (defun etaf-ecss-stylesheet (&rest rules)
   "Create a stylesheet from multiple RULES.
+
+DEPRECATED: Use `etaf-ecss' with multiple unified format strings instead.
+
+This function is maintained for backward compatibility only.
+New code should use `etaf-ecss' directly with unified format strings:
+
+  ;; Old (deprecated):
+  (etaf-ecss-stylesheet
+    \".header{flex items-center}\"
+    \".content{p-4}\")
+
+  ;; New (recommended):
+  (etaf-ecss
+    \".header{flex items-center}\"
+    \".content{p-4}\")
 
 This function supports two formats:
 
@@ -563,6 +600,8 @@ This function supports two formats:
              (declarations (cdr rule)))
          (apply #'etaf-ecss selector declarations))))
    rules "\n"))
+
+(make-obsolete 'etaf-ecss-stylesheet 'etaf-ecss "ETAF 2024-12")
 
 ;;; Macros for more convenient usage
 
