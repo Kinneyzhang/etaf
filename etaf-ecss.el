@@ -549,8 +549,6 @@ unified format strings. Mixing formats is not supported."
           (decl-block (apply #'etaf-ecss-declaration-block declarations)))
       (format "%s %s" sel-str decl-block)))))
 
-
-
 ;;; Macros for more convenient usage
 
 (defmacro etaf-ecss-rule (selector &rest body)
