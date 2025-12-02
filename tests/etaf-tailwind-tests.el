@@ -566,6 +566,34 @@ width使用cw，height使用lh。"
   (should-equal (etaf-tailwind-to-css "font-mono")
                 '((font-family . "ui-monospace, monospace"))))
 
+(ert-deftest etaf-tailwind-test-numeric-font-size ()
+  "测试数值型字体大小转换 (text-N.N → font-size: N.Nlh)。"
+  ;; Integer font size
+  (should-equal (etaf-tailwind-to-css "text-1")
+                '((font-size . "1lh")))
+  (should-equal (etaf-tailwind-to-css "text-2")
+                '((font-size . "2lh")))
+  ;; Decimal font size
+  (should-equal (etaf-tailwind-to-css "text-1.6")
+                '((font-size . "1.6lh")))
+  (should-equal (etaf-tailwind-to-css "text-1.4")
+                '((font-size . "1.4lh")))
+  (should-equal (etaf-tailwind-to-css "text-1.3")
+                '((font-size . "1.3lh")))
+  (should-equal (etaf-tailwind-to-css "text-1.2")
+                '((font-size . "1.2lh")))
+  (should-equal (etaf-tailwind-to-css "text-1.1")
+                '((font-size . "1.1lh")))
+  (should-equal (etaf-tailwind-to-css "text-1.0")
+                '((font-size . "1.0lh")))
+  (should-equal (etaf-tailwind-to-css "text-0.875")
+                '((font-size . "0.875lh")))
+  ;; Large sizes
+  (should-equal (etaf-tailwind-to-css "text-3")
+                '((font-size . "3lh")))
+  (should-equal (etaf-tailwind-to-css "text-10")
+                '((font-size . "10lh"))))
+
 ;;; 新增: 完整的 Tailwind 颜色测试
 
 (ert-deftest etaf-tailwind-test-all-color-families ()
