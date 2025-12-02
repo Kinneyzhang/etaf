@@ -100,15 +100,24 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
          (filtered-attrs (seq-filter (lambda (attr) (not (eq (car attr) 'class))) orig-attrs))
          ;; 构建新的属性 alist，添加渲染信息
          ;; 只有当暗色样式与亮色样式不同时才添加 render-style-dark
-         (render-attrs (if (and computed-style-dark
-                                (not (equal computed-style-with-display computed-style-dark)))
+         (render-attrs (if computed-style-dark
                            ;; 确保暗色模式样式也包含 display
-                           (let ((dark-display (or (cdr (assq 'display computed-style-dark)) display)))
-                             (list (cons 'render-style computed-style-with-display)
-                                   (cons 'render-style-dark 
-                                         (if (assq 'display computed-style-dark)
-                                             computed-style-dark
-                                           (cons (cons 'display dark-display) computed-style-dark)))))
+                           (let* ((dark-display (or (cdr (assq 'display computed-style-dark)) display))
+                                  (computed-style-dark-with-display
+                                   (if (assq 'display computed-style-dark)
+                                       computed-style-dark
+                                     (cons (cons 'display dark-display) computed-style-dark))))
+                             ;; 现在两个样式都有 display，可以正确比较
+                             ;; 使用 equal 进行深度比较以检测样式差异
+                             ;; 虽然对大样式对象可能较慢，但这是必要的以确保
+                             ;; 只有在暗色模式真正不同时才保存 render-style-dark
+                             (if (equal computed-style-with-display computed-style-dark-with-display)
+                                 ;; 样式相同，只保留亮色
+                                 (list (cons 'render-style computed-style-with-display))
+                               ;; 样式不同，保留两者
+                               (list (cons 'render-style computed-style-with-display)
+                                     (cons 'render-style-dark computed-style-dark-with-display))))
+                         ;; 没有暗色样式，只使用亮色
                          (list (cons 'render-style computed-style-with-display)))))
     ;; 合并渲染属性和过滤后的原始属性
     (list tag (append render-attrs filtered-attrs))))
