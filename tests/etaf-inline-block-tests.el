@@ -8,6 +8,7 @@
 
 (require 'ert)
 (require 'etaf-layout)
+(require 'etaf-ecss)
 (require 'etaf-render)
 (require 'etaf-css)
 (require 'etaf-etml)
