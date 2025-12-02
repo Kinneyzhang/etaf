@@ -36,9 +36,7 @@
 ;;
 ;; 布局树结构：
 ;; (tag ((layout-box-model . <box-model>)
-;;       (render-style . ((color . "red") ...))
-;;       (render-display . "block")
-;;       (class . "foo"))
+;;       (render-style . ((display . "block") (color . "red") ...)))
 ;;   child1 child2 ...)
 ;;
 ;; 使用示例：
@@ -377,7 +375,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
           (dolist (child children)
             (when (and (consp child) (symbolp (car child)))
               (let ((child-display
-                     (or (dom-attr child 'render-display)
+                     (or (etaf-render-get-style child 'display)
                          (etaf-render-get-default-display (car child)))))
                 (when (or (string= child-display "inline")
                           (string= child-display "inline-block"))
@@ -394,7 +392,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                 ;; :overline/:underline face实现，不占用额外行数
                 (let* ((child-box (etaf-layout-get-box-model child-layout))
                        (child-display
-                        (or (dom-attr child-layout 'render-display) "block"))
+                        (or (etaf-render-get-style child-layout 'display) "block"))
                        (child-total-height
                         (+ (etaf-layout-box-content-height child-box)
                            (etaf-layout-box-padding-height child-box)

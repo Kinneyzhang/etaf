@@ -129,7 +129,7 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
                     (cond
                      ((listp child)
                       (cons (etaf-layout-string-render-node child)
-                            (or (dom-attr child 'render-display)
+                            (or (etaf-render-get-style child 'display)
                                 (etaf-render-get-default-display
                                  (dom-tag child)))))
                      ((stringp child)

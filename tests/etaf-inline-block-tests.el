@@ -48,7 +48,7 @@
                                    (dom-children div-node))))
           (should (= (length buttons) 3))
           (dolist (button buttons)
-            (should-equal (dom-attr button 'render-display) "inline-block")))))))
+            (should-equal (etaf-render-get-style button 'display) "inline-block")))))))
 
 (ert-deftest etaf-inline-block-test-ua-stylesheet ()
   "Test that buttons have inline-block display by default from UA stylesheet."
@@ -182,9 +182,9 @@
         
         ;; Check display types
         (dolist (btn inline-buttons)
-          (should-equal (dom-attr btn 'render-display) "inline-block"))
+          (should-equal (etaf-render-get-style btn 'display) "inline-block"))
         (dolist (btn block-buttons)
-          (should-equal (dom-attr btn 'render-display) "block"))))))
+          (should-equal (etaf-render-get-style btn 'display) "block"))))))
 
 (ert-deftest etaf-inline-block-test-custom-tag ()
   "Test that custom tags with inline-block display work correctly."
@@ -214,7 +214,7 @@
                                  (dom-children div-node))))
           (should (= (length badges) 3))
           (dolist (badge badges)
-            (should-equal (dom-attr badge 'render-display) "inline-block")))))))
+            (should-equal (etaf-render-get-style badge 'display) "inline-block")))))))
 
 (provide 'etaf-inline-block-tests)
 ;;; etaf-inline-block-tests.el ends here

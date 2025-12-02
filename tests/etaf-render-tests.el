@@ -178,7 +178,7 @@
          (cssom (etaf-css-build-cssom dom))
          (render-tree (etaf-render-build-tree dom cssom))
          (main-node nil))
-    ;; 找到 #main 节点 - 渲染节点保留了原始 DOM 属性
+    ;; 找到 #main 节点 - 渲染节点保留了除 class 外的原始 DOM 属性（如 id）
     (etaf-render-walk render-tree
                       (lambda (node)
                         (when (and (null main-node) (eq (dom-tag node) 'div))
