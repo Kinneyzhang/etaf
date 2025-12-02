@@ -11,6 +11,7 @@
 ;;; Code:
 
 (require 'etaf-tailwind)
+(require 'etaf-ecss)
 (require 'etaf-ert)
 
 ;;; 类名解析测试

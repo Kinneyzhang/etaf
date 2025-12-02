@@ -7,6 +7,7 @@
 
 (require 'ert)
 (require 'etaf-layout)
+(require 'etaf-ecss)
 (require 'etaf-layout-box)
 (require 'etaf-layout-string)
 (require 'etaf-etml)

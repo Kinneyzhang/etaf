@@ -7,6 +7,7 @@
 
 (require 'ert)
 (require 'etaf-ert)
+(require 'etaf-ecss)
 
 ;;; CSS Shorthand Tests for Flex Properties
 

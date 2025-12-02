@@ -8,6 +8,7 @@
 
 (require 'ert)
 (require 'etaf-layout)
+(require 'etaf-ecss)
 
 ;;; Tests for etaf-layout-parse-length
 
