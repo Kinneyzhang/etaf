@@ -279,7 +279,7 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 ;; => ".card { display: flex; align-items: center; ... }"
 
 ;; 构建样式表
-(etaf-ecss-stylesheet
+(etaf-ecss
   ".container{flex items-center w-800px}"
   ".box{bg-blue-500 p-4}"
   "nav>a{text-white}")
