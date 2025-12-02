@@ -99,12 +99,6 @@
 h1 {
   color: #2563eb;
   margin-bottom: 1lh;
-}
-p {
-  margin-bottom: 1lh;
-}
-li {
-  margin-bottom: 1lh;
 }"
   "Default CSS styles.")
 
