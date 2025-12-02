@@ -327,8 +327,8 @@
                '(html
                  (head
                   (style
-                   (ecss ".test" "flex items-center")
-                   (ecss "#main" "bg-red-500")))
+                   (ecss ".test{flex items-center}")
+                   (ecss "#main{bg-red-500}")))
                  (body
                   (div :class "test" "Hello")))))
          (style-node (car (dom-by-tag dom 'style)))
@@ -339,21 +339,22 @@
     (should (string-match-p "#main" style-content))
     (should (string-match-p "background-color: #ef4444" style-content))))
 
-(ert-deftest etaf-ecss-test-etml-style-tag-ecss-with-props ()
-  "Test (ecss ...) with mixed Tailwind and properties in style tags."
+(ert-deftest etaf-ecss-test-etml-style-tag-ecss-multiple ()
+  "Test (ecss ...) with multiple unified format strings in style tags."
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
                  (head
                   (style
-                   (ecss ".card" "flex items-center" (padding 20))))
+                   (ecss ".card{flex items-center}" ".button{p-4 bg-blue-500}")))
                  (body))))
          (style-node (car (dom-by-tag dom 'style)))
          (style-content (car (dom-children style-node))))
     (should (stringp style-content))
     (should (string-match-p "\\.card" style-content))
     (should (string-match-p "display: flex" style-content))
-    (should (string-match-p "padding: 20px" style-content))))
+    (should (string-match-p "\\.button" style-content))
+    (should (string-match-p "background-color: #3b82f6" style-content))))
 
 ;;; Unified Format Tests
 
@@ -475,7 +476,7 @@
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(div
-                 (ecss ".box" "bg-red-500")
+                 (ecss ".box{bg-red-500}")
                  (div :class "box" "Hello")))))
     ;; Parent div should have scope class
     (let ((class-attr (dom-attr dom 'class)))
@@ -503,7 +504,7 @@
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(div
-                 (ecss ".item" "p-4")
+                 (ecss ".item{p-4}")
                  (span :class "item" "First")
                  (span :class "item" "Second")
                  (span :class "item" "Third")))))
@@ -527,8 +528,8 @@
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(div
-                 (ecss ".header" "bg-blue-500")
-                 (ecss ".content" "p-4")
+                 (ecss ".header{bg-blue-500}")
+                 (ecss ".content{p-4}")
                  (div :class "header" "Header")
                  (div :class "content" "Content")))))
     (let ((style-child (car (dom-children dom))))
@@ -548,7 +549,7 @@
                '(html
                  (head
                   (style
-                   (ecss ".global" "bg-red-500")))
+                   (ecss ".global{bg-red-500}")))
                  (body
                   (div :class "global" "Global"))))))
     (let* ((style-node (car (dom-by-tag dom 'style)))
@@ -560,7 +561,7 @@
   ;; Scoped ecss outside style tag
   (let* ((dom (etaf-etml-to-dom
                '(div
-                 (ecss ".scoped" "bg-blue-500")
+                 (ecss ".scoped{bg-blue-500}")
                  (span :class "scoped" "Scoped")))))
     (let* ((style-node (car (dom-children dom)))
            (style-content (car (dom-children style-node))))
@@ -570,11 +571,30 @@
 (ert-deftest etaf-ecss-test-ecss-tag-p ()
   "Test etaf-etml--ecss-tag-p predicate."
   (require 'etaf-etml)
-  (should (etaf-etml--ecss-tag-p '(ecss ".box" "bg-red-500")))
+  (should (etaf-etml--ecss-tag-p '(ecss ".box{bg-red-500}")))
   (should (etaf-etml--ecss-tag-p '(ecss ".card{flex}")))
   (should-not (etaf-etml--ecss-tag-p '(div :class "box")))
   (should-not (etaf-etml--ecss-tag-p "not a list"))
-  (should-not (etaf-etml--ecss-tag-p '(style (ecss ".x" "p-4")))))
+  (should-not (etaf-etml--ecss-tag-p '(style (ecss ".x{p-4}")))))
+
+(ert-deftest etaf-ecss-test-ecss-tag-rejects-legacy-format ()
+  "Test that ecss tag rejects legacy format and only accepts unified format."
+  (require 'etaf-etml)
+  ;; Should reject legacy format with separate selector and declarations
+  (should-error (etaf-etml-to-dom
+                 '(div
+                   (ecss ".box" "bg-red-500")
+                   (div :class "box" "Hello"))))
+  ;; Should reject legacy format with property lists
+  (should-error (etaf-etml-to-dom
+                 '(div
+                   (ecss ".box" (padding 10))
+                   (div :class "box" "Hello"))))
+  ;; Should accept unified format
+  (should (etaf-etml-to-dom
+           '(div
+             (ecss ".box{bg-red-500}")
+             (div :class "box" "Hello")))))
 
 (provide 'etaf-ecss-tests)
 ;;; etaf-ecss-tests.el ends here
