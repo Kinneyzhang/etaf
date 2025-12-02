@@ -28,8 +28,8 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。
                        ""))
          (cssom (etaf-css-build-cssom dom))
          (cssom (etaf-css-add-stylesheet cssom stylesheet))
-         ;; 使用 ECSS 模块构建渲染树（ECSS 模块调用 CSS 模块）
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         ;; 使用 render 模块构建渲染树
+         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree
           (etaf-layout-build-tree
            render-tree (list :width width :height height))))

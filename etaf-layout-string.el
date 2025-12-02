@@ -70,8 +70,8 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
 如果节点包含事件处理器，keymap 文本属性会被应用到最终字符串上。"
   (let* ((box-model (or (etaf-layout-get-box-model layout-node)
                         (etaf-layout-box-create)))
-         (computed-style (dom-attr layout-node 'render-style))
-         (computed-style-dark (dom-attr layout-node 'render-style-dark))
+         (computed-style (dom-attr layout-node 'computed-style))
+         (computed-style-dark (dom-attr layout-node 'computed-style-dark))
          (tag-instance (dom-attr layout-node 'etaf-tag-instance))
          (content-width (or (etaf-layout-box-content-width box-model) 0))
          (content-height-px
@@ -129,7 +129,7 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
                     (cond
                      ((listp child)
                       (cons (etaf-layout-string-render-node child)
-                            (or (dom-attr child 'render-display)
+                            (or (etaf-render-get-display child)
                                 (etaf-render-get-default-display
                                  (dom-tag child)))))
                      ((stringp child)
