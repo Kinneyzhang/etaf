@@ -453,6 +453,21 @@
     (should (string-match-p "font-size: 1.6lh" result))
     (should (string-match-p "font-weight: 700" result))))
 
+(ert-deftest etaf-ecss-test-pseudo-classes-in-unified ()
+  "Test pseudo-class selectors in unified ECSS format."
+  (let ((result (etaf-ecss
+                 "a:hover{text-blue-700}"
+                 "button:active{bg-gray-300}"
+                 "input:focus{border-blue-500}"
+                 "button:disabled{bg-gray-100 text-gray-500}")))
+    (should (string-match-p "a:hover" result))
+    (should (string-match-p "button:active" result))
+    (should (string-match-p "input:focus" result))
+    (should (string-match-p "button:disabled" result))
+    (should (string-match-p "color: #1d4ed8" result))
+    (should (string-match-p "background-color: #d1d5db" result))
+    (should (string-match-p "border-color: #3b82f6" result))))
+
 ;;; Scoped ecss Tag Tests (ecss at any position with local scope)
 
 (ert-deftest etaf-ecss-test-scoped-ecss-basic ()

@@ -577,7 +577,6 @@ Returns (tag-name ((attrs...)) children...)."
 
 ;; Interactive elements with event handlers
 (define-etaf-etml-tag a
-  :hover-style '((color . "darkblue"))
   :on-click (lambda (event)
               (let* ((target (plist-get event :target))
                      (attrs (plist-get target :attrs))
@@ -586,11 +585,6 @@ Returns (tag-name ((attrs...)) children...)."
                   (browse-url href)))))
 
 (define-etaf-etml-tag button
-  :hover-style '((background-color . "#e0e0e0"))
-  :active-style '((background-color . "#d0d0d0"))
-  :disabled-style '((background-color . "#f5f5f5")
-                    (color . "#999")
-                    (cursor . "not-allowed"))
   :on-click (lambda (event)
               (let* ((target (plist-get event :target))
                      (state (plist-get target :state)))
@@ -612,15 +606,9 @@ Returns (tag-name ((attrs...)) children...)."
 ;; Form elements with special metadata or state styles
 (define-etaf-etml-tag input
   :self-closing t
-  :children-allowed nil
-  :focus-style '((border-color . "blue")
-                 (outline . "none"))
-  :disabled-style '((background-color . "#f5f5f5")
-                    (color . "#999")))
+  :children-allowed nil)
 
-(define-etaf-etml-tag textarea
-  :focus-style '((border-color . "blue")
-                 (outline . "none")))
+(define-etaf-etml-tag textarea)
 
 ;; Elements that don't allow children
 (define-etaf-etml-tag progress

@@ -59,6 +59,9 @@
    "li{list-item}"
 
    "button{inline}"
+   "button:hover{bg-gray-200}"
+   "button:active{bg-gray-300}"
+   "button:disabled{bg-gray-100 text-gray-500 cursor-not-allowed}"
    
    ;; Display property for inline-block elements
    "input, textarea, select, img, video, canvas, svg{inline-block}"
@@ -90,6 +93,7 @@
    
    ;; Links
    "a{text-blue underline cursor-pointer}"
+   "a:hover{text-blue-700}"
    
    ;; Text formatting
    "em{italic}"
@@ -117,7 +121,10 @@
    
    ;; Form elements
    "input{border border-gray-300}"
+   "input:focus{border-blue-500}"
+   "input:disabled{bg-gray-100 text-gray-500}"
    "textarea{border border-gray-300 font-mono}"
+   "textarea:focus{border-blue-500}"
    "select{border border-gray-300}"
    "label{cursor-pointer}"
    "fieldset{border border-gray-300}"
