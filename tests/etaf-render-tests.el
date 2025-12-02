@@ -48,22 +48,22 @@
 
 ;;; Tests
 
-(ert-deftest etaf-ecss-build-render-tree-simple ()
+(ert-deftest etaf-render-build-tree-simple ()
   "测试简单渲染树构建。"
   (let* ((dom etaf-render-tests-dom-simple)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom)))
+         (render-tree (etaf-render-build-tree dom cssom)))
     (should render-tree)
     (should (eq (dom-tag render-tree) 'html))
     ;; computed-style 可以是 nil（空列表）或包含样式的 alist
-    (should (assq 'render-style (dom-attributes render-tree)))
+    (should (assq 'computed-style (dom-attributes render-tree)))
     (should (dom-children render-tree))))
 
 (ert-deftest etaf-render-node-filtering ()
   "测试渲染树过滤不可见节点。"
   (let* ((dom etaf-render-tests-dom-simple)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (all-tags '()))
     ;; 收集所有标签
     (etaf-render-walk render-tree
@@ -80,7 +80,7 @@
   "测试 display: none 元素被过滤。"
   (let* ((dom etaf-render-tests-dom-hidden)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (div-nodes '()))
     ;; 找到所有 div 渲染节点
     (etaf-render-walk render-tree
@@ -95,7 +95,7 @@
   "测试从渲染节点获取样式。"
   (let* ((dom etaf-render-tests-dom-simple)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (div-node nil))
     ;; 找到 div 节点
     (etaf-render-walk render-tree
@@ -110,7 +110,7 @@
   "测试按标签查找渲染节点。"
   (let* ((dom etaf-render-tests-dom-nested)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (spans (etaf-render-find-by-tag render-tree 'span)))
     (should (= (length spans) 2))
     (should (cl-every (lambda (node)
@@ -121,7 +121,7 @@
   "测试按 display 类型查找渲染节点。"
   (let* ((dom etaf-render-tests-dom-nested)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (block-nodes (etaf-render-find-by-display render-tree "block"))
          (inline-nodes (etaf-render-find-by-display render-tree "inline")))
     (should (> (length block-nodes) 0))
@@ -137,7 +137,7 @@
   "测试渲染树遍历。"
   (let* ((dom etaf-render-tests-dom-nested)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (node-count 0))
     (etaf-render-walk render-tree
       (lambda (_node)
@@ -148,7 +148,7 @@
   "测试渲染树统计信息。"
   (let* ((dom etaf-render-tests-dom-nested)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (stats (etaf-render-stats render-tree)))
     (should (plist-get stats :node-count))
     (should (>= (plist-get stats :node-count) 1))
@@ -161,7 +161,7 @@
   "测试渲染树转字符串。"
   (let* ((dom etaf-render-tests-dom-simple)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (str (etaf-render-to-string render-tree)))
     (should (stringp str))
     (should (> (length str) 0))
@@ -177,7 +177,7 @@
                  (body
                   (div :id "main" "Content")))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (main-node nil))
     ;; 找到 #main 节点 - 渲染节点保留了原始 DOM 属性
     (etaf-render-walk render-tree

@@ -27,7 +27,7 @@
            (span "Text 2"))))))
 
 (setq example-cssom (etaf-css-build-cssom example-dom))
-(setq example-render-tree (etaf-ecss-build-render-tree example-dom example-cssom))
+(setq example-render-tree (etaf-render-build-tree example-dom example-cssom))
 
 (message "\nRender tree structure:")
 (message "%s" (etaf-render-to-string example-render-tree))
@@ -48,7 +48,7 @@
           (div "Visible 2")))))
 
 (setq hidden-cssom (etaf-css-build-cssom hidden-dom))
-(setq hidden-render-tree (etaf-ecss-build-render-tree hidden-dom hidden-cssom))
+(setq hidden-render-tree (etaf-render-build-tree hidden-dom hidden-cssom))
 
 (message "\nVisible nodes in render tree:")
 (etaf-render-walk hidden-render-tree
@@ -71,7 +71,7 @@
           (div :id "special" "Special div")))))
 
 (setq styled-cssom (etaf-css-build-cssom styled-dom))
-(setq styled-render-tree (etaf-ecss-build-render-tree styled-dom styled-cssom))
+(setq styled-render-tree (etaf-render-build-tree styled-dom styled-cssom))
 
 (message "\nComputed styles for each div:")
 (dolist (div-node (etaf-render-find-by-tag styled-render-tree 'div))
@@ -100,7 +100,7 @@
             (span "More text")))))))
 
 (setq stats-cssom (etaf-css-build-cssom stats-dom))
-(setq stats-render-tree (etaf-ecss-build-render-tree stats-dom stats-cssom))
+(setq stats-render-tree (etaf-render-build-tree stats-dom stats-cssom))
 (setq stats (etaf-render-stats stats-render-tree))
 
 (message "\nRender tree statistics:")
@@ -127,7 +127,7 @@
           (div "Block 2")))))
 
 (setq search-cssom (etaf-css-build-cssom search-dom))
-(setq search-render-tree (etaf-ecss-build-render-tree search-dom search-cssom))
+(setq search-render-tree (etaf-render-build-tree search-dom search-cssom))
 
 (message "\nAll block-level elements:")
 (dolist (node (etaf-render-find-by-display search-render-tree "block"))

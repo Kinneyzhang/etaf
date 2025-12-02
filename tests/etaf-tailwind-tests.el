@@ -351,12 +351,12 @@ Emacs特有：padding使用cw（水平字符宽度）和lh（垂直行高）。"
                '(div :class "flex items-center justify-center"
                      (span :class "text-lg font-bold" "Title"))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom)))
+         (render-tree (etaf-render-build-tree dom cssom)))
     ;; 验证渲染树包含正确的 Tailwind 样式
-    (let ((render-style (dom-attr render-tree 'render-style)))
-      (should (equal (cdr (assq 'display render-style)) "flex"))
-      (should (equal (cdr (assq 'align-items render-style)) "center"))
-      (should (equal (cdr (assq 'justify-content render-style)) "center")))))
+    (let ((computed-style (dom-attr render-tree 'computed-style)))
+      (should (equal (cdr (assq 'display computed-style)) "flex"))
+      (should (equal (cdr (assq 'align-items computed-style)) "center"))
+      (should (equal (cdr (assq 'justify-content computed-style)) "center")))))
 
 ;;; 新增：扩展的 Tailwind 工具类测试
 

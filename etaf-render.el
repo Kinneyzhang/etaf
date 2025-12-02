@@ -16,26 +16,24 @@
 ;; 从 DOM 和 CSSOM 构建渲染树 (Render Tree)
 ;;
 ;; 渲染树使用 DOM 格式表示，保留原本的 DOM 结构，附加的渲染信息用属性表示：
-;; - render-style: 计算后的样式 ((property . value) ...)
-;; - render-display: 显示类型（如 "block", "inline", "none"）
+;; - computed-style: 计算后的样式 ((property . value) ...)
+;;   其中包含 display 属性
 ;;
 ;; 渲染树结构：
-;; (tag ((render-style . ((color . "red") ...))
-;;       (render-display . "block")
-;;       (class . "foo")  ;; 原始 DOM 属性
-;;       (id . "bar"))    ;; 原始 DOM 属性
+;; (tag ((computed-style . ((display . "block") (color . "red") ...)))
 ;;   child1 child2 ...)   ;; 子渲染节点
 ;;
 ;; 这种结构可以直接使用 etaf-dom.el 中的函数，如：
 ;; - (dom-tag render-node) => 'tag
-;; - (dom-attr render-node 'render-display) => "block"
+;; - (etaf-render-get-style render-node 'display) => "block"
 ;; - (dom-children render-node) => (child1 child2 ...)
 ;; - etaf-dom-map, etaf-dom-get-parent 等
 ;;
 ;; 渲染树与 DOM 的区别：
 ;; 1. 不包含不可见元素（display: none, <head>, <script> 等）
 ;; 2. 每个节点都附加了计算样式
-;; 3. 某些元素可能产生多个渲染节点（如 ::before, ::after）
+;; 3. 不保留原始 DOM 属性（class、id 等已被解析为样式）
+;; 4. 某些元素可能产生多个渲染节点（如 ::before, ::after）
 ;;
 ;; 使用示例：
 ;;
@@ -47,7 +45,7 @@
 ;;     (lambda (render-node)
 ;;       (message "Node: %s, Display: %s"
 ;;                (dom-tag render-node)
-;;                (dom-attr render-node 'render-display)))
+;;                (etaf-render-get-display render-node)))
 ;;     render-tree)
 ;;
 ;;   ;; 查询渲染节点的样式
@@ -85,26 +83,32 @@ COMPUTED-STYLE 是亮色模式下的计算样式 alist。
 COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
 返回 DOM 格式的渲染节点：(tag ((attrs...) children...)
 其中 attrs 包含：
-- render-style: 亮色模式计算样式
-- render-style-dark: 暗色模式计算样式（如果与亮色不同）
-- render-display: 显示类型
-- 以及原始 DOM 属性"
+- computed-style: 亮色模式计算样式（包含 display 属性）
+- computed-style-dark: 暗色模式计算样式（如果与亮色不同）
+注意：不保留原始 DOM 属性（class、id 等），只保留计算后的样式"
   (let* ((tag (dom-tag dom-node))
          ;; 从 computed-style 获取 display，如果没有则根据标签类型使用默认值
          (display (or (cdr (assq 'display computed-style))
                       (etaf-render-get-default-display tag)))
-         (orig-attrs (dom-attributes dom-node))
-         ;; 构建新的属性 alist，添加渲染信息
-         ;; 只有当暗色样式与亮色样式不同时才添加 render-style-dark
+         ;; 确保 computed-style 中有 display 属性
+         (computed-style-with-display
+          (if (assq 'display computed-style)
+              computed-style
+            (cons (cons 'display display) computed-style)))
+         ;; 构建新的属性 alist，只添加渲染信息，不保留原始 DOM 属性
+         ;; 只有当暗色样式与亮色样式不同时才添加 computed-style-dark
          (render-attrs (if (and computed-style-dark
-                                (not (equal computed-style computed-style-dark)))
-                           (list (cons 'render-style computed-style)
-                                 (cons 'render-style-dark computed-style-dark)
-                                 (cons 'render-display display))
-                         (list (cons 'render-style computed-style)
-                               (cons 'render-display display)))))
-    ;; 合并原始属性和渲染属性
-    (list tag (append render-attrs orig-attrs))))
+                                (not (equal computed-style-with-display computed-style-dark)))
+                           ;; 确保暗色模式样式也包含 display
+                           (let ((dark-display (or (cdr (assq 'display computed-style-dark)) display)))
+                             (list (cons 'computed-style computed-style-with-display)
+                                   (cons 'computed-style-dark 
+                                         (if (assq 'display computed-style-dark)
+                                             computed-style-dark
+                                           (cons (cons 'display dark-display) computed-style-dark)))))
+                         (list (cons 'computed-style computed-style-with-display)))))
+    ;; 只返回渲染属性，不包含原始 DOM 属性
+    (list tag render-attrs)))
 
 (defun etaf-render-node-visible-p (dom-node computed-style)
   "判断 DOM 节点是否应该在渲染树中显示。
@@ -169,19 +173,20 @@ FUNC 是接受一个渲染节点参数的函数。
 RENDER-NODE 是渲染节点。
 PROPERTY 是样式属性名（symbol）。
 返回属性值字符串或 nil。"
-  (cdr (assq property (dom-attr render-node 'render-style))))
+  (cdr (assq property (dom-attr render-node 'computed-style))))
 
 (defun etaf-render-get-display (render-node)
   "从渲染节点获取 display 类型。
 RENDER-NODE 是渲染节点。
 返回 display 字符串。"
-  (dom-attr render-node 'render-display))
+  (or (etaf-render-get-style render-node 'display)
+      (etaf-render-get-default-display (dom-tag render-node))))
 
 (defun etaf-render-get-computed-style (render-node)
   "从渲染节点获取完整的计算样式 alist。
 RENDER-NODE 是渲染节点。
 返回计算样式 alist。"
-  (dom-attr render-node 'render-style))
+  (dom-attr render-node 'computed-style))
 
 (defun etaf-render-find-by-tag (render-tree tag)
   "在渲染树中查找指定标签的所有节点。

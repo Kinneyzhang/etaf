@@ -69,7 +69,7 @@
          (simple-cssom (etaf-css-build-cssom simple-dom))
          
          ;; 3. 构建渲染树
-         (simple-render-tree (etaf-ecss-build-render-tree simple-dom simple-cssom))
+         (simple-render-tree (etaf-render-build-tree simple-dom simple-cssom))
          
          ;; 4. 构建布局树
          (simple-layout-tree (etaf-layout-build-tree 
@@ -203,7 +203,7 @@
          (complex-cssom (etaf-css-build-cssom complex-dom))
          
          ;; 3. 构建渲染树
-         (complex-render-tree (etaf-ecss-build-render-tree complex-dom complex-cssom))
+         (complex-render-tree (etaf-render-build-tree complex-dom complex-cssom))
          
          ;; 4. 构建布局树
          (complex-layout-tree (etaf-layout-build-tree 

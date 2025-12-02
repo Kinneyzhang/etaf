@@ -184,7 +184,7 @@
   "Test that overflow-y is correctly parsed from CSS."
   (let* ((dom etaf-layout-overflow-tests-dom-auto)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 300 :height 200))))
     ;; Find the container div
     (etaf-layout-walk layout-tree
@@ -199,7 +199,7 @@
   "Test that overflow-y: scroll is correctly parsed."
   (let* ((dom etaf-layout-overflow-tests-dom-scroll)
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 300 :height 200))))
     ;; Find the container div
     (etaf-layout-walk layout-tree
@@ -219,7 +219,7 @@
                  (body
                   (div "Content")))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 300 :height 200))))
     ;; Find any div
     (etaf-layout-walk layout-tree

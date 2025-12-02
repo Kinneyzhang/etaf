@@ -33,7 +33,7 @@
                    (button "Button 2")
                    (button "Button 3"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     (should layout-tree)
@@ -49,7 +49,7 @@
                                    (dom-children div-node))))
           (should (= (length buttons) 3))
           (dolist (button buttons)
-            (should-equal (dom-attr button 'render-display) "inline-block")))))))
+            (should-equal (etaf-render-get-display button) "inline-block")))))))
 
 (ert-deftest etaf-inline-block-test-ua-stylesheet ()
   "Test that buttons have inline-block display by default from UA stylesheet."
@@ -58,7 +58,7 @@
                  (body
                   (button "Default Button")))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom)))
+         (render-tree (etaf-render-build-tree dom cssom)))
     
     (let ((body-node (car (dom-by-tag render-tree 'body))))
       (should body-node)
@@ -85,7 +85,7 @@
                    (button :class "btn" "Button 1")
                    (button :class "btn" "Button 2"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     (should layout-tree)
@@ -123,7 +123,7 @@
                    (button "Button")
                    (span " text after"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     (should layout-tree)
@@ -153,7 +153,7 @@
                    (button :class "block-btn" "B1")
                    (button :class "block-btn" "B2"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     (should layout-tree)
@@ -183,9 +183,9 @@
         
         ;; Check display types
         (dolist (btn inline-buttons)
-          (should-equal (dom-attr btn 'render-display) "inline-block"))
+          (should-equal (etaf-render-get-display btn) "inline-block"))
         (dolist (btn block-buttons)
-          (should-equal (dom-attr btn 'render-display) "block"))))))
+          (should-equal (etaf-render-get-display btn) "block"))))))
 
 (ert-deftest etaf-inline-block-test-custom-tag ()
   "Test that custom tags with inline-block display work correctly."
@@ -199,7 +199,7 @@
                    (badge "Badge 2")
                    (badge "Badge 3"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     (should layout-tree)
@@ -215,7 +215,7 @@
                                  (dom-children div-node))))
           (should (= (length badges) 3))
           (dolist (badge badges)
-            (should-equal (dom-attr badge 'render-display) "inline-block")))))))
+            (should-equal (etaf-render-get-display badge) "inline-block")))))))
 
 (provide 'etaf-inline-block-tests)
 ;;; etaf-inline-block-tests.el ends here
