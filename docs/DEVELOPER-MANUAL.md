@@ -385,7 +385,7 @@ This is because Emacs buffer rendering is line-based for vertical positioning.
 ### Custom Components / 自定义组件
 
 ```elisp
-(etaf-etml-define-component my-component
+(etaf-define-component my-component
   :props '(:prop1 :prop2)
   :setup (lambda (props) ...)
   :template '(div ...))

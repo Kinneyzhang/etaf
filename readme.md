@@ -71,7 +71,7 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 
 ```elisp
 ;; Define a component
-(etaf-etml-define-component my-button
+(etaf-define-component my-button
   :props '(:label :disabled)
   :template '(button :class "btn" "{{ label }}"))
 
@@ -83,12 +83,12 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 ### Reactive State
 
 ```elisp
-(let* ((count (etaf-etml-ref 0))
-       (doubled (etaf-etml-computed
-                  (lambda () (* 2 (etaf-etml-ref-get count))))))
-  (etaf-etml-ref-get count)      ;; => 0
-  (etaf-etml-ref-set count 5)
-  (etaf-etml-computed-get doubled)) ;; => 10
+(let* ((count (etaf-ref 0))
+       (doubled (etaf-computed
+                  (lambda () (* 2 (etaf-ref-get count))))))
+  (etaf-ref-get count)      ;; => 0
+  (etaf-ref-set count 5)
+  (etaf-computed-get doubled)) ;; => 10
 ```
 
 ## Documentation
@@ -202,7 +202,7 @@ ETAF 支持 Vue 风格的模板指令：
 
 ```elisp
 ;; 定义组件
-(etaf-etml-define-component my-button
+(etaf-define-component my-button
   :props '(:label :disabled)
   :template '(button :class "btn" "{{ label }}"))
 
@@ -215,12 +215,12 @@ ETAF 支持 Vue 风格的模板指令：
 
 ```elisp
 ;; 创建响应式引用
-(let* ((count (etaf-etml-ref 0))
-       (doubled (etaf-etml-computed
-                  (lambda () (* 2 (etaf-etml-ref-get count))))))
-  (etaf-etml-ref-get count)      ;; => 0
-  (etaf-etml-ref-set count 5)
-  (etaf-etml-computed-get doubled)) ;; => 10
+(let* ((count (etaf-ref 0))
+       (doubled (etaf-computed
+                  (lambda () (* 2 (etaf-ref-get count))))))
+  (etaf-ref-get count)      ;; => 0
+  (etaf-ref-set count 5)
+  (etaf-computed-get doubled)) ;; => 10
 ```
 
 ### Tailwind CSS 支持

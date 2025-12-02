@@ -58,7 +58,7 @@ Translation: Split the component parts from the etml module into a separate etaf
 
 **移除的代码：**
 - 组件注册表和管理函数
-- `etaf-etml-define-component` 宏的实现
+- `etaf-define-component` 宏的实现
 - 整个响应式系统（ref, computed, watch, watchEffect, reactive）
 - 旧的响应式系统实现
 
@@ -204,8 +204,8 @@ Translation: Split the component parts from the etml module into a separate etaf
 
 ```elisp
 ;; 旧的函数名称不再有效，必须更新
-;; (etaf-etml-define-component my-component ...)  // 错误
-;; (etaf-etml-ref 0)  // 错误
+;; (etaf-define-component my-component ...)  // 错误
+;; (etaf-ref 0)  // 错误
 
 ;; 必须使用新名称
 (etaf-define-component my-component ...)

@@ -742,11 +742,11 @@ DOM + <style> 标签
 ##### 响应式数据
 | 函数 | 功能 |
 |------|------|
-| `etaf-etml-create-reactive` | 创建响应式数据 |
-| `etaf-etml-get` | 获取响应式数据值 |
-| `etaf-etml-set` | 设置值并触发更新 |
-| `etaf-etml-watch` | 添加数据监听器 |
-| `etaf-etml-unwatch` | 移除监听器 |
+| `etaf-create-reactive` | 创建响应式数据 |
+| `etaf-get` | 获取响应式数据值 |
+| `etaf-set` | 设置值并触发更新 |
+| `etaf-watch` | 添加数据监听器 |
+| `etaf-unwatch` | 移除监听器 |
 
 ---
 

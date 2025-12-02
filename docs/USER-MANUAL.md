@@ -249,25 +249,25 @@ ETAF provides a Vue3-style component system.
 
 ```elisp
 ;; Simple component
-(etaf-etml-define-component my-button
+(etaf-define-component my-button
   :props '(:label :type)
   :template '(button :class "btn btn-{{ type }}"
                      "{{ label }}"))
 
 ;; Component with setup function
-(etaf-etml-define-component counter
+(etaf-define-component counter
   :props '(:initial)
   :setup (lambda (props)
-           (let* ((count (etaf-etml-ref
+           (let* ((count (etaf-ref
                           (or (plist-get props :initial) 0)))
                   (increment (lambda ()
-                               (etaf-etml-ref-update count #'1+))))
+                               (etaf-ref-update count #'1+))))
              (list :count count
                    :increment increment)))
   :template (lambda (data)
               `(div :class "counter"
                     (span ,(format "Count: %s"
-                                   (etaf-etml-ref-get
+                                   (etaf-ref-get
                                     (plist-get data :count))))
                     (button :on-click ,(plist-get data :increment)
                             "+"))))
@@ -288,10 +288,10 @@ ETAF provides a Vue3-style component system.
 
 | Function | Description |
 |----------|-------------|
-| `etaf-etml-define-component` | Define a new component |
-| `etaf-etml-component-get` | Get component definition |
-| `etaf-etml-component-defined-p` | Check if component exists |
-| `etaf-etml-component-list-all` | List all components |
+| `etaf-define-component` | Define a new component |
+| `etaf-component-get` | Get component definition |
+| `etaf-component-defined-p` | Check if component exists |
+| `etaf-component-list-all` | List all components |
 
 ---
 
@@ -304,63 +304,63 @@ ETAF implements Vue3-style reactivity.
 
 ```elisp
 ;; Create ref
-(setq count (etaf-etml-ref 0))
+(setq count (etaf-ref 0))
 
 ;; Get value
-(etaf-etml-ref-get count)  ;; => 0
+(etaf-ref-get count)  ;; => 0
 
 ;; Set value
-(etaf-etml-ref-set count 5)
+(etaf-ref-set count 5)
 
 ;; Update based on current value
-(etaf-etml-ref-update count #'1+)  ;; => 6
+(etaf-ref-update count #'1+)  ;; => 6
 ```
 
 ### Computed / 计算属性
 
 ```elisp
-(let* ((count (etaf-etml-ref 3))
-       (doubled (etaf-etml-computed
+(let* ((count (etaf-ref 3))
+       (doubled (etaf-computed
                   (lambda ()
-                    (* 2 (etaf-etml-ref-get count))))))
-  (etaf-etml-computed-get doubled)  ;; => 6
-  (etaf-etml-ref-set count 5)
-  (etaf-etml-computed-get doubled)) ;; => 10 (auto recomputed)
+                    (* 2 (etaf-ref-get count))))))
+  (etaf-computed-get doubled)  ;; => 6
+  (etaf-ref-set count 5)
+  (etaf-computed-get doubled)) ;; => 10 (auto recomputed)
 ```
 
 ### Watch / 侦听器
 
 ```elisp
 ;; Watch a reactive source
-(let* ((count (etaf-etml-ref 0))
-       (stop (etaf-etml-watch-source count
+(let* ((count (etaf-ref 0))
+       (stop (etaf-watch count
                (lambda (new old)
                  (message "Changed: %s -> %s" old new)))))
-  (etaf-etml-ref-set count 1)  ;; triggers callback
+  (etaf-ref-set count 1)  ;; triggers callback
   (funcall stop)               ;; stop watching
-  (etaf-etml-ref-set count 2)) ;; no callback
+  (etaf-ref-set count 2)) ;; no callback
 ```
 
 ### Watch Effect / 副作用
 
 ```elisp
-(let* ((count (etaf-etml-ref 0))
+(let* ((count (etaf-ref 0))
        (stop (etaf-etml-watch-effect
                (lambda ()
                  ;; Auto-tracks dependencies
                  (message "Count is: %s"
-                          (etaf-etml-ref-get count))))))
-  (etaf-etml-ref-set count 1)  ;; re-runs effect
+                          (etaf-ref-get count))))))
+  (etaf-ref-set count 1)  ;; re-runs effect
   (funcall stop))              ;; cleanup
 ```
 
 ### Reactive Object / 响应式对象
 
 ```elisp
-(let ((state (etaf-etml-reactive '(:name "Alice" :age 30))))
-  (etaf-etml-reactive-get state :name)    ;; => "Alice"
-  (etaf-etml-reactive-set state :age 31)
-  (etaf-etml-reactive-to-plist state))    ;; => (:name "Alice" :age 31)
+(let ((state (etaf-reactive '(:name "Alice" :age 30))))
+  (etaf-reactive-get state :name)    ;; => "Alice"
+  (etaf-reactive-set state :age 31)
+  (etaf-reactive-to-plist state))    ;; => (:name "Alice" :age 31)
 ```
 
 ---
@@ -588,21 +588,21 @@ ETAF supports the following CSS units:
 
 | Function | Description |
 |----------|-------------|
-| `etaf-etml-define-component` | Define a component |
-| `etaf-etml-component-get` | Get component definition |
-| `etaf-etml-component-defined-p` | Check if component exists |
+| `etaf-define-component` | Define a component |
+| `etaf-component-get` | Get component definition |
+| `etaf-component-defined-p` | Check if component exists |
 
 ### Reactive Functions / 响应式函数
 
 | Function | Description |
 |----------|-------------|
-| `etaf-etml-ref` | Create reactive reference |
-| `etaf-etml-ref-get` | Get ref value |
-| `etaf-etml-ref-set` | Set ref value |
-| `etaf-etml-computed` | Create computed value |
-| `etaf-etml-watch-source` | Watch reactive source |
+| `etaf-ref` | Create reactive reference |
+| `etaf-ref-get` | Get ref value |
+| `etaf-ref-set` | Set ref value |
+| `etaf-computed` | Create computed value |
+| `etaf-watch` | Watch reactive source |
 | `etaf-etml-watch-effect` | Create auto-tracking effect |
-| `etaf-etml-reactive` | Create reactive object |
+| `etaf-reactive` | Create reactive object |
 
 ---
 
