@@ -25,17 +25,41 @@
 ;; - etaf-css-media: 媒体查询支持
 ;; - etaf-css-parse: CSS 值解析（单位转换：px, %, em, lh, cw）
 ;;
-;; CSSOM 结构：
-;; - inline-rules: 内联样式规则
-;; - style-rules: 样式表规则
-;; - all-rules: 所有规则（按顺序）
-;; - rule-index: 规则索引（按标签、类、ID）
-;; - cache: 计算样式缓存
-;; - media-env: 媒体查询环境
+;; CSSOM 树结构（DOM 格式，可使用 DOM 库操作）：
+;;
+;; 根节点：
+;; (cssom ((type . root)
+;;         (rule-index . ...)
+;;         (cache . #<hash-table>)
+;;         (media-env . ...))
+;;   stylesheet1 stylesheet2 ...)
+;;
+;; 样式表节点：
+;; (stylesheet ((type . stylesheet)
+;;              (source . inline|style-tag|ua)
+;;              (media . "all")
+;;              (href . nil)
+;;              (disabled . nil))
+;;   rule1 rule2 ...)
+;;
+;; 规则节点：
+;; (rule ((type . style-rule)
+;;        (selector . "div.class")
+;;        (declarations . ((color "red" nil) ...))
+;;        (specificity . (1 0 0 0))
+;;        (source . inline|style-tag|ua)
+;;        (media . nil)
+;;        (node . <dom-node>)))  ; 仅内联样式
+;;
+;; 使用 DOM 库函数操作 CSSOM：
+;; - (dom-tag cssom) => 'cssom
+;; - (dom-attr cssom 'cache) => 缓存对象
+;; - (dom-children cssom) => 样式表节点列表
+;; - (etaf-dom-map func cssom) => 遍历 CSSOM 树
 ;;
 ;; 使用示例：
 ;;
-;;   ;; 从 DOM 构建 CSSOM
+;;   ;; 从 DOM 构建 CSSOM 树
 ;;   (etaf-css-build-cssom dom)
 ;;   
 ;;   ;; 解析 CSS 声明（支持 !important）
@@ -44,6 +68,13 @@
 ;;
 ;;   ;; 查询匹配节点的样式（使用缓存和索引）
 ;;   (etaf-css-get-computed-style cssom node dom)
+;;
+;;   ;; 遍历 CSSOM 树
+;;   (etaf-dom-map
+;;     (lambda (node)
+;;       (when (eq (dom-tag node) 'rule)
+;;         (message "Rule: %s" (dom-attr node 'selector))))
+;;     cssom)
 
 ;;; Code:
 
@@ -61,18 +92,64 @@
 (require 'etaf-tailwind)
 (require 'etaf-ua-stylesheet)
 
-;;; 从 DOM 提取样式
+;;; CSSOM 树节点创建函数
+
+(defun etaf-css-create-cssom-root (&optional media-env)
+  "创建 CSSOM 根节点（使用 DOM 格式的树结构）。
+MEDIA-ENV 是可选的媒体查询环境 alist。
+返回 DOM 格式的 CSSOM 根节点。"
+  (let ((cache (etaf-css-cache-create))
+        (env (or media-env etaf-css-media-environment)))
+    (list 'cssom (list (cons 'type 'root)
+                       (cons 'rule-index nil)  ; 延迟构建索引
+                       (cons 'cache cache)
+                       (cons 'media-env env)))))
+
+(defun etaf-css-create-stylesheet (source &optional media href)
+  "创建样式表节点（使用 DOM 格式）。
+SOURCE 是样式来源：'ua, 'inline, 或 'style-tag。
+MEDIA 是可选的媒体查询字符串，默认为 \"all\"。
+HREF 是可选的外部样式表 URL。
+返回 DOM 格式的样式表节点。"
+  (list 'stylesheet (list (cons 'type 'stylesheet)
+                          (cons 'source source)
+                          (cons 'media (or media "all"))
+                          (cons 'href href)
+                          (cons 'disabled nil))))
+
+(defun etaf-css-create-rule (selector declarations specificity source &optional media node)
+  "创建样式规则节点（使用 DOM 格式）。
+SELECTOR 是 CSS 选择器字符串。
+DECLARATIONS 是声明列表 ((property value important) ...)。
+SPECIFICITY 是特异性元组 (inline id class type)。
+SOURCE 是样式来源：'ua, 'inline, 或 'style-tag。
+MEDIA 是可选的媒体查询字符串。
+NODE 是可选的 DOM 节点引用（仅用于内联样式）。
+返回 DOM 格式的规则节点。"
+  (let ((attrs (list (cons 'type 'style-rule)
+                     (cons 'selector selector)
+                     (cons 'declarations declarations)
+                     (cons 'specificity specificity)
+                     (cons 'source source)
+                     (cons 'media media))))
+    (when node
+      (push (cons 'node node) attrs))
+    (list 'rule attrs)))
+
+;;; 从 DOM 提取样式并构建树
 
 (defun etaf-css-extract-inline-styles (dom)
-  "从 DOM 树中提取所有内联样式（style 属性）。
-返回规则列表，每个规则包含节点引用和样式声明。"
-  (let ((rules '()))
+  "从 DOM 树中提取所有内联样式，构建样式表子树。
+DOM 是 DOM 树根节点。
+返回内联样式表节点（stylesheet 节点）。"
+  (let ((stylesheet (etaf-css-create-stylesheet 'inline))
+        (rules '()))
     (etaf-dom-map
      (lambda (node)
        (when-let* ((style-attr (dom-attr node 'style))
                    (declarations (etaf-css-parse-declarations style-attr)))
          (when declarations
-           ;; 为内联样式生成唯一标识（使用节点的标签、类和ID）
+           ;; 为内联样式生成唯一标识
            (let* ((tag (dom-tag node))
                   (id (dom-attr node 'id))
                   (class (dom-attr node 'class))
@@ -81,120 +158,212 @@
                                    (when class 
                                      (mapconcat (lambda (c) (concat "." c))
                                                (split-string class) "")))))
-             (push (list :selector selector
-                        :declarations declarations
-                        :specificity '(1 0 0 0)  ; 内联样式最高特异性
-                        :source 'inline
-                        :node node)
+             (push (etaf-css-create-rule selector
+                                         declarations
+                                         '(1 0 0 0)  ; 内联样式最高特异性
+                                         'inline
+                                         nil
+                                         node)
                    rules)))))
      dom)
-    (nreverse rules)))
+    ;; 将规则添加为样式表的子节点
+    (when rules
+      (nconc stylesheet (nreverse rules)))
+    stylesheet))
 
 (defun etaf-css-extract-style-tags (dom)
-  "从 DOM 树中提取 <style> 标签内的 CSS 规则。
-返回规则列表。"
-  (let ((rules '())
+  "从 DOM 树中提取 <style> 标签内的 CSS 规则，构建样式表子树。
+DOM 是 DOM 树根节点。
+返回样式表节点列表。"
+  (let ((stylesheets '())
         (style-nodes (dom-search dom (lambda (node) 
                                        (eq (dom-tag node) 'style)))))
     (dolist (style-node style-nodes)
       (when-let ((css-content (dom-texts style-node))
-                 (stylesheet-rules (etaf-css-parse-stylesheet css-content)))
-        (setq rules (append rules stylesheet-rules))))
-    rules))
+                 (parsed-rules (etaf-css-parse-stylesheet css-content)))
+        ;; 为每个 <style> 标签创建一个样式表节点
+        (let ((stylesheet (etaf-css-create-stylesheet 'style-tag)))
+          ;; 将解析的规则转换为规则节点
+          (dolist (rule-plist parsed-rules)
+            (let ((rule-node (etaf-css-create-rule
+                              (plist-get rule-plist :selector)
+                              (plist-get rule-plist :declarations)
+                              (plist-get rule-plist :specificity)
+                              (plist-get rule-plist :source)
+                              (plist-get rule-plist :media)
+                              nil)))
+              (nconc stylesheet (list rule-node))))
+          (push stylesheet stylesheets))))
+    (nreverse stylesheets)))
+
+;;; CSSOM 树辅助函数
+
+(defun etaf-css-get-all-rules (cssom)
+  "从 CSSOM 树中提取所有规则节点。
+CSSOM 是 CSSOM 根节点。
+返回规则节点列表（按优先级顺序：UA < Author < Inline）。"
+  (let ((rules '()))
+    ;; 遍历所有样式表节点（CSSOM 的子节点）
+    (dolist (stylesheet (dom-children cssom))
+      (when (eq (dom-tag stylesheet) 'stylesheet)
+        ;; 遍历样式表中的所有规则节点
+        (dolist (rule (dom-children stylesheet))
+          (when (eq (dom-tag rule) 'rule)
+            (push rule rules)))))
+    (nreverse rules)))
+
+(defun etaf-css-get-stylesheets (cssom)
+  "从 CSSOM 树中获取所有样式表节点。
+CSSOM 是 CSSOM 根节点。
+返回样式表节点列表。"
+  (let ((stylesheets '()))
+    (dolist (child (dom-children cssom))
+      (when (eq (dom-tag child) 'stylesheet)
+        (push child stylesheets)))
+    (nreverse stylesheets)))
+
+(defun etaf-css-rule-to-plist (rule-node)
+  "将规则节点转换为 plist 格式（用于兼容旧代码）。
+RULE-NODE 是规则节点。
+返回 plist 格式的规则。"
+  (list :selector (dom-attr rule-node 'selector)
+        :declarations (dom-attr rule-node 'declarations)
+        :specificity (dom-attr rule-node 'specificity)
+        :source (dom-attr rule-node 'source)
+        :media (dom-attr rule-node 'media)
+        :node (dom-attr rule-node 'node)))
 
 ;;; CSSOM 构建和查询
 
 (defun etaf-css-build-cssom (dom &optional media-env)
-  "从 DOM 树构建 CSSOM (CSS Object Model)。
+  "从 DOM 树构建 CSSOM (CSS Object Model) 树结构。
 DOM 是要构建 CSSOM 的 DOM 树。
 MEDIA-ENV 是可选的媒体查询环境 alist。
-返回包含所有 CSS 规则、索引和缓存的 CSSOM 结构。
+返回 CSSOM 根节点（使用 DOM 格式的树结构）。
 
-CSSOM 结构：
-- :ua-rules - User Agent 样式规则列表（最低优先级）
-- :style-rules - 样式表规则列表
-- :inline-rules - 内联样式规则列表（最高优先级）
-- :all-rules - 所有规则（按优先级顺序：UA < Author < Inline）
-- :rule-index - 规则索引（按标签、类、ID）
-- :cache - 计算样式缓存
-- :media-env - 媒体查询环境
+CSSOM 树结构：
+- 根节点 (cssom)：包含缓存、索引和环境配置
+  - 样式表节点 (stylesheet)：按优先级顺序（UA < Author < Inline）
+    - 规则节点 (rule)：包含选择器、声明、特异性等
+
+可以使用 DOM 库函数操作 CSSOM 树：
+- (dom-tag cssom) => 'cssom
+- (dom-attr cssom 'cache) => 缓存对象
+- (dom-children cssom) => 样式表节点列表
+- (etaf-dom-map func cssom) => 遍历树
 
 CSS 层叠顺序（从低到高）：
 1. User Agent Stylesheet (UA rules)
 2. Author Stylesheets (style tags)
 3. Inline Styles (style attribute)"
-  (let* ((ua-rules (etaf-ua-stylesheet-get-rules))
-         (style-rules (etaf-css-extract-style-tags dom))
-         (inline-rules (etaf-css-extract-inline-styles dom))
-         ;; Order matters: UA rules first (lowest priority), then author, then inline
-         (all-rules (append ua-rules style-rules inline-rules))
-         (rule-index (etaf-css-index-build all-rules))
-         (cache (etaf-css-cache-create))
-         (env (or media-env etaf-css-media-environment)))
-    (list :ua-rules ua-rules
-          :style-rules style-rules
-          :inline-rules inline-rules
-          :all-rules all-rules
-          :rule-index rule-index
-          :cache cache
-          :media-env env)))
+  (let* ((cssom (etaf-css-create-cssom-root media-env))
+         ;; 创建 UA 样式表
+         (ua-stylesheet (etaf-css-create-stylesheet 'ua))
+         ;; 获取 UA 规则并转换为规则节点
+         (ua-rules-plist (etaf-ua-stylesheet-get-rules)))
+    
+    ;; 将 UA 规则添加到 UA 样式表
+    (dolist (rule-plist ua-rules-plist)
+      (let ((rule-node (etaf-css-create-rule
+                        (plist-get rule-plist :selector)
+                        (plist-get rule-plist :declarations)
+                        (plist-get rule-plist :specificity)
+                        'ua
+                        (plist-get rule-plist :media)
+                        nil)))
+        (nconc ua-stylesheet (list rule-node))))
+    
+    ;; 提取样式表（author stylesheets）
+    (let ((author-stylesheets (etaf-css-extract-style-tags dom))
+          ;; 提取内联样式表
+          (inline-stylesheet (etaf-css-extract-inline-styles dom)))
+      
+      ;; 按优先级顺序添加样式表到 CSSOM：UA < Author < Inline
+      ;; 首先添加 UA 样式表
+      (nconc cssom (list ua-stylesheet))
+      ;; 然后添加 author 样式表
+      (dolist (stylesheet author-stylesheets)
+        (nconc cssom (list stylesheet)))
+      ;; 最后添加内联样式表
+      (when (dom-children inline-stylesheet)  ; 只有当有规则时才添加
+        (nconc cssom (list inline-stylesheet)))
+      
+      ;; 构建规则索引
+      (let* ((all-rules (etaf-css-get-all-rules cssom))
+             ;; 将规则节点转换为 plist 格式用于构建索引
+             (rules-for-index (mapcar (lambda (rule-node)
+                                        (etaf-css-rule-to-plist rule-node))
+                                      all-rules))
+             (rule-index (etaf-css-index-build rules-for-index)))
+        ;; 更新 CSSOM 根节点的索引属性
+        (let ((attrs (dom-attributes cssom)))
+          (setcdr (assq 'rule-index attrs) rule-index)))
+      
+      cssom)))
 
 (defun etaf-css-get-rules-for-node (cssom node dom)
-  "从 CSSOM 中获取适用于指定节点的所有规则（使用索引优化）。
-CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
+  "从 CSSOM 树中获取适用于指定节点的所有规则（使用索引优化）。
+CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 根节点。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
-返回适用的规则列表，会过滤掉不匹配的媒体查询规则。"
+返回适用的规则节点列表，会过滤掉不匹配的媒体查询规则。"
   (let ((matching-rules '())
-        (rule-index (plist-get cssom :rule-index))
-        (media-env (plist-get cssom :media-env))
+        (rule-index (dom-attr cssom 'rule-index))
+        (media-env (dom-attr cssom 'media-env))
         (etaf-dom--query-root dom))
     
-    ;; 1. 首先查询索引获取候选规则（性能优化）
-    (let ((candidates (if rule-index
-                          (etaf-css-index-query-candidates rule-index node)
-                        (plist-get cssom :all-rules))))
+    ;; 1. 获取所有规则节点
+    (let ((all-rule-nodes (etaf-css-get-all-rules cssom)))
       
-      ;; 2. 对候选规则进行匹配测试
-      (dolist (rule candidates)
-        ;; 2.1 检查媒体查询是否匹配
-        (let ((media-query (plist-get rule :media)))
-          (when (or (null media-query)
-                    (etaf-css-media-match-p media-query media-env))
-            ;; 媒体查询匹配，继续检查选择器
-            (cond
-             ;; 内联样式直接匹配节点
-             ;; 使用严格的节点身份比较 (eq)，避免不同节点因属性相同而错误匹配
-             ;; 这修复了当多个节点具有相同标签和属性时可能导致的样式混淆问题
-             ((eq (plist-get rule :source) 'inline)
-              (let ((rule-node (plist-get rule :node)))
-                (when (eq rule-node node)
-                  (push rule matching-rules))))
-             ;; UA 样式和外部样式通过选择器匹配
-             ((or (eq (plist-get rule :source) 'ua)
-                  (eq (plist-get rule :source) 'style-tag))
-              (condition-case nil
-                  (let* ((selector (plist-get rule :selector))
-                         (ast (etaf-css-selector-parse selector)))
-                    (when ast
-                      ;; 处理逗号分隔的选择器组（如 "div, p, h1"）
-                      ;; AST 的 :nodes 包含所有选择器，需要检查每一个
-                      (let ((selectors (plist-get ast :nodes))
-                            (matched nil))
-                        (dolist (sel selectors)
-                          (when (and sel
-                                    (eq (plist-get sel :type) 'selector))
-                            ;; 使用支持组合器的匹配函数
-                            (when (etaf-css-selector-node-matches-p node dom sel)
-                              (setq matched t))))
-                        (when matched
-                          (push rule matching-rules)))))
-                (error nil))))))))
+      ;; 2. 如果有索引，使用索引查询候选规则
+      (let ((candidates (if rule-index
+                            ;; 将规则节点转换为 plist 格式用于索引查询
+                            (let* ((rules-plist (mapcar #'etaf-css-rule-to-plist all-rule-nodes))
+                                   (candidate-plists (etaf-css-index-query-candidates rule-index node)))
+                              ;; 找回对应的规则节点
+                              (cl-remove-if-not
+                               (lambda (rule-node)
+                                 (let ((rule-plist (etaf-css-rule-to-plist rule-node)))
+                                   (member rule-plist candidate-plists)))
+                               all-rule-nodes))
+                          all-rule-nodes)))
+        
+        ;; 3. 对候选规则进行匹配测试
+        (dolist (rule-node candidates)
+          (let ((rule-plist (etaf-css-rule-to-plist rule-node))
+                (media-query (dom-attr rule-node 'media)))
+            ;; 3.1 检查媒体查询是否匹配
+            (when (or (null media-query)
+                      (etaf-css-media-match-p media-query media-env))
+              ;; 媒体查询匹配，继续检查选择器
+              (cond
+               ;; 内联样式直接匹配节点
+               ((eq (plist-get rule-plist :source) 'inline)
+                (let ((rule-node-ref (plist-get rule-plist :node)))
+                  (when (eq rule-node-ref node)
+                    (push rule-plist matching-rules))))
+               ;; UA 样式和外部样式通过选择器匹配
+               ((or (eq (plist-get rule-plist :source) 'ua)
+                    (eq (plist-get rule-plist :source) 'style-tag))
+                (condition-case nil
+                    (let* ((selector (plist-get rule-plist :selector))
+                           (ast (etaf-css-selector-parse selector)))
+                      (when ast
+                        (let ((selectors (plist-get ast :nodes))
+                              (matched nil))
+                          (dolist (sel selectors)
+                            (when (and sel
+                                      (eq (plist-get sel :type) 'selector))
+                              (when (etaf-css-selector-node-matches-p node dom sel)
+                                (setq matched t))))
+                          (when matched
+                            (push rule-plist matching-rules)))))
+                  (error nil)))))))))
     (nreverse matching-rules)))
 
 (defun etaf-css-get-computed-style (cssom node dom)
   "计算指定节点的最终样式（使用缓存和完整层叠算法）。
-CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
+CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 根节点。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
 返回合并后的样式声明列表 ((property . value) ...)。
@@ -208,7 +377,7 @@ DOM 是根 DOM 节点。
 - 属性继承
 - Tailwind CSS 类名转换
 - Tailwind CSS 复合属性展开"
-  (let ((cache (plist-get cssom :cache)))
+  (let ((cache (dom-attr cssom 'cache)))
     ;; 1. 尝试从缓存获取
     (or (and cache (etaf-css-cache-get cache node))
         ;; 2. 缓存未命中，计算新样式
@@ -216,13 +385,10 @@ DOM 是根 DOM 节点。
                ;; 3. 使用层叠算法合并规则
                (computed-style (etaf-css-cascade-merge-rules rules))
                ;; 4. 处理 Tailwind CSS 类名并展开复合属性
-               ;; 使用 when-let* 组合条件，避免不必要的中间变量
-               ;; 使用 etaf-tailwind-classes-to-css-with-mode 以支持 dark: 变体
                (tailwind-style (when-let* ((class-attr (dom-attr node 'class))
                                            (tailwind-raw (etaf-tailwind-classes-to-css-with-mode class-attr)))
                                  (etaf-css--expand-tailwind-shorthand tailwind-raw)))
                ;; 5. 合并 Tailwind 样式到计算样式
-               ;; Tailwind 类的优先级介于普通 CSS 规则和内联样式之间
                (computed-with-tailwind
                 (if tailwind-style
                     (etaf-css--merge-style-alists computed-style tailwind-style)
@@ -348,9 +514,18 @@ ADDITIONAL-STYLE 是要合并的样式 alist。
     result))
 
 (defun etaf-css-rule-to-string (rule)
-  "将 CSS 规则转换为字符串形式。"
-  (let ((selector (plist-get rule :selector))
-        (declarations (plist-get rule :declarations)))
+  "将 CSS 规则转换为字符串形式。
+RULE 可以是规则节点或 plist 格式的规则。"
+  (let* ((selector (if (listp rule)
+                       (if (eq (car rule) 'rule)
+                           (dom-attr rule 'selector)
+                         (plist-get rule :selector))
+                     nil))
+         (declarations (if (listp rule)
+                           (if (eq (car rule) 'rule)
+                               (dom-attr rule 'declarations)
+                             (plist-get rule :declarations))
+                         nil)))
     (format "%s { %s }"
             selector
             (mapconcat (lambda (decl)
@@ -364,19 +539,23 @@ ADDITIONAL-STYLE 是要合并的样式 alist。
                       declarations "; "))))
 
 (defun etaf-css-cssom-to-string (cssom)
-  "将 CSSOM 转换为可读的字符串形式。"
-  (let ((all-rules (plist-get cssom :all-rules)))
-    (mapconcat #'etaf-css-rule-to-string all-rules "\n\n")))
+  "将 CSSOM 树转换为可读的字符串形式。
+CSSOM 是 CSSOM 根节点。"
+  (let ((all-rules (etaf-css-get-all-rules cssom)))
+    (mapconcat (lambda (rule-node)
+                 (etaf-css-rule-to-string rule-node))
+               all-rules "\n\n")))
 
 (defun etaf-css-clear-cache (cssom)
   "清空 CSSOM 的缓存。
-在 DOM 或样式发生变化时应该调用此函数。"
-  (when-let ((cache (plist-get cssom :cache)))
+在 DOM 或样式发生变化时应该调用此函数。
+CSSOM 是 CSSOM 根节点。"
+  (when-let ((cache (dom-attr cssom 'cache)))
     (etaf-css-cache-clear cache)))
 
 (defun etaf-css-add-stylesheet (cssom css-string)
-  "向 CSSOM 添加外部 CSS 样式表。
-CSSOM 是由 etaf-css-build-cssom 生成的 CSS 对象模型。
+  "向 CSSOM 树添加外部 CSS 样式表。
+CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 根节点。
 CSS-STRING 是 CSS 样式表字符串，如 \".box { border: 1px solid red; }\"。
 返回更新后的 CSSOM。
 
@@ -389,17 +568,45 @@ CSS-STRING 是 CSS 样式表字符串，如 \".box { border: 1px solid red; }\"�
 
 注意：添加样式表后会清空缓存，以确保新样式能够生效。"
   (when (and css-string (not (string-empty-p css-string)))
-    (let* ((new-rules (etaf-css-parse-stylesheet css-string))
-           (old-all-rules (plist-get cssom :all-rules))
-           ;; 新规则添加到现有规则前面，优先级更高
-           (all-rules (append new-rules old-all-rules))
-           ;; 重建索引
-           (rule-index (etaf-css-index-build all-rules)))
-      ;; 更新 CSSOM
-      (setq cssom (plist-put cssom :all-rules all-rules))
-      (setq cssom (plist-put cssom :style-rules
-                             (append new-rules (plist-get cssom :style-rules))))
-      (setq cssom (plist-put cssom :rule-index rule-index))
+    (let* ((parsed-rules (etaf-css-parse-stylesheet css-string))
+           ;; 创建新的样式表节点
+           (new-stylesheet (etaf-css-create-stylesheet 'style-tag)))
+      
+      ;; 将解析的规则添加到新样式表
+      (dolist (rule-plist parsed-rules)
+        (let ((rule-node (etaf-css-create-rule
+                          (plist-get rule-plist :selector)
+                          (plist-get rule-plist :declarations)
+                          (plist-get rule-plist :specificity)
+                          (plist-get rule-plist :source)
+                          (plist-get rule-plist :media)
+                          nil)))
+          (nconc new-stylesheet (list rule-node))))
+      
+      ;; 将新样式表添加到 CSSOM（在内联样式之前）
+      ;; 找到内联样式表的位置
+      (let* ((children (dom-children cssom))
+             (inline-idx (cl-position-if
+                          (lambda (child)
+                            (and (eq (dom-tag child) 'stylesheet)
+                                 (eq (dom-attr child 'source) 'inline)))
+                          children)))
+        (if inline-idx
+            ;; 在内联样式表之前插入
+            (let ((before-inline (cl-subseq children 0 inline-idx))
+                  (from-inline (cl-subseq children inline-idx)))
+              ;; 重建子节点列表
+              (setcdr (cdr cssom) (append before-inline (list new-stylesheet) from-inline)))
+          ;; 没有内联样式表，直接添加到末尾
+          (nconc cssom (list new-stylesheet))))
+      
+      ;; 重建规则索引
+      (let* ((all-rules (etaf-css-get-all-rules cssom))
+             (rules-for-index (mapcar #'etaf-css-rule-to-plist all-rules))
+             (rule-index (etaf-css-index-build rules-for-index))
+             (attrs (dom-attributes cssom)))
+        (setcdr (assq 'rule-index attrs) rule-index))
+      
       ;; 清空缓存以使新样式生效
       (etaf-css-clear-cache cssom)))
   cssom)
