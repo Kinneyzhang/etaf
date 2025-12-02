@@ -7,7 +7,9 @@
 
 (require 'ert)
 (require 'etaf-layout)
+(require 'etaf-render)
 (require 'etaf-css)
+(require 'etaf-ecss)
 (require 'etaf-etml)
 
 ;;; Helper Functions
@@ -80,7 +82,8 @@
                  (body
                   (div "Content")))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768))))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     (should layout-tree)
     (should (etaf-layout-get-box-model layout-tree))
@@ -100,7 +103,8 @@
                        (div :class "inner" "Inner 1")
                        (div :class "inner" "Inner 2"))))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768))))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     ;; 检查布局树结构
     (should layout-tree)
@@ -133,7 +137,8 @@
                   (div :class "container"
                        (div :class "box" "Auto width"))))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768))))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     (let* ((body-node (car (dom-non-text-children layout-tree)))
            (container-node (car (dom-non-text-children body-node)))
@@ -173,7 +178,8 @@
                  (body
                   (div "Content")))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (div-node (car (dom-non-text-children body-node)))
          (box-model (etaf-layout-get-box-model div-node))
@@ -214,7 +220,8 @@
                        (div :class "box" "Box 2")
                        (div :class "box" "Box 3"))))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (container-node (car (dom-non-text-children body-node)))
          (container-box (etaf-layout-get-box-model container-node)))
@@ -231,7 +238,8 @@
                  (body
                   (div (div "Nested"))))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
          (count 0))
     
     (etaf-layout-walk layout-tree
@@ -248,7 +256,8 @@
                  (body
                   (div "Content")))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
          (layout-str (etaf-layout-to-string layout-tree)))
     
     (should (stringp layout-str))
@@ -271,7 +280,8 @@
                   (div :class "container"
                        (div :class "box" "Content"))))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768))))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
     
     ;; 验证完整的流程
     (should dom)
@@ -296,7 +306,8 @@ This tests the bug fix where string children were not included in height calcula
                  (body
                   (div (div "line1\nline2\nline3\nline4"))))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (outer-div (car (dom-non-text-children body-node)))
          (outer-box (etaf-layout-get-box-model outer-div))

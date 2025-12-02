@@ -80,7 +80,8 @@ not the natural height of the content."
                  (body
                   (div "Short text")))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (div-node (car (dom-non-text-children body-node)))
          (box-model (etaf-layout-get-box-model div-node)))
@@ -97,7 +98,8 @@ When CSS height is 3 lines, the rendered string should have 3 lines."
                  (body
                   (div "Line")))))
          (cssom (etaf-css-build-cssom dom))
-         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
+         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
          (buffer-string (etaf-layout-to-string layout-tree)))
     ;; The rendered string should have at least 3 lines for the div content
     ;; (the div has height 3)
@@ -128,7 +130,7 @@ When viewport width is nil, block elements should use content width (0)."
                  (body
                   (div "Content")))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
          ;; Use nil width in viewport
          (layout-tree (etaf-layout-build-tree render-tree '(:width nil :height 768))))
     ;; Layout tree should be created successfully
@@ -145,7 +147,7 @@ When viewport height is nil, percentage heights should return auto."
                  (body
                   (div "Content")))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
          ;; Use nil height in viewport
          (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height nil)))
          (body-node (car (dom-non-text-children layout-tree)))
@@ -164,7 +166,7 @@ When both viewport dimensions are nil, elements should use natural dimensions."
                  (body
                   (div "Some text content")))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
+         (render-tree (etaf-ecss-build-render-tree dom cssom))
          ;; Use nil for both width and height
          (layout-tree (etaf-layout-build-tree render-tree '(:width nil :height nil))))
     ;; Layout tree should be created successfully

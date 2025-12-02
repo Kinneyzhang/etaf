@@ -719,5 +719,69 @@ Example:
                 `'(,(car rule) ,@(cdr rule)))
               rules)))
 
+;;; Render Tree Building
+;; 
+;; The render tree building functionality is integrated into the ECSS module
+;; because it bridges the gap between CSS styling and DOM rendering.
+;; The ECSS module calls the CSS module to compute styles and creates
+;; the render tree that will be used by the layout module.
+
+(require 'etaf-css)
+(require 'etaf-dom)
+
+;; Forward declarations from etaf-render
+(declare-function etaf-render-get-default-display "etaf-render")
+(declare-function etaf-render-create-node "etaf-render")
+(declare-function etaf-render-node-visible-p "etaf-render")
+
+(defun etaf-ecss-build-render-tree (dom cssom)
+  "从 DOM 和 CSSOM 构建渲染树。
+DOM 是 DOM 树根节点。
+CSSOM 是 CSS 对象模型。
+返回渲染树根节点。
+
+This function is the main entry point for building the render tree.
+It calls the CSS module to compute styles for each DOM node and
+creates a render tree with computed styles attached.
+
+The render tree:
+- Filters out invisible elements (display: none, <head>, <script>, etc.)
+- Attaches computed styles to each node
+- Preserves DOM structure while adding rendering information"
+  (etaf-ecss--build-render-node dom cssom dom))
+
+(defun etaf-ecss--build-render-node (node cssom root-dom)
+  "递归构建渲染节点。
+NODE 是当前 DOM 节点。
+CSSOM 是 CSS 对象模型。
+ROOT-DOM 是 DOM 树根节点。
+返回渲染节点或 nil（如果节点不可见）。
+
+This is an internal function that recursively processes each DOM node,
+computes its styles using the CSS module, and creates render nodes."
+  (when-let ((tag (dom-tag node)))
+    ;; 获取双模式计算样式（调用 CSS 模块）
+    (let* ((dual-style (etaf-css-get-computed-style-dual-mode cssom node root-dom))
+           (computed-style (plist-get dual-style :light))
+           (computed-style-dark (plist-get dual-style :dark)))
+      ;; 检查节点是否可见（使用 render 模块的函数）
+      (when (etaf-render-node-visible-p node computed-style)
+        ;; 创建渲染节点（使用 render 模块的函数）
+        (let ((render-node (etaf-render-create-node node computed-style computed-style-dark)))
+          ;; 递归处理子节点
+          (let ((children '()))
+            (dolist (child (dom-children node))
+              (cond
+               ;; 元素节点：递归构建渲染节点
+               ((and (consp child) (symbolp (car child)))
+                (when-let ((child-render (etaf-ecss--build-render-node child cssom root-dom)))
+                  (push child-render children)))
+               ;; 文本节点：直接保留
+               ((stringp child)
+                (push child children))))
+            ;; 将子节点添加到渲染节点（DOM 格式）
+            (setcdr (cdr render-node) (nreverse children)))
+          render-node)))))
+
 (provide 'etaf-ecss)
 ;;; etaf-ecss.el ends here
