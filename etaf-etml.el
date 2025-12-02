@@ -129,8 +129,15 @@ Returns a string like \"property1: value1; property2: value2\"."
 (defun etaf-class-list-to-string (class-list)
   "Convert CLASS-LIST to a class string.
 CLASS-LIST is a list of strings: (\"class1\" \"class2\" ...).
-Returns a string like \"class1 class2 ...\"."
-  (mapconcat #'identity class-list " "))
+Returns a string like \"class1 class2 ...\".
+Empty strings and nil values are filtered out."
+  (mapconcat #'identity
+             (delq nil (mapcar (lambda (s)
+                                 (and (stringp s)
+                                      (not (string-empty-p s))
+                                      s))
+                               class-list))
+             " "))
 
 (defun etaf-etml--ecss-item-p (item)
   "Check if ITEM is an (ecss ...) form.
