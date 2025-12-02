@@ -21,9 +21,22 @@
 ;; - Display: Block, inline, inline-block, etc.
 ;;
 ;; DEFAULT STYLES:
-;; Default styles for tags are NO LONGER defined on the tags themselves.
-;; Instead, they are provided by the User Agent Stylesheet (etaf-ua-stylesheet.el)
-;; which is integrated into the CSS system following browser standards.
+;; Default styles for tags are provided by the User Agent Stylesheet 
+;; (etaf-ua-stylesheet.el) which is integrated into the CSS system following 
+;; browser standards. This includes pseudo-class rules like a:hover, button:active.
+;;
+;; INTERACTIVE STATE STYLES:
+;; Interactive pseudo-class styles (:hover, :active, :focus, :disabled) are defined
+;; in BOTH places for full functionality:
+;; 1. UA Stylesheet - CSS pseudo-class rules (e.g., "a:hover{text-blue-700}")
+;;    These are used by the CSS matching system and follow web standards.
+;; 2. Tag Definitions - Emacs-native implementation using text properties
+;;    :hover-style uses mouse-face property for visual feedback
+;;    :focus-style applied when element has focus
+;;    :active-style applied when element is being activated
+;;    :disabled-style applied when element is disabled
+;; This dual approach ensures both semantic correctness (CSS) and functional
+;; implementation (Emacs native capabilities).
 ;;
 ;; CSS Priority Order (low to high):
 ;; 1. User Agent Stylesheet (etaf-ua-stylesheet.el)
@@ -576,7 +589,10 @@ Returns (tag-name ((attrs...)) children...)."
   :children-allowed nil)
 
 ;; Interactive elements with event handlers
+;; Note: State styles use Emacs native capabilities (mouse-face for hover)
+;; while also being defined in UA stylesheet as CSS pseudo-classes
 (define-etaf-etml-tag a
+  :hover-style '((color . "#1d4ed8"))  ; text-blue-700
   :on-click (lambda (event)
               (let* ((target (plist-get event :target))
                      (attrs (plist-get target :attrs))
@@ -585,6 +601,11 @@ Returns (tag-name ((attrs...)) children...)."
                   (browse-url href)))))
 
 (define-etaf-etml-tag button
+  :hover-style '((background-color . "#e5e7eb"))  ; bg-gray-200
+  :active-style '((background-color . "#d1d5db"))  ; bg-gray-300
+  :disabled-style '((background-color . "#f3f4f6")  ; bg-gray-100
+                    (color . "#9ca3af")  ; text-gray-500
+                    (cursor . "not-allowed"))
   :on-click (lambda (event)
               (let* ((target (plist-get event :target))
                      (state (plist-get target :state)))
@@ -604,11 +625,17 @@ Returns (tag-name ((attrs...)) children...)."
                            (not (plist-get state :expanded))))))
 
 ;; Form elements with special metadata or state styles
+;; Note: Focus/disabled styles use Emacs native capabilities
+;; while also being defined in UA stylesheet as CSS pseudo-classes
 (define-etaf-etml-tag input
   :self-closing t
-  :children-allowed nil)
+  :children-allowed nil
+  :focus-style '((border-color . "#3b82f6"))  ; border-blue-500
+  :disabled-style '((background-color . "#f3f4f6")  ; bg-gray-100
+                    (color . "#9ca3af")))  ; text-gray-500
 
-(define-etaf-etml-tag textarea)
+(define-etaf-etml-tag textarea
+  :focus-style '((border-color . "#3b82f6")))  ; border-blue-500
 
 ;; Elements that don't allow children
 (define-etaf-etml-tag progress
