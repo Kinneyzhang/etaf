@@ -25,17 +25,22 @@
 ;; - etaf-css-media: 媒体查询支持
 ;; - etaf-css-parse: CSS 值解析（单位转换：px, %, em, lh, cw）
 ;;
-;; CSSOM 结构：
-;; - inline-rules: 内联样式规则
-;; - style-rules: 样式表规则
-;; - all-rules: 所有规则（按顺序）
-;; - rule-index: 规则索引（按标签、类、ID）
-;; - cache: 计算样式缓存
-;; - media-env: 媒体查询环境
+;; CSSOM 结构（扁平的 plist）：
+;; - :ua-rules - User Agent 样式规则列表
+;; - :style-rules - 样式表规则列表
+;; - :inline-rules - 内联样式规则列表
+;; - :all-rules - 所有规则（按顺序）
+;; - :rule-index - 规则索引（按标签、类、ID）
+;; - :cache - 计算样式缓存
+;; - :media-env - 媒体查询环境
+;;
+;; 这种扁平结构参考了 Chromium 浏览器的实现：
+;; CSSOM 就是一个全局的规则集合，加上索引方便查询。
+;; 不需要树形结构，避免不必要的 DOM 复制。
 ;;
 ;; 使用示例：
 ;;
-;;   ;; 从 DOM 构建 CSSOM
+;;   ;; 从 DOM 构建 CSSOM（返回扁平的 plist）
 ;;   (etaf-css-build-cssom dom)
 ;;   
 ;;   ;; 解析 CSS 声明（支持 !important）
@@ -108,22 +113,21 @@
   "从 DOM 树构建 CSSOM (CSS Object Model)。
 DOM 是要构建 CSSOM 的 DOM 树。
 MEDIA-ENV 是可选的媒体查询环境 alist。
-返回 CSSOM 树，其结构基于 DOM 树，在 DOM 节点上附加 CSSOM 属性。
+返回 CSSOM 对象，这是一个扁平的 plist 结构，包含规则集合和索引。
 
-CSSOM 树结构（基于 DOM 标签节点）：
-- 保持原始 DOM 的树形结构（tag、attributes、children）
-- 在根节点附加 CSSOM 全局属性：
-  - cssom-ua-rules: User Agent 样式规则列表
-  - cssom-style-rules: 样式表规则列表
-  - cssom-inline-rules: 内联样式规则列表
-  - cssom-all-rules: 所有规则（按优先级顺序）
-  - cssom-rule-index: 规则索引（按标签、类、ID）
-  - cssom-cache: 计算样式缓存
-  - cssom-media-env: 媒体查询环境
-- 每个节点可以有 cssom-matching-rules 属性（匹配该节点的规则）
+CSSOM 结构（扁平的 plist）：
+  (:ua-rules UA样式规则列表
+   :style-rules 样式表规则列表
+   :inline-rules 内联样式规则列表
+   :all-rules 所有规则（按优先级顺序）
+   :rule-index 规则索引（按标签、类、ID）
+   :cache 计算样式缓存
+   :media-env 媒体查询环境)
 
-这种结构类似 render tree，使用 DOM 格式，可以用 dom-tag、dom-attr、
-dom-children 等函数操作。
+这种扁平结构参考了 Chromium 浏览器的实现：
+- CSSOM 是一个全局的规则集合
+- 通过索引提供快速查询
+- 不需要树形结构，避免不必要的DOM复制
 
 CSS 层叠顺序（从低到高）：
 1. User Agent Stylesheet (UA rules)
@@ -137,75 +141,33 @@ CSS 层叠顺序（从低到高）：
          (rule-index (etaf-css-index-build all-rules))
          (cache (etaf-css-cache-create))
          (env (or media-env etaf-css-media-environment)))
-    ;; 复制 DOM 结构并附加 CSSOM 属性
-    (etaf-css--attach-cssom-to-dom 
-     dom ua-rules style-rules inline-rules all-rules rule-index cache env)))
+    ;; 返回扁平的 CSSOM 结构
+    (list :ua-rules ua-rules
+          :style-rules style-rules
+          :inline-rules inline-rules
+          :all-rules all-rules
+          :rule-index rule-index
+          :cache cache
+          :media-env env)))
 
-(defun etaf-css--attach-cssom-to-dom (dom ua-rules style-rules inline-rules 
-                                          all-rules rule-index cache media-env)
-  "将 CSSOM 属性附加到 DOM 树的副本上。
-返回带有 CSSOM 属性的 DOM 树（CSSOM 树）。"
-  (let* ((tag (dom-tag dom))
-         (attrs (dom-attributes dom))
-         (children (dom-children dom))
-         ;; 在根节点附加 CSSOM 全局属性
-         (cssom-attrs (if (null attrs)
-                          (list (cons 'cssom-ua-rules ua-rules)
-                                (cons 'cssom-style-rules style-rules)
-                                (cons 'cssom-inline-rules inline-rules)
-                                (cons 'cssom-all-rules all-rules)
-                                (cons 'cssom-rule-index rule-index)
-                                (cons 'cssom-cache cache)
-                                (cons 'cssom-media-env media-env))
-                        (append attrs
-                                (list (cons 'cssom-ua-rules ua-rules)
-                                      (cons 'cssom-style-rules style-rules)
-                                      (cons 'cssom-inline-rules inline-rules)
-                                      (cons 'cssom-all-rules all-rules)
-                                      (cons 'cssom-rule-index rule-index)
-                                      (cons 'cssom-cache cache)
-                                      (cons 'cssom-media-env media-env))))))
-    ;; 递归处理子节点 - 只在第一层附加全局属性，子节点保持原样
-    (cons tag
-          (cons cssom-attrs
-                (mapcar (lambda (child)
-                          (if (and (listp child) (symbolp (car child)))
-                              ;; 对于子节点，只复制结构不附加全局CSSOM属性
-                              (etaf-css--copy-dom-node child)
-                            child))
-                        children)))))
 
-(defun etaf-css--copy-dom-node (node)
-  "复制 DOM 节点（深度复制）。"
-  (if (and (listp node) (symbolp (car node)))
-      (let ((tag (dom-tag node))
-            (attrs (dom-attributes node))
-            (children (dom-children node)))
-        (cons tag
-              (cons attrs
-                    (mapcar (lambda (child)
-                              (if (and (listp child) (symbolp (car child)))
-                                  (etaf-css--copy-dom-node child)
-                                child))
-                            children))))
-    node))
 
 (defun etaf-css-get-rules-for-node (cssom node dom)
   "从 CSSOM 中获取适用于指定节点的所有规则（使用索引优化）。
-CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 树（带CSSOM属性的DOM树）。
-NODE 是要查询的 DOM 节点（可以是 CSSOM 树中的节点或原始 DOM 节点）。
-DOM 是根 DOM 节点（通常与 CSSOM 相同）。
+CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 对象（扁平的 plist 结构）。
+NODE 是要查询的 DOM 节点。
+DOM 是根 DOM 节点。
 返回适用的规则列表，会过滤掉不匹配的媒体查询规则。"
   (let ((matching-rules '())
-        ;; 从 CSSOM 根节点获取全局属性
-        (rule-index (dom-attr cssom 'cssom-rule-index))
-        (media-env (dom-attr cssom 'cssom-media-env))
+        ;; 从 CSSOM plist 获取属性
+        (rule-index (plist-get cssom :rule-index))
+        (media-env (plist-get cssom :media-env))
         (etaf-dom--query-root dom))
     
     ;; 1. 首先查询索引获取候选规则（性能优化）
     (let ((candidates (if rule-index
                           (etaf-css-index-query-candidates rule-index node)
-                        (dom-attr cssom 'cssom-all-rules))))
+                        (plist-get cssom :all-rules))))
       
       ;; 2. 对候选规则进行匹配测试
       (dolist (rule candidates)
@@ -246,7 +208,7 @@ DOM 是根 DOM 节点（通常与 CSSOM 相同）。
 
 (defun etaf-css-get-computed-style (cssom node dom)
   "计算指定节点的最终样式（使用缓存和完整层叠算法）。
-CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 树（带CSSOM属性的DOM树）。
+CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 对象（扁平的 plist 结构）。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
 返回合并后的样式声明列表 ((property . value) ...)。
@@ -260,7 +222,7 @@ DOM 是根 DOM 节点。
 - 属性继承
 - Tailwind CSS 类名转换
 - Tailwind CSS 复合属性展开"
-  (let ((cache (dom-attr cssom 'cssom-cache)))
+  (let ((cache (plist-get cssom :cache)))
     ;; 1. 尝试从缓存获取
     (or (and cache (etaf-css-cache-get cache node))
         ;; 2. 缓存未命中，计算新样式
@@ -417,24 +379,24 @@ ADDITIONAL-STYLE 是要合并的样式 alist。
 
 (defun etaf-css-cssom-to-string (cssom)
   "将 CSSOM 转换为可读的字符串形式。
-CSSOM 是 CSSOM 树（带CSSOM属性的DOM树）。"
-  (let ((all-rules (dom-attr cssom 'cssom-all-rules)))
+CSSOM 是 CSSOM 对象（扁平的 plist 结构）。"
+  (let ((all-rules (plist-get cssom :all-rules)))
     (mapconcat #'etaf-css-rule-to-string all-rules "\n\n")))
 
 (defun etaf-css-clear-cache (cssom)
   "清空 CSSOM 的缓存。
 在 DOM 或样式发生变化时应该调用此函数。
-CSSOM 是 CSSOM 树（带CSSOM属性的DOM树）。"
-  (when-let ((cache (dom-attr cssom 'cssom-cache)))
+CSSOM 是 CSSOM 对象（扁平的 plist 结构）。"
+  (when-let ((cache (plist-get cssom :cache)))
     (etaf-css-cache-clear cache)))
 
 (defun etaf-css-add-stylesheet (cssom css-string)
   "向 CSSOM 添加外部 CSS 样式表。
-CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 树（带CSSOM属性的DOM树）。
+CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 对象（扁平的 plist 结构）。
 CSS-STRING 是 CSS 样式表字符串，如 \".box { border: 1px solid red; }\"。
 返回更新后的 CSSOM。
 
-注意：此函数会修改CSSOM树的属性。
+注意：此函数会修改 CSSOM 对象的属性。
 
 使用示例：
   (let* ((dom (etaf-etml-to-dom '(div :class \"box\" \"hello\")))
@@ -446,19 +408,17 @@ CSS-STRING 是 CSS 样式表字符串，如 \".box { border: 1px solid red; }\"�
 注意：添加样式表后会清空缓存，以确保新样式能够生效。"
   (when (and css-string (not (string-empty-p css-string)))
     (let* ((new-rules (etaf-css-parse-stylesheet css-string))
-           (old-all-rules (dom-attr cssom 'cssom-all-rules))
-           (old-style-rules (dom-attr cssom 'cssom-style-rules))
+           (old-all-rules (plist-get cssom :all-rules))
+           (old-style-rules (plist-get cssom :style-rules))
            ;; 新规则添加到现有规则前面，优先级更高
            (all-rules (append new-rules old-all-rules))
            (style-rules (append new-rules old-style-rules))
            ;; 重建索引
-           (rule-index (etaf-css-index-build all-rules))
-           ;; 获取属性列表并更新
-           (attrs (dom-attributes cssom)))
+           (rule-index (etaf-css-index-build all-rules)))
       ;; 更新 CSSOM 属性
-      (setcdr (assq 'cssom-all-rules attrs) all-rules)
-      (setcdr (assq 'cssom-style-rules attrs) style-rules)
-      (setcdr (assq 'cssom-rule-index attrs) rule-index)
+      (plist-put cssom :all-rules all-rules)
+      (plist-put cssom :style-rules style-rules)
+      (plist-put cssom :rule-index rule-index)
       ;; 清空缓存以使新样式生效
       (etaf-css-clear-cache cssom)))
   cssom)
