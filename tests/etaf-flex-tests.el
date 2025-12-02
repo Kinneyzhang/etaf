@@ -128,8 +128,7 @@
 When items are in a row flex layout, their combined width should equal
 the container's content-width, not each item filling the entire parent width."
   (require 'etaf-layout)
-  (require 'etaf-render)
-  (require 'etaf-css)
+    (require 'etaf-css)
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
@@ -149,8 +148,7 @@ the container's content-width, not each item filling the entire parent width."
                        (div :class "flex-item" "Item 2")
                        (div :class "flex-item" "Item 3"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (flex-container (car (dom-non-text-children body-node)))
          (flex-items (dom-non-text-children flex-container))
@@ -180,8 +178,7 @@ the container's content-width, not each item filling the entire parent width."
 When container width is greater than the total width of child elements,
 children with flex-grow > 0 should be stretched proportionally."
   (require 'etaf-layout)
-  (require 'etaf-render)
-  (require 'etaf-css)
+    (require 'etaf-css)
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
@@ -202,8 +199,7 @@ children with flex-grow > 0 should be stretched proportionally."
                        (div :class "flex-item" "A")
                        (div :class "flex-item" "B"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (flex-container (car (dom-non-text-children body-node)))
          (flex-items (dom-non-text-children flex-container))
@@ -230,8 +226,7 @@ children with flex-grow > 0 should be stretched proportionally."
   "Test that flex-grow distributes space proportionally.
 An item with flex-grow: 2 should grow twice as much as one with flex-grow: 1."
   (require 'etaf-layout)
-  (require 'etaf-render)
-  (require 'etaf-css)
+    (require 'etaf-css)
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
@@ -255,8 +250,7 @@ An item with flex-grow: 2 should grow twice as much as one with flex-grow: 1."
                        (div :class "item1" "A")
                        (div :class "item2" "B"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (flex-container (car (dom-non-text-children body-node)))
          (flex-items (dom-non-text-children flex-container)))
@@ -283,8 +277,7 @@ An item with flex-grow: 2 should grow twice as much as one with flex-grow: 1."
 When container width is less than the total width of child elements,
 children with flex-shrink > 0 should be reduced proportionally."
   (require 'etaf-layout)
-  (require 'etaf-render)
-  (require 'etaf-css)
+    (require 'etaf-css)
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
@@ -305,8 +298,7 @@ children with flex-shrink > 0 should be reduced proportionally."
                        (div :class "flex-item" "A")
                        (div :class "flex-item" "B"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (flex-container (car (dom-non-text-children body-node)))
          (flex-items (dom-non-text-children flex-container)))
@@ -327,8 +319,7 @@ children with flex-shrink > 0 should be reduced proportionally."
 (ert-deftest etaf-layout-test-flex-grow-zero-no-stretch ()
   "Test that flex-grow: 0 items don't stretch."
   (require 'etaf-layout)
-  (require 'etaf-render)
-  (require 'etaf-css)
+    (require 'etaf-css)
   (require 'etaf-etml)
   (let* ((dom (etaf-etml-to-dom
                '(html
@@ -352,8 +343,7 @@ children with flex-shrink > 0 should be reduced proportionally."
                        (div :class "no-grow" "A")
                        (div :class "grow" "B"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (flex-container (car (dom-non-text-children body-node)))
          (flex-items (dom-non-text-children flex-container)))
@@ -405,8 +395,7 @@ children with flex-shrink > 0 should be reduced proportionally."
 (ert-deftest etaf-layout-test-inline-elements-wrap ()
   "Test that inline elements wrap when they exceed container width."
   (require 'etaf-layout)
-  (require 'etaf-render)
-  (require 'etaf-css)
+    (require 'etaf-css)
   (require 'etaf-etml)
   ;; Test the helper function directly
   (let* ((str1 (make-string 50 ?A))  ;; A string of 50 'A' characters

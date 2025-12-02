@@ -198,6 +198,60 @@ LAYOUT-TREE 是布局树根节点。
 FUNC 是接受一个布局节点参数的函数。"
   (etaf-dom-map func layout-tree))
 
+(defun etaf-layout-find-by-tag (layout-tree tag)
+  "在布局树中查找指定标签的所有节点。
+LAYOUT-TREE 是布局树根节点。
+TAG 是要查找的标签名（symbol）。
+返回匹配的布局节点列表。"
+  (let ((result '()))
+    (etaf-layout-walk layout-tree
+      (lambda (node)
+        (when (eq (dom-tag node) tag)
+          (push node result))))
+    (nreverse result)))
+
+(defun etaf-layout-find-by-display (layout-tree display)
+  "在布局树中查找指定 display 类型的所有节点。
+LAYOUT-TREE 是布局树根节点。
+DISPLAY 是显示类型字符串（如 \"block\", \"inline\"）。
+返回匹配的布局节点列表。"
+  (let ((result '()))
+    (etaf-layout-walk layout-tree
+      (lambda (node)
+        (when (string= (etaf-layout-get-display node) display)
+          (push node result))))
+    (nreverse result)))
+
+(defun etaf-layout-stats (layout-tree)
+  "计算布局树的统计信息。
+LAYOUT-TREE 是布局树根节点。
+返回 plist 包含：
+- :node-count 节点总数
+- :max-depth 最大深度
+- :display-types display 类型的分布 alist"
+  (let ((node-count 0)
+        (max-depth 0)
+        (display-types (make-hash-table :test 'equal)))
+    (cl-labels ((count-nodes (node depth)
+                  (when node
+                    (cl-incf node-count)
+                    (setq max-depth (max max-depth depth))
+                    (let ((display (etaf-layout-get-display node)))
+                      (puthash display (1+ (gethash display display-types 0))
+                              display-types))
+                    ;; 遍历子节点（过滤出元素子节点）
+                    (dolist (child (dom-children node))
+                      (when (listp child)
+                        (count-nodes child (1+ depth)))))))
+      (count-nodes layout-tree 0))
+    ;; 转换 hash-table 为 alist
+    (let ((display-alist '()))
+      (maphash (lambda (k v) (push (cons k v) display-alist))
+              display-types)
+      (list :node-count node-count
+            :max-depth max-depth
+            :display-types (nreverse display-alist)))))
+
 (defun etaf-layout-to-string (layout-tree)
   "将布局树转换为可插入 Emacs buffer 的字符串。
 LAYOUT-TREE 是布局树根节点。
