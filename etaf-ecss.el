@@ -726,8 +726,10 @@ Example:
 ;; The ECSS module calls the CSS module to compute styles and creates
 ;; the render tree that will be used by the layout module.
 
-(require 'etaf-css)
 (require 'etaf-dom)
+
+;; Forward declarations from etaf-css
+(declare-function etaf-css-get-computed-style-dual-mode "etaf-css")
 
 ;; Forward declarations from etaf-render
 (declare-function etaf-render-get-default-display "etaf-render")
