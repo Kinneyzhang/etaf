@@ -71,7 +71,7 @@
                      (head (style "div { color: red; }"))
                      (body (div "Text")))))
         (cssom (etaf-css-build-cssom test-dom))
-        (index (plist-get cssom :rule-index)))
+        (index (dom-attr cssom 'cssom-rule-index)))
    (and (plist-get index :by-tag)
         (plist-get index :by-class)
         (plist-get index :by-id))))
