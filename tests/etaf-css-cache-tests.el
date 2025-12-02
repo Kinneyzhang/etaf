@@ -55,7 +55,7 @@
  (let* ((test-dom (etaf-etml-to-dom
                    '(div :style "color: red;" "Text")))
         (cssom (etaf-css-build-cssom test-dom)))
-   (hash-table-p (plist-get cssom :cache))))
+   (hash-table-p (dom-attr cssom 'cssom-cache))))
 
 ;;; 测试计算样式缓存命中
 
@@ -63,7 +63,7 @@
  (let* ((test-dom (etaf-etml-to-dom
                    '(div :style "color: red;" "Text")))
         (cssom (etaf-css-build-cssom test-dom))
-        (cache (plist-get cssom :cache)))
+        (cache (dom-attr cssom 'cssom-cache)))
    ;; 第一次计算
    (etaf-css-get-computed-style cssom test-dom test-dom)
    ;; 检查缓存命中
