@@ -859,19 +859,7 @@ Add docstrings to setup functions:
 ### From etaf-etml-* to etaf-*
 
 The component system was extracted from `etaf-etml.el` to `etaf-component.el`.
-All old names are aliased for backward compatibility:
-
-```elisp
-;; Old (still works)
-(etaf-etml-define-component ...)
-(etaf-etml-ref 0)
-(etaf-etml-computed ...)
-
-;; New (preferred)
-(etaf-define-component ...)
-(etaf-ref 0)
-(etaf-computed ...)
-```
+**Note: Backward compatibility aliases have been removed.** You must update your code to use the new function names.
 
 ### Updating Code
 
@@ -883,18 +871,26 @@ To update existing code:
    (require 'etaf-component)
    ```
 
-2. Update function names (optional):
+2. Update function names (required):
    ```elisp
-   ;; Find/replace
+   ;; Find/replace - old names no longer work
    etaf-etml-define-component → etaf-define-component
    etaf-etml-ref → etaf-ref
    etaf-etml-computed → etaf-computed
    etaf-etml-watch-source → etaf-watch
    etaf-etml-watch-effect → etaf-watch-effect
    etaf-etml-reactive → etaf-reactive
+   etaf-etml-ref-get → etaf-ref-get
+   etaf-etml-ref-set → etaf-ref-set
+   etaf-etml-ref-update → etaf-ref-update
+   etaf-etml-computed-get → etaf-computed-get
+   etaf-etml-reactive-get → etaf-reactive-get
+   etaf-etml-reactive-set → etaf-reactive-set
+   etaf-etml-reactive-to-plist → etaf-reactive-to-plist
+   etaf-etml-component-* → etaf-component-*
    ```
 
-3. Test your code - the aliases ensure backward compatibility
+3. Test your code after updating all function names
 
 ## Further Reading
 

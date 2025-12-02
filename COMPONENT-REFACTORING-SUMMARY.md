@@ -44,10 +44,10 @@ Translation: Split the component parts from the etml module into a separate etaf
 - `etaf-reactive-to-plist` - 转换回 plist
 - `etaf-reactive-p` - 检查是否为响应式对象
 
-**向后兼容 (Backward Compatibility):**
-- 所有旧的 `etaf-etml-*` 函数都有别名指向新的 `etaf-*` 函数
-- 旧代码无需修改即可继续工作
-- 保留了旧的响应式系统（`etaf-create-reactive` 等）
+**注意：向后兼容别名已被移除 (Backward Compatibility Removed):**
+- 旧的 `etaf-etml-*` 函数名称已不再有效
+- 所有代码必须更新以使用新的 `etaf-*` 函数名称
+- 保留了旧的响应式系统（`etaf-create-reactive` 等）以支持其他现有代码
 
 ### 2. 更新 etaf-etml.el (Updated etaf-etml.el)
 
@@ -159,13 +159,10 @@ Translation: Split the component parts from the etml module into a separate etaf
 ✅ 模块依赖正确
 - etaf-etml.el 正确 require etaf-component
 
-✅ 向后兼容性维护
-- 5 个主要别名已验证
-- 旧代码可无缝运行
-
 ✅ 文档覆盖全面
 - 11 个主要章节已验证
 - 所有关键主题都有记录
+- 更新了迁移指南以反映需要更新函数名称
 
 ## 优势 (Benefits)
 
@@ -194,32 +191,23 @@ Translation: Split the component parts from the etml module into a separate etaf
 - 熟悉的 API 命名
 - 类似的概念模型
 
-### 6. 向后兼容 (Backward Compatible)
-- 无破坏性更改
-- 现有代码继续工作
-- 平滑的迁移路径
+### 6. 清晰的迁移路径 (Clear Migration Path)
+- 移除了向后兼容别名以保持代码库清洁
+- 提供详细的迁移指南
+- 简单的查找替换即可更新代码
 
 ## 迁移指南 (Migration Guide)
 
 ### 对于现有代码 (For Existing Code)
 
-现有代码无需任何更改即可继续工作：
+**重要：** 现有代码需要更新函数名称才能继续工作：
 
 ```elisp
-;; 这些仍然有效（通过别名）
-(etaf-etml-define-component my-component ...)
-(etaf-etml-ref 0)
-(etaf-etml-computed ...)
-(etaf-etml-watch-source ...)
-(etaf-etml-watch-effect ...)
-```
+;; 旧的函数名称不再有效，必须更新
+;; (etaf-etml-define-component my-component ...)  // 错误
+;; (etaf-etml-ref 0)  // 错误
 
-### 对于新代码 (For New Code)
-
-推荐使用新的更短的名称：
-
-```elisp
-;; 推荐使用
+;; 必须使用新名称
 (etaf-define-component my-component ...)
 (etaf-ref 0)
 (etaf-computed ...)
@@ -230,7 +218,17 @@ Translation: Split the component parts from the etml module into a separate etaf
 ### 更新步骤 (Update Steps)
 
 1. 确保 require etaf-component（通过 etaf-etml 自动）
-2. 可选：使用查找替换更新函数名
+2. **必须：** 使用查找替换更新所有函数名
+   ```
+   etaf-etml-define-component → etaf-define-component
+   etaf-etml-ref → etaf-ref
+   etaf-etml-computed → etaf-computed
+   etaf-etml-watch-source → etaf-watch
+   etaf-etml-watch-effect → etaf-watch-effect
+   etaf-etml-reactive → etaf-reactive
+   etaf-etml-*-get → etaf-*-get
+   etaf-etml-*-set → etaf-*-set
+   ```
 3. 测试代码确保一切正常
 
 ## 文件变更统计 (File Changes Statistics)
@@ -272,7 +270,8 @@ Translation: Split the component parts from the etml module into a separate etaf
 - ✅ 创建 etaf-component.el 模块
 - ✅ 重构 etaf-etml.el
 - ✅ 编写详细文档（英文+中文）
-- ✅ 维护向后兼容性
+- ✅ 移除向后兼容别名，保持代码库清洁
+- ✅ 更新所有示例代码使用新函数名
 - ✅ 验证所有更改
 
 建议的后续改进：
@@ -284,14 +283,15 @@ Translation: Split the component parts from the etml module into a separate etaf
 
 ## 总结 (Conclusion)
 
-成功完成了组件系统的重构，将其从 etaf-etml.el 提取到专用的 etaf-component.el 模块。新设计参考了 Vue 3 的组合式 API，提供了更完善的组件模型。同时创建了详尽的文档，覆盖了从基础到高级的所有用法。最重要的是，保持了完全的向后兼容性，确保现有代码可以无缝迁移。
+成功完成了组件系统的重构，将其从 etaf-etml.el 提取到专用的 etaf-component.el 模块。新设计参考了 Vue 3 的组合式 API，提供了更完善的组件模型。同时创建了详尽的文档，覆盖了从基础到高级的所有用法。移除了向后兼容别名以保持代码库清洁，所有示例代码已更新为使用新的函数名称。
 
 This refactoring successfully achieves all the goals stated in the problem statement:
 1. ✅ Component system extracted to separate module
 2. ✅ Comprehensive documentation created
 3. ✅ More complete component model designed (Vue 3-inspired)
-4. ✅ Backward compatibility maintained
-5. ✅ Well-tested and verified
+4. ✅ Backward compatibility aliases removed per user request
+5. ✅ All example code updated to use new function names
+6. ✅ Well-tested and verified
 
 ---
 

@@ -813,19 +813,7 @@ ETAF 的组件系统受 Vue 3 的组合式 API 启发：
 ### 从 etaf-etml-* 到 etaf-*
 
 组件系统从 `etaf-etml.el` 提取到 `etaf-component.el`。
-所有旧名称都有别名以保持向后兼容：
-
-```elisp
-;; 旧的（仍然有效）
-(etaf-etml-define-component ...)
-(etaf-etml-ref 0)
-(etaf-etml-computed ...)
-
-;; 新的（推荐）
-(etaf-define-component ...)
-(etaf-ref 0)
-(etaf-computed ...)
-```
+**注意：向后兼容别名已被移除。** 您必须更新代码以使用新的函数名称。
 
 ### 更新代码
 
@@ -837,18 +825,26 @@ ETAF 的组件系统受 Vue 3 的组合式 API 启发：
    (require 'etaf-component)
    ```
 
-2. 更新函数名称（可选）：
+2. 更新函数名称（必须）：
    ```elisp
-   ;; 查找/替换
+   ;; 查找/替换 - 旧名称不再有效
    etaf-etml-define-component → etaf-define-component
    etaf-etml-ref → etaf-ref
    etaf-etml-computed → etaf-computed
    etaf-etml-watch-source → etaf-watch
    etaf-etml-watch-effect → etaf-watch-effect
    etaf-etml-reactive → etaf-reactive
+   etaf-etml-ref-get → etaf-ref-get
+   etaf-etml-ref-set → etaf-ref-set
+   etaf-etml-ref-update → etaf-ref-update
+   etaf-etml-computed-get → etaf-computed-get
+   etaf-etml-reactive-get → etaf-reactive-get
+   etaf-etml-reactive-set → etaf-reactive-set
+   etaf-etml-reactive-to-plist → etaf-reactive-to-plist
+   etaf-etml-component-* → etaf-component-*
    ```
 
-3. 测试代码 - 别名确保向后兼容
+3. 更新所有函数名称后测试代码
 
 ## 延伸阅读
 
