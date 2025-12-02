@@ -56,8 +56,8 @@
 ;;   ;; Diff two VTrees
 ;;   (etaf-vdom-diff old-vnode new-vnode)
 ;;   
-;;   ;; Patch DOM with changes
-;;   (etaf-vdom-patch patches)
+;;   ;; Apply patches to update DOM
+;;   (etaf-vdom-apply-patches patches)
 ;;   
 ;;   ;; Get the clean DOM from VTree
 ;;   (etaf-vdom-get-dom vnode)
