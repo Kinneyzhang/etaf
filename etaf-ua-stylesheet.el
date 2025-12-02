@@ -79,8 +79,8 @@
    "h6{text-1.0 font-bold}"
    
    ;; Lists
-   "ul{mt-1 mb-1 pl-10}"
-   "ol{mt-1 mb-1 pl-10}"
+   "ul{mt-1 mb-1 pl-4}"
+   "ol{mt-1 mb-1 pl-4}"
    
    ;; Block quotes
    "blockquote{mt-1 mb-1 ml-4 mr-4}"
