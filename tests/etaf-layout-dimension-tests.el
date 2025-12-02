@@ -80,8 +80,7 @@ not the natural height of the content."
                  (body
                   (div "Short text")))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
          (body-node (car (dom-non-text-children layout-tree)))
          (div-node (car (dom-non-text-children body-node)))
          (box-model (etaf-layout-get-box-model div-node)))
@@ -98,8 +97,7 @@ When CSS height is 3 lines, the rendered string should have 3 lines."
                  (body
                   (div "Line")))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768)))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768)))
          (buffer-string (etaf-layout-to-string layout-tree)))
     ;; The rendered string should have at least 3 lines for the div content
     ;; (the div has height 3)

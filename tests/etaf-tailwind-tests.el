@@ -345,8 +345,7 @@ Emacs特有：padding使用cw（水平字符宽度）和lh（垂直行高）。"
   "测试 Tailwind 类在渲染树中的正确应用。"
   (require 'etaf-etml)
   (require 'etaf-css)
-  (require 'etaf-render)
-  (let* ((dom (etaf-etml-to-dom
+    (let* ((dom (etaf-etml-to-dom
                '(div :class "flex items-center justify-center"
                      (span :class "text-lg font-bold" "Title"))))
          (cssom (etaf-css-build-cssom dom))

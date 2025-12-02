@@ -8,7 +8,6 @@
 
 (require 'ert)
 (require 'etaf-layout)
-(require 'etaf-render)
 (require 'etaf-css)
 (require 'etaf-etml)
 
@@ -32,8 +31,7 @@
                    (button "Button 2")
                    (button "Button 3"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768))))
     
     (should layout-tree)
     
@@ -84,8 +82,7 @@
                    (button :class "btn" "Button 1")
                    (button :class "btn" "Button 2"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768))))
     
     (should layout-tree)
     
@@ -122,8 +119,7 @@
                    (button "Button")
                    (span " text after"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768))))
     
     (should layout-tree)
     
@@ -152,8 +148,7 @@
                    (button :class "block-btn" "B1")
                    (button :class "block-btn" "B2"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768))))
     
     (should layout-tree)
     
@@ -198,8 +193,7 @@
                    (badge "Badge 2")
                    (badge "Badge 3"))))))
          (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 1024 :height 768))))
+         (layout-tree (etaf-layout-build-tree dom cssom '(:width 1024 :height 768))))
     
     (should layout-tree)
     
