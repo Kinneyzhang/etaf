@@ -50,5 +50,26 @@
         (assq 'font-size computed)
         (equal (cdr (assq 'font-size computed)) "14px"))))
 
+;;; 测试去重功能
+
+(should
+ (let* ((style-with-duplicates '((color . "red") (font-weight . "bold") (color . "blue") (font-size . "12px")))
+        (result (etaf-css--remove-duplicate-properties style-with-duplicates)))
+   ;; 应该只保留第一次出现的 color
+   (and (= (length (seq-filter (lambda (p) (eq (car p) 'color)) result)) 1)
+        (equal (cdr (assq 'color result)) "red"))))
+
+;;; 测试继承时的去重
+
+(should
+ (let* ((parent-style '((color . "red") (font-weight . "bold")))
+        ;; 子元素样式中已经有重复的 font-weight
+        (child-style '((font-weight . "normal") (background . "white") (font-weight . "normal")))
+        (result (etaf-css-apply-inheritance child-style parent-style)))
+   ;; font-weight 应该只出现一次
+   (and (= (length (seq-filter (lambda (p) (eq (car p) 'font-weight)) result)) 1)
+        ;; color 应该被继承且只出现一次
+        (= (length (seq-filter (lambda (p) (eq (car p) 'color)) result)) 1))))
+
 (provide 'etaf-css-inheritance-tests)
 ;;; etaf-css-inheritance-tests.el ends here
