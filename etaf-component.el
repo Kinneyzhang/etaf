@@ -651,67 +651,10 @@ Returns a new plist with current values from the reactive object."
       result)))
 
 ;;; ============================================================================
-;;; Backward Compatibility Aliases
+;;; Legacy Reactive System
 ;;; ============================================================================
 
-;; These aliases maintain compatibility with existing code that uses
-;; the etaf-etml-* naming convention. New code should use the shorter
-;; etaf-* names defined above.
-
-(defalias 'etaf-etml-component-create 'etaf-component-create
-  "Backward compatibility alias for `etaf-component-create'.")
-(defalias 'etaf-etml-component-register 'etaf-component-register
-  "Backward compatibility alias for `etaf-component-register'.")
-(defalias 'etaf-etml-component-unregister 'etaf-component-unregister
-  "Backward compatibility alias for `etaf-component-unregister'.")
-(defalias 'etaf-etml-component-get 'etaf-component-get
-  "Backward compatibility alias for `etaf-component-get'.")
-(defalias 'etaf-etml-component-defined-p 'etaf-component-defined-p
-  "Backward compatibility alias for `etaf-component-defined-p'.")
-(defalias 'etaf-etml-component-list-all 'etaf-component-list-all
-  "Backward compatibility alias for `etaf-component-list-all'.")
-(defalias 'etaf-etml-define-component 'etaf-define-component
-  "Backward compatibility alias for `etaf-define-component'.")
-
-(defalias 'etaf-etml-ref 'etaf-ref
-  "Backward compatibility alias for `etaf-ref'.")
-(defalias 'etaf-etml-ref-p 'etaf-ref-p
-  "Backward compatibility alias for `etaf-ref-p'.")
-(defalias 'etaf-etml-ref-get 'etaf-ref-get
-  "Backward compatibility alias for `etaf-ref-get'.")
-(defalias 'etaf-etml-ref-set 'etaf-ref-set
-  "Backward compatibility alias for `etaf-ref-set'.")
-(defalias 'etaf-etml-ref-update 'etaf-ref-update
-  "Backward compatibility alias for `etaf-ref-update'.")
-
-(defalias 'etaf-etml-computed 'etaf-computed
-  "Backward compatibility alias for `etaf-computed'.")
-(defalias 'etaf-etml-computed-p 'etaf-computed-p
-  "Backward compatibility alias for `etaf-computed-p'.")
-(defalias 'etaf-etml-computed-get 'etaf-computed-get
-  "Backward compatibility alias for `etaf-computed-get'.")
-
-(defalias 'etaf-etml-watch-source 'etaf-watch
-  "Backward compatibility alias for `etaf-watch'.")
-(defalias 'etaf-etml-watch-effect 'etaf-watch-effect
-  "Backward compatibility alias for `etaf-watch-effect'.")
-
-(defalias 'etaf-etml-reactive 'etaf-reactive
-  "Backward compatibility alias for `etaf-reactive'.")
-(defalias 'etaf-etml-reactive-p 'etaf-reactive-p
-  "Backward compatibility alias for `etaf-reactive-p'.")
-(defalias 'etaf-etml-reactive-get 'etaf-reactive-get
-  "Backward compatibility alias for `etaf-reactive-get'.")
-(defalias 'etaf-etml-reactive-set 'etaf-reactive-set
-  "Backward compatibility alias for `etaf-reactive-set'.")
-(defalias 'etaf-etml-reactive-to-plist 'etaf-reactive-to-plist
-  "Backward compatibility alias for `etaf-reactive-to-plist'.")
-
-;;; ============================================================================
-;;; Legacy Reactive System (for backward compatibility)
-;;; ============================================================================
-
-;; The old reactive system is kept for backward compatibility.
+;; The old reactive system is kept for compatibility with existing code.
 ;; New code should use the new ref/computed/watch system above.
 
 (defvar etaf-reactive--watchers (make-hash-table :test 'eq)
@@ -759,13 +702,6 @@ Works with objects created by `etaf-create-reactive'."
 Works with objects created by `etaf-create-reactive'."
   (let ((watchers (plist-get reactive :watchers)))
     (plist-put reactive :watchers (delete callback watchers))))
-
-;; Legacy aliases for the old naming
-(defalias 'etaf-etml-create-reactive 'etaf-create-reactive)
-(defalias 'etaf-etml-get 'etaf-get)
-(defalias 'etaf-etml-set 'etaf-set)
-(defalias 'etaf-etml-watch 'etaf-watch-reactive)
-(defalias 'etaf-etml-unwatch 'etaf-unwatch-reactive)
 
 (provide 'etaf-component)
 ;;; etaf-component.el ends here
