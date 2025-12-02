@@ -927,7 +927,11 @@ If VALUE ends with 'px' suffix (e.g., \"20px\"), use pixels instead."
      ;; Color
      ((cdr (assoc value etaf-tailwind-color-palette))
       (list (cons 'color (cdr (assoc value etaf-tailwind-color-palette)))))
-     ;; Font size
+     ;; Font size - numeric values (e.g., text-1.6 → font-size: 1.6lh)
+     ;; Supports integers and decimals (e.g., "1", "1.5", "2.0")
+     ((and value (string-match-p "^[0-9]+\\(?:\\.[0-9]+\\)?$" value))
+      (list (cons 'font-size (concat value "lh"))))
+     ;; Font size - named sizes
      ((cdr (assoc value etaf-tailwind-font-sizes))
       (let* ((size-data (cdr (assoc value etaf-tailwind-font-sizes)))
              (font-size (car size-data))
