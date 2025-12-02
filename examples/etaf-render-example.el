@@ -84,7 +84,7 @@
 
 ;;; Example 4: Layout tree statistics
 
-(message "\n=== Example 4: Render Tree Statistics ===")
+(message "\n=== Example 4: Layout Tree Statistics ===")
 
 (setq stats-dom
       (etaf-etml-to-dom
