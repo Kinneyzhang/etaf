@@ -1,74 +1,56 @@
-# CSSOM 树结构 - 基于 DOM 节点
+# CSSOM 扁平结构 - 基于 Chromium 实现
 
 ## 概述
 
-CSSOM (CSS Object Model) 采用与 render tree 和 layout tree 相同的设计模式：基于原始 DOM 的标签节点结构，在节点上附加 CSSOM 相关属性。
+CSSOM (CSS Object Model) 采用扁平的 plist 结构，这是一个全局的规则集合，加上索引方便查询。这种设计参考了 Chromium 浏览器的实现，不使用树形结构，避免不必要的 DOM 复制。
 
 ## 设计原则
 
-### 统一的树结构模式
+### 扁平结构模式
 
-ETAF 中的所有树结构（DOM、CSSOM、Render Tree、Layout Tree）都遵循相同的模式：
+CSSOM 是一个简单的 plist（属性列表），包含：
 
-1. **DOM 树**：原始文档结构
-   ```elisp
-   (html ((id . "root"))
-     (head nil
-       (style nil "div { color: blue; }"))
-     (body nil
-       (div ((id . "test") (style . "color: red;")) "Text")))
-   ```
+1. **规则集合**：所有 CSS 规则的列表
+2. **索引结构**：按标签、类、ID 分类的快速查询索引
+3. **缓存机制**：计算样式的缓存
+4. **环境信息**：媒体查询环境等元数据
 
-2. **CSSOM 树**：DOM 结构 + CSSOM 属性
-   ```elisp
-   (html ((cssom-ua-rules . (...))
-          (cssom-style-rules . (...))
-          (cssom-inline-rules . (...))
-          (cssom-all-rules . (...))
-          (cssom-rule-index . (...))
-          (cssom-cache . #<hash-table>)
-          (cssom-media-env . (...))
-          (id . "root"))
-     (head nil
-       (style nil "div { color: blue; }"))
-     (body nil
-       (div ((id . "test") (style . "color: red;")) "Text")))
-   ```
+```elisp
+;; CSSOM 结构示例
+(:ua-rules (...)           ; User Agent 样式规则
+ :style-rules (...)        ; 样式表规则
+ :inline-rules (...)       ; 内联样式规则
+ :all-rules (...)          ; 所有规则（按优先级排序）
+ :rule-index (...)         ; 规则索引（hash表）
+ :cache #<hash-table>      ; 计算样式缓存
+ :media-env (...))         ; 媒体查询环境
+```
 
-3. **Render Tree**：DOM 结构 + 渲染属性
-   ```elisp
-   (html ((render-style . ((color . "black") ...))
-          (render-display . "block"))
-     ...)
-   ```
+### 为什么采用扁平结构？
 
-4. **Layout Tree**：DOM 结构 + 布局属性
-   ```elisp
-   (html ((layout-box-model . (:content ...))
-          (render-style . (...)))
-     ...)
-   ```
-
-### 为什么这样设计？
-
-1. **保持 DOM 结构**：不创建新的树结构，而是增强现有的 DOM 树
-2. **统一的API**：所有树都可以用 `dom-tag`、`dom-attr`、`dom-children` 等函数操作
-3. **模块化**：每个层次只添加自己需要的属性，不破坏原有结构
-4. **可组合性**：可以轻松地在同一个树上组合多个层次的信息
+1. **简单直接**：CSSOM 就是规则的集合，不需要复杂的树形结构
+2. **避免复制**：不需要深度复制整个 DOM 树
+3. **性能优化**：通过索引快速查找匹配的规则
+4. **符合标准**：与 Chromium 等浏览器的实现一致
 
 ## CSSOM 属性说明
 
-### 全局属性（附加在根节点）
+### 规则集合属性
 
 | 属性名 | 类型 | 说明 |
 |--------|------|------|
-| `cssom-ua-rules` | list | User Agent 样式规则列表（最低优先级） |
-| `cssom-style-rules` | list | 样式表规则列表（来自 `<style>` 标签） |
-| `cssom-inline-rules` | list | 内联样式规则列表（最高优先级） |
-| `cssom-all-rules` | list | 所有规则（按优先级顺序：UA < Author < Inline） |
-| `cssom-rule-index` | plist | 规则索引（按标签、类、ID 分类） |
-| `cssom-cache` | hash-table | 计算样式缓存 |
-| `cssom-media-env` | alist | 媒体查询环境 |
+| `:ua-rules` | list | User Agent 样式规则列表（最低优先级） |
+| `:style-rules` | list | 样式表规则列表（来自 `<style>` 标签） |
+| `:inline-rules` | list | 内联样式规则列表（最高优先级） |
+| `:all-rules` | list | 所有规则（按优先级顺序：UA < Author < Inline） |
+
+### 优化属性
+
+| 属性名 | 类型 | 说明 |
+|--------|------|------|
+| `:rule-index` | plist | 规则索引（包含 :by-tag、:by-class、:by-id 三个 hash 表） |
+| `:cache` | hash-table | 计算样式缓存 |
+| `:media-env` | alist | 媒体查询环境 |
 
 ### 规则格式（plist）
 
@@ -99,55 +81,45 @@ ETAF 中的所有树结构（DOM、CSSOM、Render Tree、Layout Tree）都遵循
              (body
               (div :id "test" :style "color: red;" "Hello")))))
 
-;; 构建 CSSOM（返回带 CSSOM 属性的 DOM 树）
+;; 构建 CSSOM（返回扁平的 plist）
 (setq cssom (etaf-css-build-cssom dom))
 
-;; CSSOM 是一个 DOM 树，可以用 DOM 函数操作
-(dom-tag cssom)  ; => 'html
-(dom-children cssom)  ; => ((head ...) (body ...))
+;; CSSOM 是一个 plist
+(keywordp (car cssom))  ; => t
 ```
 
 ### 访问 CSSOM 属性
 
 ```elisp
-;; 获取全局 CSSOM 属性
-(setq cache (dom-attr cssom 'cssom-cache))
-(setq all-rules (dom-attr cssom 'cssom-all-rules))
-(setq rule-index (dom-attr cssom 'cssom-rule-index))
-(setq media-env (dom-attr cssom 'cssom-media-env))
+;; 获取 CSSOM 属性
+(setq cache (plist-get cssom :cache))
+(setq all-rules (plist-get cssom :all-rules))
+(setq rule-index (plist-get cssom :rule-index))
+(setq media-env (plist-get cssom :media-env))
 
 ;; 查看规则数量
-(length (dom-attr cssom 'cssom-ua-rules))
-(length (dom-attr cssom 'cssom-style-rules))
-(length (dom-attr cssom 'cssom-inline-rules))
+(length (plist-get cssom :ua-rules))
+(length (plist-get cssom :style-rules))
+(length (plist-get cssom :inline-rules))
+
+;; 注意：空列表在 plist-get 中返回 nil
+;; 使用 plist-member 检查键是否存在
+(plist-member cssom :style-rules)  ; => (:style-rules () ...)
 ```
 
 ### 查询节点样式
 
 ```elisp
 ;; 获取匹配节点的规则
-(let* ((div-node (dom-by-id cssom "test"))
-       (rules (etaf-css-get-rules-for-node cssom div-node cssom)))
+(let* ((div-node (dom-by-id dom "test"))
+       (rules (etaf-css-get-rules-for-node cssom div-node dom)))
   (message "Found %d rules" (length rules)))
 
 ;; 计算节点的最终样式
-(let* ((div-node (dom-by-id cssom "test"))
-       (computed-style (etaf-css-get-computed-style cssom div-node cssom)))
+(let* ((div-node (dom-by-id dom "test"))
+       (computed-style (etaf-css-get-computed-style cssom div-node dom)))
   (message "Color: %s" (cdr (assq 'color computed-style)))
   (message "Font size: %s" (cdr (assq 'font-size computed-style))))
-```
-
-### 遍历 CSSOM 树
-
-```elisp
-;; 使用 etaf-dom-map 遍历（就像遍历普通 DOM 树）
-(etaf-dom-map
-  (lambda (node)
-    (when (eq (dom-tag node) 'div)
-      (let ((id (dom-attr node 'id))
-            (style-attr (dom-attr node 'style)))
-        (message "Div: id=%s, style=%s" id style-attr))))
-  cssom)
 ```
 
 ### 动态添加样式表
@@ -173,31 +145,9 @@ ETAF 中的所有树结构（DOM、CSSOM、Render Tree、Layout Tree）都遵循
    - 按标签、类、ID 建立规则索引
    - 提高规则匹配性能
 
-3. **附加到 DOM**：
-   - 复制 DOM 结构
-   - 在根节点附加 CSSOM 全局属性
-   - 子节点保持原样
-
-### 节点复制
-
-CSSOM 构建时会深度复制 DOM 树，确保不修改原始 DOM：
-
-```elisp
-(defun etaf-css--copy-dom-node (node)
-  "复制 DOM 节点（深度复制）。"
-  (if (and (listp node) (symbolp (car node)))
-      (let ((tag (dom-tag node))
-            (attrs (dom-attributes node))
-            (children (dom-children node)))
-        (cons tag
-              (cons attrs
-                    (mapcar (lambda (child)
-                              (if (and (listp child) (symbolp (car child)))
-                                  (etaf-css--copy-dom-node child)
-                                child))
-                            children))))
-    node))
-```
+3. **创建 plist**：
+   - 将所有信息组织成扁平的 plist
+   - 不复制 DOM 树
 
 ### 规则匹配
 
@@ -206,20 +156,20 @@ CSSOM 构建时会深度复制 DOM 树，确保不修改原始 DOM：
 ```elisp
 ;; 1. 从索引获取候选规则
 (let ((candidates (etaf-css-index-query-candidates 
-                   (dom-attr cssom 'cssom-rule-index) 
+                   (plist-get cssom :rule-index) 
                    node)))
   ;; 2. 测试选择器匹配
   (dolist (rule candidates)
-    (when (etaf-css-selector-node-matches-p node cssom selector-ast)
+    (when (etaf-css-selector-node-matches-p node dom selector-ast)
       (push rule matching-rules))))
 ```
 
 ### 样式缓存
 
-计算样式会被缓存在 `cssom-cache` 中：
+计算样式会被缓存在 `:cache` 中：
 
 ```elisp
-(let ((cache (dom-attr cssom 'cssom-cache)))
+(let ((cache (plist-get cssom :cache)))
   ;; 检查缓存
   (or (etaf-css-cache-get cache node)
       ;; 缓存未命中，计算并存储
@@ -233,133 +183,89 @@ CSSOM 构建时会深度复制 DOM 树，确保不修改原始 DOM：
 ### 数据流
 
 ```
-DOM 
+DOM (树形结构)
   ↓
-CSSOM (DOM + CSS 属性)
+CSSOM (扁平结构) ← 不同于 DOM！
   ↓
-Render Tree (DOM + 渲染属性)
+Render Tree (树形结构，基于 DOM)
   ↓
-Layout Tree (DOM + 布局属性)
+Layout Tree (树形结构，基于 DOM)
 ```
 
-### 共同特点
+### 关键区别
 
-1. 都基于 DOM 节点结构
-2. 都通过属性附加信息
-3. 都可以用 DOM 函数操作
-4. 都保持树的层次关系
+- **DOM**: 树形结构，表示文档层次
+- **CSSOM**: 扁平结构，全局规则集合
+- **Render Tree**: 树形结构（基于 DOM，附加渲染信息）
+- **Layout Tree**: 树形结构（基于 DOM，附加布局信息）
 
-### 示例对比
+### CSSOM 的独特性
 
-**CSSOM 节点**：
-```elisp
-(html ((cssom-cache . #<hash>)
-       (cssom-all-rules . (...)))
-  (body nil
-    (div ((id . "test")) "Text")))
-```
-
-**Render Tree 节点**：
-```elisp
-(html ((render-style . ((color . "black")))
-       (render-display . "block"))
-  (body ((render-display . "block"))
-    (div ((render-style . ((color . "red")))
-          (render-display . "block")
-          (id . "test")) "Text")))
-```
-
-**Layout Tree 节点**：
-```elisp
-(html ((layout-box-model . (:content ...))
-       (render-style . (...))
-       (render-display . "block"))
-  ...)
-```
+CSSOM 是唯一不使用树形结构的组件，因为：
+1. CSS 规则本质上是全局的
+2. 规则通过选择器匹配，不需要树形结构
+3. 扁平结构更高效，更易于索引和查询
 
 ## 最佳实践
 
 ### 1. 访问 CSSOM 属性
 
 ```elisp
-;; ✓ 正确：使用 dom-attr
-(dom-attr cssom 'cssom-cache)
-
-;; ✗ 错误：不要使用 plist-get（CSSOM 不是 plist）
+;; ✓ 正确：使用 plist-get
 (plist-get cssom :cache)
+(plist-get cssom :all-rules)
+
+;; ✓ 正确：检查键是否存在
+(plist-member cssom :style-rules)
+
+;; ✗ 错误：CSSOM 不是 DOM 树
+(dom-attr cssom 'cssom-cache)  ; 不再有效
 ```
 
-### 2. 遍历树
+### 2. 查询样式
 
 ```elisp
-;; ✓ 正确：使用 etaf-dom-map
-(etaf-dom-map func cssom)
+;; ✓ 正确：传入 DOM 和 CSSOM 作为独立参数
+(etaf-css-get-computed-style cssom node dom)
 
-;; ✓ 正确：使用 dom-children
-(dolist (child (dom-children cssom))
+;; ✓ 正确：CSSOM 是独立的数据结构
+(let ((cssom (etaf-css-build-cssom dom)))
+  ;; cssom 和 dom 是两个不同的对象
   ...)
 ```
 
-### 3. 节点查询
+### 3. 性能考虑
 
 ```elisp
-;; ✓ 正确：使用 dom-by-id, dom-by-class, dom-by-tag
-(dom-by-id cssom "test")
-(dom-by-class cssom "button")
-(dom-by-tag cssom 'div)
+;; ✓ 好：利用索引快速查询
+(etaf-css-get-rules-for-node cssom node dom)
+
+;; ✓ 好：利用缓存避免重复计算
+(etaf-css-get-computed-style cssom node dom)
+
+;; ✓ 好：CSSOM 构建不复制 DOM，性能更好
+(etaf-css-build-cssom dom)
 ```
 
-### 4. 样式计算
+## 性能优势
 
-```elisp
-;; ✓ 正确：传入 CSSOM 而不是原始 DOM
-(etaf-css-get-computed-style cssom node cssom)
+### 与旧实现（树结构）对比
 
-;; 注意：node 可以是原始 DOM 节点或 CSSOM 节点
-```
-
-## 性能考虑
-
-### 规则索引
-
-索引按标签、类、ID 分类，避免对每个节点测试所有规则：
-
-```elisp
-;; 索引结构
-(:by-tag #<hash-table tag -> rules>
- :by-class #<hash-table class -> rules>
- :by-id #<hash-table id -> rules>)
-
-;; 查询时只检查相关规则
-(etaf-css-index-query-candidates index node)
-```
-
-### 样式缓存
-
-避免重复计算相同节点的样式：
-
-```elisp
-;; 第一次：计算并缓存
-(etaf-css-get-computed-style cssom node cssom)  ; 慢
-
-;; 第二次：从缓存读取
-(etaf-css-get-computed-style cssom node cssom)  ; 快
-```
-
-### 深度复制开销
-
-CSSOM 构建时会复制整个 DOM 树。对于大型 DOM：
-- 只在需要时构建 CSSOM
-- 复用 CSSOM 而不是重复构建
-- 在 DOM 变化时重建 CSSOM
+| 方面 | 旧实现（树结构） | 新实现（扁平结构） |
+|------|-----------------|-------------------|
+| DOM 复制 | 需要深度复制整个 DOM | 不需要复制 |
+| 内存使用 | 高（双倍 DOM） | 低（只存储规则） |
+| 构建速度 | 慢（复制开销） | 快（只组织规则） |
+| 查询效率 | 需要树遍历 | 直接索引查询 |
+| 符合标准 | 非标准设计 | 符合浏览器实现 |
 
 ## 总结
 
-CSSOM 采用与 DOM、Render Tree、Layout Tree 相同的设计模式：
+CSSOM 采用扁平的 plist 结构，参考 Chromium 浏览器实现：
 
-- **基础**：保持 DOM 的标签节点结构
-- **扩展**：通过属性附加 CSSOM 信息
-- **操作**：使用统一的 DOM API
-- **优化**：规则索引和样式缓存
+- **核心**：全局规则集合 + 索引
+- **优势**：简单、高效、符合标准
+- **设计**：不需要树形结构
+- **性能**：避免 DOM 复制，快速索引查询
 
-这种设计使 ETAF 的各个层次保持一致，便于理解和使用。
+这种设计使 ETAF 的 CSS 系统更加高效和易于理解。
