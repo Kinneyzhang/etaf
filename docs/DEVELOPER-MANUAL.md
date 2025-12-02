@@ -28,7 +28,7 @@ This manual provides architecture details and extension guides for ETAF contribu
 ```
 ┌─────────────────────────────────────────────────────────────────┐
 │                         etaf.el (Entry)                          │
-│                    etaf-string: TML → Rendered String            │
+│                    etaf-paint-string TML → Rendered String            │
 └───────────────────────────────┬─────────────────────────────────┘
                                 │
         ┌───────────────────────┼───────────────────────┐

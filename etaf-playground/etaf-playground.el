@@ -152,8 +152,8 @@ evaluated expression."
                               (head
                                (style ,css))
                               (body ,etml-sexp)))
-                 (rendered (etaf-string full-etml data nil
-                                        etaf-playground-output-width nil)))
+                 (rendered (etaf-paint-string full-etml data nil
+                                              etaf-playground-output-width nil)))
             (setq etaf-playground-output-content rendered))
         (error
          (setq etaf-playground-error-message
@@ -204,7 +204,7 @@ evaluated expression."
       (let ((inhibit-read-only t)
             (etml (etaf-playground--build-etml)))
         (erase-buffer)
-        (insert (etaf-string etml nil nil)))
+        (insert (etaf-paint-string etml nil nil)))
       (goto-char (point-min))
       (setq buffer-read-only t))
     buffer))

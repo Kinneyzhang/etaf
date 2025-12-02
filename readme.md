@@ -40,13 +40,13 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 (require 'etaf)
 
 ;; Simple rendering
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(div :class "container"
      (h1 :style "color: blue" "Hello ETAF!")
      (p "Build beautiful UIs in Emacs")))
 
 ;; With Tailwind CSS classes
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(div :class "flex items-center p-2 bg-blue-500"
      (span :class "text-white font-bold" "Styled with Tailwind!")))
 ```
@@ -56,7 +56,7 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
 ```elisp
 (setq my-data '(:name "Alice" :items ("Apple" "Banana" "Cherry")))
 
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(div
      (h1 "Hello, {{ name }}!")
      (ul
@@ -73,7 +73,7 @@ TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
   :template '(button :class "btn" "{{ label }}"))
 
 ;; Use the component
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(my-button :label "Click Me"))
 ```
 
@@ -155,13 +155,13 @@ TML → DOM 树 → CSSOM → 渲染树 → 布局树 → Buffer 字符串
 (require 'etaf)
 
 ;; 简单渲染
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(div :class "container"
      (h1 :style "color: blue" "Hello ETAF!")
      (p "在 Emacs 中构建精美 UI")))
 
 ;; 使用 Tailwind CSS 类
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(div :class "flex items-center p-2 bg-blue-500"
      (span :class "text-white font-bold" "Tailwind 样式!")))
 ```
@@ -182,7 +182,7 @@ ETAF 支持 Vue 风格的模板指令：
 ```elisp
 (setq my-data '(:name "Alice" :items ("苹果" "香蕉" "樱桃")))
 
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(div
      (h1 "你好，{{ name }}！")
      (ul
@@ -199,7 +199,7 @@ ETAF 支持 Vue 风格的模板指令：
   :template '(button :class "btn" "{{ label }}"))
 
 ;; 使用组件
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(my-button :label "点击我"))
 ```
 
@@ -219,7 +219,7 @@ ETAF 支持 Vue 风格的模板指令：
 
 ```elisp
 ;; 直接使用 Tailwind 类
-(etaf-render-to-buffer "*demo*"
+(etaf-paint-to-buffer "*demo*"
   '(div :class "flex items-center justify-between bg-white rounded-lg shadow-md p-2"
      (h1 :class "text-lg font-bold text-gray-900" "标题")
      (button :class "bg-blue-500 text-white px-2 py-1 rounded" "按钮")))
