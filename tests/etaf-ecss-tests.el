@@ -108,7 +108,7 @@
 
 (ert-deftest etaf-ecss-test-stylesheet ()
   "Test stylesheet generation."
-  (let ((result (etaf-ecss-stylesheet
+  (let ((result (etaf-ecss
                  '(".a" (color "red"))
                  '(".b" (color "blue")))))
     (should (string-match-p "\\.a" result))
@@ -210,8 +210,8 @@
     (should (string-match-p "font-style: italic" result))))
 
 (ert-deftest etaf-ecss-test-tailwind-stylesheet ()
-  "Test Tailwind CSS utilities in etaf-ecss-stylesheet."
-  (let ((result (etaf-ecss-stylesheet
+  "Test Tailwind CSS utilities in etaf-ecss."
+  (let ((result (etaf-ecss
                  '(".header" (flex) (items-center) (bg-blue-500))
                  '(".content" (p-4) (text-gray-700)))))
     (should (string-match-p "\\.header" result))
@@ -298,8 +298,8 @@
     (should (equal (cdr (assq 'align-items result)) "center"))))
 
 (ert-deftest etaf-ecss-test-tailwind-string-stylesheet ()
-  "Test etaf-ecss-stylesheet with Tailwind string."
-  (let ((result (etaf-ecss-stylesheet
+  "Test etaf-ecss with Tailwind string."
+  (let ((result (etaf-ecss
                  '(".header" "flex items-center bg-blue-500")
                  '(".content" "p-4" (color "gray")))))
     (should (string-match-p "\\.header" result))
@@ -400,8 +400,8 @@
   (should-not (etaf-ecss-unified-p ".card{  }")))
 
 (ert-deftest etaf-ecss-test-unified-stylesheet ()
-  "Test etaf-ecss-stylesheet with unified format strings."
-  (let ((result (etaf-ecss-stylesheet
+  "Test etaf-ecss with unified format strings."
+  (let ((result (etaf-ecss
                  ".header{flex items-center bg-blue-500}"
                  ".content{p-4}"
                  "nav>a{text-white}")))
@@ -412,8 +412,8 @@
     (should (string-match-p "color: #ffffff" result))))
 
 (ert-deftest etaf-ecss-test-unified-stylesheet-mixed ()
-  "Test etaf-ecss-stylesheet with mixed unified and legacy formats."
-  (let ((result (etaf-ecss-stylesheet
+  "Test etaf-ecss with mixed unified and legacy formats."
+  (let ((result (etaf-ecss
                  ".header{flex items-center}"
                  '(".footer" (background "white") (padding 10)))))
     (should (string-match-p "\\.header" result))
@@ -433,7 +433,7 @@
     (should (string-match-p "align-items: center" result))))
 
 (ert-deftest etaf-ecss-test-multiple-unified-strings ()
-  "Test etaf-ecss with multiple unified format strings (replacing etaf-ecss-stylesheet)."
+  "Test etaf-ecss with multiple unified format strings."
   (let ((result (etaf-ecss
                  ".header{flex items-center bg-blue-500}"
                  ".content{p-4}"
