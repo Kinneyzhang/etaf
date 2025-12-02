@@ -126,6 +126,12 @@ Returns a string like \"property1: value1; property2: value2\"."
                (format "%s: %s" (car pair) (cdr pair)))
              css-alist "; "))
 
+(defun etaf-class-list-to-string (class-list)
+  "Convert CLASS-LIST to a class string.
+CLASS-LIST is a list of strings: (\"class1\" \"class2\" ...).
+Returns a string like \"class1 class2 ...\"."
+  (mapconcat #'identity class-list " "))
+
 (defun etaf-etml--ecss-item-p (item)
   "Check if ITEM is an (ecss ...) form.
 Returns t if ITEM is a list starting with symbol `ecss'."
@@ -222,6 +228,14 @@ Supports :style attribute for inline CSS rules in two formats:
 Both are converted to:
   (div ((style . \"background: red; padding: 10px\")) ...)
 
+Supports :class attribute in two formats:
+  String format:
+    (div :class \"w-20 h-4\" ...)
+  List format:
+    (div :class (\"w-20 h-4\" \"border border-red-200\" \"bg-green-200\") ...)
+Both are converted to:
+  (div ((class . \"w-20 h-4 border border-red-200 bg-green-200\")) ...)
+
 Special handling for ecss tags:
 1. Inside <style> tags (global scope):
    (style
@@ -263,13 +277,18 @@ the final string with keymap properties."
             (push (car rest) attrs)
             (setq rest (cdr rest))))
         (setq attrs (nreverse attrs))
-        ;; Process :style attribute - handle both string and list formats
+        ;; Process :style and :class attributes - handle both string and list formats
         (let* ((attr-alist (etaf-plist-to-alist attrs))
-               (style-attr (assq 'style attr-alist)))
+               (style-attr (assq 'style attr-alist))
+               (class-attr (assq 'class attr-alist)))
           ;; If :style is present and is a list (alist), convert it to string
           (when (and style-attr (listp (cdr style-attr)))
             (let ((style-string (etaf-css-alist-to-string (cdr style-attr))))
               (setcdr style-attr style-string)))
+          ;; If :class is present and is a list, convert it to string
+          (when (and class-attr (listp (cdr class-attr)))
+            (let ((class-string (etaf-class-list-to-string (cdr class-attr))))
+              (setcdr class-attr class-string)))
           ;; Merge etaf-etml-tag default styles if tag is defined
           (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
           ;; NOTE: Tag instances are no longer embedded in DOM attributes.
@@ -1237,13 +1256,18 @@ SEXP can be:
           (setq rest (cdr rest))))
       (setq attrs (nreverse attrs))
       
-      ;; Process :style attribute - handle both string and list formats
+      ;; Process :style and :class attributes - handle both string and list formats
       (let* ((attr-alist (etaf-plist-to-alist attrs))
-             (style-attr (assq 'style attr-alist)))
+             (style-attr (assq 'style attr-alist))
+             (class-attr (assq 'class attr-alist)))
         ;; If :style is present and is a list (alist), convert it to string
         (when (and style-attr (listp (cdr style-attr)))
           (let ((style-string (etaf-css-alist-to-string (cdr style-attr))))
             (setcdr style-attr style-string)))
+        ;; If :class is present and is a list, convert it to string
+        (when (and class-attr (listp (cdr class-attr)))
+          (let ((class-string (etaf-class-list-to-string (cdr class-attr))))
+            (setcdr class-attr class-string)))
         
         ;; Merge etaf-etml-tag default styles if tag is defined
         (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))

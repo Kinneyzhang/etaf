@@ -24,6 +24,31 @@
   (etaf-etml-to-dom '(div :class "box" :style ((color . "blue")) "World"))
   '(div ((class . "box") (style . "color: blue")) "World"))
 
+;;; :class attribute tests - string format (existing behavior)
+(should-equal
+  (etaf-etml-to-dom '(div :class "w-20 h-4" "Hello"))
+  '(div ((class . "w-20 h-4")) "Hello"))
+
+;;; :class attribute tests - list format (single string)
+(should-equal
+  (etaf-etml-to-dom '(div :class ("w-20 h-4") "Hello"))
+  '(div ((class . "w-20 h-4")) "Hello"))
+
+;;; :class attribute tests - list format with multiple strings
+(should-equal
+  (etaf-etml-to-dom '(div :class ("w-20 h-4" "border border-red-200" "bg-green-200") "test content"))
+  '(div ((class . "w-20 h-4 border border-red-200 bg-green-200")) "test content"))
+
+;;; :class attribute tests - list format equals concatenated string
+(should-equal
+  (etaf-etml-to-dom '(div :class ("w-20 h-4" "border border-red-200" "bg-green-200") "test content"))
+  (etaf-etml-to-dom '(div :class "w-20 h-4 border border-red-200 bg-green-200" "test content")))
+
+;;; :class attribute tests - list format with other attributes
+(should-equal
+  (etaf-etml-to-dom '(div :id "main" :class ("flex" "items-center") :style "color: blue" "Content"))
+  '(div ((id . "main") (class . "flex items-center") (style . "color: blue")) "Content"))
+
 ;;; Test etaf-etml-tag integration - p tag should NOT have default styles
 ;; (p tag has :default-style nil, so no styles are merged)
 (let* ((result (etaf-etml-to-dom '(p "Hello")))
