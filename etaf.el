@@ -57,8 +57,14 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。
         (insert (etaf-string etml data ecss width height)))
       ;; 显示 buffer
       (pop-to-buffer buffer)
+      (local-set-key "q" 'etaf-window-quit)
       (read-only-mode 1))
     buffer))
+
+(defun etaf-window-quit ()
+  (interactive)
+  (local-unset-key "q")
+  (quit-window))
 
 (defun etaf-rerender-buffer (&optional buffer)
   "重新渲染 BUFFER（默认为当前 buffer）。

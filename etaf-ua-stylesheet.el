@@ -58,7 +58,7 @@
    "caption{table-caption}"
    "li{list-item}"
 
-   "button{inline}"
+   "button{inline-block}"
    "button:hover{bg-gray-200}"
    "button:active{bg-gray-300}"
    "button:disabled{bg-gray-100 text-gray-500 cursor-not-allowed}"
