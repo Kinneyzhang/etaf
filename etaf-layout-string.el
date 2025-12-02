@@ -40,8 +40,7 @@
 (require 'etaf-layout-interactive)
 
 ;; Forward declarations
-(declare-function etaf-layout-get-default-display "etaf-layout")
-(declare-function etaf-layout-get-style "etaf-layout")
+(declare-function etaf-render-get-default-display "etaf-render")
 (declare-function etaf-flex-line-breaks "etaf-flex")
 (declare-function etaf-layout-get-box-model "etaf-layout")
 
@@ -130,8 +129,8 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
                     (cond
                      ((listp child)
                       (cons (etaf-layout-string-render-node child)
-                            (or (etaf-layout-get-style child 'display)
-                                (etaf-layout-get-default-display
+                            (or (dom-attr child 'render-display)
+                                (etaf-render-get-default-display
                                  (dom-tag child)))))
                      ((stringp child)
                       (cons child "inline"))

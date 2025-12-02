@@ -1,4 +1,4 @@
-;;; etaf-layout.el --- Layout computation from DOM and CSSOM -*- lexical-binding: t; -*-
+;;; etaf-layout.el --- Layout computation for render tree -*- lexical-binding: t; -*-
 
 ;; Copyright (C) 2024 ETAF Contributors
 
@@ -15,7 +15,7 @@
 
 ;; 布局系统主模块
 ;;
-;; 本模块负责从 DOM 和 CSSOM 直接构建布局树，集成了原来分离的渲染树构建步骤。
+;; 本模块是布局系统的主协调器，负责从渲染树构建布局树。
 ;; 所有函数使用 `etaf-layout-' 前缀。
 ;;
 ;; 模块结构：
@@ -26,29 +26,30 @@
 ;; - etaf-layout-string.el: 布局到字符串转换
 ;;
 ;; 公共接口：
-;; - `etaf-layout-build-tree' - 从 DOM 和 CSSOM 构建布局树（主入口）
+;; - `etaf-layout-build-tree' - 从渲染树构建布局树（主入口）
 ;; - `etaf-layout-get-box-model' - 获取布局节点的盒模型
-;; - `etaf-layout-get-style' - 获取布局节点的样式属性
-;; - `etaf-layout-get-display' - 获取布局节点的 display 类型
+;; - `etaf-layout-create-node' - 创建布局节点
+;; - `etaf-layout-compute-box-model' - 计算盒模型
+;; - `etaf-layout-node' - 递归布局节点
 ;; - `etaf-layout-walk' - 遍历布局树
 ;; - `etaf-layout-to-string' - 将布局树转换为字符串
 ;;
 ;; 布局树结构：
 ;; (tag ((layout-box-model . <box-model>)
-;;       (render-style . ((display . "block") (color . "red") ...))
-;;       (id . "main"))  ;; 保留除 class 外的原始 DOM 属性
+;;       (render-style . ((color . "red") ...))
+;;       (render-display . "block")
+;;       (class . "foo"))
 ;;   child1 child2 ...)
 ;;
 ;; 使用示例：
-;;   (setq layout-tree (etaf-layout-build-tree dom cssom viewport))
+;;   (setq layout-tree (etaf-layout-build-tree render-tree viewport))
 ;;   (setq layout-string (etaf-layout-to-string layout-tree))
 
 ;;; Code:
 
 (require 'cl-lib)
 (require 'dom)
-(require 'etaf-dom)
-(require 'etaf-css)
+(require 'etaf-render)
 (require 'etaf-utils)
 
 ;; 引入子模块
@@ -58,103 +59,6 @@
 ;; Forward declarations
 (declare-function etaf-layout-flex-format "etaf-layout-flex")
 (declare-function etaf-layout-string-render "etaf-layout-string")
-
-;;; ============================================================
-;;; 样式和显示类型辅助函数（原 etaf-render 模块功能）
-;;; ============================================================
-
-;; HTML 块级元素列表
-(defconst etaf-layout-block-level-tags
-  '(div p h1 h2 h3 h4 h5 h6 ul ol li dl dt dd
-    article aside section nav header footer main
-    blockquote pre address figure figcaption
-    form fieldset table thead tbody tfoot tr th td
-    hr html body)
-  "HTML 块级元素标签列表。这些元素默认 display 为 block。")
-
-(defun etaf-layout-get-default-display (tag)
-  "根据元素标签返回默认的 display 值。
-TAG 是元素标签名（symbol）。
-块级元素返回 \"block\"，其他返回 \"inline\"。"
-  (if (memq tag etaf-layout-block-level-tags)
-      "block"
-    "inline"))
-
-(defun etaf-layout-get-style (layout-node property)
-  "从布局节点获取指定样式属性的值。
-LAYOUT-NODE 是布局节点。
-PROPERTY 是样式属性名（symbol）。
-返回属性值字符串或 nil。"
-  (cdr (assq property (dom-attr layout-node 'render-style))))
-
-(defun etaf-layout-get-display (layout-node)
-  "从布局节点获取 display 类型。
-LAYOUT-NODE 是布局节点。
-返回 display 字符串。"
-  (or (etaf-layout-get-style layout-node 'display)
-      (etaf-layout-get-default-display (dom-tag layout-node))))
-
-(defun etaf-layout-get-computed-style (layout-node)
-  "从布局节点获取完整的计算样式 alist。
-LAYOUT-NODE 是布局节点。
-返回计算样式 alist。"
-  (dom-attr layout-node 'render-style))
-
-(defun etaf-layout--node-visible-p (dom-node computed-style)
-  "判断 DOM 节点是否应该在布局树中显示。
-不显示的元素包括：
-- display: none
-- <head>, <script>, <style>, <meta>, <link> 等不可见标签"
-  (let ((tag (dom-tag dom-node))
-        (display (cdr (assq 'display computed-style))))
-    (and (not (memq tag '(head script style meta link title)))
-         (not (string= display "none")))))
-
-(defun etaf-layout--create-styled-node (dom-node computed-style &optional computed-style-dark)
-  "创建带样式的节点（中间步骤，用于构建布局树）。
-DOM-NODE 是 DOM 节点。
-COMPUTED-STYLE 是亮色模式下的计算样式 alist。
-COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
-返回 DOM 格式的节点：(tag ((attrs...) children...)
-其中 attrs 包含：
-- render-style: 亮色模式计算样式（包含 display 属性）
-- render-style-dark: 暗色模式计算样式（如果与亮色不同）
-- 保留除 class 外的原始 DOM 属性（如 id）"
-  (let* ((tag (dom-tag dom-node))
-         ;; 从 computed-style 获取 display，如果没有则根据标签类型使用默认值
-         (display (or (cdr (assq 'display computed-style))
-                      (etaf-layout-get-default-display tag)))
-         ;; 确保 computed-style 中有 display 属性
-         (computed-style-with-display
-          (if (assq 'display computed-style)
-              computed-style
-            (cons (cons 'display display) computed-style)))
-         (orig-attrs (dom-attributes dom-node))
-         ;; 过滤掉 class 属性，保留其他属性（如 id）
-         (filtered-attrs (seq-filter (lambda (attr) (not (eq (car attr) 'class))) orig-attrs))
-         ;; 构建新的属性 alist，添加样式信息
-         ;; 只有当暗色样式与亮色样式不同时才添加 render-style-dark
-         (render-attrs (if computed-style-dark
-                           ;; 确保暗色模式样式也包含 display
-                           (let* ((dark-display (or (cdr (assq 'display computed-style-dark)) display))
-                                  (computed-style-dark-with-display
-                                   (if (assq 'display computed-style-dark)
-                                       computed-style-dark
-                                     (cons (cons 'display dark-display) computed-style-dark))))
-                             ;; 现在两个样式都有 display，可以正确比较
-                             ;; 使用 equal 进行深度比较以检测样式差异
-                             ;; 虽然对大样式对象可能较慢，但这是必要的以确保
-                             ;; 只有在暗色模式真正不同时才保存 render-style-dark
-                             (if (equal computed-style-with-display computed-style-dark-with-display)
-                                 ;; 样式相同，只保留亮色
-                                 (list (cons 'render-style computed-style-with-display))
-                               ;; 样式不同，保留两者
-                               (list (cons 'render-style computed-style-with-display)
-                                     (cons 'render-style-dark computed-style-dark-with-display))))
-                         ;; 没有暗色样式，只使用亮色
-                         (list (cons 'render-style computed-style-with-display)))))
-    ;; 合并样式属性和过滤后的原始属性
-    (list tag (append render-attrs filtered-attrs))))
 
 ;;; ============================================================
 ;;; 公共接口
@@ -176,10 +80,9 @@ BOX-MODEL 是盒模型 plist。
          (layout-attrs (list (cons 'layout-box-model box-model))))
     (list tag (append layout-attrs render-attrs))))
 
-(defun etaf-layout-build-tree (dom cssom viewport)
-  "从 DOM 和 CSSOM 直接构建布局树。
-DOM 是 DOM 树根节点。
-CSSOM 是 CSS 对象模型。
+(defun etaf-layout-build-tree (render-tree viewport)
+  "从渲染树构建布局树。
+RENDER-TREE 是渲染树根节点。
 VIEWPORT 是视口大小 (:width w :height h)。
   - width 和 height 可以为 nil，表示不限制根容器的该维度，使用内容的自然尺寸。
   - 当 width 为 nil 时，块级元素的宽度将根据内容自动计算。
@@ -187,10 +90,8 @@ VIEWPORT 是视口大小 (:width w :height h)。
 返回布局树根节点。"
   (let ((root-context (list :content-width (plist-get viewport :width)
                             :content-height (plist-get viewport :height)
-                            :is-root t
-                            :cssom cssom
-                            :root-dom dom)))
-    (etaf-layout--build-node dom root-context)))
+                            :is-root t)))
+    (etaf-layout-node render-tree root-context)))
 
 (defun etaf-layout-walk (layout-tree func)
   "遍历布局树，对每个节点调用 FUNC。
@@ -198,101 +99,11 @@ LAYOUT-TREE 是布局树根节点。
 FUNC 是接受一个布局节点参数的函数。"
   (etaf-dom-map func layout-tree))
 
-(defun etaf-layout-find-by-tag (layout-tree tag)
-  "在布局树中查找指定标签的所有节点。
-LAYOUT-TREE 是布局树根节点。
-TAG 是要查找的标签名（symbol）。
-返回匹配的布局节点列表。"
-  (let ((result '()))
-    (etaf-layout-walk layout-tree
-      (lambda (node)
-        (when (eq (dom-tag node) tag)
-          (push node result))))
-    (nreverse result)))
-
-(defun etaf-layout-find-by-display (layout-tree display)
-  "在布局树中查找指定 display 类型的所有节点。
-LAYOUT-TREE 是布局树根节点。
-DISPLAY 是显示类型字符串（如 \"block\", \"inline\"）。
-返回匹配的布局节点列表。"
-  (let ((result '()))
-    (etaf-layout-walk layout-tree
-      (lambda (node)
-        (when (string= (etaf-layout-get-display node) display)
-          (push node result))))
-    (nreverse result)))
-
-(defun etaf-layout-stats (layout-tree)
-  "计算布局树的统计信息。
-LAYOUT-TREE 是布局树根节点。
-返回 plist 包含：
-- :node-count 节点总数
-- :max-depth 最大深度
-- :display-types display 类型的分布 alist"
-  (let ((node-count 0)
-        (max-depth 0)
-        (display-types (make-hash-table :test 'equal)))
-    (cl-labels ((count-nodes (node depth)
-                  (when node
-                    (cl-incf node-count)
-                    (setq max-depth (max max-depth depth))
-                    (let ((display (etaf-layout-get-display node)))
-                      (puthash display (1+ (gethash display display-types 0))
-                              display-types))
-                    ;; 遍历子节点（过滤出元素子节点）
-                    (dolist (child (dom-children node))
-                      (when (listp child)
-                        (count-nodes child (1+ depth)))))))
-      (count-nodes layout-tree 0))
-    ;; 转换 hash-table 为 alist
-    (let ((display-alist '()))
-      (maphash (lambda (k v) (push (cons k v) display-alist))
-              display-types)
-      (list :node-count node-count
-            :max-depth max-depth
-            :display-types (nreverse display-alist)))))
-
 (defun etaf-layout-to-string (layout-tree)
   "将布局树转换为可插入 Emacs buffer 的字符串。
 LAYOUT-TREE 是布局树根节点。
 返回拼接好的布局字符串。"
   (etaf-layout-string-render layout-tree))
-
-;;; ============================================================
-;;; 布局树构建（从 DOM 节点）
-;;; ============================================================
-
-(defun etaf-layout--build-node (dom-node parent-context)
-  "从 DOM 节点递归构建布局节点。
-DOM-NODE 是当前 DOM 节点。
-PARENT-CONTEXT 包含父容器上下文信息，包括 :cssom 和 :root-dom。
-返回布局节点或 nil（如果节点不可见）。"
-  (when-let ((tag (dom-tag dom-node)))
-    (let* ((cssom (plist-get parent-context :cssom))
-           (root-dom (plist-get parent-context :root-dom))
-           ;; 获取双模式计算样式
-           (dual-style (etaf-css-get-computed-style-dual-mode cssom dom-node root-dom))
-           (computed-style (plist-get dual-style :light))
-           (computed-style-dark (plist-get dual-style :dark)))
-      ;; 检查节点是否可见
-      (when (etaf-layout--node-visible-p dom-node computed-style)
-        ;; 创建带样式的节点
-        (let ((styled-node (etaf-layout--create-styled-node dom-node computed-style computed-style-dark)))
-          ;; 递归处理子节点
-          (let ((children '()))
-            (dolist (child (dom-children dom-node))
-              (cond
-               ;; 元素节点：递归构建布局节点
-               ((and (consp child) (symbolp (car child)))
-                (when-let ((child-layout (etaf-layout--build-node child parent-context)))
-                  (push child-layout children)))
-               ;; 文本节点：直接保留
-               ((stringp child)
-                (push child children))))
-            ;; 将子节点添加到styled-node
-            (setcdr (cdr styled-node) (nreverse children)))
-          ;; 现在有了带样式和子节点的节点，进行布局计算
-          (etaf-layout-node styled-node parent-context))))))
 
 ;;; ============================================================
 ;;; 盒模型计算
@@ -306,7 +117,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
   :content-height - 可用内容高度
   :is-root        - 是否为根元素（可选）
 返回盒模型 plist。"
-  (let* ((style (etaf-layout-get-computed-style render-node))
+  (let* ((style (etaf-render-get-computed-style render-node))
          (parent-width (plist-get parent-context :content-width))
          (parent-height (plist-get parent-context :content-height))
          (is-root (plist-get parent-context :is-root))
@@ -457,7 +268,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (margin-left-val (if (eq margin-left 'auto) 0 margin-left))
          
          ;; display 类型
-         (display (etaf-layout-get-display render-node))
+         (display (etaf-render-get-display render-node))
          (is-inline (or (string= display "inline")
                         (string= display "inline-block")))
          (is-in-flex-container (plist-get parent-context :flex-container))
@@ -566,8 +377,8 @@ PARENT-CONTEXT 包含父容器的上下文信息。
           (dolist (child children)
             (when (and (consp child) (symbolp (car child)))
               (let ((child-display
-                     (or (etaf-layout-get-style child 'display)
-                         (etaf-layout-get-default-display (car child)))))
+                     (or (dom-attr child 'render-display)
+                         (etaf-render-get-default-display (car child)))))
                 (when (or (string= child-display "inline")
                           (string= child-display "inline-block"))
                   (setq has-inline-element t)))))
@@ -583,7 +394,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                 ;; :overline/:underline face实现，不占用额外行数
                 (let* ((child-box (etaf-layout-get-box-model child-layout))
                        (child-display
-                        (or (etaf-layout-get-style child-layout 'display) "block"))
+                        (or (dom-attr child-layout 'render-display) "block"))
                        (child-total-height
                         (+ (etaf-layout-box-content-height child-box)
                            (etaf-layout-box-padding-height child-box)
@@ -617,7 +428,7 @@ RENDER-NODE 是渲染节点。
 PARENT-CONTEXT 是父容器上下文。
 返回布局节点或 nil。"
   (when render-node
-    (let ((display (etaf-layout-get-display render-node)))
+    (let ((display (etaf-render-get-display render-node)))
       (cond
        ((string= display "flex")
         (etaf-layout-flex-format render-node parent-context))

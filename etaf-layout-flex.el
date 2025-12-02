@@ -52,8 +52,8 @@
 (declare-function etaf-layout-create-node "etaf-layout")
 (declare-function etaf-layout-compute-box-model "etaf-layout")
 (declare-function etaf-layout-node "etaf-layout")
-(declare-function etaf-layout-get-computed-style "etaf-layout")
-(declare-function etaf-layout-get-display "etaf-layout")
+(declare-function etaf-render-get-computed-style "etaf-render")
+(declare-function etaf-render-get-display "etaf-render")
 
 ;;; ============================================================
 ;;; 公共接口
@@ -73,7 +73,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
 4. 计算主轴分配（flex-grow/shrink）
 5. 计算交叉轴对齐（align-items）"
   (let* ((box-model (etaf-layout-compute-box-model render-node parent-context))
-         (computed-style (etaf-layout-get-computed-style render-node))
+         (computed-style (etaf-render-get-computed-style render-node))
          (content-width (etaf-layout-box-content-width box-model))
          (content-height (etaf-layout-box-content-height box-model))
          
@@ -134,7 +134,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
               (when-let ((child-layout (etaf-layout-node child child-context)))
                 (push child-layout child-layouts)
                 ;; 收集 flex item 信息
-                (let* ((child-style (etaf-layout-get-computed-style child))
+                (let* ((child-style (etaf-render-get-computed-style child))
                        (order (or (etaf-css-parse-flex-number
                                    (etaf-css-parse-style-value child-style 'order))
                                   0))

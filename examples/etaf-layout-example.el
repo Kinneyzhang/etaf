@@ -19,6 +19,8 @@
 
 (require 'etaf-etml)
 (require 'etaf-css)
+(require 'etaf-render)
+(require 'etaf-ecss)
 (require 'etaf-layout)
 
 ;;; 示例 1: 简单的两列布局
@@ -66,10 +68,12 @@
          ;; 2. 构建 CSSOM
          (simple-cssom (etaf-css-build-cssom simple-dom))
          
-         ;; 3. 直接构建布局树（不再需要单独的渲染树）
+         ;; 3. 构建渲染树
+         (simple-render-tree (etaf-ecss-build-render-tree simple-dom simple-cssom))
+         
+         ;; 4. 构建布局树
          (simple-layout-tree (etaf-layout-build-tree 
-                              simple-dom
-                              simple-cssom
+                              simple-render-tree 
                               '(:width 1024 :height 768))))
     
     ;; 5. 打印布局树结构
@@ -198,10 +202,12 @@
          ;; 2. 构建 CSSOM
          (complex-cssom (etaf-css-build-cssom complex-dom))
          
-         ;; 3. 直接构建布局树
+         ;; 3. 构建渲染树
+         (complex-render-tree (etaf-ecss-build-render-tree complex-dom complex-cssom))
+         
+         ;; 4. 构建布局树
          (complex-layout-tree (etaf-layout-build-tree 
-                              complex-dom
-                              complex-cssom
+                              complex-render-tree 
                               '(:width 1024 :height 768))))
     
     ;; 5. 打印布局树结构
