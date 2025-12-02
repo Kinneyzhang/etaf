@@ -171,6 +171,14 @@ DOM 是 DOM 树根节点。
       (nconc stylesheet (nreverse rules)))
     stylesheet))
 
+(defun etaf-css-extract-inline-styles-compat (dom)
+  "从 DOM 树中提取所有内联样式（style 属性）。
+返回规则列表（plist 格式），用于向后兼容。
+新代码应该使用 etaf-css-extract-inline-styles。"
+  (let ((stylesheet (etaf-css-extract-inline-styles dom)))
+    ;; 将样式表节点的子规则转换为 plist 列表
+    (mapcar #'etaf-css-rule-to-plist (dom-children stylesheet))))
+
 (defun etaf-css-extract-style-tags (dom)
   "从 DOM 树中提取 <style> 标签内的 CSS 规则，构建样式表子树。
 DOM 是 DOM 树根节点。
@@ -195,6 +203,19 @@ DOM 是 DOM 树根节点。
               (nconc stylesheet (list rule-node))))
           (push stylesheet stylesheets))))
     (nreverse stylesheets)))
+
+(defun etaf-css-extract-style-tags-compat (dom)
+  "从 DOM 树中提取 <style> 标签内的 CSS 规则。
+返回规则列表（plist 格式），用于向后兼容。
+新代码应该使用 etaf-css-extract-style-tags。"
+  (let ((stylesheets (etaf-css-extract-style-tags dom))
+        (rules '()))
+    ;; 将所有样式表节点的规则收集到一个列表
+    (dolist (stylesheet stylesheets)
+      (dolist (rule-node (dom-children stylesheet))
+        (when (eq (dom-tag rule-node) 'rule)
+          (push (etaf-css-rule-to-plist rule-node) rules))))
+    (nreverse rules)))
 
 ;;; CSSOM 树辅助函数
 
@@ -232,6 +253,40 @@ RULE-NODE 是规则节点。
         :source (dom-attr rule-node 'source)
         :media (dom-attr rule-node 'media)
         :node (dom-attr rule-node 'node)))
+
+;;; 向后兼容的 CSSOM 访问器
+
+(defun etaf-css-get-inline-rules (cssom)
+  "从 CSSOM 树中提取内联样式规则（plist 格式）。
+CSSOM 是 CSSOM 根节点。
+返回规则 plist 列表，用于向后兼容。"
+  (let ((rules '()))
+    (dolist (stylesheet (dom-children cssom))
+      (when (and (eq (dom-tag stylesheet) 'stylesheet)
+                 (eq (dom-attr stylesheet 'source) 'inline))
+        (dolist (rule (dom-children stylesheet))
+          (when (eq (dom-tag rule) 'rule)
+            (push (etaf-css-rule-to-plist rule) rules)))))
+    (nreverse rules)))
+
+(defun etaf-css-get-style-rules (cssom)
+  "从 CSSOM 树中提取样式表规则（plist 格式）。
+CSSOM 是 CSSOM 根节点。
+返回规则 plist 列表，用于向后兼容。"
+  (let ((rules '()))
+    (dolist (stylesheet (dom-children cssom))
+      (when (and (eq (dom-tag stylesheet) 'stylesheet)
+                 (memq (dom-attr stylesheet 'source) '(style-tag ua)))
+        (dolist (rule (dom-children stylesheet))
+          (when (eq (dom-tag rule) 'rule)
+            (push (etaf-css-rule-to-plist rule) rules)))))
+    (nreverse rules)))
+
+(defun etaf-css-get-all-rules-plist (cssom)
+  "从 CSSOM 树中提取所有规则（plist 格式）。
+CSSOM 是 CSSOM 根节点。
+返回规则 plist 列表，用于向后兼容。"
+  (mapcar #'etaf-css-rule-to-plist (etaf-css-get-all-rules cssom)))
 
 ;;; CSSOM 构建和查询
 
@@ -306,47 +361,45 @@ CSS 层叠顺序（从低到高）：
 CSSOM 是由 etaf-css-build-cssom 生成的 CSSOM 根节点。
 NODE 是要查询的 DOM 节点。
 DOM 是根 DOM 节点。
-返回适用的规则节点列表，会过滤掉不匹配的媒体查询规则。"
+返回适用的规则 plist 列表，会过滤掉不匹配的媒体查询规则。"
   (let ((matching-rules '())
         (rule-index (dom-attr cssom 'rule-index))
         (media-env (dom-attr cssom 'media-env))
-        (etaf-dom--query-root dom))
+        (etaf-dom--query-root dom)
+        ;; 标准化节点：如果是包装的节点 ((tag ...))，解包为 (tag ...)
+        (normalized-node (if (and (listp node) 
+                                  (listp (car node))
+                                  (symbolp (car (car node))))
+                             (car node)
+                           node)))
     
-    ;; 1. 获取所有规则节点
-    (let ((all-rule-nodes (etaf-css-get-all-rules cssom)))
+    ;; 1. 获取所有规则节点并转换为 plist
+    (let* ((all-rule-nodes (etaf-css-get-all-rules cssom))
+           (all-rules-plist (mapcar #'etaf-css-rule-to-plist all-rule-nodes)))
       
       ;; 2. 如果有索引，使用索引查询候选规则
       (let ((candidates (if rule-index
-                            ;; 将规则节点转换为 plist 格式用于索引查询
-                            (let* ((rules-plist (mapcar #'etaf-css-rule-to-plist all-rule-nodes))
-                                   (candidate-plists (etaf-css-index-query-candidates rule-index node)))
-                              ;; 找回对应的规则节点
-                              (cl-remove-if-not
-                               (lambda (rule-node)
-                                 (let ((rule-plist (etaf-css-rule-to-plist rule-node)))
-                                   (member rule-plist candidate-plists)))
-                               all-rule-nodes))
-                          all-rule-nodes)))
+                            (etaf-css-index-query-candidates rule-index normalized-node)
+                          all-rules-plist)))
         
         ;; 3. 对候选规则进行匹配测试
-        (dolist (rule-node candidates)
-          (let ((rule-plist (etaf-css-rule-to-plist rule-node))
-                (media-query (dom-attr rule-node 'media)))
-            ;; 3.1 检查媒体查询是否匹配
+        (dolist (rule candidates)
+          ;; 3.1 检查媒体查询是否匹配
+          (let ((media-query (plist-get rule :media)))
             (when (or (null media-query)
                       (etaf-css-media-match-p media-query media-env))
               ;; 媒体查询匹配，继续检查选择器
               (cond
                ;; 内联样式直接匹配节点
-               ((eq (plist-get rule-plist :source) 'inline)
-                (let ((rule-node-ref (plist-get rule-plist :node)))
-                  (when (eq rule-node-ref node)
-                    (push rule-plist matching-rules))))
+               ((eq (plist-get rule :source) 'inline)
+                (let ((rule-node-ref (plist-get rule :node)))
+                  (when (eq rule-node-ref normalized-node)
+                    (push rule matching-rules))))
                ;; UA 样式和外部样式通过选择器匹配
-               ((or (eq (plist-get rule-plist :source) 'ua)
-                    (eq (plist-get rule-plist :source) 'style-tag))
+               ((or (eq (plist-get rule :source) 'ua)
+                    (eq (plist-get rule :source) 'style-tag))
                 (condition-case nil
-                    (let* ((selector (plist-get rule-plist :selector))
+                    (let* ((selector (plist-get rule :selector))
                            (ast (etaf-css-selector-parse selector)))
                       (when ast
                         (let ((selectors (plist-get ast :nodes))
@@ -354,10 +407,10 @@ DOM 是根 DOM 节点。
                           (dolist (sel selectors)
                             (when (and sel
                                       (eq (plist-get sel :type) 'selector))
-                              (when (etaf-css-selector-node-matches-p node dom sel)
+                              (when (etaf-css-selector-node-matches-p normalized-node dom sel)
                                 (setq matched t))))
                           (when matched
-                            (push rule-plist matching-rules)))))
+                            (push rule matching-rules)))))
                   (error nil)))))))))
     (nreverse matching-rules)))
 
