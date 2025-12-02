@@ -269,7 +269,8 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          
          ;; display 类型
          (display (etaf-render-get-display render-node))
-         (is-inline (string= display "inline"))
+         (is-inline (or (string= display "inline")
+                        (string= display "inline-block")))
          (is-in-flex-container (plist-get parent-context :flex-container))
          
          ;; 处理 min/max 值
@@ -372,13 +373,14 @@ PARENT-CONTEXT 包含父容器的上下文信息。
               ;; 检查是否有inline元素子节点
               (has-inline-element nil))
           
-          ;; 先遍历一次检查是否有inline元素
+          ;; 先遍历一次检查是否有inline或inline-block元素
           (dolist (child children)
             (when (and (consp child) (symbolp (car child)))
               (let ((child-display
                      (or (dom-attr child 'render-display)
                          (etaf-render-get-default-display (car child)))))
-                (when (string= child-display "inline")
+                (when (or (string= child-display "inline")
+                          (string= child-display "inline-block"))
                   (setq has-inline-element t)))))
           
           (dolist (child children)
@@ -434,6 +436,8 @@ PARENT-CONTEXT 是父容器上下文。
             (null display))
         (etaf-layout-block-formatting-context render-node parent-context))
        ((string= display "inline")
+        (etaf-layout-block-formatting-context render-node parent-context))
+       ((string= display "inline-block")
         (etaf-layout-block-formatting-context render-node parent-context))
        (t (etaf-layout-block-formatting-context
            render-node parent-context))))))

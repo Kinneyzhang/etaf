@@ -684,7 +684,7 @@ SCROLL-UUID 是可选的滚动区域标识符，用于关联滚动条和内容�
 CHILD-INFOS 是 ((string . display-type) ...) 列表。
 CONTAINER-WIDTH 是容器宽度（用于 inline 元素换行）。
 
-Inline 元素水平拼接，Block 元素垂直堆叠。"
+Inline 和 inline-block 元素水平拼接，Block 元素垂直堆叠。"
   (if (null child-infos)
       ""
     (let ((result-parts '())
@@ -693,7 +693,8 @@ Inline 元素水平拼接，Block 元素垂直堆叠。"
         (let ((str (car info))
               (display (cdr info)))
           (when (> (length str) 0)
-            (if (string= display "inline")
+            (if (or (string= display "inline")
+                    (string= display "inline-block"))
                 (push str inline-group)
               (when inline-group
                 (push (etaf-layout-string--merge-inline
