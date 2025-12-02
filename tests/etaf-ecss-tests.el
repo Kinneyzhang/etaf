@@ -432,6 +432,27 @@
     (should (string-match-p "display: flex" result))
     (should (string-match-p "align-items: center" result))))
 
+(ert-deftest etaf-ecss-test-multiple-unified-strings ()
+  "Test etaf-ecss with multiple unified format strings (replacing etaf-ecss-stylesheet)."
+  (let ((result (etaf-ecss
+                 ".header{flex items-center bg-blue-500}"
+                 ".content{p-4}"
+                 "nav>a{text-white}")))
+    (should (string-match-p "\\.header" result))
+    (should (string-match-p "\\.content" result))
+    (should (string-match-p "nav>a" result))
+    (should (string-match-p "display: flex" result))
+    (should (string-match-p "align-items: center" result))
+    (should (string-match-p "background-color: #3b82f6" result))
+    (should (string-match-p "color: #ffffff" result))))
+
+(ert-deftest etaf-ecss-test-numeric-font-size-in-unified ()
+  "Test numeric font-size values in unified ECSS format."
+  (let ((result (etaf-ecss "h1{text-1.6 font-bold}")))
+    (should (string-match-p "^h1" result))
+    (should (string-match-p "font-size: 1.6lh" result))
+    (should (string-match-p "font-weight: 700" result))))
+
 ;;; Scoped ecss Tag Tests (ecss at any position with local scope)
 
 (ert-deftest etaf-ecss-test-scoped-ecss-basic ()
