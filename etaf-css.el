@@ -92,6 +92,22 @@
 (require 'etaf-tailwind)
 (require 'etaf-ua-stylesheet)
 
+;;; 节点辅助函数
+
+(defun etaf-css--normalize-node (node)
+  "标准化 DOM 节点：解包被 dom.el 函数包装的节点。
+NODE 可以是 (tag ...) 或 ((tag ...)) 格式。
+返回标准化的节点 (tag ...)。
+
+dom-by-id 和类似函数返回包装的节点 ((tag ...))，
+而 etaf-dom-map 提供未包装的节点 (tag ...)。
+此函数确保一致性以便进行 eq 比较。"
+  (if (and (listp node)
+           (listp (car node))
+           (symbolp (car (car node))))
+      (car node)
+    node))
+
 ;;; CSSOM 树节点创建函数
 
 (defun etaf-css-create-cssom-root (&optional media-env)
@@ -329,19 +345,21 @@ CSS 层叠顺序（从低到高）：
         (nconc ua-stylesheet (list rule-node))))
     
     ;; 提取样式表（author stylesheets）
-    (let ((author-stylesheets (etaf-css-extract-style-tags dom))
-          ;; 提取内联样式表
-          (inline-stylesheet (etaf-css-extract-inline-styles dom)))
+    (let* ((author-stylesheets (etaf-css-extract-style-tags dom))
+           ;; 提取内联样式表
+           (inline-stylesheet (etaf-css-extract-inline-styles dom))
+           ;; 构建子节点列表：UA < Author < Inline
+           (children (list ua-stylesheet)))
       
-      ;; 按优先级顺序添加样式表到 CSSOM：UA < Author < Inline
-      ;; 首先添加 UA 样式表
-      (nconc cssom (list ua-stylesheet))
-      ;; 然后添加 author 样式表
-      (dolist (stylesheet author-stylesheets)
-        (nconc cssom (list stylesheet)))
-      ;; 最后添加内联样式表
-      (when (dom-children inline-stylesheet)  ; 只有当有规则时才添加
-        (nconc cssom (list inline-stylesheet)))
+      ;; 添加 author 样式表
+      (setq children (nconc children author-stylesheets))
+      
+      ;; 添加内联样式表（如果有规则）
+      (when (dom-children inline-stylesheet)
+        (setq children (nconc children (list inline-stylesheet))))
+      
+      ;; 一次性设置 CSSOM 的子节点
+      (setcdr (cdr cssom) children)
       
       ;; 构建规则索引
       (let* ((all-rules (etaf-css-get-all-rules cssom))
@@ -366,12 +384,8 @@ DOM 是根 DOM 节点。
         (rule-index (dom-attr cssom 'rule-index))
         (media-env (dom-attr cssom 'media-env))
         (etaf-dom--query-root dom)
-        ;; 标准化节点：如果是包装的节点 ((tag ...))，解包为 (tag ...)
-        (normalized-node (if (and (listp node) 
-                                  (listp (car node))
-                                  (symbolp (car (car node))))
-                             (car node)
-                           node)))
+        ;; 标准化节点以确保 eq 比较正确
+        (normalized-node (etaf-css--normalize-node node)))
     
     ;; 1. 获取所有规则节点并转换为 plist
     (let* ((all-rule-nodes (etaf-css-get-all-rules cssom))
@@ -636,22 +650,23 @@ CSS-STRING 是 CSS 样式表字符串，如 \".box { border: 1px solid red; }\"�
                           nil)))
           (nconc new-stylesheet (list rule-node))))
       
-      ;; 将新样式表添加到 CSSOM（在内联样式之前）
-      ;; 找到内联样式表的位置
+      ;; 将新样式表插入到内联样式表之前
+      ;; 找到内联样式表的位置，在其前面插入
       (let* ((children (dom-children cssom))
              (inline-idx (cl-position-if
                           (lambda (child)
                             (and (eq (dom-tag child) 'stylesheet)
                                  (eq (dom-attr child 'source) 'inline)))
-                          children)))
-        (if inline-idx
-            ;; 在内联样式表之前插入
-            (let ((before-inline (cl-subseq children 0 inline-idx))
-                  (from-inline (cl-subseq children inline-idx)))
-              ;; 重建子节点列表
-              (setcdr (cdr cssom) (append before-inline (list new-stylesheet) from-inline)))
-          ;; 没有内联样式表，直接添加到末尾
-          (nconc cssom (list new-stylesheet))))
+                          children))
+             (new-children (if inline-idx
+                               ;; 在内联样式表前插入
+                               (append (cl-subseq children 0 inline-idx)
+                                       (list new-stylesheet)
+                                       (cl-subseq children inline-idx))
+                             ;; 没有内联样式表，添加到末尾
+                             (append children (list new-stylesheet)))))
+        ;; 更新 CSSOM 子节点
+        (setcdr (cdr cssom) new-children))
       
       ;; 重建规则索引
       (let* ((all-rules (etaf-css-get-all-rules cssom))
