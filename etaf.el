@@ -24,7 +24,7 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。
 当为 nil 时，表示不限制根容器的该维度，使用内容的自然尺寸。"
   (let* ((dom (etaf-etml-to-dom etml data))
          (stylesheet (if ecss
-                         (apply #'etaf-ecss-stylesheet ecss)
+                         (apply #'etaf-ecss ecss)
                        ""))
          (cssom (etaf-css-build-cssom dom))
          (cssom (etaf-css-add-stylesheet cssom stylesheet))

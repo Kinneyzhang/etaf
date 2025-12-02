@@ -37,7 +37,7 @@
 ;;   ;; => ".card { display: flex; align-items: center; ... }"
 ;;
 ;;   ;; Build a stylesheet using unified format:
-;;   (etaf-ecss-stylesheet
+;;   (etaf-ecss
 ;;     ".container{flex items-center w-800px}"
 ;;     ".box{bg-blue-500 p-4}"
 ;;     "nav>a{text-white}")
@@ -54,7 +54,7 @@
 ;;   ;; => ".box { background: red; padding: 10px; border: 1px solid black; }"
 ;;
 ;;   ;; Build a stylesheet from multiple rules
-;;   (etaf-ecss-stylesheet
+;;   (etaf-ecss
 ;;     '(".container" (width 800) (margin 0 'auto))
 ;;     '(".box" (background "blue") (padding 10)))
 ;;   ;; => ".container { width: 800px; margin: 0 auto; }\n.box { ... }"
@@ -549,59 +549,7 @@ unified format strings. Mixing formats is not supported."
           (decl-block (apply #'etaf-ecss-declaration-block declarations)))
       (format "%s %s" sel-str decl-block)))))
 
-(defun etaf-ecss-stylesheet (&rest rules)
-  "Create a stylesheet from multiple RULES.
 
-DEPRECATED: Use `etaf-ecss' with multiple unified format strings instead.
-
-This function is maintained for backward compatibility only.
-New code should use `etaf-ecss' directly with unified format strings:
-
-  ;; Old (deprecated):
-  (etaf-ecss-stylesheet
-    \".header{flex items-center}\"
-    \".content{p-4}\")
-
-  ;; New (recommended):
-  (etaf-ecss
-    \".header{flex items-center}\"
-    \".content{p-4}\")
-
-This function supports two formats:
-
-1. UNIFIED FORMAT (recommended):
-   Each rule is a unified ECSS string \"selector{tailwind-classes}\".
-
-   Example:
-     (etaf-ecss-stylesheet
-       \".container{flex items-center w-800px}\"
-       \".box{bg-blue-500 p-4}\"
-       \"nav>a{text-white}\")
-     ;; => \".container { display: flex; ... }
-     ;;     .box { background-color: #3b82f6; ... }
-     ;;     nav>a { color: #ffffff; }\"
-
-2. LEGACY FORMAT:
-   Each rule is a list: (selector declarations ...)
-
-   Example:
-     (etaf-ecss-stylesheet
-       '(\".container\" (width 800) (margin 0 auto))
-       '(\".box\" (background \"blue\") (padding 10)))
-     ;; => \".container { width: 800px; margin: 0 auto; }
-     ;;     .box { background: blue; padding: 10px; }\""
-  (mapconcat
-   (lambda (rule)
-     (if (stringp rule)
-         ;; Unified format: "selector{tailwind-classes}"
-         (etaf-ecss rule)
-       ;; Legacy format: (selector declarations ...)
-       (let ((selector (car rule))
-             (declarations (cdr rule)))
-         (apply #'etaf-ecss selector declarations))))
-   rules "\n"))
-
-(make-obsolete 'etaf-ecss-stylesheet 'etaf-ecss "ETAF 2024-12")
 
 ;;; Macros for more convenient usage
 
@@ -630,7 +578,7 @@ Expands to:
       (background \"blue\")))
 
 Returns the combined CSS string."
-  `(etaf-ecss-stylesheet
+  `(etaf-ecss
     ,@(mapcar (lambda (rule)
                 `'(,(car rule) ,@(cdr rule)))
               rules)))
@@ -768,7 +716,7 @@ Example:
   ;; The style tag content becomes:
   ;; .container { display: flex; align-items: center; width: 800px; }
   ;; .box { background-color: #ef4444; padding-top: 4lh; ... }"
-  `(etaf-ecss-stylesheet
+  `(etaf-ecss
     ,@(mapcar (lambda (rule)
                 `'(,(car rule) ,@(cdr rule)))
               rules)))

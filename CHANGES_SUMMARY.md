@@ -32,7 +32,7 @@ This document summarizes the changes made to implement the requirements for impr
 
 ### 2. ✅ Simplified ECSS Module
 
-**Requirement:** The `etaf-ecss` module should only support the unified format `"<selector>{tailwindcss...}"` and can set one or more CSS rules at once. Remove `etaf-ecss-stylesheet` as a separate interface.
+**Requirement:** The `etaf-ecss` module should only support the unified format `"<selector>{tailwindcss...}"` and can set one or more CSS rules at once. The `etaf-ecss-stylesheet` function has been completely removed.
 
 **Implementation:**
 - **File:** `etaf-ecss.el`
@@ -42,17 +42,17 @@ This document summarizes the changes made to implement the requirements for impr
      ;; Single rule
      (etaf-ecss ".card{flex items-center}")
      
-     ;; Multiple rules (replaces etaf-ecss-stylesheet)
+     ;; Multiple rules
      (etaf-ecss
        ".header{flex items-center}"
        ".content{p-4}"
        "nav>a{text-white}")
      ```
   
-  2. **Marked `etaf-ecss-stylesheet` as obsolete:**
-     - Added `(make-obsolete 'etaf-ecss-stylesheet 'etaf-ecss "ETAF 2024-12")`
-     - Updated documentation to recommend using `etaf-ecss` directly
-     - Function still works for backward compatibility
+  2. **Removed `etaf-ecss-stylesheet` function:**
+     - The function has been completely removed from the codebase
+     - All references updated to use `etaf-ecss` directly
+     - Documentation updated to reflect the removal
   
   3. **Maintained legacy format support:**
      - Old format still works to avoid breaking existing code
@@ -62,7 +62,7 @@ This document summarizes the changes made to implement the requirements for impr
   - Simpler API: one function (`etaf-ecss`) for all use cases
   - Better composability
   - Clearer intent (unified format is recommended)
-  - Backward compatible
+  - Backward compatible with legacy format
 
 ### 3. ✅ Numeric Font-Size in Tailwind
 
@@ -159,11 +159,11 @@ This document summarizes the changes made to implement the requirements for impr
 ## Impact and Migration
 
 ### Breaking Changes
-**None.** All changes are backward compatible.
+**Yes.** The `etaf-ecss-stylesheet` function has been completely removed.
 
 ### Deprecations
-- `etaf-ecss-stylesheet` is now obsolete but still functional
-- Users should migrate to using `etaf-ecss` with multiple unified strings
+- `etaf-ecss-stylesheet` has been completely removed from the codebase
+- Users must migrate to using `etaf-ecss` with multiple unified strings or legacy format
 
 ### Migration Guide
 
@@ -203,22 +203,40 @@ This document summarizes the changes made to implement the requirements for impr
 
 2. **etaf-ecss.el**
    - Enhanced `etaf-ecss` to support multiple unified strings
-   - Marked `etaf-ecss-stylesheet` as obsolete
+   - Completely removed `etaf-ecss-stylesheet` function
+   - Updated macros to use `etaf-ecss` instead
    - ~60 lines changed
 
-3. **etaf-ua-stylesheet.el**
+3. **etaf.el**
+   - Updated to use `etaf-ecss` instead of `etaf-ecss-stylesheet`
+   - ~1 line changed
+
+4. **etaf-ua-stylesheet.el**
    - Converted from legacy to unified ECSS format
    - All 52+ rules updated
    - ~140 lines changed
 
-4. **tests/etaf-tailwind-tests.el**
+5. **tests/etaf-tailwind-tests.el**
    - Added numeric font-size test
    - ~25 lines added
 
-5. **tests/etaf-ecss-tests.el**
+6. **tests/etaf-ecss-tests.el**
+   - Updated tests to use `etaf-ecss` instead of `etaf-ecss-stylesheet`
    - Added multiple unified strings tests
    - Added numeric font-size in unified format test
-   - ~24 lines added
+   - ~30 lines changed
+
+7. **readme.md**
+   - Updated examples to use `etaf-ecss` instead of `etaf-ecss-stylesheet`
+   - ~1 line changed
+
+8. **CHANGES_SUMMARY.md**
+   - Updated to reflect complete removal of `etaf-ecss-stylesheet`
+   - ~20 lines changed
+
+9. **docs/USER-MANUAL.md**
+   - Updated examples to use `etaf-ecss` instead of `etaf-ecss-stylesheet`
+   - ~Several lines changed
 
 ## Benefits of Changes
 
@@ -229,6 +247,7 @@ This document summarizes the changes made to implement the requirements for impr
 5. **Simpler API:** One function (`etaf-ecss`) for all stylesheet needs
 6. **Maintainability:** Less code duplication, clearer separation of concerns
 7. **Forward Compatible:** Unified format is the recommended way forward
+8. **Cleaner Codebase:** Removal of obsolete function reduces complexity
 
 ## Notes
 
@@ -265,4 +284,4 @@ All four requirements have been successfully implemented:
 3. ✅ Numeric font-size support added (text-1.6 → 1.6lh)
 4. ✅ Tag definitions remain minimal
 
-The changes are backward compatible, well-tested, and improve the overall developer experience when working with ETAF's styling system.
+The `etaf-ecss-stylesheet` function has been completely removed from the codebase, and all references have been updated to use `etaf-ecss` directly. The changes improve the overall developer experience when working with ETAF's styling system.
