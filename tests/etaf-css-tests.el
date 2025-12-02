@@ -98,9 +98,9 @@
 
 (should
  (let ((cssom (etaf-css-build-cssom etaf-css-tests-dom-full)))
-   (and (dom-attr cssom 'cssom-inline-rules)
-        (dom-attr cssom 'cssom-style-rules)
-        (dom-attr cssom 'cssom-all-rules))))
+   (and (plist-get cssom :inline-rules)
+        (plist-get cssom :style-rules)
+        (plist-get cssom :all-rules))))
 
 ;;; 测试节点样式查询
 
@@ -142,25 +142,20 @@
    (and (equal (cdr (assq 'color computed)) "red")  ; 内联样式覆盖
         (equal (cdr (assq 'font-size computed)) "12px"))))  ; 继承外部样式
 
-;;; 测试 CSSOM 树结构（基于 DOM 的树形表示）
+;;; 测试 CSSOM 扁平结构
 
 (should
  (let ((cssom (etaf-css-build-cssom etaf-css-tests-dom-full)))
-   ;; CSSOM 应该是一个 DOM 树结构
-   (and (eq (dom-tag cssom) 'html)  ; 保持 DOM 的根标签
-        ;; CSSOM 属性附加在根节点上
-        (dom-attr cssom 'cssom-ua-rules)
-        (dom-attr cssom 'cssom-style-rules)
-        (dom-attr cssom 'cssom-inline-rules)
-        (dom-attr cssom 'cssom-all-rules)
-        (dom-attr cssom 'cssom-rule-index)
-        (dom-attr cssom 'cssom-cache)
-        (dom-attr cssom 'cssom-media-env)
-        ;; 子节点应该被保留
-        (= (length (dom-children cssom)) 2)  ; head 和 body
-        ;; 可以使用 DOM 函数操作 CSSOM 树
-        (dom-by-tag cssom 'div)
-        (dom-by-class cssom "highlight"))))
+   ;; CSSOM 应该是一个扁平的 plist 结构
+   (and (keywordp (car cssom))  ; plist 以 keyword 开始
+        ;; CSSOM 是一个扁平的规则集合，不是 DOM 树
+        (plist-member cssom :ua-rules)
+        (plist-member cssom :style-rules)
+        (plist-member cssom :inline-rules)
+        (plist-member cssom :all-rules)
+        (plist-member cssom :rule-index)
+        (plist-member cssom :cache)
+        (plist-member cssom :media-env))))
 
 ;;; 测试 CSSOM 转字符串
 
