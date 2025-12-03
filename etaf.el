@@ -30,16 +30,22 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。
 (defun etaf-paint-to-buffer (buffer-or-name
                              etml &optional data ecss width height)
   "将 ETML 渲染到指定的 BUFFER-OR-NAME 中。
-支持主题切换时自动重新渲染（需要先启用 `etaf-enable-theme-auto-refresh`）。"
+支持主题切换时自动重新渲染（需要先启用 `etaf-enable-theme-auto-refresh`）。
+支持响应式组件的增量更新（使用 etaf-reactive-span）。"
   (declare (indent defun))
   (let ((buffer (get-buffer-create buffer-or-name)))
     (with-current-buffer buffer
-      ;; 初始化缓存
+      ;; 初始化缓存和响应式绑定
       (etaf-layout-caches-init)
+      (setq-local etaf-reactive-buffer-bindings nil)
       ;; 渲染内容
       (let ((inhibit-read-only t))
         (erase-buffer)
         (insert (etaf-paint-string etml data ecss width height)))
+      ;; 设置响应式监听器
+      (when etaf-reactive-buffer-bindings
+        (require 'etaf-component)
+        (etaf-setup-reactive-watchers buffer))
       ;; 显示 buffer
       (pop-to-buffer buffer)
       (local-set-key "q" 'etaf-window-quit)
