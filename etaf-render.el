@@ -85,7 +85,8 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
 其中 attrs 包含：
 - computed-style: 亮色模式计算样式（包含 display 属性）
 - computed-style-dark: 暗色模式计算样式（如果与亮色不同）
-注意：不保留原始 DOM 属性（class、id 等），只保留计算后的样式"
+- etaf-tag-instance: 标签实例（如果存在），用于交互功能
+注意：不保留大多数原始 DOM 属性（class、id 等），只保留计算后的样式和交互相关属性"
   (let* ((tag (dom-tag dom-node))
          ;; 从 computed-style 获取 display，如果没有则根据标签类型使用默认值
          (display (or (cdr (assq 'display computed-style))
@@ -95,7 +96,9 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
           (if (assq 'display computed-style)
               computed-style
             (cons (cons 'display display) computed-style)))
-         ;; 构建新的属性 alist，只添加渲染信息，不保留原始 DOM 属性
+         ;; 获取原始 DOM 的 etaf-tag-instance 属性（如果存在）
+         (tag-instance (dom-attr dom-node 'etaf-tag-instance))
+         ;; 构建新的属性 alist，只添加渲染信息，不保留大多数原始 DOM 属性
          ;; 只有当暗色样式与亮色样式不同时才添加 computed-style-dark
          (render-attrs (if (and computed-style-dark
                                 (not (equal computed-style-with-display computed-style-dark)))
@@ -107,7 +110,10 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
                                              computed-style-dark
                                            (cons (cons 'display dark-display) computed-style-dark)))))
                          (list (cons 'computed-style computed-style-with-display)))))
-    ;; 只返回渲染属性，不包含原始 DOM 属性
+    ;; 如果存在 tag-instance，将其添加到渲染属性中
+    (when tag-instance
+      (push (cons 'etaf-tag-instance tag-instance) render-attrs))
+    ;; 返回渲染节点
     (list tag render-attrs)))
 
 (defun etaf-render-node-visible-p (dom-node computed-style)

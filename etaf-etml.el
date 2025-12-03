@@ -318,13 +318,21 @@ the final string with keymap properties."
               (setcdr class-attr class-string)))
           ;; Merge etaf-etml-tag default styles if tag is defined
           (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
-          ;; NOTE: Tag instances are no longer embedded in DOM attributes.
-          ;; They are stored in the virtual DOM layer (see etaf-vdom.el).
-          ;; To access tag instances with event handlers, use:
-          ;;   (etaf-etml-to-dom-with-vdom template data)
-          ;; This returns an etaf-vdom-result with:
-          ;;   - :dom - Clean DOM without tag-instances
-          ;;   - :vtree - Virtual DOM tree with tag-instances and event handlers
+          
+          ;; Create tag-instance for tags with event handlers or interactive styles
+          ;; This is needed for the layout rendering to add interactive text properties
+          (when (etaf-etml-tag-defined-p tag)
+            (let* ((tag-def (etaf-etml-tag-get-definition tag))
+                   (has-events (or (plist-get tag-def :on-click)
+                                   (plist-get tag-def :on-hover-enter)
+                                   (plist-get tag-def :on-hover-leave)
+                                   (plist-get tag-def :on-keydown)
+                                   (plist-get tag-def :hover-style))))
+              (when has-events
+                (let ((tag-instance (etaf-etml-tag-create-instance tag attrs rest)))
+                  ;; Add tag-instance to DOM attributes for rendering pipeline
+                  (setq attr-alist (cons (cons 'etaf-tag-instance tag-instance) attr-alist))))))
+          
           ;; Process children based on tag type and content
           ;; Check for ecss children first to handle scoping properly
           (let* ((has-ecss-children (and rest 
