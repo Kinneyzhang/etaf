@@ -750,22 +750,22 @@ Should be called automatically by etaf-paint-to-buffer."
               ;; Add text property to mark this region
               (put-text-property start end 'etaf-reactive-id uuid)
               ;; Set up watcher
-              (etaf-watch ref
-                (lambda (new-value _old-value)
-                  (when (buffer-live-p buffer)
-                    (with-current-buffer buffer
-                      (let ((inhibit-read-only t))
-                        (save-excursion
-                          (goto-char (point-min))
-                          (while (let ((pos (text-property-search-forward 'etaf-reactive-id uuid t)))
-                                   (when pos
-                                     (let ((region-start (prop-match-beginning pos))
-                                           (region-end (prop-match-end pos))
-                                           (new-text (funcall format-fn new-value)))
-                                       (goto-char region-start)
-                                       (delete-region region-start region-end)
-                                       (insert (propertize new-text 'etaf-reactive-id uuid))
-                                       nil)))))))))))))))
+              (etaf-watch
+               ref
+               (lambda (new-value _old-value)
+                 (when (buffer-live-p buffer)
+                   (with-current-buffer buffer
+                     (let ((inhibit-read-only t))
+                       (save-excursion
+                         (goto-char (point-min))
+                         (while (let ((pos (text-property-search-forward 'etaf-reactive-id uuid t)))
+                                  (when pos
+                                    (let ((region-start (prop-match-beginning pos))
+                                          (region-end (prop-match-end pos))
+                                          (new-text (funcall format-fn new-value)))
+                                      (goto-char region-start)
+                                      (delete-region region-start region-end)
+                                      (insert (propertize new-text 'etaf-reactive-id uuid)) nil)))))))))))))))))
 
 (provide 'etaf-component)
 ;;; etaf-component.el ends here
