@@ -72,7 +72,9 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
                         (etaf-layout-box-create)))
          (computed-style (dom-attr layout-node 'computed-style))
          (computed-style-dark (dom-attr layout-node 'computed-style-dark))
-         (tag-instance (dom-attr layout-node 'etaf-tag-instance))
+         ;; 根据标签类型动态创建 tag-instance（底层能力）
+         (tag (dom-tag layout-node))
+         (tag-instance (etaf-layout-string--create-tag-instance-if-needed tag layout-node))
          (content-width (or (etaf-layout-box-content-width box-model) 0))
          (content-height-px
           (or (etaf-layout-box-content-height box-model) 0))
@@ -188,6 +190,35 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
 ;;; ============================================================
 ;;; 内部函数：盒模型构建
 ;;; ============================================================
+
+(defun etaf-layout-string--create-tag-instance-if-needed (tag layout-node)
+  "根据标签类型判断是否需要创建 tag-instance 以提供交互能力。
+TAG 是标签名（symbol）。
+LAYOUT-NODE 是布局节点。
+返回 tag-instance 或 nil。
+
+这是一个底层能力函数，在渲染字符串时根据标签类型自动为交互元素
+（button, a, input, textarea 等）创建 tag-instance，无需在 DOM 阶段绑定。"
+  (when (etaf-etml-tag-defined-p tag)
+    (let* ((tag-def (etaf-etml-tag-get-definition tag))
+           ;; 检查标签是否有交互能力（事件处理器或交互样式）
+           (has-interactive-capability
+            (or (plist-get tag-def :on-click)
+                (plist-get tag-def :on-hover-enter)
+                (plist-get tag-def :on-hover-leave)
+                (plist-get tag-def :on-keydown)
+                (plist-get tag-def :hover-style)
+                (plist-get tag-def :active-style)
+                (plist-get tag-def :focus-style))))
+      (when has-interactive-capability
+        ;; 从布局节点提取必要信息创建 tag-instance
+        ;; 注意：此时没有原始的 attrs 和 children，我们需要从计算样式重建
+        (let* ((computed-style (dom-attr layout-node 'computed-style))
+               ;; 创建简化的 attrs（从计算样式提取关键属性）
+               (attrs nil)
+               ;; 获取子节点作为 children
+               (children (dom-children layout-node)))
+          (etaf-etml-tag-create-instance tag attrs children))))))
 
 (defun etaf-layout-string--apply-bgcolor-per-line (string bgcolor)
   "Apply background color to each line of STRING, excluding newline characters.
