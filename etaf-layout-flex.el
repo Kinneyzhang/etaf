@@ -244,10 +244,11 @@ SHOULD-WRAP 表示是否启用换行。"
     
     (setq item-sizes (nreverse item-sizes))
     
-    ;; 当容器没有指定宽度时（nil 或 0），使用内容宽度作为容器宽度
+    ;; 当容器没有指定宽度时（nil），使用内容宽度作为容器宽度
     ;; 这样 justify-content 可以正常工作
+    ;; 注意：0 是一个有效的宽度值，应该被保留
     (let* ((total-gap (* main-gap (max 0 (1- items-count))))
-           (effective-main-size (if (or (not main-size) (<= main-size 0))
+           (effective-main-size (if (not main-size)
                                    (+ total-flex-basis total-gap)
                                  main-size))
            (available-space (- effective-main-size total-flex-basis total-gap))
