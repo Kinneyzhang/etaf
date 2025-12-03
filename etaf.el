@@ -10,6 +10,18 @@
 (require 'etaf-layout-interactive)
 (require 'etaf-utils)
 
+(defun etaf-viewport-width (width)
+  "Parse WIDTH of viewport to pixel"
+  (cond
+   ((numberp width) (* (frame-char-width) width))
+   ((stringp width)
+    (cond
+     ((string-match "\\([0-9]+\\)px$" width)
+      (string-to-number (match-string 1 width))) 
+     ((string-match "\\([0-9]+\\)cw$" width)
+      (string-to-number
+       (* (frame-char-width) (match-string 1 width))))))))
+
 ;;;###autoload
 (defun etaf-paint-string (etml &optional data ecss width height)
   "将 ETML 转换为带有样式的字符串。
@@ -25,7 +37,8 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree
           (etaf-layout-build-tree
-           render-tree (list :width width :height height))))
+           render-tree (list :width (etaf-viewport-width width)
+                             :height height))))
     (etaf-layout-to-string layout-tree)))
 
 ;;;###autoload
@@ -58,5 +71,23 @@ WIDTH 和 HEIGHT 是可选的视口尺寸。
   (interactive)
   (local-unset-key "q")
   (quit-window))
+
+(defun etaf-get-dom (etml &optional data)
+  (etaf-etml-to-dom etml data))
+
+;;; FIXME: etaf-css-build-cssom supports to set extra stylesheet
+;;; set extra stylesheet as the second parameter.
+(defun etaf-get-cssom (etml &optional data)
+  (etaf-css-build-cssom (etaf-get-dom etml data)))
+
+(defun etaf-get-render-tree (etml &optional data)
+  (etaf-render-build-tree
+   (etaf-get-dom etml data)
+   (etaf-get-cssom etml data)))
+
+(defun etaf-get-layout-tree (etml &optional data width height)
+  (etaf-layout-build-tree
+   (etaf-get-render-tree etml data)
+   (list :width (etaf-viewport-width width) :height height)))
 
 (provide 'etaf)
