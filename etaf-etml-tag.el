@@ -162,6 +162,22 @@ PROPS is a plist with the following keys:
   (or (not (null (gethash name etaf-etml-tag-definitions)))
       (memq name etaf-etml-builtin-tags)))
 
+(defun etaf-etml-tag-has-interactive-capability-p (tag)
+  "Check if TAG has interactive capabilities (events or interactive styles).
+TAG can be either a tag name (symbol) or a tag definition (plist).
+Returns t if the tag has any interactive capability, nil otherwise."
+  (let ((tag-def (if (symbolp tag)
+                     (etaf-etml-tag-get-definition tag)
+                   tag)))
+    (and tag-def
+         (or (plist-get tag-def :on-click)
+             (plist-get tag-def :on-hover-enter)
+             (plist-get tag-def :on-hover-leave)
+             (plist-get tag-def :on-keydown)
+             (plist-get tag-def :hover-style)
+             (plist-get tag-def :active-style)
+             (plist-get tag-def :focus-style)))))
+
 (defun etaf-etml-tag-list-all ()
   "Return a list of all defined and registered tag names."
   (let ((tags nil))
