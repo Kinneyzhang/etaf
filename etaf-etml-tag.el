@@ -635,7 +635,7 @@ Returns (tag-name ((attrs...)) children...)."
                       (condition-case nil
                           (funcall custom-handler)
                         (wrong-number-of-arguments
-                         (funcall custom-handler event))))))))
+                         (funcall custom-handler event)))))))))
 
 (define-etaf-etml-tag summary
   :on-click (lambda (event)

@@ -59,6 +59,7 @@
    "li{list-item}"
 
    "button{inline-block}"
+   "button{border pl-2px}"
    "button:hover{bg-gray-200}"
    "button:active{bg-gray-300}"
    "button:disabled{bg-gray-100 text-gray-500 cursor-not-allowed}"
