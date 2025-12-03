@@ -198,27 +198,21 @@ LAYOUT-NODE 是布局节点。
 返回 tag-instance 或 nil。
 
 这是一个底层能力函数，在渲染字符串时根据标签类型自动为交互元素
-（button, a, input, textarea 等）创建 tag-instance，无需在 DOM 阶段绑定。"
-  (when (etaf-etml-tag-defined-p tag)
-    (let* ((tag-def (etaf-etml-tag-get-definition tag))
-           ;; 检查标签是否有交互能力（事件处理器或交互样式）
-           (has-interactive-capability
-            (or (plist-get tag-def :on-click)
-                (plist-get tag-def :on-hover-enter)
-                (plist-get tag-def :on-hover-leave)
-                (plist-get tag-def :on-keydown)
-                (plist-get tag-def :hover-style)
-                (plist-get tag-def :active-style)
-                (plist-get tag-def :focus-style))))
-      (when has-interactive-capability
-        ;; 从布局节点提取必要信息创建 tag-instance
-        ;; 注意：此时没有原始的 attrs 和 children，我们需要从计算样式重建
-        (let* ((computed-style (dom-attr layout-node 'computed-style))
-               ;; 创建简化的 attrs（从计算样式提取关键属性）
-               (attrs nil)
-               ;; 获取子节点作为 children
-               (children (dom-children layout-node)))
-          (etaf-etml-tag-create-instance tag attrs children))))))
+（button, a, input, textarea 等）创建 tag-instance，无需在 DOM 阶段绑定。
+
+对于交互元素，原始 DOM 属性（如 href）会在渲染树构建时被保留在
+etaf-original-attrs 中，这样事件处理器可以访问这些属性。"
+  (when (and (etaf-etml-tag-defined-p tag)
+             (etaf-etml-tag-has-interactive-capability-p tag))
+    ;; 从布局节点提取必要信息创建 tag-instance
+    (let* (;; 获取子节点作为 children
+           (children (dom-children layout-node))
+           ;; 获取原始 DOM 属性（已在渲染树构建时保留）
+           (original-attrs (dom-attr layout-node 'etaf-original-attrs))
+           ;; 将 alist 格式的原始属性转换为 plist 格式供 tag-instance 使用
+           (attrs (when original-attrs
+                    (etaf-alist-to-plist original-attrs))))
+      (etaf-etml-tag-create-instance tag attrs children))))
 
 (defun etaf-layout-string--apply-bgcolor-per-line (string bgcolor)
   "Apply background color to each line of STRING, excluding newline characters.

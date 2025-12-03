@@ -131,6 +131,17 @@ Example: (:class \"foo\" :id \"bar\")
                 result)))
       (nreverse result))))
 
+(defun etaf-alist-to-plist (alist)
+  "Convert an alist to a plist.
+Example: ((class . \"foo\") (id . \"bar\"))
+         => (:class \"foo\" :id \"bar\")"
+  (when alist
+    (let ((result nil))
+      (dolist (pair alist)
+        (push (intern (concat ":" (symbol-name (car pair)))) result)
+        (push (cdr pair) result))
+      (nreverse result))))
+
 (defun etaf-css-alist-to-string (css-alist)
   "Convert CSS alist to style string.
 CSS-ALIST is ((property . value) ...).
