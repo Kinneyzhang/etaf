@@ -56,6 +56,7 @@
 (require 'cl-lib)
 (require 'etaf-dom)
 (require 'etaf-css)
+(require 'etaf-etml-tag)
 
 ;;; 渲染节点结构
 

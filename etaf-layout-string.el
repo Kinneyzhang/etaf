@@ -36,6 +36,7 @@
 (require 'etaf-css-face)
 (require 'etaf-layout-box)
 (require 'etaf-etml-tag)
+(require 'etaf-etml)
 (require 'etaf-layout-scroll)
 (require 'etaf-layout-interactive)
 
