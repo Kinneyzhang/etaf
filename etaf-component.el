@@ -703,5 +703,69 @@ Works with objects created by `etaf-create-reactive'."
   (let ((watchers (plist-get reactive :watchers)))
     (plist-put reactive :watchers (delete callback watchers))))
 
+;;; ============================================================================
+;;; Reactive Buffer Binding
+;;; ============================================================================
+
+(defvar-local etaf-reactive-buffer-bindings nil
+  "Buffer-local list of reactive bindings for incremental updates.
+Each binding is (uuid ref format-fn) tuple.")
+
+(defun etaf-reactive-span (ref &optional format-fn)
+  "Create a reactive span element that updates incrementally when REF changes.
+FORMAT-FN is an optional function to format the ref value (default: formats as string).
+
+Returns a span ETML element with a unique ID that will be automatically
+updated when the ref value changes.
+
+Example:
+  (let ((count (etaf-ref 0)))
+    `(div
+      (button :on-click ,(lambda () (etaf-ref-update count #'1+)) \"+\")
+      ,(etaf-reactive-span count)  ; This span will auto-update
+      (button :on-click ,(lambda () (etaf-ref-update count #'1-)) \"-\")))"
+  (let* ((uuid (format "reactive-%s" (cl-gensym)))
+         (format-fn (or format-fn (lambda (v) (format "%s" v))))
+         (initial-text (funcall format-fn (etaf-ref-get ref))))
+    ;; Store binding for setup after render
+    (push (list uuid ref format-fn) etaf-reactive-buffer-bindings)
+    ;; Return span with special marker
+    `(span :data-reactive-id ,uuid ,initial-text)))
+
+(defun etaf-setup-reactive-watchers (buffer)
+  "Set up watchers for all reactive spans in BUFFER.
+Should be called automatically by etaf-paint-to-buffer."
+  (require 'etaf-layout-interactive)
+  (with-current-buffer buffer
+    (dolist (binding etaf-reactive-buffer-bindings)
+      (let ((uuid (nth 0 binding))
+            (ref (nth 1 binding))  
+            (format-fn (nth 2 binding)))
+        ;; Find the text region with this reactive ID
+        (save-excursion
+          (goto-char (point-min))
+          (when (search-forward uuid nil t)
+            (let ((start (match-beginning 0))
+                  (end (match-end 0)))
+              ;; Add text property to mark this region
+              (put-text-property start end 'etaf-reactive-id uuid)
+              ;; Set up watcher
+              (etaf-watch ref
+                (lambda (new-value _old-value)
+                  (when (buffer-live-p buffer)
+                    (with-current-buffer buffer
+                      (let ((inhibit-read-only t))
+                        (save-excursion
+                          (goto-char (point-min))
+                          (while (let ((pos (text-property-search-forward 'etaf-reactive-id uuid t)))
+                                   (when pos
+                                     (let ((region-start (prop-match-beginning pos))
+                                           (region-end (prop-match-end pos))
+                                           (new-text (funcall format-fn new-value)))
+                                       (goto-char region-start)
+                                       (delete-region region-start region-end)
+                                       (insert (propertize new-text 'etaf-reactive-id uuid))
+                                       nil)))))))))))))))
+
 (provide 'etaf-component)
 ;;; etaf-component.el ends here
