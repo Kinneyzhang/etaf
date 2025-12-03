@@ -244,18 +244,22 @@ SHOULD-WRAP 表示是否启用换行。"
     
     (setq item-sizes (nreverse item-sizes))
     
-    ;; 计算空间分配
+    ;; 当容器没有指定宽度时（nil 或 0），使用内容宽度作为容器宽度
+    ;; 这样 justify-content 可以正常工作
     (let* ((total-gap (* main-gap (max 0 (1- items-count))))
-           (available-space (- main-size total-flex-basis total-gap))
+           (effective-main-size (if (or (not main-size) (<= main-size 0))
+                                   (+ total-flex-basis total-gap)
+                                 main-size))
+           (available-space (- effective-main-size total-flex-basis total-gap))
            (free-space (max 0 available-space))
-           (overflow-space (max 0 (- (+ total-flex-basis total-gap) main-size))))
+           (overflow-space (max 0 (- (+ total-flex-basis total-gap) effective-main-size))))
       
       ;; 应用 flex-grow
-      (when (and (> free-space 0) (> total-flex-grow 0) (> main-size 0))
+      (when (and (> free-space 0) (> total-flex-grow 0) (> effective-main-size 0))
         (etaf-layout-flex--apply-grow flex-items item-sizes free-space total-flex-grow is-row))
       
       ;; 应用 flex-shrink
-      (when (and (> overflow-space 0) (> total-flex-shrink 0) (> main-size 0))
+      (when (and (> overflow-space 0) (> total-flex-shrink 0) (> effective-main-size 0))
         (etaf-layout-flex--apply-shrink flex-items item-sizes overflow-space total-flex-shrink is-row))
       
       ;; 存储计算结果
