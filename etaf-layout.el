@@ -269,6 +269,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (display (etaf-render-get-display render-node))
          (is-inline (or (string= display "inline")
                         (string= display "inline-block")))
+         (is-flex-container (string= display "flex"))
          (is-in-flex-container (plist-get parent-context :flex-container))
          
          ;; 处理 min/max 值
@@ -290,9 +291,10 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                            max-height-value))
          
          ;; 计算内容宽度
+         ;; flex 容器自身没有指定宽度时，应该使用父容器的可用宽度，这样 justify-content 才能正常工作
          (base-content-width
           (if (eq width-value 'auto)
-              (if (or is-inline is-in-flex-container (null parent-width))
+              (if (or is-inline (and is-in-flex-container (not is-flex-container)) (null parent-width))
                   0
                 (max 0 (- parent-width
                           padding-left-val padding-right-val
