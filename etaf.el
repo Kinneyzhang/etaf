@@ -1,3 +1,5 @@
+;; -*- lexical-binding: t; -*-
+
 (require 'etaf-etml)
 (require 'etaf-css)
 (require 'etaf-render)
