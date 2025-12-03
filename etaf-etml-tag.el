@@ -630,7 +630,12 @@ Returns (tag-name ((attrs...)) children...)."
                   (let* ((attrs (plist-get target :attrs))
                          (custom-handler (plist-get attrs :on-click)))
                     (when (functionp custom-handler)
-                      (funcall custom-handler event)))))))
+                      ;; Call handler with appropriate number of arguments
+                      ;; Check function arity to support both zero-arg and one-arg handlers
+                      (condition-case nil
+                          (funcall custom-handler)
+                        (wrong-number-of-arguments
+                         (funcall custom-handler event))))))))
 
 (define-etaf-etml-tag summary
   :on-click (lambda (event)
