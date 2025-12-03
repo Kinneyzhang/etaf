@@ -1569,7 +1569,7 @@ Use px suffix for explicit pixels (e.g., \"20px\")."
                 ((string= value "0") "0")
                 ((string= value "full") "100%")
                 ((string= value "screen")
-                 (if is-width "100vw" "100vh"))
+                 (if is-width "100cw" "100vh"))
                 ((string= value "none") "none")
                 ((string= value "min") "min-content")
                 ((string= value "max") "max-content")
@@ -1786,7 +1786,7 @@ Width使用cw（水平方向字符宽度），Height使用lh（垂直方向行�
                 ;; 特殊值
                 ((string= value "full") "100%")
                 ((string= value "screen")
-                 (if (eq property 'width) "100vw" "100vh"))
+                 (if (eq property 'width) "100cw" "100vh"))
                 ((string= value "auto") "auto")
                 ((string= value "min") "min-content")
                 ((string= value "max") "max-content")
