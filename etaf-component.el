@@ -210,7 +210,7 @@ Example (Options API - Vue 2 style):
     :computed (list :doubled (lambda ()
                                (* 2 (etaf-ref-get (plist-get this :count)))))
     :methods (list :increment (lambda ()
-                                (etaf-ref-update (plist-get this :count) #\\='1+)))
+                                (etaf-ref-update (plist-get this :count) #'1+)))
     :template (lambda (data)
                 `(div :class \"counter\"
                       (span ,(format \"Count: %s\" (etaf-ref-get
