@@ -1,14 +1,25 @@
 # ETAF Component System
 
-*Vue 3-inspired Component System for ETAF*
+*Support for both Vue 2 Options API and Vue 3 Composition API*
 
 ## Table of Contents
 
 - [Overview](#overview)
+- [API Styles](#api-styles)
+  - [Vue 3 Composition API](#vue-3-composition-api)
+  - [Vue 2 Options API](#vue-2-options-api)
 - [Quick Start](#quick-start)
+  - [Composition API Example](#composition-api-example)
+  - [Options API Example](#options-api-example)
 - [Component Basics](#component-basics)
 - [Props](#props)
-- [Setup Function](#setup-function)
+- [Setup Function (Composition API)](#setup-function)
+- [Options API](#options-api-detailed)
+  - [data](#data)
+  - [methods](#methods)
+  - [computed (Options)](#computed-options)
+  - [watch (Options)](#watch-options)
+  - [Lifecycle Hooks](#lifecycle-hooks)
 - [Templates](#templates)
 - [Reactive System](#reactive-system)
   - [ref](#ref)
@@ -18,17 +29,17 @@
   - [reactive](#reactive)
 - [Slots](#slots)
 - [Component Lifecycle](#component-lifecycle)
-- [Comparison with Vue 3](#comparison-with-vue-3)
+- [Comparison: Vue 2 vs Vue 3](#comparison-with-vue)
 - [API Reference](#api-reference)
 - [Examples](#examples)
 
 ## Overview
 
-ETAF's component system is inspired by Vue 3's Composition API, bringing reactive components to Emacs. It provides:
+ETAF's component system now supports **both** Vue 2's Options API and Vue 3's Composition API, giving you flexibility in how you write components. Choose the style that best fits your needs or use both styles in the same project!
 
 - **Declarative Components** - Define reusable UI components with props and state
 - **Reactive State Management** - Automatic dependency tracking and updates
-- **Composition API** - Flexible and composable logic organization
+- **Two API Styles** - Options API (Vue 2) or Composition API (Vue 3)
 - **Type Safety** - Structured component definitions with clear contracts
 
 The component system is built on three main pillars:
@@ -37,14 +48,58 @@ The component system is built on three main pillars:
 2. **Reactive System** - ref, computed, watch for state management  
 3. **Template Rendering** - Integration with ETAF's TML templating
 
+## API Styles
+
+### Vue 3 Composition API
+
+The Composition API uses a `setup` function to define reactive state and logic:
+
+```elisp
+(etaf-define-component my-counter
+  :props '(:initial)
+  :setup (lambda (props)
+           (let* ((count (etaf-ref 0))
+                  (increment (lambda () (etaf-ref-update count #'1+))))
+             (list :count count :increment increment)))
+  :template ...)
+```
+
+**Pros:**
+- More flexible for complex logic
+- Better code reusability through composables
+- Explicit reactive references
+- Better TypeScript support (in JavaScript)
+
+### Vue 2 Options API
+
+The Options API uses data, methods, computed, and watch options:
+
+```elisp
+(etaf-define-component my-counter
+  :props '(:initial)
+  :data (lambda () (list :count 0))
+  :methods (list :increment (lambda () ...))
+  :computed (list :doubled (lambda () ...))
+  :watch (list :count (lambda (new old) ...))
+  :template ...)
+```
+
+**Pros:**
+- Familiar to Vue 2 developers
+- More organized structure for simple components
+- Clear separation of concerns
+- Less boilerplate for simple cases
+
 ## Quick Start
 
-Here's a simple counter component:
+### Composition API Example
+
+Here's a simple counter using the Composition API:
 
 ```elisp
 (require 'etaf-component)
 
-;; Define a counter component
+;; Define a counter component using Composition API
 (etaf-define-component my-counter
   :props '(:initial-count)
   :setup (lambda (props)
@@ -67,12 +122,47 @@ Here's a simple counter component:
   '(my-counter :initial-count 5))
 ```
 
+### Options API Example
+
+The same counter using the Options API:
+
+```elisp
+(require 'etaf-component)
+
+;; Define a counter component using Options API
+(etaf-define-component my-counter
+  :props '(:initial-count)
+  :data (lambda ()
+          (list :count 0))
+  :methods (list
+            :increment (lambda ()
+                        (let ((count-ref (plist-get this :count)))
+                          (etaf-ref-update count-ref #'1+))))
+  :computed (list
+             :doubled (lambda ()
+                       (let ((count-ref (plist-get this :count)))
+                         (* 2 (etaf-ref-get count-ref)))))
+  :mounted (lambda ()
+            (message "Counter mounted!"))
+  :template (lambda (data)
+              `(div :class "counter"
+                    (button :on-click ,(plist-get data :increment)
+                            "Count: " 
+                            ,(format "%d" (etaf-ref-get 
+                                           (plist-get data :count)))))))
+
+;; Use the component  
+(etaf-paint-to-buffer "*demo*"
+  '(my-counter :initial-count 5))
+```
+
 ## Component Basics
 
 ### Defining a Component
 
-Components are defined using the `etaf-define-component` macro:
+Components are defined using the `etaf-define-component` macro with either API style:
 
+**Composition API:**
 ```elisp
 (etaf-define-component component-name
   :props '(:prop1 :prop2)
@@ -80,15 +170,37 @@ Components are defined using the `etaf-define-component` macro:
   :template template-function)
 ```
 
+**Options API:**
+```elisp
+(etaf-define-component component-name
+  :props '(:prop1 :prop2)
+  :data data-function
+  :methods methods-plist
+  :computed computed-plist
+  :watch watch-plist
+  :mounted mounted-hook
+  :template template-function)
+```
+
 ### Component Structure
 
-A component definition consists of:
+A component definition can include:
 
+**Common to both APIs:**
 - **name** - Symbol identifying the component
 - **:props** - List of properties the component accepts
-- **:setup** - Function that sets up reactive state and methods
 - **:template** - Template for rendering (function or s-expression)
 - **:emits** (optional) - List of events the component can emit
+
+**Composition API specific:**
+- **:setup** - Function that sets up reactive state and methods
+
+**Options API specific:**
+- **:data** - Function returning initial reactive data
+- **:methods** - Plist of method functions
+- **:computed** - Plist of computed property getters
+- **:watch** - Plist of watcher functions
+- **:mounted/:updated/:unmounted** - Lifecycle hooks
 
 ### Using Components
 
@@ -177,6 +289,151 @@ Props are passed as the first argument:
          (let ((initial (plist-get props :initial-value)))
            (list :value (etaf-ref initial))))
 ```
+
+## Options API (Detailed)
+
+The Options API provides a structured way to define components using distinct options for data, methods, computed properties, and watchers.
+
+### data
+
+The `:data` option is a function that returns the initial state as a plist. All values are automatically converted to reactive refs.
+
+```elisp
+(etaf-define-component my-form
+  :data (lambda ()
+          (list :username ""
+                :email ""
+                :age 0
+                :terms-accepted nil)))
+```
+
+**Key Points:**
+- Data function is called once when component is created
+- All values become reactive refs automatically
+- Access with `(plist-get this :property-name)`
+- Values are wrapped in refs, so use `etaf-ref-get` and `etaf-ref-set`
+
+### methods
+
+The `:methods` option is a plist of functions that can be called from the template or other methods.
+
+```elisp
+(etaf-define-component todo-item
+  :data (lambda ()
+          (list :done nil
+                :text ""))
+  :methods (list
+            :toggle (lambda ()
+                     (let ((done-ref (plist-get this :done)))
+                       (etaf-ref-set done-ref
+                                    (not (etaf-ref-get done-ref)))))
+            :update-text (lambda (new-text)
+                          (let ((text-ref (plist-get this :text)))
+                            (etaf-ref-set text-ref new-text)))
+            :reset (lambda ()
+                    (let ((done-ref (plist-get this :done))
+                          (text-ref (plist-get this :text)))
+                      (etaf-ref-set done-ref nil)
+                      (etaf-ref-set text-ref "")))))
+```
+
+**Key Points:**
+- Methods have access to `this` - the component's data
+- Methods can call other methods via `(plist-get this :method-name)`
+- Methods are automatically bound to the component context
+
+### computed (Options)
+
+The `:computed` option defines derived state that automatically updates when dependencies change.
+
+```elisp
+(etaf-define-component shopping-cart
+  :data (lambda ()
+          (list :items '()
+                :tax-rate 0.08))
+  :computed (list
+             :subtotal (lambda ()
+                        (let ((items-ref (plist-get this :items)))
+                          (apply #'+ (mapcar (lambda (item)
+                                              (plist-get item :price))
+                                            (etaf-ref-get items-ref)))))
+             :tax (lambda ()
+                   (let ((subtotal-computed (plist-get this :subtotal))
+                         (tax-rate-ref (plist-get this :tax-rate)))
+                     (* (etaf-computed-get subtotal-computed)
+                        (etaf-ref-get tax-rate-ref))))
+             :total (lambda ()
+                     (let ((subtotal-computed (plist-get this :subtotal))
+                           (tax-computed (plist-get this :tax)))
+                       (+ (etaf-computed-get subtotal-computed)
+                          (etaf-computed-get tax-computed))))))
+```
+
+**Key Points:**
+- Computed properties are cached and only recompute when dependencies change
+- Access computed values with `etaf-computed-get`
+- Computed properties can depend on other computed properties
+- Use `this` to access component data and other computed properties
+
+### watch (Options)
+
+The `:watch` option allows you to react to data changes.
+
+```elisp
+(etaf-define-component search-input
+  :data (lambda ()
+          (list :query ""
+                :results '()))
+  :watch (list
+          :query (lambda (new-val old-val)
+                  (message "Search query changed: %s -> %s" old-val new-val)
+                  ;; Perform search with new query
+                  (when (> (length new-val) 2)
+                    ;; Trigger search...
+                    )))
+  :methods (list
+            :search (lambda ()
+                     ;; Search logic here
+                     )))
+```
+
+**Key Points:**
+- Watchers receive `(new-value old-value)` as arguments
+- Watchers are called whenever the watched property changes
+- Watch works with both data properties and computed properties
+- Use watchers for side effects like API calls, logging, etc.
+
+### Lifecycle Hooks
+
+The Options API supports lifecycle hooks for component initialization and cleanup.
+
+```elisp
+(etaf-define-component data-fetcher
+  :props '(:user-id)
+  :data (lambda ()
+          (list :user-data nil
+                :loading t
+                :error nil))
+  :mounted (lambda ()
+            (message "Component mounted, fetching data...")
+            ;; Fetch data when component mounts
+            (let ((user-id (plist-get props :user-id)))
+              ;; Async data fetch would go here
+              ))
+  :updated (lambda ()
+            (message "Component updated"))
+  :unmounted (lambda ()
+              (message "Component unmounted, cleaning up...")
+              ;; Cleanup subscriptions, timers, etc.
+              ))
+```
+
+**Available Hooks:**
+- **:mounted** - Called when component is first rendered and added to the DOM
+- **:updated** - Called when component re-renders due to data changes
+- **:unmounted** - Called when component is removed from the DOM
+
+**Note:** Currently, `:mounted` is fully supported. `:updated` and `:unmounted` hooks require deeper integration with the virtual DOM lifecycle system.
 
 ## Templates
 
@@ -435,38 +692,105 @@ Watch and watchEffect return stop functions for cleanup:
                  :cleanup stop)))
 ```
 
-## Comparison with Vue 3
+## Comparison with Vue
 
-ETAF's component system is inspired by Vue 3's Composition API:
+ETAF supports both Vue 2's Options API and Vue 3's Composition API:
 
-| Feature | Vue 3 | ETAF |
-|---------|-------|------|
-| Component Definition | `defineComponent()` | `etaf-define-component` |
-| Reactive Refs | `ref()` | `etaf-ref` |
-| Computed Values | `computed()` | `etaf-computed` |
-| Watch | `watch()` | `etaf-watch` |
-| Watch Effect | `watchEffect()` | `etaf-watch-effect` |
-| Reactive Objects | `reactive()` | `etaf-reactive` |
-| Props | `props` option | `:props` keyword |
-| Setup | `setup()` | `:setup` keyword |
-| Template | `template` option | `:template` keyword |
-| Slots | `<slot>` | `:$slots` prop |
+### API Comparison Table
 
-### Key Differences
+| Feature | Vue 2 | Vue 3 | ETAF |
+|---------|-------|-------|------|
+| Component Definition | `Vue.component()` / `export default` | `defineComponent()` | `etaf-define-component` |
+| **Options API** |
+| Data | `data()` | `data()` | `:data` function |
+| Methods | `methods: {}` | `methods: {}` | `:methods` plist |
+| Computed | `computed: {}` | `computed: {}` | `:computed` plist |
+| Watch | `watch: {}` | `watch: {}` | `:watch` plist |
+| Lifecycle - Mounted | `mounted()` | `mounted()` | `:mounted` |
+| Lifecycle - Updated | `updated()` | `updated()` | `:updated` |
+| Lifecycle - Unmounted | `beforeDestroy()` | `unmounted()` | `:unmounted` |
+| **Composition API** |
+| Setup | Not available | `setup()` | `:setup` |
+| Reactive Refs | Not available | `ref()` | `etaf-ref` |
+| Computed Values | Not available | `computed()` | `etaf-computed` |
+| Watch | Not available | `watch()` | `etaf-watch` |
+| Watch Effect | Not available | `watchEffect()` | `etaf-watch-effect` |
+| Reactive Objects | Not available | `reactive()` | `etaf-reactive` |
+| **Common** |
+| Props | `props: []` | `props: []` | `:props` list |
+| Template | `template: ""` | `template: ""` | `:template` |
+| Emits | `$emit()` | `emits: []` | `:emits` list |
+| Slots | `<slot>` | `<slot>` | `:$slots` prop |
+
+### Key Differences from Vue
 
 1. **Language** - Vue uses JavaScript, ETAF uses Emacs Lisp
-2. **Templates** - Vue uses HTML-like syntax, ETAF uses S-expressions
+2. **Templates** - Vue uses HTML-like syntax, ETAF uses S-expressions (ETML)
 3. **Data Structures** - ETAF uses plists instead of JavaScript objects
-4. **Rendering** - ETAF renders to text buffers, not DOM
+4. **Rendering** - ETAF renders to text buffers, Vue renders to DOM
+5. **Context Binding** - ETAF uses `this` variable in Options API (similar to Vue 2)
 
-### Design Principles (from Vue 3)
+### Design Principles (from Vue)
 
-Both systems share these principles:
+All three (Vue 2, Vue 3, and ETAF) share these principles:
 
-- **Composition over Inheritance**
-- **Explicit over Implicit**
-- **Flexible and Composable**
+- **Declarative Rendering**
+- **Component-Based Architecture**
+- **Reactive Data Binding**
 - **Automatic Dependency Tracking**
+
+ETAF's dual API support means:
+- **Options API** - Great for beginners and simple components (like Vue 2)
+- **Composition API** - Better for complex logic and code reuse (like Vue 3)
+- **Your Choice** - Use either or both styles in the same project!
+
+### Migration from Vue
+
+If you're familiar with Vue, here's how to think about ETAF:
+
+**From Vue 2:**
+```javascript
+// Vue 2
+export default {
+  data() {
+    return { count: 0 }
+  },
+  methods: {
+    increment() { this.count++ }
+  }
+}
+```
+
+```elisp
+;; ETAF Options API
+(etaf-define-component my-component
+  :data (lambda () (list :count 0))
+  :methods (list
+            :increment (lambda ()
+                        (etaf-ref-update (plist-get this :count) #'1+))))
+```
+
+**From Vue 3:**
+```javascript
+// Vue 3
+import { ref } from 'vue'
+export default {
+  setup() {
+    const count = ref(0)
+    const increment = () => count.value++
+    return { count, increment }
+  }
+}
+```
+
+```elisp
+;; ETAF Composition API
+(etaf-define-component my-component
+  :setup (lambda (props)
+           (let* ((count (etaf-ref 0))
+                  (increment (lambda () (etaf-ref-update count #'1+))))
+             (list :count count :increment increment))))
+```
 
 ## API Reference
 
@@ -501,6 +825,48 @@ Check if component is registered.
 (etaf-component-list-all)
 ```
 List all registered component names.
+
+### Component Definition Options
+
+#### Composition API Options
+
+- **:setup** - Setup function `(lambda (props) -> plist)`
+  - Receives props, returns reactive data and methods
+  - Has access to all Composition API functions (ref, computed, watch, etc.)
+
+#### Options API Options
+
+- **:data** - Data function `(lambda () -> plist)`
+  - Returns initial component data
+  - All values automatically become reactive refs
+  
+- **:methods** - Methods plist `(list :method1 fn1 :method2 fn2 ...)`
+  - Functions that modify component state
+  - Have access to `this` (component data)
+  
+- **:computed** - Computed properties plist `(list :prop1 getter1 :prop2 getter2 ...)`
+  - Derived state that updates automatically
+  - Getters have access to `this`
+  
+- **:watch** - Watchers plist `(list :prop1 watcher1 :prop2 watcher2 ...)`
+  - Watch functions receive `(new-value old-value)`
+  - Triggered when watched property changes
+  
+- **:mounted** - Lifecycle hook `(lambda () ...)`
+  - Called when component is first rendered
+  
+- **:updated** - Lifecycle hook `(lambda () ...)`
+  - Called when component re-renders (requires vdom integration)
+  
+- **:unmounted** - Lifecycle hook `(lambda () ...)`
+  - Called when component is removed (requires vdom integration)
+
+#### Common Options
+
+- **:props** - List of prop names `'(:prop1 :prop2 ...)`
+- **:template** - Template function or s-expression
+- **:render** - Custom render function (advanced)
+- **:emits** - List of emittable events `'(:event1 :event2 ...)`
 
 ### Reactive System
 

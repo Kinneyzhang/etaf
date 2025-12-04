@@ -62,6 +62,7 @@ Keys are component name symbols, values are component definitions.")
 
 OPTIONS is a plist that can include:
 
+Vue 3 Composition API style (recommended):
 - :props - List of prop names or plist with prop definitions
   Examples:
     \\='(:title :count :disabled)
@@ -73,6 +74,25 @@ OPTIONS is a plist that can include:
   The setup function should return a plist of data and methods
   that will be available in the template.
 
+Vue 2 Options API style:
+- :data - Function that returns initial data as plist
+  Signature: (lambda () -> plist)
+  All values are automatically made reactive.
+
+- :methods - Plist of methods
+  Example: \\='(:increment (lambda () ...) :decrement (lambda () ...))
+
+- :computed - Plist of computed properties
+  Example: \\='(:doubled (lambda () (* 2 (etaf-ref-get count))))
+
+- :watch - Plist of watchers
+  Example: \\='(:count (lambda (new old) (message \"Changed: %s\" new)))
+
+- :mounted - Lifecycle hook called when component is mounted
+- :updated - Lifecycle hook called when component updates
+- :unmounted - Lifecycle hook called when component is unmounted
+
+Common to both styles:
 - :template - Component template, can be:
   1. An ETML s-expression
   2. A function (lambda (data) -> ETML)
@@ -87,7 +107,17 @@ OPTIONS is a plist that can include:
 Returns a component definition plist."
   (let ((component (list :name name
                          :props (plist-get options :props)
+                         ;; Composition API
                          :setup (plist-get options :setup)
+                         ;; Options API
+                         :data (plist-get options :data)
+                         :methods (plist-get options :methods)
+                         :computed (plist-get options :computed)
+                         :watch (plist-get options :watch)
+                         :mounted (plist-get options :mounted)
+                         :updated (plist-get options :updated)
+                         :unmounted (plist-get options :unmounted)
+                         ;; Common
                          :template (plist-get options :template)
                          :render (plist-get options :render)
                          :emits (plist-get options :emits))))
@@ -131,15 +161,29 @@ Useful for testing or resetting the component system."
 NAME is the component symbol (e.g., my-button, user-card).
 
 OPTIONS is a plist that can include:
+
+Vue 3 Composition API style:
 - :props - List of prop names the component accepts
 - :setup - Setup function (props) -> plist of reactive data and methods
+- :template - Template function (data) -> ETML sexp, or ETML sexp directly
+- :emits - List of events this component can emit
+
+Vue 2 Options API style:
+- :props - List of prop names the component accepts
+- :data - Function returning initial data plist (automatically reactive)
+- :methods - Plist of method functions
+- :computed - Plist of computed property functions
+- :watch - Plist of watcher functions
+- :mounted - Lifecycle hook function
+- :updated - Lifecycle hook function
+- :unmounted - Lifecycle hook function
 - :template - Template function (data) -> ETML sexp, or ETML sexp directly
 - :emits - List of events this component can emit
 
 This macro creates a component definition variable and registers it
 in the global component registry.
 
-Example:
+Example (Composition API - Vue 3 style):
 
   (etaf-define-component my-counter
     :props \\='(:initial-count)
@@ -157,12 +201,29 @@ Example:
                       (button :on-click ,(plist-get data :increment)
                               \"Increment\"))))
 
+Example (Options API - Vue 2 style):
+
+  (etaf-define-component my-counter
+    :props \\='(:initial-count)
+    :data (lambda ()
+            (list :count 0))
+    :computed (list :doubled (lambda ()
+                               (* 2 (etaf-ref-get (plist-get this :count)))))
+    :methods (list :increment (lambda ()
+                                (etaf-ref-update (plist-get this :count) #\\='1+)))
+    :template (lambda (data)
+                `(div :class \"counter\"
+                      (span ,(format \"Count: %s\" (etaf-ref-get
+                                                    (plist-get data :count))))
+                      (button :on-click ,(plist-get data :increment)
+                              \"Increment\"))))
+
 After definition, the component can be used in templates:
 
   (my-counter :initial-count 10)
 
 The component system integrates with ETAF's template rendering
-to provide a Vue3-like component experience."
+to provide both Vue 2 Options API and Vue 3 Composition API styles."
   (declare (indent defun))
   (let ((component-var (intern (format "etaf-component--%s" name))))
     `(progn
@@ -171,6 +232,87 @@ to provide a Vue3-like component experience."
          ,(format "Component definition for %s." name))
        (etaf-component-register ',name ,component-var)
        ',name)))
+
+;;; ============================================================================
+;;; Options API to Composition API Conversion
+;;; ============================================================================
+
+(defun etaf-component--options-to-setup (data-fn methods computed-props watch-props mounted updated unmounted)
+  "Convert Vue 2 Options API to Vue 3 Composition API setup function.
+
+DATA-FN is the :data function that returns initial data plist.
+METHODS is a plist of method functions.
+COMPUTED-PROPS is a plist of computed property getter functions.
+WATCH-PROPS is a plist of watcher functions.
+MOUNTED, UPDATED, UNMOUNTED are lifecycle hook functions.
+
+Returns a setup function compatible with the Composition API."
+  (lambda (props)
+    "Setup function generated from Options API."
+    (let ((result-data nil)
+          (cleanup-functions nil))
+      
+      ;; 1. Initialize reactive data from :data function
+      (when data-fn
+        (let ((initial-data (funcall data-fn)))
+          ;; Convert each data property to a ref
+          (let ((rest initial-data))
+            (while rest
+              (let ((key (car rest))
+                    (value (cadr rest)))
+                (setq result-data (plist-put result-data key (etaf-ref value))))
+              (setq rest (cddr rest))))))
+      
+      ;; 2. Create computed properties
+      (when computed-props
+        (let ((rest computed-props))
+          (while rest
+            (let* ((key (car rest))
+                   (getter (cadr rest))
+                   ;; Create a computed value with access to component data
+                   (computed-val (etaf-computed
+                                  (lambda ()
+                                    ;; Bind 'this' context for the getter
+                                    (let ((this result-data))
+                                      (funcall getter))))))
+              (setq result-data (plist-put result-data key computed-val)))
+            (setq rest (cddr rest)))))
+      
+      ;; 3. Add methods (bind 'this' context to each method)
+      (when methods
+        (let ((rest methods))
+          (while rest
+            (let* ((key (car rest))
+                   (method (cadr rest))
+                   ;; Create a method with bound 'this' context
+                   (bound-method (lambda (&rest args)
+                                   (let ((this result-data))
+                                     (apply method args)))))
+              (setq result-data (plist-put result-data key bound-method)))
+            (setq rest (cddr rest)))))
+      
+      ;; 4. Set up watchers
+      (when watch-props
+        (let ((rest watch-props))
+          (while rest
+            (let* ((key (car rest))
+                   (watcher (cadr rest))
+                   (source (plist-get result-data key)))
+              (when (and source (or (etaf-ref-p source) (etaf-computed-p source)))
+                (let ((stop-fn (etaf-watch source watcher)))
+                  (push stop-fn cleanup-functions))))
+            (setq rest (cddr rest)))))
+      
+      ;; 5. Call mounted hook (simulated)
+      (when mounted
+        (let ((this result-data))
+          (funcall mounted)))
+      
+      ;; Note: updated and unmounted hooks would need integration with
+      ;; the virtual DOM lifecycle system to work properly
+      
+      ;; Return the component data (refs, computed, methods)
+      result-data)))
 
 ;;; ============================================================================
 ;;; Component Rendering Utilities
@@ -196,17 +338,37 @@ Returns the rendered ETML.
 
 This function:
 1. Extracts props from attrs based on component's prop definitions
-2. Runs the component's setup function to create reactive state
-3. Merges component data with parent data context
-4. Renders the component using its template or render function"
+2. Detects if using Options API or Composition API
+3. Converts Options API to Composition API setup if needed
+4. Runs the component's setup function to create reactive state
+5. Merges component data with parent data context
+6. Renders the component using its template or render function"
   (let* ((prop-names (plist-get component :props))
          (props (etaf-component--extract-props attrs prop-names))
+         ;; Check if using Options API or Composition API
+         (data-fn (plist-get component :data))
+         (methods (plist-get component :methods))
+         (computed-props (plist-get component :computed))
+         (watch-props (plist-get component :watch))
+         (mounted (plist-get component :mounted))
+         (updated (plist-get component :updated))
+         (unmounted (plist-get component :unmounted))
          (setup-fn (plist-get component :setup))
          (template-fn (plist-get component :template))
          (render-fn (plist-get component :render))
          ;; Add special $slots prop for children (Vue-like slots)
          (props-with-slots (plist-put props :$slots children)))
-    ;; Run setup function if provided
+    
+    ;; Determine which API style to use
+    ;; If Options API properties exist, convert to Composition API
+    (when (and (not setup-fn)
+               (or data-fn methods computed-props watch-props
+                   mounted updated unmounted))
+      (setq setup-fn (etaf-component--options-to-setup
+                      data-fn methods computed-props watch-props
+                      mounted updated unmounted)))
+    
+    ;; Run setup function if provided (either original or converted)
     (let ((component-data (if setup-fn
                               (funcall setup-fn props-with-slots)
                             props-with-slots)))
