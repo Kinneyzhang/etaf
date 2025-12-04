@@ -20,7 +20,7 @@ ETAF (Emacs Text-based Application Framework) is a comprehensive framework for b
 
 - 🏗️ **HTML-like Templating** - Write UI using S-expression based TML (Template Markup Language)
 - 🎨 **CSS Support** - Full CSS parsing, cascade algorithm, and computed styles
-- 📦 **Component System** - Vue3-style reactive components with props, setup, and templates
+- 📦 **Component System** - Vue 2 Options API and Vue 3 Composition API support with reactive components
 - 🔄 **Reactive System** - ref, computed, watch, and watchEffect for state management
 - 🌳 **Virtual DOM** - Vue 3-inspired virtual DOM with diff/patch algorithm for efficient updates
 - 🎯 **Tailwind CSS** - Built-in support for Tailwind utility classes
@@ -140,7 +140,7 @@ ETAF（Emacs Text-based Application Framework）是一个在 Emacs 中构建丰�
 
 - 🏗️ **类 HTML 模板** - 使用基于 S-expression 的 TML（模板标记语言）编写 UI
 - 🎨 **CSS 支持** - 完整的 CSS 解析、层叠算法和计算样式
-- 📦 **组件系统** - Vue3 风格的响应式组件，支持 props、setup 和 templates
+- 📦 **组件系统** - 同时支持 Vue 2 选项式 API 和 Vue 3 组合式 API 的响应式组件
 - 🔄 **响应式系统** - ref、computed、watch 和 watchEffect 状态管理
 - 🌳 **虚拟 DOM** - 参考 Vue 3 设计的虚拟 DOM，支持 diff/patch 算法实现高效更新
 - 🎯 **Tailwind CSS** - 内置 Tailwind 工具类支持

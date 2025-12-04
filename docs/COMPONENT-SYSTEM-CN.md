@@ -1,14 +1,25 @@
 # ETAF 组件系统
 
-*参考 Vue 3 设计的 ETAF 组件系统*
+*同时支持 Vue 2 选项式 API 和 Vue 3 组合式 API*
 
 ## 目录
 
 - [概述](#概述)
+- [API 风格](#api-风格)
+  - [Vue 3 组合式 API](#vue-3-组合式-api)
+  - [Vue 2 选项式 API](#vue-2-选项式-api)
 - [快速开始](#快速开始)
+  - [组合式 API 示例](#组合式-api-示例)
+  - [选项式 API 示例](#选项式-api-示例)
 - [组件基础](#组件基础)
 - [Props（属性）](#props属性)
-- [Setup 函数](#setup-函数)
+- [Setup 函数（组合式 API）](#setup-函数)
+- [选项式 API](#选项式-api-详解)
+  - [data（数据）](#data数据)
+  - [methods（方法）](#methods方法)
+  - [computed（计算属性）](#computed计算属性选项)
+  - [watch（侦听器）](#watch侦听器选项)
+  - [生命周期钩子](#生命周期钩子)
 - [模板](#模板)
 - [响应式系统](#响应式系统)
   - [ref（响应式引用）](#ref响应式引用)
@@ -18,17 +29,17 @@
   - [reactive（响应式对象）](#reactive响应式对象)
 - [插槽（Slots）](#插槽slots)
 - [组件生命周期](#组件生命周期)
-- [与 Vue 3 的对比](#与-vue-3-的对比)
+- [对比：Vue 2 vs Vue 3](#与-vue-的对比)
 - [API 参考](#api-参考)
 - [示例](#示例)
 
 ## 概述
 
-ETAF 的组件系统借鉴了 Vue 3 的组合式 API（Composition API），为 Emacs 带来了响应式组件。它提供：
+ETAF 的组件系统现在**同时支持** Vue 2 的选项式 API 和 Vue 3 的组合式 API，让您可以灵活地选择编写组件的方式。您可以选择最适合您需求的风格，或在同一个项目中混合使用两种风格！
 
 - **声明式组件** - 定义可复用的 UI 组件，支持属性和状态
 - **响应式状态管理** - 自动依赖追踪和更新
-- **组合式 API** - 灵活可组合的逻辑组织方式
+- **两种 API 风格** - 选项式 API（Vue 2）或组合式 API（Vue 3）
 - **类型安全** - 结构化的组件定义，契约清晰
 
 组件系统建立在三大支柱之上：
@@ -37,14 +48,58 @@ ETAF 的组件系统借鉴了 Vue 3 的组合式 API（Composition API），为 
 2. **响应式系统** - ref、computed、watch 用于状态管理
 3. **模板渲染** - 与 ETAF 的 TML 模板系统集成
 
+## API 风格
+
+### Vue 3 组合式 API
+
+组合式 API 使用 `setup` 函数来定义响应式状态和逻辑：
+
+```elisp
+(etaf-define-component my-counter
+  :props '(:initial)
+  :setup (lambda (props)
+           (let* ((count (etaf-ref 0))
+                  (increment (lambda () (etaf-ref-update count #'1+))))
+             (list :count count :increment increment)))
+  :template ...)
+```
+
+**优点：**
+- 对于复杂逻辑更灵活
+- 通过组合函数提高代码复用性
+- 显式的响应式引用
+- 更好的 TypeScript 支持（在 JavaScript 中）
+
+### Vue 2 选项式 API
+
+选项式 API 使用 data、methods、computed 和 watch 选项：
+
+```elisp
+(etaf-define-component my-counter
+  :props '(:initial)
+  :data (lambda () (list :count 0))
+  :methods (list :increment (lambda () ...))
+  :computed (list :doubled (lambda () ...))
+  :watch (list :count (lambda (new old) ...))
+  :template ...)
+```
+
+**优点：**
+- 对 Vue 2 开发者熟悉
+- 对于简单组件结构更有组织性
+- 关注点分离清晰
+- 简单情况下样板代码更少
+
 ## 快速开始
 
-下面是一个简单的计数器组件：
+### 组合式 API 示例
+
+使用组合式 API 的简单计数器：
 
 ```elisp
 (require 'etaf-component)
 
-;; 定义计数器组件
+;; 使用组合式 API 定义计数器组件
 (etaf-define-component my-counter
   :props '(:initial-count)
   :setup (lambda (props)
@@ -67,17 +122,89 @@ ETAF 的组件系统借鉴了 Vue 3 的组合式 API（Composition API），为 
   '(my-counter :initial-count 5))
 ```
 
+### 选项式 API 示例
+
+使用选项式 API 的同样计数器：
+
+```elisp
+(require 'etaf-component)
+
+;; 使用选项式 API 定义计数器组件
+(etaf-define-component my-counter
+  :props '(:initial-count)
+  :data (lambda ()
+          (list :count 0))
+  :methods (list
+            :increment (lambda ()
+                        (let ((count-ref (plist-get this :count)))
+                          (etaf-ref-update count-ref #'1+))))
+  :computed (list
+             :doubled (lambda ()
+                       (let ((count-ref (plist-get this :count)))
+                         (* 2 (etaf-ref-get count-ref)))))
+  :mounted (lambda ()
+            (message "计数器已挂载！"))
+  :template (lambda (data)
+              `(div :class "counter"
+                    (button :on-click ,(plist-get data :increment)
+                            "计数: " 
+                            ,(format "%d" (etaf-ref-get 
+                                           (plist-get data :count)))))))
+
+;; 使用组件
+(etaf-paint-to-buffer "*demo*"
+  '(my-counter :initial-count 5))
+```
+
 ## 组件基础
 
 ### 定义组件
 
-组件使用 `etaf-define-component` 宏定义：
+组件可以使用任一 API 风格通过 `etaf-define-component` 宏定义：
 
+**组合式 API：**
 ```elisp
 (etaf-define-component 组件名
   :props '(:属性1 :属性2)
   :setup setup-函数
   :template 模板函数)
+```
+
+**选项式 API：**
+```elisp
+(etaf-define-component 组件名
+  :props '(:属性1 :属性2)
+  :data data-函数
+  :methods 方法-plist
+  :computed 计算属性-plist
+  :watch 侦听器-plist
+  :mounted 挂载钩子
+  :template 模板函数)
+```
+
+### 组件结构
+
+组件定义可以包括：
+
+**两种 API 共通：**
+- **name（名称）** - 标识组件的符号
+- **:props** - 组件接受的属性列表
+- **:template** - 用于渲染的模板（函数或 s-表达式）
+- **:emits**（可选）- 组件可以发出的事件列表
+
+**组合式 API 特有：**
+- **:setup** - 设置响应式状态和方法的函数
+
+**选项式 API 特有：**
+- **:data** - 返回初始响应式数据的函数
+- **:methods** - 方法函数的 plist
+- **:computed** - 计算属性 getter 的 plist
+- **:watch** - 侦听器函数的 plist
+- **:mounted/:updated/:unmounted** - 生命周期钩子
+
+### 使用组件
+
+定义后，组件可以像普通 HTML 元素一样使用：
 ```
 
 ### 组件结构
@@ -177,6 +304,151 @@ Props 作为第一个参数传入：
          (let ((initial (plist-get props :initial-value)))
            (list :value (etaf-ref initial))))
 ```
+
+## 选项式 API（详解）
+
+选项式 API 提供了一种结构化的方式来定义组件，使用不同的选项来定义数据、方法、计算属性和侦听器。
+
+### data（数据）
+
+`:data` 选项是一个返回初始状态（plist）的函数。所有值会自动转换为响应式 refs。
+
+```elisp
+(etaf-define-component my-form
+  :data (lambda ()
+          (list :username ""
+                :email ""
+                :age 0
+                :terms-accepted nil)))
+```
+
+**要点：**
+- data 函数在组件创建时调用一次
+- 所有值自动成为响应式 refs
+- 通过 `(plist-get this :property-name)` 访问
+- 值被包装在 refs 中，所以使用 `etaf-ref-get` 和 `etaf-ref-set`
+
+### methods（方法）
+
+`:methods` 选项是一个函数的 plist，可以从模板或其他方法中调用。
+
+```elisp
+(etaf-define-component todo-item
+  :data (lambda ()
+          (list :done nil
+                :text ""))
+  :methods (list
+            :toggle (lambda ()
+                     (let ((done-ref (plist-get this :done)))
+                       (etaf-ref-set done-ref
+                                    (not (etaf-ref-get done-ref)))))
+            :update-text (lambda (new-text)
+                          (let ((text-ref (plist-get this :text)))
+                            (etaf-ref-set text-ref new-text)))
+            :reset (lambda ()
+                    (let ((done-ref (plist-get this :done))
+                          (text-ref (plist-get this :text)))
+                      (etaf-ref-set done-ref nil)
+                      (etaf-ref-set text-ref "")))))
+```
+
+**要点：**
+- 方法可以访问 `this` - 组件的数据
+- 方法可以通过 `(plist-get this :method-name)` 调用其他方法
+- 方法自动绑定到组件上下文
+
+### computed（计算属性选项）
+
+`:computed` 选项定义派生状态，当依赖改变时自动更新。
+
+```elisp
+(etaf-define-component shopping-cart
+  :data (lambda ()
+          (list :items '()
+                :tax-rate 0.08))
+  :computed (list
+             :subtotal (lambda ()
+                        (let ((items-ref (plist-get this :items)))
+                          (apply #'+ (mapcar (lambda (item)
+                                              (plist-get item :price))
+                                            (etaf-ref-get items-ref)))))
+             :tax (lambda ()
+                   (let ((subtotal-computed (plist-get this :subtotal))
+                         (tax-rate-ref (plist-get this :tax-rate)))
+                     (* (etaf-computed-get subtotal-computed)
+                        (etaf-ref-get tax-rate-ref))))
+             :total (lambda ()
+                     (let ((subtotal-computed (plist-get this :subtotal))
+                           (tax-computed (plist-get this :tax)))
+                       (+ (etaf-computed-get subtotal-computed)
+                          (etaf-computed-get tax-computed))))))
+```
+
+**要点：**
+- 计算属性被缓存，只在依赖改变时重新计算
+- 使用 `etaf-computed-get` 访问计算值
+- 计算属性可以依赖其他计算属性
+- 使用 `this` 访问组件数据和其他计算属性
+
+### watch（侦听器选项）
+
+`:watch` 选项允许您响应数据变化。
+
+```elisp
+(etaf-define-component search-input
+  :data (lambda ()
+          (list :query ""
+                :results '()))
+  :watch (list
+          :query (lambda (new-val old-val)
+                  (message "搜索查询改变: %s -> %s" old-val new-val)
+                  ;; 用新查询执行搜索
+                  (when (> (length new-val) 2)
+                    ;; 触发搜索...
+                    )))
+  :methods (list
+            :search (lambda ()
+                     ;; 搜索逻辑在这里
+                     )))
+```
+
+**要点：**
+- 侦听器接收 `(new-value old-value)` 作为参数
+- 每当被侦听的属性改变时调用侦听器
+- watch 对 data 属性和 computed 属性都有效
+- 用于副作用，如 API 调用、日志记录等
+
+### 生命周期钩子
+
+选项式 API 支持组件初始化和清理的生命周期钩子。
+
+```elisp
+(etaf-define-component data-fetcher
+  :props '(:user-id)
+  :data (lambda ()
+          (list :user-data nil
+                :loading t
+                :error nil))
+  :mounted (lambda ()
+            (message "组件已挂载，正在获取数据...")
+            ;; 组件挂载时获取数据
+            (let ((user-id (plist-get props :user-id)))
+              ;; 异步数据获取会在这里
+              ))
+  :updated (lambda ()
+            (message "组件已更新"))
+  :unmounted (lambda ()
+              (message "组件已卸载，正在清理...")
+              ;; 清理订阅、定时器等
+              ))
+```
+
+**可用钩子：**
+- **:mounted** - 组件首次渲染并添加到 DOM 时调用
+- **:updated** - 由于数据变化而重新渲染组件时调用
+- **:unmounted** - 组件从 DOM 中移除时调用
+
+**注意：** 目前完全支持 `:mounted`。`:updated` 和 `:unmounted` 钩子需要与虚拟 DOM 生命周期系统更深度的集成。
 
 ## 模板
 
@@ -435,38 +707,105 @@ Watch 和 watchEffect 返回停止函数用于清理：
                  :cleanup stop)))
 ```
 
-## 与 Vue 3 的对比
+## 与 Vue 的对比
 
-ETAF 的组件系统受 Vue 3 的组合式 API 启发：
+ETAF 支持 Vue 2 的选项式 API 和 Vue 3 的组合式 API：
 
-| 特性 | Vue 3 | ETAF |
-|------|-------|------|
-| 组件定义 | `defineComponent()` | `etaf-define-component` |
-| 响应式引用 | `ref()` | `etaf-ref` |
-| 计算属性 | `computed()` | `etaf-computed` |
-| 侦听器 | `watch()` | `etaf-watch` |
-| 自动侦听 | `watchEffect()` | `etaf-watch-effect` |
-| 响应式对象 | `reactive()` | `etaf-reactive` |
-| Props | `props` 选项 | `:props` 关键字 |
-| Setup | `setup()` | `:setup` 关键字 |
-| 模板 | `template` 选项 | `:template` 关键字 |
-| 插槽 | `<slot>` | `:$slots` prop |
+### API 对比表
 
-### 主要区别
+| 特性 | Vue 2 | Vue 3 | ETAF |
+|------|-------|-------|------|
+| 组件定义 | `Vue.component()` / `export default` | `defineComponent()` | `etaf-define-component` |
+| **选项式 API** |
+| 数据 | `data()` | `data()` | `:data` 函数 |
+| 方法 | `methods: {}` | `methods: {}` | `:methods` plist |
+| 计算属性 | `computed: {}` | `computed: {}` | `:computed` plist |
+| 侦听器 | `watch: {}` | `watch: {}` | `:watch` plist |
+| 生命周期 - 挂载 | `mounted()` | `mounted()` | `:mounted` |
+| 生命周期 - 更新 | `updated()` | `updated()` | `:updated` |
+| 生命周期 - 卸载 | `beforeDestroy()` | `unmounted()` | `:unmounted` |
+| **组合式 API** |
+| Setup | 不可用 | `setup()` | `:setup` |
+| 响应式引用 | 不可用 | `ref()` | `etaf-ref` |
+| 计算值 | 不可用 | `computed()` | `etaf-computed` |
+| 侦听 | 不可用 | `watch()` | `etaf-watch` |
+| 自动侦听 | 不可用 | `watchEffect()` | `etaf-watch-effect` |
+| 响应式对象 | 不可用 | `reactive()` | `etaf-reactive` |
+| **共通** |
+| Props | `props: []` | `props: []` | `:props` 列表 |
+| 模板 | `template: ""` | `template: ""` | `:template` |
+| 事件发射 | `$emit()` | `emits: []` | `:emits` 列表 |
+| 插槽 | `<slot>` | `<slot>` | `:$slots` prop |
+
+### 与 Vue 的主要区别
 
 1. **语言** - Vue 使用 JavaScript，ETAF 使用 Emacs Lisp
-2. **模板** - Vue 使用类 HTML 语法，ETAF 使用 S-表达式
+2. **模板** - Vue 使用类 HTML 语法，ETAF 使用 S-表达式（ETML）
 3. **数据结构** - ETAF 使用 plists 而不是 JavaScript 对象
-4. **渲染** - ETAF 渲染到文本 buffer，而非 DOM
+4. **渲染** - ETAF 渲染到文本 buffer，Vue 渲染到 DOM
+5. **上下文绑定** - ETAF 在选项式 API 中使用 `this` 变量（类似 Vue 2）
 
-### 设计原则（来自 Vue 3）
+### 设计原则（来自 Vue）
 
-两个系统共享这些原则：
+三者（Vue 2、Vue 3 和 ETAF）共享这些原则：
 
-- **组合优于继承**
-- **显式优于隐式**
-- **灵活且可组合**
+- **声明式渲染**
+- **组件化架构**
+- **响应式数据绑定**
 - **自动依赖追踪**
+
+ETAF 的双 API 支持意味着：
+- **选项式 API** - 适合初学者和简单组件（类似 Vue 2）
+- **组合式 API** - 更适合复杂逻辑和代码复用（类似 Vue 3）
+- **您的选择** - 在同一个项目中使用任一或两种风格！
+
+### 从 Vue 迁移
+
+如果您熟悉 Vue，这里是如何理解 ETAF：
+
+**从 Vue 2：**
+```javascript
+// Vue 2
+export default {
+  data() {
+    return { count: 0 }
+  },
+  methods: {
+    increment() { this.count++ }
+  }
+}
+```
+
+```elisp
+;; ETAF 选项式 API
+(etaf-define-component my-component
+  :data (lambda () (list :count 0))
+  :methods (list
+            :increment (lambda ()
+                        (etaf-ref-update (plist-get this :count) #'1+))))
+```
+
+**从 Vue 3：**
+```javascript
+// Vue 3
+import { ref } from 'vue'
+export default {
+  setup() {
+    const count = ref(0)
+    const increment = () => count.value++
+    return { count, increment }
+  }
+}
+```
+
+```elisp
+;; ETAF 组合式 API
+(etaf-define-component my-component
+  :setup (lambda (props)
+           (let* ((count (etaf-ref 0))
+                  (increment (lambda () (etaf-ref-update count #'1+))))
+             (list :count count :increment increment))))
+```
 
 ## API 参考
 
@@ -501,6 +840,48 @@ ETAF 的组件系统受 Vue 3 的组合式 API 启发：
 (etaf-component-list-all)
 ```
 列出所有已注册的组件名称。
+
+### 组件定义选项
+
+#### 组合式 API 选项
+
+- **:setup** - Setup 函数 `(lambda (props) -> plist)`
+  - 接收 props，返回响应式数据和方法
+  - 可访问所有组合式 API 函数（ref、computed、watch 等）
+
+#### 选项式 API 选项
+
+- **:data** - 数据函数 `(lambda () -> plist)`
+  - 返回初始组件数据
+  - 所有值自动成为响应式 refs
+  
+- **:methods** - 方法 plist `(list :method1 fn1 :method2 fn2 ...)`
+  - 修改组件状态的函数
+  - 可访问 `this`（组件数据）
+  
+- **:computed** - 计算属性 plist `(list :prop1 getter1 :prop2 getter2 ...)`
+  - 自动更新的派生状态
+  - Getter 可访问 `this`
+  
+- **:watch** - 侦听器 plist `(list :prop1 watcher1 :prop2 watcher2 ...)`
+  - Watch 函数接收 `(new-value old-value)`
+  - 被侦听属性改变时触发
+  
+- **:mounted** - 生命周期钩子 `(lambda () ...)`
+  - 组件首次渲染时调用
+  
+- **:updated** - 生命周期钩子 `(lambda () ...)`
+  - 组件重新渲染时调用（需要 vdom 集成）
+  
+- **:unmounted** - 生命周期钩子 `(lambda () ...)`
+  - 组件移除时调用（需要 vdom 集成）
+
+#### 共通选项
+
+- **:props** - prop 名称列表 `'(:prop1 :prop2 ...)`
+- **:template** - 模板函数或 s-表达式
+- **:render** - 自定义渲染函数（高级）
+- **:emits** - 可发出事件列表 `'(:event1 :event2 ...)`
 
 ### 响应式系统
 
