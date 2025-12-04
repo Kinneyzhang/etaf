@@ -713,29 +713,29 @@ ETAF 支持 Vue 2 的选项式 API 和 Vue 3 的组合式 API：
 
 ### API 对比表
 
-| 特性 | Vue 2 | Vue 3 | ETAF |
-|------|-------|-------|------|
-| 组件定义 | `Vue.component()` / `export default` | `defineComponent()` | `etaf-define-component` |
-| **选项式 API** |
-| 数据 | `data()` | `data()` | `:data` 函数 |
-| 方法 | `methods: {}` | `methods: {}` | `:methods` plist |
-| 计算属性 | `computed: {}` | `computed: {}` | `:computed` plist |
-| 侦听器 | `watch: {}` | `watch: {}` | `:watch` plist |
-| 生命周期 - 挂载 | `mounted()` | `mounted()` | `:mounted` |
-| 生命周期 - 更新 | `updated()` | `updated()` | `:updated` |
-| 生命周期 - 卸载 | `beforeDestroy()` | `unmounted()` | `:unmounted` |
-| **组合式 API** |
-| Setup | 不可用 | `setup()` | `:setup` |
-| 响应式引用 | 不可用 | `ref()` | `etaf-ref` |
-| 计算值 | 不可用 | `computed()` | `etaf-computed` |
-| 侦听 | 不可用 | `watch()` | `etaf-watch` |
-| 自动侦听 | 不可用 | `watchEffect()` | `etaf-watch-effect` |
-| 响应式对象 | 不可用 | `reactive()` | `etaf-reactive` |
-| **共通** |
-| Props | `props: []` | `props: []` | `:props` 列表 |
-| 模板 | `template: ""` | `template: ""` | `:template` |
-| 事件发射 | `$emit()` | `emits: []` | `:emits` 列表 |
-| 插槽 | `<slot>` | `<slot>` | `:$slots` prop |
+| 特性            | Vue 2                                | Vue 3               | ETAF                    |
+|-----------------|--------------------------------------|---------------------|-------------------------|
+| 组件定义        | `Vue.component()` / `export default` | `defineComponent()` | `etaf-define-component` |
+| **选项式 API**  |                                      |                     |                         |
+| 数据            | `data()`                             | `data()`            | `:data` 函数            |
+| 方法            | `methods: {}`                        | `methods: {}`       | `:methods` plist        |
+| 计算属性        | `computed: {}`                       | `computed: {}`      | `:computed` plist       |
+| 侦听器          | `watch: {}`                          | `watch: {}`         | `:watch` plist          |
+| 生命周期 - 挂载 | `mounted()`                          | `mounted()`         | `:mounted`              |
+| 生命周期 - 更新 | `updated()`                          | `updated()`         | `:updated`              |
+| 生命周期 - 卸载 | `beforeDestroy()`                    | `unmounted()`       | `:unmounted`            |
+| **组合式 API**  |                                      |                     |                         |
+| Setup           | 不可用                               | `setup()`           | `:setup`                |
+| 响应式引用      | 不可用                               | `ref()`             | `etaf-ref`              |
+| 计算值          | 不可用                               | `computed()`        | `etaf-computed`         |
+| 侦听            | 不可用                               | `watch()`           | `etaf-watch`            |
+| 自动侦听        | 不可用                               | `watchEffect()`     | `etaf-watch-effect`     |
+| 响应式对象      | 不可用                               | `reactive()`        | `etaf-reactive`         |
+| **共通**        |                                      |                     |                         |
+| Props           | `props: []`                          | `props: []`         | `:props` 列表           |
+| 模板            | `template: ""`                       | `template: ""`      | `:template`             |
+| 事件发射        | `$emit()`                            | `emits: []`         | `:emits` 列表           |
+| 插槽            | `<slot>`                             | `<slot>`            | `:$slots` prop          |
 
 ### 与 Vue 的主要区别
 
