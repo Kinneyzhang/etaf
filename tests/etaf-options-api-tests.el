@@ -87,6 +87,8 @@
 ;;; ============================================================================
 
 ;;; Test 7: Complete Options API component definition
+;;; Note: 'this' variable is bound at runtime by etaf-component--options-to-setup
+;;; These tests verify component definition structure, not runtime execution
 (let ((etaf-component-registry (make-hash-table :test 'eq)))
   (etaf-define-component test-full-options
     :props '(:initial-value)
