@@ -337,8 +337,8 @@ Key bindings:
   (setq etaf-playground-elisp-content etaf-playground--default-elisp)
   (setq etaf-playground-output-content nil)
   (setq etaf-playground-error-message nil)
-  ;; Render initial state
-  (etaf-playground--render-user-content)
+  ;; Render playground UI immediately without rendering user content
+  ;; This improves startup performance - users can trigger rendering with C-c C-c
   (let ((buffer (etaf-playground--refresh)))
     (switch-to-buffer buffer)
     (etaf-playground-mode)
