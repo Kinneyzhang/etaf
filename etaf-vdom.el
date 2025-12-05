@@ -183,6 +183,73 @@ Returns t if patchFlag is 0, -1 (hoisted), or nil."
   "Static node type - fully static, never needs update.")
 
 ;;; ============================================================================
+;;; Tag Metadata Creation (for interactive elements)
+;;; ============================================================================
+
+(defun etaf-vdom-create-tag-metadata (tag attrs children)
+  "Create tag metadata for interactive TAG with ATTRS and CHILDREN.
+This is used by the layout renderer to create interactive behavior for tags.
+
+TAG - Tag symbol (a, button, input, textarea, summary)
+ATTRS - Plist of attributes (:href \"...\" :type \"button\" etc.)
+CHILDREN - Child nodes
+
+Returns a plist with tag metadata:
+- :tag - The tag name
+- :attrs - Original attributes
+- :children - Child nodes
+- :state - Interactive state (:hovered nil :focused nil :active nil :disabled ...)
+- :on-click - Click handler (if applicable)
+- :on-hover-enter - Mouse enter handler
+- :on-hover-leave - Mouse leave handler
+- :hover-style - Hover visual style
+- :active-style - Active/pressed style
+- :disabled-style - Disabled style
+
+This replaces the old etaf-etml-tag-create-instance functionality."
+  (let ((metadata (list :tag tag
+                        :attrs attrs
+                        :children children
+                        :state (list :hovered nil
+                                     :focused nil
+                                     :active nil
+                                     :disabled (plist-get attrs :disabled)))))
+    ;; Add built-in event handlers and styles based on tag type
+    (pcase tag
+      ('a
+       (setq metadata (plist-put metadata :hover-style '((color . "#1d4ed8"))))
+       (setq metadata (plist-put metadata :on-click
+                                  (lambda ()
+                                    (when-let ((href (plist-get attrs :href)))
+                                      (browse-url href))))))
+      ('button
+       (setq metadata (plist-put metadata :hover-style '((background-color . "#e5e7eb"))))
+       (setq metadata (plist-put metadata :active-style '((background-color . "#d1d5db"))))
+       (setq metadata (plist-put metadata :disabled-style
+                                  '((background-color . "#f3f4f6")
+                                    (color . "#9ca3af")
+                                    (cursor . "not-allowed"))))
+       (setq metadata (plist-put metadata :on-click
+                                  (lambda ()
+                                    (let ((state (plist-get metadata :state)))
+                                      (unless (plist-get state :disabled)
+                                        (when-let ((custom-handler (plist-get attrs :on-click)))
+                                          (funcall custom-handler))))))))
+      ('input
+       (setq metadata (plist-put metadata :focus-style '((border-color . "#3b82f6"))))
+       (setq metadata (plist-put metadata :disabled-style
+                                  '((background-color . "#f3f4f6")
+                                    (color . "#9ca3af")))))
+      ('textarea
+       (setq metadata (plist-put metadata :focus-style '((border-color . "#3b82f6")))))
+      ('summary
+       (setq metadata (plist-put metadata :on-click
+                                  (lambda ()
+                                    ;; Toggle details element
+                                    (message "Summary clicked"))))))
+    metadata))
+
+;;; ============================================================================
 ;;; VNode Creation (Vue 3 standard: createBaseVNode)
 ;;; ============================================================================
 
