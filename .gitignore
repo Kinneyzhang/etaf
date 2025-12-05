@@ -10,3 +10,7 @@ elpa/
 
 # External dependencies (cloned for development)
 ekp-lib/
+
+# Test files created for verification
+test-interactive-fix.el
+test-interactive-check.el
