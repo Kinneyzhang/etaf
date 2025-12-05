@@ -250,6 +250,42 @@ This replaces the old etaf-etml-tag-create-instance functionality."
     metadata))
 
 ;;; ============================================================================
+;;; Helper Functions for Interactive Elements
+;;; ============================================================================
+
+(defun etaf-vdom-setup-keymap (tag-metadata &optional parent-keymap)
+  "Setup keymap for interactive TAG-METADATA.
+TAG-METADATA is a plist with :on-click, :on-hover-enter, etc.
+PARENT-KEYMAP is optional parent keymap to inherit from.
+Returns a keymap with event handlers bound."
+  (let ((map (if parent-keymap
+                 (make-composed-keymap nil parent-keymap)
+               (make-sparse-keymap))))
+    ;; Bind click handler
+    (when-let ((on-click (plist-get tag-metadata :on-click)))
+      (define-key map [mouse-1] on-click)
+      (define-key map (kbd "RET") on-click))
+    ;; Bind hover handlers
+    (when-let ((on-hover-enter (plist-get tag-metadata :on-hover-enter)))
+      (define-key map [mouse-movement] on-hover-enter))
+    ;; Bind keydown handler
+    (when-let ((on-keydown (plist-get tag-metadata :on-keydown)))
+      (define-key map (kbd "SPC") on-keydown))
+    map))
+
+(defun etaf-vdom-help-echo-handler (tag-metadata)
+  "Create help-echo handler for TAG-METADATA.
+Returns a function that provides tooltip/status line help."
+  (let ((tag (plist-get tag-metadata :tag))
+        (attrs (plist-get tag-metadata :attrs)))
+    (lambda (window object pos)
+      (format "%s element%s"
+              tag
+              (if-let ((href (plist-get attrs :href)))
+                  (format ": %s" href)
+                "")))))
+
+;;; ============================================================================
 ;;; VNode Creation (Vue 3 standard: createBaseVNode)
 ;;; ============================================================================
 
