@@ -511,7 +511,8 @@ Example:
               
               ;; Cache the result
               (puthash ecss-string result etaf-ecss--parse-cache)
-              result))))),
+              result))))))
+  
 (defun etaf-ecss-unified-p (arg)
   "Check if ARG is a unified ECSS string format.
 Returns t if ARG matches the pattern \"selector{tailwind-classes}\"
