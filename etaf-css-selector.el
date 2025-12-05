@@ -40,6 +40,20 @@
 ;; This is intentional to keep the CSS selector module independent.
 (require 'etaf-event nil t)
 
+;;; Performance: CSS selector parsing cache
+
+(defvar etaf-css-selector--parse-cache (make-hash-table :test 'equal)
+  "Cache for CSS selector parsing results.
+Keys are selector strings, values are parsed AST structures.
+This cache significantly improves performance by avoiding repeated
+parsing of the same selectors during style matching.")
+
+(defun etaf-css-selector-clear-cache ()
+  "Clear the CSS selector parsing cache.
+Useful when testing or debugging selector parsing."
+  (interactive)
+  (clrhash etaf-css-selector--parse-cache))
+
 (defconst etaf-css-selector-token-types
   '((ampersand . 38)          ; &
     (asterisk . 42)           ; *
@@ -709,22 +723,30 @@ CSS是输入字符串，START是单词的起始位置。返回单词的结束位
 (defun etaf-css-selector-parse (string)
   "解析CSS选择器字符串 SELECTOR，返回AST。
 
+此函数使用缓存来提高性能，避免重复解析相同的选择器。
+
 示例：
   (etaf-css-selector-parse \"div.class#id\")
   ;; => '(:type root :nodes ((:type selector :nodes ((:type tag :value \"div\" :spaces (:before \"\" :after \"\")) (:type class :value \"class\" :spaces (:before \"\" :after \"\")) (:type id :value \"id\" :spaces (:before \"\" :after \"\"))) :spaces (:before \"\" :after \"\"))) :spaces (:before \"\" :after \"\"))"
-  (let* ((tokens (etaf-css-selector-tokenize string))
-         (root (etaf-css-selector-make-root))
-         (selector (etaf-css-selector-make-selector))
-         (parser nil))
-    (etaf-css-selector-node-append root selector)
-    (setq parser (make-etaf-css-selector-parser
-                  :css string
-                  :tokens (vconcat tokens)
-                  :position 0
-                  :root root
-                  :current selector
-                  :spaces-before ""))
-    (etaf-css-selector-parser-loop parser)))
+  ;; Check cache first
+  (or (gethash string etaf-css-selector--parse-cache)
+      ;; Cache miss - parse and cache the result
+      (let* ((tokens (etaf-css-selector-tokenize string))
+             (root (etaf-css-selector-make-root))
+             (selector (etaf-css-selector-make-selector))
+             (parser nil))
+        (etaf-css-selector-node-append root selector)
+        (setq parser (make-etaf-css-selector-parser
+                      :css string
+                      :tokens (vconcat tokens)
+                      :position 0
+                      :root root
+                      :current selector
+                      :spaces-before ""))
+        (let ((result (etaf-css-selector-parser-loop parser)))
+          ;; Cache the result
+          (puthash string result etaf-css-selector--parse-cache)
+          result))))
 
 (defun etaf-css-selector-walk (func ast)
   "遍历AST树的所有节点，对每个节点调用FUNC。
