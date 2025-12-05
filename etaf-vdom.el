@@ -676,10 +676,15 @@ The DOM is 'clean' - it contains no VNode-specific fields like
     (let* ((type (etaf-vdom-get-type vnode))
            (props (etaf-vdom-get-props vnode))
            (children (etaf-vdom-get-children vnode))
+           ;; Check for :textContent in props - used for style/script elements
+           (text-content (plist-get props :textContent))
            ;; Convert props plist to attrs alist for DOM
            (attrs (etaf-vdom--props-to-attrs props))
            ;; Render children
            (child-doms (cond
+                        ;; If textContent is specified, use it as the only child
+                        (text-content
+                         (list text-content))
                         ;; String children
                         ((stringp children)
                          (list children))
