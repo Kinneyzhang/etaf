@@ -109,6 +109,20 @@
 (require 'cl-lib)
 (require 'etaf-tailwind)
 
+;;; Performance: ECSS parsing cache
+
+(defvar etaf-ecss--parse-cache (make-hash-table :test 'equal)
+  "Cache for ECSS string parsing results.
+Keys are ECSS unified format strings, values are parsed plists.
+This cache significantly improves performance by avoiding repeated
+parsing and conversion of the same ECSS expressions.")
+
+(defun etaf-ecss-clear-cache ()
+  "Clear the ECSS parsing cache.
+Useful when testing or debugging ECSS conversions."
+  (interactive)
+  (clrhash etaf-ecss--parse-cache))
+
 ;;; Constants
 
 (defconst etaf-ecss--unified-regex "\\`\\([^{]+\\){\\([^}]*\\)}\\'"
@@ -456,26 +470,34 @@ Tailwind utility class syntax.
 Returns a plist with :selector and :css-string keys.
 Returns nil if the input is invalid or has empty selector/classes.
 
+此函数使用缓存来提高性能，避免重复解析相同的ECSS字符串。
+
 Example:
   (etaf-ecss-parse \"div>p:nth-child(odd){pl-6px pr-2 py-1 border border-gray-500}\")
   ;; => (:selector \"div>p:nth-child(odd)\"
   ;;     :css-string \"div>p:nth-child(odd) { padding-left: 6px; padding-right: 2cw; ... }\")"
-  (when (and (stringp ecss-string)
-             (string-match etaf-ecss--unified-regex ecss-string))
-    (let* ((selector (string-trim (match-string 1 ecss-string)))
-           (tailwind-classes (string-trim (match-string 2 ecss-string))))
-      ;; Validate that both selector and classes are non-empty
-      (when (and (not (string-empty-p selector))
-                 (not (string-empty-p tailwind-classes)))
-        (let* ((css-props (etaf-tailwind-classes-to-css-with-mode tailwind-classes))
-               (css-decls (mapcar (lambda (prop)
-                                    (format "%s: %s" (car prop) (cdr prop)))
-                                  css-props))
-               (css-body (mapconcat #'identity css-decls "; ")))
-          (list :selector selector
-                :css-string (if (string-empty-p css-body)
-                                (format "%s { }" selector)
-                              (format "%s { %s; }" selector css-body))))))))
+  ;; Check cache first
+  (or (gethash ecss-string etaf-ecss--parse-cache)
+      ;; Cache miss - parse and cache the result
+      (when (and (stringp ecss-string)
+                 (string-match etaf-ecss--unified-regex ecss-string))
+        (let* ((selector (string-trim (match-string 1 ecss-string)))
+               (tailwind-classes (string-trim (match-string 2 ecss-string))))
+          ;; Validate that both selector and classes are non-empty
+          (when (and (not (string-empty-p selector))
+                     (not (string-empty-p tailwind-classes)))
+            (let* ((css-props (etaf-tailwind-classes-to-css-with-mode tailwind-classes))
+                   (css-decls (mapcar (lambda (prop)
+                                        (format "%s: %s" (car prop) (cdr prop)))
+                                      css-props))
+                   (css-body (mapconcat #'identity css-decls "; "))
+                   (result (list :selector selector
+                                 :css-string (if (string-empty-p css-body)
+                                                 (format "%s { }" selector)
+                                               (format "%s { %s; }" selector css-body)))))
+              ;; Cache the result
+              (puthash ecss-string result etaf-ecss--parse-cache)
+              result))))))
 
 (defun etaf-ecss-unified-p (arg)
   "Check if ARG is a unified ECSS string format.

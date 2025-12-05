@@ -171,6 +171,20 @@
 (require 'etaf-dom)
 (require 'etaf-utils)
 
+;;; Performance: Tailwind class conversion cache
+
+(defvar etaf-tailwind--class-cache (make-hash-table :test 'equal)
+  "Cache for Tailwind class-to-CSS conversions.
+Keys are class name strings, values are CSS property alists.
+This cache significantly improves performance by avoiding repeated
+parsing and conversion of the same Tailwind classes.")
+
+(defun etaf-tailwind-clear-cache ()
+  "Clear the Tailwind class conversion cache.
+Useful when testing or debugging Tailwind conversions."
+  (interactive)
+  (clrhash etaf-tailwind--class-cache))
+
 ;;; Tailwind CSS patterns and utilities
 
 (defconst etaf-tailwind-responsive-prefixes
@@ -770,6 +784,8 @@ If VALUE ends with 'px' suffix (e.g., \"20px\"), use pixels instead."
 返回一个alist: ((property . value) ...)。
 如果无法转换，返回nil。
 
+此函数使用缓存来提高性能，避免重复转换相同的类名。
+
 示例：
   (etaf-tailwind-to-css \"bg-red-500\")
   ;; => ((background-color . \"#ef4444\"))
@@ -780,22 +796,27 @@ If VALUE ends with 'px' suffix (e.g., \"20px\"), use pixels instead."
   (etaf-tailwind-to-css \"p-2\")
   ;; => ((padding-top . \"2lh\") (padding-right . \"2cw\")
   ;;     (padding-bottom . \"2lh\") (padding-left . \"2cw\"))"
-  (let* ((parsed (etaf-tailwind-parse-class class-name))
-         (property (plist-get parsed :property))
-         (value (plist-get parsed :value))
-         (arbitrary (plist-get parsed :arbitrary))
-         (css-props '()))
-    
-    (when (or property value arbitrary)
-      ;; 如果有任意值，直接使用
-      (if arbitrary
-          (setq css-props (etaf-tailwind-convert-arbitrary
-                           property arbitrary))
-        ;; 否则根据属性和值转换
-        (setq css-props (etaf-tailwind-convert-standard
-                         property value))))
-    
-    css-props))
+  ;; Check cache first
+  (or (gethash class-name etaf-tailwind--class-cache)
+      ;; Cache miss - compute and cache the result
+      (let* ((parsed (etaf-tailwind-parse-class class-name))
+             (property (plist-get parsed :property))
+             (value (plist-get parsed :value))
+             (arbitrary (plist-get parsed :arbitrary))
+             (css-props '()))
+        
+        (when (or property value arbitrary)
+          ;; 如果有任意值，直接使用
+          (if arbitrary
+              (setq css-props (etaf-tailwind-convert-arbitrary
+                               property arbitrary))
+            ;; 否则根据属性和值转换
+            (setq css-props (etaf-tailwind-convert-standard
+                             property value))))
+        
+        ;; Cache the result (even if nil, to avoid re-parsing invalid classes)
+        (puthash class-name css-props etaf-tailwind--class-cache)
+        css-props)))
 
 (defun etaf-tailwind-convert-arbitrary (property arbitrary)
   "转换任意值语法的Tailwind类。"
