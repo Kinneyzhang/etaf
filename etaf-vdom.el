@@ -219,7 +219,7 @@ This replaces the old etaf-etml-tag-create-instance functionality."
       ('a
        (setq metadata (plist-put metadata :hover-style '((color . "#1d4ed8"))))
        (setq metadata (plist-put metadata :on-click
-                                  (lambda ()
+                                  (lambda (&optional event)
                                     (interactive)
                                     (when-let ((href (plist-get attrs :href)))
                                       (browse-url href))))))
@@ -246,7 +246,7 @@ This replaces the old etaf-etml-tag-create-instance functionality."
        (setq metadata (plist-put metadata :focus-style '((border-color . "#3b82f6")))))
       ('summary
        (setq metadata (plist-put metadata :on-click
-                                  (lambda ()
+                                  (lambda (&optional event)
                                     (interactive)
                                     ;; Toggle details element
                                     (message "Summary clicked"))))))
