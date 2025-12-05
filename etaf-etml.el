@@ -759,21 +759,209 @@ This is a convenience function combining template rendering and TML-to-DOM."
   (etaf-etml--to-dom (etaf-etml-render template data)))
 
 ;;; ============================================================================
-;;; Component System and Reactive System
+;;; Vue 3 Style Compilation Pipeline
 ;;; ============================================================================
 
-;; The component system and reactive system have been moved to etaf-component.el
-;; This module now uses those functions via the etaf-component require.
-;;
-;; For component-related functions, see etaf-component.el:
-;; - etaf-define-component
-;; - etaf-component-* functions for component management
-;;
-;; For reactive system functions, see etaf-component.el:
-;; - etaf-ref, etaf-computed, etaf-watch, etaf-watch-effect
-;; - etaf-reactive for reactive objects
-;;
-;; The following helper functions remain in this module for template rendering:
+;; Pipeline: ETML → Compiler → Render Function → VNode Tree
+
+;;; Step 1: Compiler - Compile ETML template to render function
+
+(defun etaf-compile (template)
+  "Compile ETML TEMPLATE into a render function.
+This is the COMPILER step in the Vue 3 pipeline.
+
+TEMPLATE - ETML template S-expression
+Returns - A render function that produces VNode tree when called
+
+The render function signature: (lambda (data) ... vnode)
+
+Example:
+  (setq render-fn (etaf-compile '(div :class \"box\" \"Hello {{ name }}\")))
+  (setq vnode (funcall render-fn '(:name \"World\")))"
+  (lambda (data)
+    "Render function - produces VNode tree.
+This is the RENDER FUNCTION step in the Vue 3 pipeline.
+DATA - Context data for template rendering"
+    ;; First, render template with data (handle {{ }} interpolations, directives)
+    (let ((rendered-template (etaf-etml-render template data)))
+      ;; Then, create VNode tree from rendered template
+      (etaf-vdom-create-from-etml rendered-template))))
+
+;;; Step 2: VNode Creation - Convert rendered ETML to VNode tree
+
+(defun etaf-vdom-create-from-etml (sexp)
+  "Create VNode tree from rendered ETML S-expression.
+This produces the VIRTUAL DOM (VNode tree) in the Vue 3 pipeline.
+
+SEXP - Rendered ETML (S-expression after template rendering)
+Returns - VNode tree (pure data structure, no DOM)
+
+The VNode follows Vue 3 design:
+- :type - Node type (element, text, fragment, etc.)
+- :tag - Tag name for elements
+- :props - Properties including attributes and event handlers
+- :children - Child VNodes
+- :key - Key for diff optimization
+
+Example ETML:
+  (div :class \"box\" :id \"main\" (span \"Hello\"))
+
+Produces VNode:
+  (:type element
+   :tag div
+   :props (:class \"box\" :id \"main\")
+   :children ((:type element :tag span :props (:textContent \"Hello\"))))"
+  (cond
+   ;; Text node - atom (string, number, etc.)
+   ((atom sexp)
+    (etaf-vdom-text sexp))
+   
+   ;; Special: ecss tag - becomes style element
+   ((and (listp sexp) (eq (car sexp) 'ecss))
+    (require 'etaf-ecss)
+    (let ((css (apply #'etaf-ecss (cdr sexp))))
+      (etaf-vdom-element 'style
+                         (list :textContent css)
+                         nil)))
+   
+   ;; Element node
+   ((listp sexp)
+    (let* ((tag (car sexp))
+           (rest (cdr sexp))
+           (props nil)
+           (children nil))
+      
+      ;; Parse attributes (keywords)
+      (while (and rest (keywordp (car rest)))
+        (push (car rest) props)
+        (setq rest (cdr rest))
+        (when rest
+          (push (car rest) props)
+          (setq rest (cdr rest))))
+      (setq props (nreverse props))
+      
+      ;; Process props (convert :style and :class if needed)
+      (setq props (etaf-vdom--normalize-props props tag))
+      
+      ;; Add built-in event handlers for interactive tags
+      (setq props (etaf-vdom--add-builtin-handlers tag props))
+      
+      ;; Remaining items are children - recursively create VNodes
+      (setq children (mapcar #'etaf-vdom-create-from-etml rest))
+      
+      ;; Handle ecss in children (scoped CSS)
+      (when (cl-some (lambda (c) (and (listp c) (eq (car c) 'ecss))) rest)
+        (let ((scope-id (etaf-etml--generate-scope-id)))
+          ;; Add scope class to props
+          (setq props (etaf-vdom--add-scope-class props scope-id))
+          ;; Process ecss children
+          (setq children (etaf-vdom--process-ecss-children rest scope-id))))
+      
+      ;; Create element VNode
+      (etaf-vdom-element tag props children)))
+   
+   ;; Fallback
+   (t nil)))
+
+(defun etaf-vdom--normalize-props (props tag)
+  "Normalize PROPS for TAG.
+Convert :style list to string, :class list to string, etc."
+  (let ((result (copy-sequence props)))
+    ;; Process :style
+    (let ((style (plist-get result :style)))
+      (when (and style (listp style))
+        (setq result (plist-put result :style
+                                (etaf-css-alist-to-string style)))))
+    ;; Process :class
+    (let ((class (plist-get result :class)))
+      (when (and class (listp class))
+        (setq result (plist-put result :class
+                                (etaf-class-list-to-string class)))))
+    result))
+
+(defun etaf-vdom--add-builtin-handlers (tag props)
+  "Add built-in event handlers for TAG to PROPS.
+For interactive tags like 'a', 'button', etc., add default handlers."
+  (let ((result (copy-sequence props)))
+    (pcase tag
+      ('a
+       ;; Add default click handler for links
+       (unless (plist-get result :on-click)
+         (setq result (plist-put result :on-click
+                                 (lambda ()
+                                   (when-let ((href (plist-get props :href)))
+                                     (browse-url href)))))))
+      ('button
+       ;; Button handlers will be added by layout rendering
+       result)
+      ;; Add more tags as needed
+      (_ result))
+    result))
+
+(defun etaf-vdom--add-scope-class (props scope-id)
+  "Add SCOPE-ID to class in PROPS."
+  (let* ((class (plist-get props :class))
+         (new-class (if class
+                        (concat class " " scope-id)
+                      scope-id)))
+    (plist-put (copy-sequence props) :class new-class)))
+
+(defun etaf-vdom--process-ecss-children (children scope-id)
+  "Process CHILDREN with ecss tags, applying SCOPE-ID.
+Returns list of VNodes with scoped CSS."
+  (let ((ecss-nodes nil)
+        (other-nodes nil))
+    ;; Separate ecss from other children
+    (dolist (child children)
+      (if (and (listp child) (eq (car child) 'ecss))
+          (push child ecss-nodes)
+        (push child other-nodes)))
+    
+    (if (null ecss-nodes)
+        ;; No ecss, process normally
+        (mapcar #'etaf-vdom-create-from-etml children)
+      ;; Has ecss - create scoped style
+      (require 'etaf-ecss)
+      (let* ((css-parts (mapcar (lambda (ecss-form)
+                                  (etaf-etml--process-ecss-content ecss-form scope-id))
+                                (nreverse ecss-nodes)))
+             (css-string (mapconcat #'identity css-parts "\n"))
+             (style-vnode (etaf-vdom-element 'style
+                                             (list :textContent css-string)
+                                             nil))
+             (other-vnodes (mapcar #'etaf-vdom-create-from-etml (nreverse other-nodes))))
+        (cons style-vnode other-vnodes)))))
+
+;;; ============================================================================
+;;; Public API Functions
+;;; ============================================================================
+
+(defun etaf-create-vnode (template &optional data)
+  "High-level API: Create VNode from TEMPLATE with DATA.
+This combines compilation and execution in one call.
+
+TEMPLATE - ETML template
+DATA - Optional data context
+
+Returns - VNode tree
+
+This is equivalent to:
+  (funcall (etaf-compile template) data)"
+  (let ((render-fn (etaf-compile template)))
+    (funcall render-fn data)))
+
+;;; ============================================================================
+;;; Legacy Compatibility (Old API)
+;;; ============================================================================
+
+;; Keep old function names for backward compatibility
+
+(defalias 'etaf-etml-compile 'etaf-compile
+  "Alias for backward compatibility.")
+
+(defun etaf-etml--create-vnode (sexp)
+  "Legacy alias for etaf-vdom-create-from-etml."
+  (etaf-vdom-create-from-etml sexp))
 
 (defun etaf-etml--render-component (component attrs children data)
   "Render COMPONENT with ATTRS and CHILDREN using DATA context.

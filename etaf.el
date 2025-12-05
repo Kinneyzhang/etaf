@@ -25,20 +25,33 @@
 ;;;###autoload
 (defun etaf-paint-string (etml &optional data ecss width height)
   "将 ETML 转换为带有样式的字符串。
-WIDTH 和 HEIGHT 是可选的视口尺寸。
-当为 nil 时，表示不限制根容器的该维度，使用内容的自然尺寸。"
-  (let* ((dom (etaf-etml-to-dom etml data))
-         (stylesheet (if ecss
-                         (apply #'etaf-ecss ecss)
-                       ""))
+严格遵循 Vue 3 流程：
+  模板(ETML) → 编译器 → 渲染函数 → 虚拟DOM → 渲染器 → 真实DOM 
+  → CSSOM → 渲染树 → 布局树 → 最终文本
+
+ETML - 模板 S-expression
+DATA - 模板数据上下文
+ECSS - 额外的CSS样式
+WIDTH/HEIGHT - 视口尺寸"
+  ;; Step 1-2: 模板 → 编译器 - Compile ETML to render function
+  (let* ((render-fn (etaf-compile etml))
+         ;; Step 3: 渲染函数执行 - Call render function with data
+         ;; Step 4: 虚拟DOM - Produces VNode tree (pure data structure)
+         (vnode (funcall render-fn data))
+         ;; Step 5: 渲染器 - Render VNode tree to clean DOM
+         (dom (etaf-vdom-render vnode))
+         ;; Step 6: CSSOM - Build CSS Object Model
+         (stylesheet (if ecss (apply #'etaf-ecss ecss) ""))
          (cssom (etaf-css-build-cssom dom))
          (cssom (etaf-css-add-stylesheet cssom stylesheet))
-         ;; 使用 render 模块构建渲染树
+         ;; Step 7: 渲染树 - Combine DOM and CSSOM
          (render-tree (etaf-render-build-tree dom cssom))
+         ;; Step 8: 布局树 - Calculate layout
          (layout-tree
           (etaf-layout-build-tree
            render-tree (list :width (etaf-viewport-width width)
                              :height height))))
+    ;; Step 9: 最终文本 - Convert layout to string
     (etaf-layout-to-string layout-tree)))
 
 ;;;###autoload
