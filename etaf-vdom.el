@@ -183,6 +183,109 @@ Returns t if patchFlag is 0, -1 (hoisted), or nil."
   "Static node type - fully static, never needs update.")
 
 ;;; ============================================================================
+;;; Tag Metadata Creation (for interactive elements)
+;;; ============================================================================
+
+(defun etaf-vdom-create-tag-metadata (tag attrs children)
+  "Create tag metadata for interactive TAG with ATTRS and CHILDREN.
+This is used by the layout renderer to create interactive behavior for tags.
+
+TAG - Tag symbol (a, button, input, textarea, summary)
+ATTRS - Plist of attributes (:href \"...\" :type \"button\" etc.)
+CHILDREN - Child nodes
+
+Returns a plist with tag metadata:
+- :tag - The tag name
+- :attrs - Original attributes
+- :children - Child nodes
+- :state - Interactive state (:hovered nil :focused nil :active nil :disabled ...)
+- :on-click - Click handler (if applicable)
+- :on-hover-enter - Mouse enter handler
+- :on-hover-leave - Mouse leave handler
+- :hover-style - Hover visual style
+- :active-style - Active/pressed style
+- :disabled-style - Disabled style
+
+This replaces the old etaf-etml-tag-create-instance functionality."
+  (let ((metadata (list :tag tag
+                        :attrs attrs
+                        :children children
+                        :state (list :hovered nil
+                                     :focused nil
+                                     :active nil
+                                     :disabled (plist-get attrs :disabled)))))
+    ;; Add built-in event handlers and styles based on tag type
+    (pcase tag
+      ('a
+       (setq metadata (plist-put metadata :hover-style '((color . "#1d4ed8"))))
+       (setq metadata (plist-put metadata :on-click
+                                  (lambda ()
+                                    (when-let ((href (plist-get attrs :href)))
+                                      (browse-url href))))))
+      ('button
+       (setq metadata (plist-put metadata :hover-style '((background-color . "#e5e7eb"))))
+       (setq metadata (plist-put metadata :active-style '((background-color . "#d1d5db"))))
+       (setq metadata (plist-put metadata :disabled-style
+                                  '((background-color . "#f3f4f6")
+                                    (color . "#9ca3af")
+                                    (cursor . "not-allowed"))))
+       (setq metadata (plist-put metadata :on-click
+                                  (lambda ()
+                                    (let ((state (plist-get metadata :state)))
+                                      (unless (plist-get state :disabled)
+                                        (when-let ((custom-handler (plist-get attrs :on-click)))
+                                          (funcall custom-handler))))))))
+      ('input
+       (setq metadata (plist-put metadata :focus-style '((border-color . "#3b82f6"))))
+       (setq metadata (plist-put metadata :disabled-style
+                                  '((background-color . "#f3f4f6")
+                                    (color . "#9ca3af")))))
+      ('textarea
+       (setq metadata (plist-put metadata :focus-style '((border-color . "#3b82f6")))))
+      ('summary
+       (setq metadata (plist-put metadata :on-click
+                                  (lambda ()
+                                    ;; Toggle details element
+                                    (message "Summary clicked"))))))
+    metadata))
+
+;;; ============================================================================
+;;; Helper Functions for Interactive Elements
+;;; ============================================================================
+
+(defun etaf-vdom-setup-keymap (tag-metadata &optional parent-keymap)
+  "Setup keymap for interactive TAG-METADATA.
+TAG-METADATA is a plist with :on-click, :on-hover-enter, etc.
+PARENT-KEYMAP is optional parent keymap to inherit from.
+Returns a keymap with event handlers bound."
+  (let ((map (if parent-keymap
+                 (make-composed-keymap nil parent-keymap)
+               (make-sparse-keymap))))
+    ;; Bind click handler
+    (when-let ((on-click (plist-get tag-metadata :on-click)))
+      (define-key map [mouse-1] on-click)
+      (define-key map (kbd "RET") on-click))
+    ;; Bind hover handlers
+    (when-let ((on-hover-enter (plist-get tag-metadata :on-hover-enter)))
+      (define-key map [mouse-movement] on-hover-enter))
+    ;; Bind keydown handler
+    (when-let ((on-keydown (plist-get tag-metadata :on-keydown)))
+      (define-key map (kbd "SPC") on-keydown))
+    map))
+
+(defun etaf-vdom-help-echo-handler (tag-metadata)
+  "Create help-echo handler for TAG-METADATA.
+Returns a function that provides tooltip/status line help."
+  (let ((tag (plist-get tag-metadata :tag))
+        (attrs (plist-get tag-metadata :attrs)))
+    (lambda (window object pos)
+      (format "%s element%s"
+              tag
+              (if-let ((href (plist-get attrs :href)))
+                  (format ": %s" href)
+                "")))))
+
+;;; ============================================================================
 ;;; VNode Creation (Vue 3 standard: createBaseVNode)
 ;;; ============================================================================
 
