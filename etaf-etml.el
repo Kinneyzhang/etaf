@@ -889,6 +889,7 @@ For interactive tags like 'a', 'button', etc., add default handlers."
        (unless (plist-get result :on-click)
          (setq result (plist-put result :on-click
                                  (lambda ()
+                                   (interactive)
                                    (when-let ((href (plist-get props :href)))
                                      (browse-url href)))))))
       ('button
