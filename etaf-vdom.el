@@ -87,16 +87,30 @@ PROPS is a plist with the following keys:
 - :tag - The tag symbol (for element nodes)
 - :props - Original properties from ETML (plist)
 - :dom - The clean DOM node
-- :tag-instance - The etaf-tag-instance if applicable
+- :tag-metadata - Tag metadata (self-closing, interactive handlers, etc.)
 - :children - List of child VNodes
 - :parent - Parent VNode (set during tree construction)
 - :key - Optional key for diff optimization (from :key prop or :id)
 - :mounted-p - Whether this VNode has been mounted to DOM
-- :hooks - Lifecycle hooks (plist): :mounted, :updated, :unmounted"
+- :hooks - Lifecycle hooks (plist): :mounted, :updated, :unmounted
+- :state - Interactive state (plist): :hovered, :focused, :active, :disabled
+
+Tag metadata structure (plist):
+- :self-closing - Whether tag is self-closing
+- :children-allowed - Whether children are allowed
+- :on-click - Click event handler
+- :on-hover-enter - Mouse enter handler
+- :on-hover-leave - Mouse leave handler
+- :on-keydown - Keydown handler
+- :hover-style - Visual hover style (CSS alist)
+- :active-style - Active state style
+- :focus-style - Focus state style
+- :disabled-style - Disabled state style"
   (let ((vnode (list :id (etaf-vdom--generate-id)
                      :type type
                      :mounted-p nil
-                     :hooks nil)))
+                     :hooks nil
+                     :state nil)))
     (while props
       (setq vnode (plist-put vnode (car props) (cadr props))
             props (cddr props)))
@@ -108,6 +122,12 @@ PROPS is a plist with the following keys:
                       (plist-get node-props :id))))
         (when key
           (setq vnode (plist-put vnode :key key)))))
+    ;; Initialize state if tag has interactive metadata
+    (when (and (not (plist-get vnode :state))
+               (plist-get vnode :tag-metadata))
+      (let ((disabled (and (plist-get vnode :props)
+                           (plist-get (plist-get vnode :props) :disabled))))
+        (plist-put vnode :state (list :hovered nil :focused nil :active nil :disabled disabled))))
     vnode))
 
 (defun etaf-vdom-element (tag &rest props)
@@ -152,8 +172,17 @@ Fragments allow multiple root nodes without a wrapper element."
   "Get the clean DOM node from VNODE."
   (plist-get vnode :dom))
 
+(defun etaf-vdom-get-tag-metadata (vnode)
+  "Get the tag metadata from VNODE (if any)."
+  (plist-get vnode :tag-metadata))
+
+(defun etaf-vdom-get-state (vnode)
+  "Get the interactive state from VNODE (if any)."
+  (plist-get vnode :state))
+
 (defun etaf-vdom-get-tag-instance (vnode)
-  "Get the tag-instance from VNODE (if any)."
+  "Get the tag-instance from VNODE (if any).
+This is deprecated - use tag-metadata instead."
   (plist-get vnode :tag-instance))
 
 (defun etaf-vdom-get-children (vnode)
@@ -247,8 +276,17 @@ Two VNodes are the same type if they have:
   (plist-put vnode :dom dom))
 
 (defun etaf-vdom-set-tag-instance (vnode instance)
-  "Set the tag-instance of VNODE to INSTANCE."
+  "Set the tag-instance of VNODE to INSTANCE.
+This is deprecated - use tag-metadata instead."
   (plist-put vnode :tag-instance instance))
+
+(defun etaf-vdom-set-tag-metadata (vnode metadata)
+  "Set the tag-metadata of VNODE to METADATA."
+  (plist-put vnode :tag-metadata metadata))
+
+(defun etaf-vdom-set-state (vnode state)
+  "Set the interactive state of VNODE to STATE."
+  (plist-put vnode :state state))
 
 (defun etaf-vdom-set-mounted-p (vnode mounted)
   "Set the mounted state of VNODE to MOUNTED."
@@ -662,6 +700,214 @@ In ETAF, this would trigger re-rendering of affected portions."
        ;; Reordering would involve moving DOM nodes
        ;; This is typically handled by the render system
        nil))))
+
+;;; ============================================================================
+;;; Tag Metadata Support (replaces etaf-etml-tag.el functionality)
+;;; ============================================================================
+
+(defconst etaf-vdom-builtin-tags
+  '(;; Block-level elements (display: block in UA stylesheet)
+    div p h1 h2 h3 h4 h5 h6
+    header footer section article aside nav main
+    ul ol blockquote pre form fieldset
+    figure figcaption details
+    ;; Inline elements (display: inline by default)
+    span em strong b i u s del ins mark small sub sup
+    code kbd samp var abbr cite q label
+    ;; Inline-block media elements (display: inline-block in UA stylesheet)
+    video audio canvas svg
+    ;; Form elements
+    select
+    ;; Dialog
+    dialog
+    ;; Table elements (display: table-* in UA stylesheet)
+    table tr th td thead tbody tfoot caption
+    ;; Other elements  
+    option legend li)
+  "List of built-in HTML-like tags.
+These tags are automatically recognized and get their styles from the UA stylesheet.")
+
+(defconst etaf-vdom-self-closing-tags
+  '(br hr img input)
+  "List of self-closing tags that don't allow children.")
+
+(defun etaf-vdom-tag-defined-p (tag)
+  "Check if TAG is a built-in or self-closing tag."
+  (or (memq tag etaf-vdom-builtin-tags)
+      (memq tag etaf-vdom-self-closing-tags)))
+
+(defun etaf-vdom-tag-self-closing-p (tag)
+  "Check if TAG is self-closing."
+  (memq tag etaf-vdom-self-closing-tags))
+
+(defun etaf-vdom-create-tag-metadata (tag attrs children)
+  "Create tag metadata for TAG with ATTRS and CHILDREN.
+This replaces the old etaf-etml-tag-instance functionality.
+Returns a plist with:
+- :tag - The tag name
+- :self-closing - Whether tag is self-closing
+- :children-allowed - Whether children are allowed
+- :on-click - Click event handler (if tag has one)
+- :on-hover-enter - Mouse enter handler
+- :on-hover-leave - Mouse leave handler
+- :on-keydown - Keydown handler
+- :hover-style - Visual hover style
+- :active-style - Active state style
+- :focus-style - Focus state style
+- :disabled-style - Disabled state style"
+  (let ((metadata (list :tag tag
+                        :self-closing (etaf-vdom-tag-self-closing-p tag)
+                        :children-allowed (not (etaf-vdom-tag-self-closing-p tag)))))
+    ;; Add built-in event handlers for specific tags
+    (pcase tag
+      ('a
+       (setq metadata (plist-put metadata :hover-style '((color . "#1d4ed8"))))
+       (setq metadata (plist-put metadata :on-click
+                                  (lambda (event)
+                                    (let* ((target (plist-get event :target))
+                                           (props (etaf-vdom-get-props target))
+                                           (href (plist-get props :href)))
+                                      (when href
+                                        (browse-url href)))))))
+      ('button
+       (setq metadata (plist-put metadata :hover-style '((background-color . "#e5e7eb"))))
+       (setq metadata (plist-put metadata :active-style '((background-color . "#d1d5db"))))
+       (setq metadata (plist-put metadata :disabled-style 
+                                  '((background-color . "#f3f4f6")
+                                    (color . "#9ca3af")
+                                    (cursor . "not-allowed"))))
+       (setq metadata (plist-put metadata :on-click
+                                  (lambda (event)
+                                    (let* ((target (plist-get event :target))
+                                           (state (etaf-vdom-get-state target)))
+                                      (unless (plist-get state :disabled)
+                                        (let* ((props (etaf-vdom-get-props target))
+                                               (custom-handler (plist-get props :on-click)))
+                                          (when (functionp custom-handler)
+                                            (condition-case nil
+                                                (funcall custom-handler)
+                                              (wrong-number-of-arguments
+                                               (funcall custom-handler event)))))))))))
+      ('input
+       (setq metadata (plist-put metadata :focus-style '((border-color . "#3b82f6"))))
+       (setq metadata (plist-put metadata :disabled-style
+                                  '((background-color . "#f3f4f6")
+                                    (color . "#9ca3af")))))
+      ('textarea
+       (setq metadata (plist-put metadata :focus-style '((border-color . "#3b82f6")))))
+      ('summary
+       (setq metadata (plist-put metadata :on-click
+                                  (lambda (event)
+                                    (let* ((target (plist-get event :target))
+                                           (state (etaf-vdom-get-state target)))
+                                      (plist-put state :expanded
+                                                 (not (plist-get state :expanded)))))))))
+    metadata))
+
+(defun etaf-vdom-has-interactive-capability-p (vnode)
+  "Check if VNODE has interactive capabilities.
+Returns t if the VNode has any event handlers or state styles."
+  (when-let ((metadata (etaf-vdom-get-tag-metadata vnode)))
+    (or (plist-get metadata :on-click)
+        (plist-get metadata :on-hover-enter)
+        (plist-get metadata :on-hover-leave)
+        (plist-get metadata :on-keydown)
+        (plist-get metadata :hover-style)
+        (plist-get metadata :active-style)
+        (plist-get metadata :focus-style))))
+
+;;; ============================================================================
+;;; Helper Functions for Interactive Elements (replaces etaf-etml-tag.el)
+;;; ============================================================================
+
+(defun etaf-vdom-setup-keymap (tag-metadata vnode-or-state)
+  "Set up keybindings for TAG-METADATA.
+VNODE-OR-STATE can be either a VNode or a state plist.
+Creates a keymap with bindings for RET, SPC, mouse-1, etc.
+Returns the configured keymap."
+  (let* ((keymap (make-sparse-keymap))
+         (on-click (plist-get tag-metadata :on-click))
+         (on-keydown (plist-get tag-metadata :on-keydown))
+         ;; Determine state - either from VNode or passed directly
+         (state (if (and (listp vnode-or-state)
+                         (plist-member vnode-or-state :id))
+                    (etaf-vdom-get-state vnode-or-state)
+                  vnode-or-state)))
+    ;; Click handler via RET and SPC keys
+    (when on-click
+      (define-key keymap (kbd "RET")
+        (lambda ()
+          (interactive)
+          (let ((event (list :type 'click
+                             :target vnode-or-state
+                             :timestamp (current-time))))
+            (funcall on-click event))))
+      (define-key keymap (kbd "SPC")
+        (lambda ()
+          (interactive)
+          (let ((event (list :type 'click
+                             :target vnode-or-state
+                             :timestamp (current-time))))
+            (funcall on-click event))))
+      ;; Mouse click handler
+      (define-key keymap [mouse-1]
+        (lambda (event)
+          (interactive "e")
+          (let* ((posn (event-start event))
+                 (pos (posn-point posn))
+                 (click-event (list :type 'click
+                                    :target vnode-or-state
+                                    :timestamp (current-time)
+                                    :mouse-event event
+                                    :position pos)))
+            (funcall on-click click-event)))))
+    ;; Keydown handler
+    (when on-keydown
+      (define-key keymap [remap self-insert-command]
+        (lambda ()
+          (interactive)
+          (let* ((key (this-command-keys-vector))
+                 (event (list :type 'keydown
+                              :target vnode-or-state
+                              :timestamp (current-time)
+                              :key key
+                              :key-char (when (> (length key) 0)
+                                          (aref key (1- (length key)))))))
+            (funcall on-keydown event)))))
+    keymap))
+
+(defvar-local etaf-vdom--current-hover-metadata nil
+  "The tag metadata currently being hovered over in this buffer.")
+
+(defun etaf-vdom-help-echo-handler (window _obj pos)
+  "Help-echo function to track mouse hover and dispatch hover events.
+Uses tag metadata instead of tag instances.
+WINDOW is the window where the mouse is.
+POS is the buffer position under the mouse."
+  (when (and window pos)
+    (let* ((metadata (get-text-property pos 'etaf-tag-metadata))
+           (state (get-text-property pos 'etaf-tag-state)))
+      ;; Handle hover-leave for previous element
+      (when (and etaf-vdom--current-hover-metadata
+                 (not (eq etaf-vdom--current-hover-metadata metadata)))
+        (when-let ((on-hover-leave (plist-get etaf-vdom--current-hover-metadata :on-hover-leave)))
+          (let ((event (list :type 'hover-leave
+                             :target metadata
+                             :timestamp (current-time))))
+            (funcall on-hover-leave event))))
+      ;; Handle hover-enter for new element
+      (when (and metadata (not (eq etaf-vdom--current-hover-metadata metadata)))
+        (when-let ((on-hover-enter (plist-get metadata :on-hover-enter)))
+          (let ((event (list :type 'hover-enter
+                             :target metadata
+                             :timestamp (current-time))))
+            (funcall on-hover-enter event))))
+      ;; Update current hover
+      (setq etaf-vdom--current-hover-metadata metadata)
+      ;; Return help-echo string
+      (when metadata
+        (let ((tag-name (or (plist-get metadata :tag) "element")))
+          (format "Click or press RET/SPC to activate %s" tag-name))))))
 
 (provide 'etaf-vdom)
 ;;; etaf-vdom.el ends here

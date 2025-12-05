@@ -56,7 +56,7 @@
 (require 'cl-lib)
 (require 'etaf-dom)
 (require 'etaf-css)
-(require 'etaf-etml-tag)
+(require 'etaf-vdom)
 
 ;;; 渲染节点结构
 
@@ -98,7 +98,8 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
               computed-style
             (cons (cons 'display display) computed-style)))
          ;; 对于交互元素，保留某些关键的原始属性（如 href, type, value 等）
-         (original-attrs (when (etaf-etml-tag-has-interactive-capability-p tag)
+         ;; Check using VNode metadata approach - tag names that have interactive capability
+         (original-attrs (when (memq tag '(a button input textarea summary))
                            (dom-attributes dom-node)))
          ;; 构建新的属性 alist，只添加渲染信息，不保留大多数原始 DOM 属性
          ;; 只有当暗色样式与亮色样式不同时才添加 computed-style-dark
