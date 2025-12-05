@@ -34,9 +34,7 @@ ETML Template → Compiler (etaf-etml) → VNode Tree (Virtual DOM with metadata
                                               ↓
                                       Renderer extracts clean DOM
                                               ↓
-TML → Clean DOM → CSSOM → Render Tree → Layout Tree → Buffer String
-      ↓
-   VNode Tree (for event handling, lifecycle, interactive metadata)
+                                            CSSOM → Render Tree → Layout Tree → Buffer String
 ```
 
 The pipeline follows Vue 3's architecture:
@@ -160,12 +158,6 @@ ETAF（Emacs Text-based Application Framework）是一个在 Emacs 中构建丰�
 - ⚡ **性能优化** - 规则索引和样式缓存
 
 ### 渲染流程
-
-```
-TML → DOM 树 → CSSOM → 渲染树 → 布局树 → Buffer 字符串
-       ↓
-   虚拟 DOM (VNode 树) - 用于高效更新和生命周期管理
-```
 
 ## 快速开始
 
