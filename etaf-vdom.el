@@ -527,3 +527,92 @@ Two VNodes are the same type if they have:
       (plist-put child :parent vnode)))
   vnode)
 
+
+;;; ============================================================================
+;;; Renderer - VNode to DOM (Step 5 in Vue 3 pipeline)
+;;; ============================================================================
+
+(defun etaf-vdom-render (vnode)
+  "Render VNode tree to clean DOM tree.
+This is Step 5 in the pipeline: 渲染器 (Renderer).
+Converts VNode tree to clean DOM without VNode metadata in attributes.
+Returns the root DOM node.
+
+VNode → DOM conversion:
+- Element VNode → (tag ((attrs...)) children...)
+- Text VNode → string
+- Fragment VNode → list of DOM nodes (no wrapper)
+- Comment VNode → ignored (returns nil)
+
+The DOM is 'clean' - it contains no VNode-specific fields like
+:__v_isVNode, :patchFlag, :shapeFlag, etc. Only standard DOM structure."
+  (cond
+   ;; Text VNode - return text content
+   ((etaf-vdom-text-p vnode)
+    (let ((props (etaf-vdom-get-props vnode)))
+      (or (plist-get props :textContent)
+          (etaf-vdom-get-children vnode)
+          "")))
+   
+   ;; Fragment VNode - render children without wrapper
+   ((etaf-vdom-fragment-p vnode)
+    (let ((children (etaf-vdom-get-children vnode)))
+      (if (listp children)
+          (mapcar #'etaf-vdom-render children)
+        children)))
+   
+   ;; Static VNode - return content as-is
+   ((etaf-vdom-static-p vnode)
+    (etaf-vdom-get-children vnode))
+   
+   ;; Comment VNode - ignore (don't render)
+   ((etaf-vdom-comment-p vnode)
+    nil)
+   
+   ;; Element VNode - render to DOM
+   ((etaf-vdom-element-p vnode)
+    (let* ((type (etaf-vdom-get-type vnode))
+           (props (etaf-vdom-get-props vnode))
+           (children (etaf-vdom-get-children vnode))
+           ;; Convert props plist to attrs alist for DOM
+           (attrs (etaf-vdom--props-to-attrs props))
+           ;; Render children
+           (child-doms (cond
+                        ;; String children
+                        ((stringp children)
+                         (list children))
+                        ;; Array children - render recursively
+                        ((listp children)
+                         (delq nil (mapcar #'etaf-vdom-render children)))
+                        ;; Other (nil, etc.)
+                        (t nil))))
+      ;; Build DOM: (tag ((attrs...)) children...)
+      (cons type (cons attrs child-doms))))
+   
+   ;; Unknown type - return nil
+   (t nil)))
+
+(defun etaf-vdom--props-to-attrs (props)
+  "Convert VNode PROPS (plist) to DOM attributes (alist).
+Filters out event handlers and VNode-specific props.
+
+Props format: (:class \"foo\" :id \"bar\" :on-click fn :style \"color: red\")
+Attrs format: ((class . \"foo\") (id . \"bar\") (style . \"color: red\"))
+
+Event handlers (:on-*) are not included in DOM attributes."
+  (when props
+    (let ((result nil))
+      (while props
+        (let ((key (pop props))
+              (value (pop props)))
+          (when (keywordp key)
+            (let ((attr-name (intern (substring (symbol-name key) 1))))
+              ;; Skip event handlers (on-*) and VNode-specific props
+              (unless (or (string-prefix-p "on-" (symbol-name attr-name))
+                          (eq attr-name 'textContent)
+                          (eq attr-name 'innerHTML))
+                (push (cons attr-name value) result))))))
+      (nreverse result))))
+
+(provide 'etaf-vdom)
+;;; etaf-vdom.el ends here
