@@ -73,7 +73,7 @@ were not rendering their CSS content."
          (vnode (funcall render-fn nil))
          (dom (etaf-vdom-render vnode)))
     ;; Check that DOM has a style element
-    (let ((style-elem (dom-by-tag dom 'style)))
+    (let ((style-elem (car (dom-by-tag dom 'style))))
       (should style-elem)
       ;; Style element should have CSS content as a child (not in attributes)
       (let ((css-content (nth 2 style-elem)))
@@ -90,7 +90,7 @@ were not rendering their CSS content."
          (render-fn (etaf-compile etml))
          (vnode (funcall render-fn nil))
          (dom (etaf-vdom-render vnode)))
-    (let ((style-elem (dom-by-tag dom 'style)))
+    (let ((style-elem (car (dom-by-tag dom 'style))))
       (should style-elem)
       (let ((css-content (nth 2 style-elem)))
         (should (stringp css-content))
@@ -107,9 +107,9 @@ were not rendering their CSS content."
          (vnode (funcall render-fn nil))
          (dom (etaf-vdom-render vnode)))
     ;; Get the parent div
-    (let* ((parent-div (dom-by-id dom "container"))
+    (let* ((parent-div (car (dom-by-id dom "container")))
            (class-attr (dom-attr parent-div 'class))
-           (style-elem (dom-by-tag dom 'style))
+           (style-elem (car (dom-by-tag dom 'style)))
            (css-content (nth 2 style-elem)))
       ;; Parent should have scope class
       (should (string-match-p "etaf-scope-" class-attr))
@@ -131,7 +131,7 @@ were not rendering their CSS content."
          (render-fn (etaf-compile etml))
          (vnode (funcall render-fn nil))
          (dom (etaf-vdom-render vnode)))
-    (let ((style-elem (dom-by-tag dom 'style)))
+    (let ((style-elem (car (dom-by-tag dom 'style))))
       (should style-elem)
       (let ((css-content (nth 2 style-elem)))
         (should (stringp css-content))
