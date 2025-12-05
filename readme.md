@@ -30,10 +30,22 @@ ETAF (Emacs Text-based Application Framework) is a comprehensive framework for b
 ### Rendering Pipeline
 
 ```
-TML → DOM → CSSOM → Render Tree → Layout Tree → Buffer String
+ETML Template → Compiler (etaf-etml) → VNode Tree (Virtual DOM with metadata)
+                                              ↓
+                                      Renderer extracts clean DOM
+                                              ↓
+TML → Clean DOM → CSSOM → Render Tree → Layout Tree → Buffer String
       ↓
-   Virtual DOM (VNode Tree) - For efficient updates and lifecycle management
+   VNode Tree (for event handling, lifecycle, interactive metadata)
 ```
+
+The pipeline follows Vue 3's architecture:
+1. **Template (ETML)**: S-expression based markup
+2. **Compiler**: Converts ETML to VNode tree with metadata
+3. **Virtual DOM (VNode)**: Stores tag metadata, event handlers, state
+4. **Renderer**: Extracts clean DOM from VNode
+5. **CSSOM, Render Tree, Layout**: Existing CSS and layout pipeline
+6. **Buffer String**: Final text with properties for interactivity
 
 ## Quick Start
 
@@ -310,12 +322,14 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 | 模块 | 说明 |
 |------|------|
 | `etaf.el` | 主入口，高层 API |
-| `etaf-etml.el` | TML 到 DOM 转换、模板指令 |
+| `etaf-etml.el` | TML 到 DOM 转换、模板指令、编译器（生成 VNode） |
+| `etaf-vdom.el` | 虚拟 DOM (VNode)，存储标签元数据和交互处理器 |
 | `etaf-component.el` | 组件系统、响应式系统（ref、computed、watch） |
 | `etaf-event.el` | 事件模型，支持交互式伪类（:hover, :focus 等） |
 | `etaf-css.el` | CSS 对象模型（CSSOM）主入口 |
-| `etaf-render.el` | 渲染树构建 |
+| `etaf-render.el` | 渲染树构建（从 VNode 提取的 DOM + CSSOM） |
 | `etaf-layout.el` | 盒模型和布局计算 |
+| `etaf-layout-string.el` | 布局树到最终文本字符串的转换 |
 | `etaf-tailwind.el` | Tailwind CSS 支持 |
 | `etaf-ecss.el` | Emacs 风格的 CSS 表达式 |
 
