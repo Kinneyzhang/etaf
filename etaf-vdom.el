@@ -236,10 +236,12 @@ This replaces the old etaf-etml-tag-create-instance functionality."
                                     (let ((state (plist-get metadata :state)))
                                       (unless (plist-get state :disabled)
                                         (when-let ((custom-handler (plist-get attrs :on-click)))
-                                          ;; Try to call with event, fall back to no args if wrong-number-of-arguments
-                                          (condition-case nil
+                                          ;; Try to call with event, fall back to no args if arity mismatch
+                                          (condition-case err
                                               (funcall custom-handler event)
-                                            (wrong-number-of-arguments (funcall custom-handler))))))))))
+                                            (wrong-number-of-arguments (funcall custom-handler))
+                                            ;; Re-signal other errors to avoid hiding bugs
+                                            (error (signal (car err) (cdr err)))))))))))
       ('input
        (setq metadata (plist-put metadata :focus-style '((border-color . "#3b82f6"))))
        (setq metadata (plist-put metadata :disabled-style
