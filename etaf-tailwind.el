@@ -179,6 +179,14 @@ Keys are class name strings, values are CSS property alists.
 This cache significantly improves performance by avoiding repeated
 parsing and conversion of the same Tailwind classes.")
 
+(defcustom etaf-tailwind-cache-max-size 1000
+  "Maximum number of entries in the Tailwind class cache.
+When exceeded, the cache is cleared to prevent unbounded memory growth.
+Set to nil to disable size limit (not recommended)."
+  :type '(choice (integer :tag "Max cache size")
+                 (const :tag "Unlimited" nil))
+  :group 'etaf)
+
 (defun etaf-tailwind-clear-cache ()
   "Clear the Tailwind class conversion cache.
 Useful when testing or debugging Tailwind conversions."
@@ -813,6 +821,12 @@ If VALUE ends with 'px' suffix (e.g., \"20px\"), use pixels instead."
             ;; 否则根据属性和值转换
             (setq css-props (etaf-tailwind-convert-standard
                              property value))))
+        
+        ;; Check cache size and clear if exceeded
+        (when (and etaf-tailwind-cache-max-size
+                   (>= (hash-table-count etaf-tailwind--class-cache)
+                       etaf-tailwind-cache-max-size))
+          (clrhash etaf-tailwind--class-cache))
         
         ;; Cache the result (even if nil, to avoid re-parsing invalid classes)
         (puthash class-name css-props etaf-tailwind--class-cache)

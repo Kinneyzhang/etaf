@@ -48,6 +48,14 @@ Keys are selector strings, values are parsed AST structures.
 This cache significantly improves performance by avoiding repeated
 parsing of the same selectors during style matching.")
 
+(defcustom etaf-css-selector-cache-max-size 500
+  "Maximum number of entries in the CSS selector parsing cache.
+When exceeded, the cache is cleared to prevent unbounded memory growth.
+Set to nil to disable size limit (not recommended)."
+  :type '(choice (integer :tag "Max cache size")
+                 (const :tag "Unlimited" nil))
+  :group 'etaf)
+
 (defun etaf-css-selector-clear-cache ()
   "Clear the CSS selector parsing cache.
 Useful when testing or debugging selector parsing."
@@ -744,6 +752,12 @@ CSS是输入字符串，START是单词的起始位置。返回单词的结束位
                       :current selector
                       :spaces-before ""))
         (let ((result (etaf-css-selector-parser-loop parser)))
+          ;; Check cache size and clear if exceeded
+          (when (and etaf-css-selector-cache-max-size
+                     (>= (hash-table-count etaf-css-selector--parse-cache)
+                         etaf-css-selector-cache-max-size))
+            (clrhash etaf-css-selector--parse-cache))
+          
           ;; Cache the result
           (puthash string result etaf-css-selector--parse-cache)
           result))))
