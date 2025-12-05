@@ -936,7 +936,7 @@ Returns list of VNodes with scoped CSS."
 ;;; Public API Functions
 ;;; ============================================================================
 
-(defun etaf-create-vnode (template &optional data)
+(defun etaf-create-vnode-from-template (template &optional data)
   "High-level API: Create VNode from TEMPLATE with DATA.
 This combines compilation and execution in one call.
 
@@ -949,6 +949,10 @@ This is equivalent to:
   (funcall (etaf-compile template) data)"
   (let ((render-fn (etaf-compile template)))
     (funcall render-fn data)))
+
+;; Keep old name as alias for backward compatibility
+(defalias 'etaf-etml-create-vnode 'etaf-create-vnode-from-template
+  "Alias for backward compatibility.")
 
 ;;; ============================================================================
 ;;; Legacy Compatibility (Old API)
