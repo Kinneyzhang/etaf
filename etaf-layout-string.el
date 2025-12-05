@@ -545,7 +545,7 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                              '(mouse-face highlight))
                          ,@(when has-click
                              '(pointer hand))
-                         help-echo ,#'etaf-vdom-help-echo-handler)
+                         help-echo ,(etaf-vdom-help-echo-handler tag-metadata))
                        result)
                       result)
                   with-v-border))

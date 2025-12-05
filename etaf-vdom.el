@@ -231,12 +231,12 @@ This replaces the old etaf-etml-tag-create-instance functionality."
                                     (color . "#9ca3af")
                                     (cursor . "not-allowed"))))
        (setq metadata (plist-put metadata :on-click
-                                  (lambda ()
+                                  (lambda (&optional event)
                                     (interactive)
                                     (let ((state (plist-get metadata :state)))
                                       (unless (plist-get state :disabled)
                                         (when-let ((custom-handler (plist-get attrs :on-click)))
-                                          (funcall custom-handler))))))))
+                                          (funcall custom-handler event))))))))
       ('input
        (setq metadata (plist-put metadata :focus-style '((border-color . "#3b82f6"))))
        (setq metadata (plist-put metadata :disabled-style
