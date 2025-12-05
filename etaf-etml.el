@@ -26,7 +26,6 @@
 ;;; Utility functions
 
 (require 'cl-lib)
-(require 'etaf-etml-tag)
 (require 'etaf-vdom)
 (require 'etaf-component)
 
@@ -198,28 +197,11 @@ Returns a CSS string."
     (mapconcat #'identity (nreverse css-parts) "\n")))
 
 (defun etaf-etml--merge-tag-styles (tag attr-alist)
-  "Merge etaf-etml-tag default styles into ATTR-ALIST for TAG.
-If TAG is defined in etaf-etml-tag, its default style is used as the base,
-and any inline :style in ATTR-ALIST overrides the default.
-Returns the updated ATTR-ALIST with merged style attribute."
-  (when (etaf-etml-tag-defined-p tag)
-    (let* ((tag-def (etaf-etml-tag-get-definition tag))
-           (default-style (plist-get tag-def :default-style)))
-      (when default-style
-        (let* ((style-attr (assq 'style attr-alist))
-               (inline-style (when style-attr
-                               (if (stringp (cdr style-attr))
-                                   (etaf-etml-tag--parse-style-string (cdr style-attr))
-                                 (cdr style-attr))))
-               ;; Merge: default-style as base, inline-style overrides
-               (merged-style (etaf-etml-tag--merge-styles default-style inline-style)))
-          (if merged-style
-              (let ((merged-string (etaf-css-alist-to-string merged-style)))
-                (if style-attr
-                    (setcdr style-attr merged-string)
-                  ;; Add style attribute if not present
-                  (setq attr-alist (cons (cons 'style merged-string) attr-alist))))
-            attr-alist)))))
+  "Merge tag default styles into ATTR-ALIST for TAG.
+Since tag default styles are now in the UA stylesheet, this function
+only handles custom inline styles. Returns the ATTR-ALIST unchanged."
+  ;; Tag default styles are now in UA stylesheet, not in tag definitions
+  ;; This function is kept for backward compatibility but doesn't merge anything
   attr-alist)
 
 (defun etaf-etml--process-children-with-ecss (children scope-id)
@@ -292,7 +274,7 @@ Special handling for ecss tags:
 If the tag is defined in etaf-etml-tag, its default styles are merged with
 inline styles, where inline styles take precedence.
 
-If the tag has event handlers (on-click, on-hover-enter, etc.), a tag-instance
+If the tag has event handlers (on-click, on-hover-enter, etc.), a tag-metadata
 is created and stored in the DOM attributes for later use when generating
 the final string with keymap properties."
   (cond
@@ -817,7 +799,7 @@ Returns the rendered ETML."
 
 (defun etaf-etml--to-vdom-node (sexp)
   "Convert SEXP to both VNode and clean DOM, recursively.
-Returns a VNode with :dom set to clean DOM and :tag-instance if applicable.
+Returns a VNode with :dom set to clean DOM and :tag-metadata if applicable.
 SEXP can be:
 - An atom (string, number, etc.) - returned as-is
 - An ecss tag - converted to style element
@@ -864,13 +846,13 @@ SEXP can be:
           (let ((class-string (etaf-class-list-to-string (cdr class-attr))))
             (setcdr class-attr class-string)))
         
-        ;; Merge etaf-etml-tag default styles if tag is defined
+        ;; Merge tag default styles (now no-op since styles are in UA stylesheet)
         (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
         
-        ;; Create tag-instance for tags with event handlers (for VNode only, not DOM)
-        (let ((tag-instance nil))
-          (when (etaf-etml-tag-has-interactive-capability-p tag)
-            (setq tag-instance (etaf-etml-tag-create-instance tag attrs rest)))
+        ;; Create tag metadata for interactive tags using new VNode-based approach
+        (let ((tag-metadata nil))
+          (when (etaf-vdom-tag-defined-p tag)
+            (setq tag-metadata (etaf-vdom-create-tag-metadata tag attrs rest)))
           
           ;; Process children based on tag type and content
           (let* ((has-ecss-children (and rest 
@@ -898,16 +880,16 @@ SEXP can be:
                       (etaf-etml--process-children-with-ecss-vdom rest scope-id))
                      ;; Normal processing
                      (t (mapcar #'etaf-etml--to-vdom-node rest))))
-                   ;; Build clean DOM (without tag-instance)
+                   ;; Build clean DOM (without tag-metadata)
                    (child-doms (mapcar #'etaf-vdom-get-dom child-vnodes))
                    (dom (cons tag (cons attr-alist child-doms)))
                    ;; Create VNode
                    (vnode (etaf-vdom-element tag
                                              :props attrs
                                              :dom dom)))
-              ;; Set tag-instance in VNode if present
-              (when tag-instance
-                (etaf-vdom-set-tag-instance vnode tag-instance))
+              ;; Set tag-metadata in VNode if present
+              (when tag-metadata
+                (etaf-vdom-set-tag-metadata vnode tag-metadata))
               ;; Set children
               (etaf-vdom-set-children vnode child-vnodes)
               vnode))))))))
@@ -945,7 +927,7 @@ Similar to `etaf-etml--process-children-with-ecss' but returns VNodes."
   "Render TEMPLATE with DATA and convert to both clean DOM and VTree.
 Returns an `etaf-vdom-result' structure containing:
 - :vtree - The root VNode of the virtual DOM tree
-- :dom - The clean DOM (without tag-instances in attributes)
+- :dom - The clean DOM (without tag-metadatas in attributes)
 
 This function should be used when you need access to tag instances
 and event handlers through the virtual DOM layer.
@@ -955,7 +937,7 @@ Example:
          (dom (etaf-vdom-result-get-dom result))
          (vtree (etaf-vdom-result-get-vtree result)))
     ;; dom is clean: (a ((href . \"/test\")) \"Link\")
-    ;; vtree contains the tag-instance for event handling
+    ;; vtree contains the tag-metadata for event handling
     )"
   (let* ((rendered (etaf-etml-render template data))
          (vnode (etaf-etml--to-vdom-node rendered))

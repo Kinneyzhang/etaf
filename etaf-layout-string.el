@@ -35,7 +35,7 @@
 (require 'etaf-utils)
 (require 'etaf-css-face)
 (require 'etaf-layout-box)
-(require 'etaf-etml-tag)
+(require 'etaf-vdom)
 (require 'etaf-etml)
 (require 'etaf-layout-scroll)
 (require 'etaf-layout-interactive)
@@ -73,9 +73,9 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
                         (etaf-layout-box-create)))
          (computed-style (dom-attr layout-node 'computed-style))
          (computed-style-dark (dom-attr layout-node 'computed-style-dark))
-         ;; 根据标签类型动态创建 tag-instance（底层能力）
+         ;; Create tag-metadata for interactive tags (bottom layer capability)
          (tag (dom-tag layout-node))
-         (tag-instance (etaf-layout-string--create-tag-instance-if-needed tag layout-node))
+         (tag-metadata (etaf-layout-string--create-tag-instance-if-needed tag layout-node))
          (content-width (or (etaf-layout-box-content-width box-model) 0))
          (content-height-px
           (or (etaf-layout-box-content-height box-model) 0))
@@ -198,22 +198,23 @@ TAG 是标签名（symbol）。
 LAYOUT-NODE 是布局节点。
 返回 tag-instance 或 nil。
 
-这是一个底层能力函数，在渲染字符串时根据标签类型自动为交互元素
-（button, a, input, textarea 等）创建 tag-instance，无需在 DOM 阶段绑定。
+This is a bottom-layer capability that automatically creates tag metadata
+during string rendering for interactive elements (button, a, input, textarea, etc.)
+without needing it to be bound at the DOM stage.
 
-对于交互元素，原始 DOM 属性（如 href）会在渲染树构建时被保留在
-etaf-original-attrs 中，这样事件处理器可以访问这些属性。"
-  (when (and (etaf-etml-tag-defined-p tag)
-             (etaf-etml-tag-has-interactive-capability-p tag))
-    ;; 从布局节点提取必要信息创建 tag-instance
-    (let* (;; 获取子节点作为 children
+For interactive elements, original DOM attributes (like href) are preserved in
+etaf-original-attrs in the render tree, so event handlers can access them."
+  (when (memq tag '(a button input textarea summary))
+    ;; Extract necessary information from layout node to create tag-metadata
+    (let* (;; Get children nodes
            (children (dom-children layout-node))
-           ;; 获取原始 DOM 属性（已在渲染树构建时保留）
+           ;; Get original DOM attributes (preserved during render tree building)
            (original-attrs (dom-attr layout-node 'etaf-original-attrs))
-           ;; 将 alist 格式的原始属性转换为 plist 格式供 tag-instance 使用
+           ;; Convert alist format attributes to plist format for tag-metadata
            (attrs (when original-attrs
                     (etaf-alist-to-plist original-attrs))))
-      (etaf-etml-tag-create-instance tag attrs children))))
+      ;; Create tag metadata using the VNode-based approach
+      (etaf-vdom-create-tag-metadata tag attrs children))))
 
 (defun etaf-layout-string--apply-bgcolor-per-line (string bgcolor)
   "Apply background color to each line of STRING, excluding newline characters.
@@ -526,26 +527,25 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
          ;; 如果 tag-instance 存在且有事件处理器，将 keymap 应用到内容区域
          ;; 这样在 hover 时只会高亮按钮本身，而不是整行
          (with-interaction
-          (if (and tag-instance (> (length with-v-border) 0))
-              (let* ((definition (plist-get tag-instance :definition))
-                     (has-click (plist-get definition :on-click))
-                     (has-hover (or (plist-get definition :on-hover-enter)
-                                    (plist-get definition :on-hover-leave)
-                                    (plist-get definition :hover-style)))
-                     (has-keydown (plist-get definition :on-keydown)))
+          (if (and tag-metadata (> (length with-v-border) 0))
+              (let* ((has-click (plist-get tag-metadata :on-click))
+                     (has-hover (or (plist-get tag-metadata :on-hover-enter)
+                                    (plist-get tag-metadata :on-hover-leave)
+                                    (plist-get tag-metadata :hover-style)))
+                     (has-keydown (plist-get tag-metadata :on-keydown)))
                 (if (or has-click has-hover has-keydown)
-                    (let ((keymap (etaf-etml-tag-setup-keymap tag-instance))
+                    (let ((keymap (etaf-vdom-setup-keymap tag-metadata nil))
                           (result (copy-sequence with-v-border)))
                       (add-text-properties
                        0 (length result)
-                       `(etaf-tag-instance
-                         ,tag-instance
+                       `(etaf-tag-metadata
+                         ,tag-metadata
                          keymap ,keymap
                          ,@(when (or has-click has-hover)
                              '(mouse-face highlight))
                          ,@(when has-click
                              '(pointer hand))
-                         help-echo ,#'etaf-etml-tag--help-echo-handler)
+                         help-echo ,#'etaf-vdom-help-echo-handler)
                        result)
                       result)
                   with-v-border))

@@ -6,7 +6,7 @@
 (require 'etaf-layout)
 (require 'etaf-tailwind)
 (require 'etaf-ecss)
-(require 'etaf-etml-tag)
+(require 'etaf-vdom)
 (require 'etaf-layout-interactive)
 (require 'etaf-utils)
 
