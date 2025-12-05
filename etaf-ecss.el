@@ -117,6 +117,14 @@ Keys are ECSS unified format strings, values are parsed plists.
 This cache significantly improves performance by avoiding repeated
 parsing and conversion of the same ECSS expressions.")
 
+(defcustom etaf-ecss-cache-max-size 500
+  "Maximum number of entries in the ECSS parsing cache.
+When exceeded, the cache is cleared to prevent unbounded memory growth.
+Set to nil to disable size limit (not recommended)."
+  :type '(choice (integer :tag "Max cache size")
+                 (const :tag "Unlimited" nil))
+  :group 'etaf)
+
 (defun etaf-ecss-clear-cache ()
   "Clear the ECSS parsing cache.
 Useful when testing or debugging ECSS conversions."
@@ -495,10 +503,15 @@ Example:
                                  :css-string (if (string-empty-p css-body)
                                                  (format "%s { }" selector)
                                                (format "%s { %s; }" selector css-body)))))
+              ;; Check cache size and clear if exceeded
+              (when (and etaf-ecss-cache-max-size
+                         (>= (hash-table-count etaf-ecss--parse-cache)
+                             etaf-ecss-cache-max-size))
+                (clrhash etaf-ecss--parse-cache))
+              
               ;; Cache the result
               (puthash ecss-string result etaf-ecss--parse-cache)
-              result))))))
-
+              result))))),
 (defun etaf-ecss-unified-p (arg)
   "Check if ARG is a unified ECSS string format.
 Returns t if ARG matches the pattern \"selector{tailwind-classes}\"
