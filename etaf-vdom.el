@@ -527,3 +527,4 @@ Two VNodes are the same type if they have:
       (plist-put child :parent vnode)))
   vnode)
 
+(provide 'etaf-vdom)
