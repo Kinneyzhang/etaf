@@ -112,7 +112,7 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
                                          (if (assq 'display computed-style-dark)
                                              computed-style-dark
                                            (cons (cons 'display dark-display) computed-style-dark)))))
-                         (list (cons 'computed-style computed-style-with-display)))))
+                         (list (cons 'computed-style computed-style-with-display))))))
     ;; 如果是交互元素，保留原始属性用于事件处理
     (when original-attrs
       (push (cons 'etaf-original-attrs original-attrs) render-attrs))
