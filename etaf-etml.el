@@ -1084,7 +1084,7 @@ SEXP can be:
                 (etaf-vdom-set-tag-metadata vnode tag-metadata))
               ;; Set children
               (etaf-vdom-set-children vnode child-vnodes)
-              vnode)))))))
+              vnode))))))))
 
 (defun etaf-etml--process-children-with-ecss-vdom (children scope-id)
   "Process CHILDREN list with ecss tags, returning VNodes.
