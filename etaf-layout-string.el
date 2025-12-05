@@ -182,7 +182,7 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
        border-top-color border-right-color
        border-bottom-color border-left-color
        margin-top margin-right margin-bottom margin-left
-       computed-style computed-style-dark tag-instance
+       computed-style computed-style-dark tag-metadata
        ;; 新增溢出相关参数
        overflow-y v-scroll-bar-type v-scroll-bar-direction
        scroll-thumb-color scroll-track-color
@@ -193,10 +193,10 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
 ;;; ============================================================
 
 (defun etaf-layout-string--create-tag-instance-if-needed (tag layout-node)
-  "根据标签类型判断是否需要创建 tag-instance 以提供交互能力。
+  "根据标签类型判断是否需要创建 tag-metadata 以提供交互能力。
 TAG 是标签名（symbol）。
 LAYOUT-NODE 是布局节点。
-返回 tag-instance 或 nil。
+返回 tag-metadata 或 nil。
 
 This is a bottom-layer capability that automatically creates tag metadata
 during string rendering for interactive elements (button, a, input, textarea, etc.)
@@ -273,7 +273,7 @@ in `etaf-dual-style' text property for incremental updates on theme change."
                    border-top-color border-right-color border-bottom-color border-left-color
                    margin-top margin-right margin-bottom margin-left
                    computed-style computed-style-dark
-                   &optional tag-instance overflow-y v-scroll-bar-type v-scroll-bar-direction
+                   &optional tag-metadata overflow-y v-scroll-bar-type v-scroll-bar-direction
                    scroll-thumb-color scroll-track-color natural-content-height)
   "构建盒模型字符串，支持垂直溢出处理和滚动条。
 
@@ -524,7 +524,7 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
             with-border))
          
          ;; 4.6 应用 keymap 等交互属性到内容区域（不包含 margin）
-         ;; 如果 tag-instance 存在且有事件处理器，将 keymap 应用到内容区域
+         ;; 如果 tag-metadata 存在且有事件处理器，将 keymap 应用到内容区域
          ;; 这样在 hover 时只会高亮按钮本身，而不是整行
          (with-interaction
           (if (and tag-metadata (> (length with-v-border) 0))
