@@ -130,9 +130,21 @@ git clone https://github.com/Kinneyzhang/etaf.git
 
 Run interactive demos:
 ```elisp
+;; Component system examples - Options API and Composition API
+(load-file "examples/etaf-component-examples.el")
+M-x etaf-component-demo
+
+;; Other interactive examples
 (load-file "examples/etaf-interactive-examples.el")
 M-x etaf-interactive-demo
 ```
+
+Example files:
+- `examples/etaf-component-examples.el` - Component system examples (Options API & Composition API)
+- `examples/etaf-tailwind-example.el` - Tailwind CSS examples
+- `examples/etaf-layout-example.el` - Layout system examples
+- `examples/etaf-render-example.el` - Render examples
+- `examples/etaf-css-example.el` - CSS examples
 
 ## License
 
@@ -342,15 +354,21 @@ git clone https://github.com/Kinneyzhang/etaf.git
 
 运行交互式演示：
 ```elisp
+;; 组件系统示例 - 选项式 API 和组合式 API
+(load-file "examples/etaf-component-examples.el")
+M-x etaf-component-demo
+
+;; 其他交互式演示
 (load-file "examples/etaf-interactive-examples.el")
 M-x etaf-interactive-demo
 ```
 
 示例文件：
-- `examples/etaf-interactive-examples.el` - 交互式演示
-- `examples/etaf-component-examples.el` - 组件系统示例
+- `examples/etaf-component-examples.el` - 组件系统示例（选项式 API 和组合式 API）
 - `examples/etaf-tailwind-example.el` - Tailwind CSS 示例
 - `examples/etaf-layout-example.el` - 布局系统示例
+- `examples/etaf-render-example.el` - 渲染示例
+- `examples/etaf-css-example.el` - CSS 示例
 
 ## 测试
 
