@@ -12,8 +12,7 @@ This document explains the implementation based on Vue 3's reactivity principles
 2. [Basic Usage](#basic-usage)
 3. [Advanced Features](#advanced-features)
 4. [Implementation Details](#implementation-details)
-5. [Migration Guide](#migration-guide)
-6. [API Reference](#api-reference)
+5. [API Reference](#api-reference)
 
 ## Core Concepts
 
@@ -387,34 +386,7 @@ For nested effects, the system uses a stack:
 ;; 2. inner-ref → inner effect
 ```
 
-## Migration Guide
-
-### From Old Reactive System
-
-The old system is still available for compatibility. To migrate:
-
-**Old:**
-```elisp
-(let ((data (etaf-create-reactive '(:count 0))))
-  (etaf-get data :count)
-  (etaf-set data :count 5)
-  (etaf-watch-reactive
-   data
-   (lambda (reactive key value)
-     (message "Changed: %s = %s" key value))))
-```
-
-**New:**
-```elisp
-(let ((data (etaf-reactive '(:count 0))))
-  (etaf-reactive-get data :count)
-  (etaf-reactive-set data :count 5)
-  (etaf-watch-effect
-   (lambda ()
-     (message "Count: %s" (etaf-reactive-get data :count)))))
-```
-
-### Best Practices
+## Best Practices
 
 1. **Use `ref` for primitive values**, `reactive` for objects
 2. **Prefer `watchEffect` over `watch`** for automatic tracking
