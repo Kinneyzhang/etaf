@@ -25,7 +25,11 @@
 ;;;###autoload
 (defun etaf-paint-string (etml &optional data ecss width height)
   "将 ETML 转换为带有样式的字符串。
-严格遵循 Vue 3 流程：
+
+对于静态模板（无动态内容）：
+  模板(ETML) → 真实DOM → CSSOM → 渲染树 → 布局树 → 最终文本
+
+对于动态模板（有动态内容）：
   模板(ETML) → 编译器 → 渲染函数 → 虚拟DOM → 渲染器 → 真实DOM 
   → CSSOM → 渲染树 → 布局树 → 最终文本
 
@@ -33,13 +37,16 @@ ETML - 模板 S-expression
 DATA - 模板数据上下文
 ECSS - 额外的CSS样式
 WIDTH/HEIGHT - 视口尺寸"
-  ;; Step 1-2: 模板 → 编译器 - Compile ETML to render function
-  (let* ((render-fn (etaf-compile etml))
-         ;; Step 3: 渲染函数执行 - Call render function with data
-         ;; Step 4: 虚拟DOM - Produces VNode tree (pure data structure)
-         (vnode (funcall render-fn data))
-         ;; Step 5: 渲染器 - Render VNode tree to clean DOM
-         (dom (etaf-vdom-render vnode))
+  (let* (;; Optimization: Check if template has dynamic content
+         (has-dynamic (etaf-etml-has-dynamic-content-p etml))
+         ;; Generate DOM: Use optimized path for static templates
+         (dom (if has-dynamic
+                  ;; Dynamic path: ETML → Compiler → Render Function → VNode → DOM
+                  (let* ((render-fn (etaf-compile etml))
+                         (vnode (funcall render-fn data)))
+                    (etaf-vdom-render vnode))
+                ;; Static path: ETML → DOM directly (skip VNode)
+                (etaf-etml-to-dom etml data)))
          ;; Step 6: CSSOM - Build CSS Object Model
          (stylesheet (if ecss (apply #'etaf-ecss ecss) ""))
          (cssom (etaf-css-build-cssom dom))
