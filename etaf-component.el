@@ -1020,59 +1020,6 @@ Returns a new plist with current values from the reactive object."
       result)))
 
 ;;; ============================================================================
-;;; Legacy Reactive System
-;;; ============================================================================
-
-;; The old reactive system is kept for compatibility with existing code.
-;; New code should use the new ref/computed/watch system above.
-
-(defvar etaf-reactive--watchers (make-hash-table :test 'eq)
-  "Hash table mapping data objects to their watchers.
-This is part of the legacy reactive system.")
-
-(defun etaf-create-reactive (data)
-  "Create a reactive data wrapper around DATA plist (legacy).
-
-This is the old reactive system kept for backward compatibility.
-New code should use `etaf-reactive' instead.
-
-Returns a reactive data object that can trigger re-renders."
-  (let ((reactive (list :data data
-                        :version 0
-                        :watchers nil)))
-    reactive))
-
-(defun etaf-get (reactive key)
-  "Get value for KEY from REACTIVE data object (legacy).
-Works with objects created by `etaf-create-reactive'."
-  (plist-get (plist-get reactive :data) key))
-
-(defun etaf-set (reactive key value)
-  "Set KEY to VALUE in REACTIVE data object and trigger watchers (legacy).
-Works with objects created by `etaf-create-reactive'."
-  (let* ((data (plist-get reactive :data))
-         (new-data (plist-put data key value)))
-    (plist-put reactive :data new-data)
-    (plist-put reactive :version (1+ (plist-get reactive :version)))
-    ;; Trigger watchers
-    (dolist (watcher (plist-get reactive :watchers))
-      (funcall watcher reactive key value))
-    value))
-
-(defun etaf-watch-reactive (reactive callback)
-  "Add CALLBACK as watcher to REACTIVE data (legacy).
-CALLBACK receives (reactive key value) when data changes.
-Works with objects created by `etaf-create-reactive'."
-  (let ((watchers (plist-get reactive :watchers)))
-    (plist-put reactive :watchers (cons callback watchers))))
-
-(defun etaf-unwatch-reactive (reactive callback)
-  "Remove CALLBACK from REACTIVE data watchers (legacy).
-Works with objects created by `etaf-create-reactive'."
-  (let ((watchers (plist-get reactive :watchers)))
-    (plist-put reactive :watchers (delete callback watchers))))
-
-;;; ============================================================================
 ;;; Reactive Buffer Binding
 ;;; ============================================================================
 
