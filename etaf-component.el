@@ -448,7 +448,10 @@ This function is called during reactive data reads."
         (puthash key (cons etaf-reactive--active-effect dep) deps-map)
         ;; Also track in effect's deps for cleanup
         (let ((effect-obj etaf-reactive--active-effect))
-          (when (and (listp effect-obj) (plist-get effect-obj :deps))
+          (when (listp effect-obj)
+            ;; Initialize :deps if it doesn't exist
+            (unless (plist-member effect-obj :deps)
+              (plist-put effect-obj :deps nil))
             (plist-put effect-obj :deps 
                       (cons (cons target key) 
                             (plist-get effect-obj :deps)))))))))
@@ -507,9 +510,14 @@ Returns an effect runner function that can be called to re-run the effect.
 
 This is the foundation of Vue 3's reactivity system. Effects automatically
 track their dependencies and re-run when dependencies change."
-  (let* ((effect (list :type 'effect
+  (let* ((scheduler (plist-get options :scheduler))
+         (lazy (plist-get options :lazy))
+         (on-stop (plist-get options :onStop))
+         (effect (list :type 'effect
                        :fn fn
-                       :options options
+                       :scheduler scheduler
+                       :lazy lazy
+                       :onStop on-stop
                        :deps nil  ; list of (target . key) pairs
                        :active t))
          (runner nil))
@@ -535,7 +543,7 @@ track their dependencies and re-run when dependencies change."
     (plist-put effect :run runner)
     
     ;; Run immediately unless lazy
-    (unless (plist-get options :lazy)
+    (unless lazy
       (funcall runner))
     
     ;; Return the runner
@@ -798,8 +806,10 @@ Example:
 This is similar to Vue 3's watch() function with onInvalidate support."
   (let* ((immediate (plist-get options :immediate))
          (flush (or (plist-get options :flush) 'pre))
-         (cleanup-fn nil)
-         (old-value 'etaf-watch-uninitialized)
+         (cleanup-fn-box (list nil))  ; Use list as mutable box
+         (old-value-box (list 'etaf-watch-uninitialized))  ; Use list as mutable box
+         (is-first-run-box (list t))  ; Track if this is the first run
+         (effect-obj-box (list nil))  ; Store effect object for stop function
          (getter (cond
                   ((functionp source) source)
                   ((etaf-ref-p source)
@@ -809,23 +819,39 @@ This is similar to Vue 3's watch() function with onInvalidate support."
                   (t (error "Invalid watch source"))))
          (on-invalidate (lambda (fn)
                          "Register cleanup function for next callback."
-                         (setq cleanup-fn fn)))
+                         (setcar cleanup-fn-box fn)))
          (job nil)
          (runner (etaf-reactive-effect
                   (lambda ()
-                    (let ((new-value (funcall getter)))
+                    ;; Capture effect object on first run
+                    (unless (car effect-obj-box)
+                      (setcar effect-obj-box etaf-reactive--active-effect))
+                    
+                    (let ((new-value (funcall getter))
+                          (old-value (car old-value-box))
+                          (is-first-run (car is-first-run-box)))
+                      
+                      ;; Handle first run
+                      (when is-first-run
+                        (setcar is-first-run-box nil)
+                        (setcar old-value-box new-value)
+                        ;; If immediate, run callback on first run
+                        (when immediate
+                          (funcall callback new-value nil on-invalidate))
+                        (setq new-value nil))  ; Skip change detection below
+                      
                       ;; Only trigger callback on changes (not on first collection)
-                      (when (and (not (eq old-value 'etaf-watch-uninitialized))
+                      (when (and new-value  ; nil means we're on first run
                                  (not (equal new-value old-value)))
                         (let ((run-callback
                                (lambda ()
                                  ;; Run cleanup before callback
-                                 (when cleanup-fn
-                                   (funcall cleanup-fn)
-                                   (setq cleanup-fn nil))
+                                 (when (car cleanup-fn-box)
+                                   (funcall (car cleanup-fn-box))
+                                   (setcar cleanup-fn-box nil))
                                  ;; Call user callback
                                  (funcall callback new-value old-value on-invalidate)
-                                 (setq old-value new-value))))
+                                 (setcar old-value-box new-value))))
                           (cond
                            ;; Sync flush - run immediately
                            ((eq flush 'sync)
@@ -833,25 +859,18 @@ This is similar to Vue 3's watch() function with onInvalidate support."
                            ;; Pre/post flush - use scheduler
                            (t
                             (setq job run-callback)
-                            (etaf-reactive--queue-job job)))))
-                      ;; Update old value for next comparison
-                      (when (eq old-value 'etaf-watch-uninitialized)
-                        (setq old-value new-value))))
-                  (list :lazy (not immediate)))))
-    
-    ;; Run immediately if requested
-    (when immediate
-      (setq old-value (funcall getter))
-      (funcall callback old-value nil on-invalidate))
+                            (etaf-reactive--queue-job job)))))))
+                  nil)))  ; No options - always run immediately to track dependencies
     
     ;; Return stop function
     (lambda ()
-      (when cleanup-fn
-        (funcall cleanup-fn))
-      ;; Mark effect as inactive
-      (when (and (listp runner) (plist-get runner :active))
-        (plist-put runner :active nil))
-      (etaf-reactive--cleanup-effect runner))))
+      (when (car cleanup-fn-box)
+        (funcall (car cleanup-fn-box)))
+      ;; Mark effect as inactive using captured effect object
+      (let ((effect-obj (car effect-obj-box)))
+        (when effect-obj
+          (plist-put effect-obj :active nil)
+          (etaf-reactive--cleanup-effect effect-obj))))))
 
 ;;; ============================================================================
 ;;; Reactive System - WatchEffect
@@ -869,6 +888,7 @@ is automatically registered as a dependency.
 
 OPTIONS is an optional plist that can include:
 - :flush - Control effect execution timing ('pre', 'post', or 'sync')
+  Default is 'sync' for immediate execution
 
 Returns a stop function. Call the stop function to stop the effect:
   (funcall stop)
@@ -890,26 +910,27 @@ Example:
 
 This is similar to Vue 3's watchEffect() function and is the most
 commonly used watch function due to its automatic dependency tracking."
-  (let* ((flush (or (plist-get options :flush) 'pre))
+  (let* ((flush (or (plist-get options :flush) 'sync))  ; Default to sync
          (scheduler (if (eq flush 'sync)
-                       nil  ; No scheduler for sync
+                       nil  ; No scheduler for sync (runs immediately)
                      (lambda (effect)
                        (etaf-reactive--queue-job 
                         (plist-get effect :run)))))
+         (effect-obj nil)
          (runner (etaf-reactive-effect
                   effect-fn
                   (list :scheduler scheduler))))
+    ;; Store effect object for stop function
+    ;; We need to capture it from the effect stack after first run
+    (setq effect-obj (car etaf-reactive--effect-stack))
+    
     ;; Return stop function
     (lambda ()
-      ;; Mark effect as inactive (stops it from running)
-      (when (listp runner)
-        (let ((effect (car (last etaf-reactive--effect-stack))))
-          (when effect
-            (plist-put effect :active nil))))
-      ;; Clean up dependencies
-      (when (listp runner)
-        (etaf-reactive--cleanup-effect 
-         (car (last etaf-reactive--effect-stack)))))))
+      ;; Find the effect object - it should be in the bucket
+      ;; For now, we just mark all effects on stack as inactive
+      (when effect-obj
+        (plist-put effect-obj :active nil)
+        (etaf-reactive--cleanup-effect effect-obj)))))
 
 ;;; ============================================================================
 ;;; Reactive System - Reactive Objects
