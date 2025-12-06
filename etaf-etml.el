@@ -944,6 +944,11 @@ A template is considered dynamic if it contains:
 - Directives: :e-if, :e-for, :e-show, :e-bind:*, :e-text, :e-else, :e-else-if
 - Component usage (registered components)
 
+This function recursively analyzes the template tree, examining:
+- All string values for {{ }} interpolation patterns
+- All attributes for dynamic directives
+- All child elements for dynamic content
+
 Returns t if the template has dynamic content, nil otherwise."
   (cond
    ;; String - check for {{ }} interpolation
@@ -962,34 +967,35 @@ Returns t if the template has dynamic content, nil otherwise."
        (etaf-etml--is-component-p tag)
        
        ;; Check attributes for directives
-       (let ((has-directive nil))
-         (while (and rest (keywordp (car rest)) (not has-directive))
-           (let ((key (car rest))
-                 (val (cadr rest)))
+       (catch 'has-directive
+         (while (and rest (keywordp (car rest)))
+           (let* ((key (car rest))
+                  (val (cadr rest))
+                  (key-name (symbol-name key)))
              ;; Check for dynamic directives
              (when (memq key '(:e-if :e-for :e-show :e-text :e-else :e-else-if))
-               (setq has-directive t))
-             ;; Check for :e-bind:* directives
-             (when (string-prefix-p ":e-bind:" (symbol-name key))
-               (setq has-directive t))
+               (throw 'has-directive t))
+             ;; Check for :e-bind:* directives - need to strip leading colon
+             (when (string-prefix-p "e-bind:" (substring key-name 1))
+               (throw 'has-directive t))
              ;; Check attribute value for {{ }} interpolation
              (when (and (stringp val) (string-match-p "{{\\s-*[^}]+?\\s-*}}" val))
-               (setq has-directive t))
+               (throw 'has-directive t))
              ;; Move to next attribute
              (setq rest (cddr rest))))
-         has-directive)
+         nil) ; No directive found
        
        ;; Recursively check children
-       (let ((has-dynamic-child nil))
+       (catch 'has-dynamic-child
          ;; Skip attributes (already processed above)
          (while (and rest (keywordp (car rest)))
            (setq rest (cddr rest)))
          ;; Check remaining children
-         (while (and rest (not has-dynamic-child))
+         (while rest
            (when (etaf-etml-has-dynamic-content-p (car rest))
-             (setq has-dynamic-child t))
+             (throw 'has-dynamic-child t))
            (setq rest (cdr rest)))
-         has-dynamic-child))))
+         nil)))) ; No dynamic child found
    
    ;; Unknown type
    (t nil)))
