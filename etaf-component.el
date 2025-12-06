@@ -401,21 +401,188 @@ Returns t if TAG is a component name, nil otherwise."
   (etaf-component-defined-p tag))
 
 ;;; ============================================================================
-;;; Reactive System - Ref
+;;; Reactive System - Core Infrastructure (Vue 3 Style)
 ;;; ============================================================================
 
-(defvar etaf-reactive--current-effect nil
-  "The currently running effect, used for dependency tracking.
-When a ref is accessed during effect execution, the effect is
-registered as a dependency of that ref.")
+;; Global dependency tracking bucket structure
+;; This follows Vue 3's design: WeakMap<target, Map<key, Set<effect>>>
+;; In Elisp, we use a hash-table instead of WeakMap
+(defvar etaf-reactive--bucket (make-hash-table :test 'eq)
+  "Global bucket for storing dependency relationships.
+Maps reactive objects (refs/computed) to their dependent effects.
+Structure: hash-table<target, hash-table<key, list<effect>>>")
+
+(defvar etaf-reactive--active-effect nil
+  "The currently active effect being executed.
+Used for automatic dependency collection during effect execution.")
 
 (defvar etaf-reactive--effect-stack nil
-  "Stack of currently running effects for nested effect tracking.
-Allows proper dependency tracking when effects are nested.")
+  "Stack of effects for handling nested effects.
+When an effect runs, it's pushed onto this stack. When effects are
+nested (e.g., parent component -> child component), this ensures
+correct dependency tracking.")
 
-(defvar etaf-reactive--effect-deps-tracker nil
-  "Tracks dependencies collected during effect execution for cleanup.
-This is used to properly clean up old dependencies when an effect re-runs.")
+(defvar etaf-reactive--should-track t
+  "Flag to control whether dependency tracking should occur.
+Set to nil to temporarily disable tracking.")
+
+;;; ============================================================================
+;;; Effect Management
+;;; ============================================================================
+
+(defun etaf-reactive--track (target key)
+  "Track dependency between TARGET reactive object and KEY.
+Records that the current active effect depends on TARGET[KEY].
+This function is called during reactive data reads."
+  (when (and etaf-reactive--active-effect etaf-reactive--should-track)
+    (let* ((deps-map (or (gethash target etaf-reactive--bucket)
+                         (let ((new-map (make-hash-table :test 'eq)))
+                           (puthash target new-map etaf-reactive--bucket)
+                           new-map)))
+           (dep (or (gethash key deps-map)
+                    (let ((new-dep nil))
+                      (puthash key new-dep deps-map)
+                      new-dep))))
+      ;; Add current effect to dependency set
+      (unless (member etaf-reactive--active-effect dep)
+        (puthash key (cons etaf-reactive--active-effect dep) deps-map)
+        ;; Also track in effect's deps for cleanup
+        (let ((effect-obj etaf-reactive--active-effect))
+          (when (and (listp effect-obj) (plist-get effect-obj :deps))
+            (plist-put effect-obj :deps 
+                      (cons (cons target key) 
+                            (plist-get effect-obj :deps)))))))))
+
+(defun etaf-reactive--trigger (target key)
+  "Trigger all effects that depend on TARGET[KEY].
+This function is called when reactive data is modified."
+  (let ((deps-map (gethash target etaf-reactive--bucket)))
+    (when deps-map
+      (let ((effects (gethash key deps-map)))
+        (when effects
+          ;; Create a new list to avoid infinite loop during Set iteration
+          ;; (as described in ECMA spec and Vue 3 implementation)
+          (let ((effects-to-run nil))
+            (dolist (effect effects)
+              ;; Prevent infinite recursion: don't trigger if effect is currently running
+              (unless (eq effect etaf-reactive--active-effect)
+                (push effect effects-to-run)))
+            ;; Run effects
+            (dolist (effect (nreverse effects-to-run))
+              (cond
+               ;; If effect has a scheduler, use it
+               ((and (listp effect) (plist-get effect :scheduler))
+                (funcall (plist-get effect :scheduler) effect))
+               ;; If effect has a run function, call it
+               ((and (listp effect) (plist-get effect :run))
+                (funcall (plist-get effect :run)))
+               ;; Otherwise, treat as a plain function
+               ((functionp effect)
+                (funcall effect))))))))))
+
+(defun etaf-reactive--cleanup-effect (effect)
+  "Remove EFFECT from all its dependencies.
+This is called before re-running an effect to clean up old dependencies,
+solving the branch switching problem described in Vue 3 reactivity."
+  (when (and (listp effect) (plist-get effect :deps))
+    (dolist (dep-pair (plist-get effect :deps))
+      (let* ((target (car dep-pair))
+             (key (cdr dep-pair))
+             (deps-map (gethash target etaf-reactive--bucket)))
+        (when deps-map
+          (let ((dep-list (gethash key deps-map)))
+            (puthash key (delete effect dep-list) deps-map)))))
+    ;; Clear the effect's deps list
+    (plist-put effect :deps nil)))
+
+(defun etaf-reactive-effect (fn &optional options)
+  "Create a reactive effect with function FN.
+
+OPTIONS can include:
+- :scheduler - Custom scheduler function (effect) -> void
+- :lazy - If t, don't run immediately (used for computed)
+- :onStop - Callback when effect is stopped
+
+Returns an effect runner function that can be called to re-run the effect.
+
+This is the foundation of Vue 3's reactivity system. Effects automatically
+track their dependencies and re-run when dependencies change."
+  (let* ((effect (list :type 'effect
+                       :fn fn
+                       :options options
+                       :deps nil  ; list of (target . key) pairs
+                       :active t))
+         (runner nil))
+    ;; Create the runner function
+    (setq runner
+          (lambda ()
+            (when (plist-get effect :active)
+              ;; Cleanup old dependencies before re-running
+              (etaf-reactive--cleanup-effect effect)
+              
+              ;; Push effect onto stack for nested effect tracking
+              (push effect etaf-reactive--effect-stack)
+              (let ((etaf-reactive--active-effect effect))
+                (unwind-protect
+                    (funcall fn)
+                  ;; Pop from stack when done
+                  (pop etaf-reactive--effect-stack)
+                  ;; Update active effect to parent if exists
+                  (setq etaf-reactive--active-effect 
+                        (car etaf-reactive--effect-stack)))))))
+    
+    ;; Store runner in effect for later use
+    (plist-put effect :run runner)
+    
+    ;; Run immediately unless lazy
+    (unless (plist-get options :lazy)
+      (funcall runner))
+    
+    ;; Return the runner
+    runner))
+
+;;; ============================================================================
+;;; Scheduler and Batching
+;;; ============================================================================
+
+(defvar etaf-reactive--queue nil
+  "Queue for batched effect execution.")
+
+(defvar etaf-reactive--is-flushing nil
+  "Flag indicating if queue is currently being flushed.")
+
+(defvar etaf-reactive--pending-flush nil
+  "Flag indicating if a flush is scheduled.")
+
+(defun etaf-reactive--queue-job (job)
+  "Add JOB to the execution queue with deduplication.
+Jobs are deduplicated and executed in the next microtask."
+  (unless (member job etaf-reactive--queue)
+    (push job etaf-reactive--queue)
+    (etaf-reactive--queue-flush)))
+
+(defun etaf-reactive--queue-flush ()
+  "Schedule flushing of the job queue.
+Uses run-with-idle-timer to simulate microtask behavior."
+  (unless etaf-reactive--pending-flush
+    (setq etaf-reactive--pending-flush t)
+    (run-with-idle-timer 0 nil #'etaf-reactive--flush-jobs)))
+
+(defun etaf-reactive--flush-jobs ()
+  "Flush all pending jobs in the queue."
+  (when etaf-reactive--queue
+    (setq etaf-reactive--is-flushing t)
+    (setq etaf-reactive--pending-flush nil)
+    (let ((queue (nreverse etaf-reactive--queue)))
+      (setq etaf-reactive--queue nil)
+      (dolist (job queue)
+        (when (functionp job)
+          (funcall job))))
+    (setq etaf-reactive--is-flushing nil)))
+
+;;; ============================================================================
+;;; Reactive System - Ref
+;;; ============================================================================
 
 (defun etaf-ref (value)
   "Create a reactive reference with initial VALUE.
@@ -441,8 +608,7 @@ Vue 3's ref() function."
   (let* ((id (cl-gensym "etaf-ref-"))
          (ref (list :type 'ref
                     :id id
-                    :value value
-                    :deps nil)))    ; dependencies (effects that read this ref)
+                    :value value)))
     ref))
 
 (defun etaf-ref-p (obj)
@@ -454,22 +620,14 @@ Returns t if OBJ is a ref, nil otherwise."
 (defun etaf-ref-get (ref)
   "Get the current value of REF.
 
-If called within an effect (created by `etaf-watch-effect'), the effect
+If called within an effect (created by `etaf-reactive-effect'), the effect
 is automatically registered as a dependency of this ref. When the ref
 value changes, the effect will be re-run.
 
 Returns the current value stored in the ref."
   (when (etaf-ref-p ref)
     ;; Track dependency if inside an effect
-    (when etaf-reactive--current-effect
-      (let ((deps (plist-get ref :deps)))
-        (unless (member etaf-reactive--current-effect deps)
-          (plist-put ref :deps (cons etaf-reactive--current-effect deps))))
-      ;; Also track for effect cleanup
-      (when etaf-reactive--effect-deps-tracker
-        (let ((tracked (plist-get etaf-reactive--effect-deps-tracker :deps)))
-          (unless (member ref tracked)
-            (plist-put etaf-reactive--effect-deps-tracker :deps (cons ref tracked))))))
+    (etaf-reactive--track ref :value)
     (plist-get ref :value)))
 
 (defun etaf-ref-set (ref value)
@@ -487,9 +645,7 @@ no updates are triggered."
       (unless (equal old-value value)
         (plist-put ref :value value)
         ;; Trigger all dependent effects
-        (dolist (effect (plist-get ref :deps))
-          (when (functionp effect)
-            (funcall effect)))))))
+        (etaf-reactive--trigger ref :value)))))
 
 (defun etaf-ref-update (ref fn)
   "Update REF by applying FN to its current value.
@@ -550,17 +706,18 @@ Computed values are similar to Vue 3's computed() function."
                          :id id
                          :getter getter
                          :value nil
-                         :dirty t       ; needs recomputation
-                         :deps nil)))   ; effects that depend on this computed
-    ;; Create an effect to recompute when dependencies change
-    (let ((recompute-effect
-           (lambda ()
-             (plist-put computed :dirty t)
-             ;; Trigger dependent effects
-             (dolist (effect (plist-get computed :deps))
-               (when (functionp effect)
-                 (funcall effect))))))
-      (plist-put computed :recompute-effect recompute-effect))
+                         :dirty t)))    ; needs recomputation
+    ;; Create an effect with lazy evaluation and custom scheduler
+    (let ((runner (etaf-reactive-effect
+                   (lambda ()
+                     (plist-put computed :value (funcall getter)))
+                   (list :lazy t
+                         :scheduler (lambda (_effect)
+                                     ;; When dependency changes, mark as dirty
+                                     (plist-put computed :dirty t)
+                                     ;; Trigger effects that depend on this computed
+                                     (etaf-reactive--trigger computed :value))))))
+      (plist-put computed :effect runner))
     computed))
 
 (defun etaf-computed-p (obj)
@@ -581,24 +738,16 @@ dependency of this computed value.
 Returns the computed value."
   (when (etaf-computed-p computed)
     ;; Track as dependency if inside an effect
-    (when etaf-reactive--current-effect
-      (let ((deps (plist-get computed :deps)))
-        (unless (member etaf-reactive--current-effect deps)
-          (plist-put computed :deps (cons etaf-reactive--current-effect deps))))
-      ;; Also track for effect cleanup
-      (when etaf-reactive--effect-deps-tracker
-        (let ((tracked (plist-get etaf-reactive--effect-deps-tracker :deps)))
-          (unless (member computed tracked)
-            (plist-put etaf-reactive--effect-deps-tracker :deps (cons computed tracked))))))
+    (etaf-reactive--track computed :value)
+    
     ;; Recompute if dirty
     (when (plist-get computed :dirty)
-      (let* ((getter (plist-get computed :getter))
-             (recompute-effect (plist-get computed :recompute-effect))
-             ;; Track dependencies during computation
-             (etaf-reactive--current-effect recompute-effect)
-             (value (funcall getter)))
-        (plist-put computed :value value)
-        (plist-put computed :dirty nil)))
+      (plist-put computed :dirty nil)
+      ;; Run the effect to recompute
+      (let ((runner (plist-get computed :effect)))
+        (when runner
+          (funcall runner))))
+    
     (plist-get computed :value)))
 
 ;;; ============================================================================
@@ -606,18 +755,27 @@ Returns the computed value."
 ;;; ============================================================================
 
 (defun etaf-watch (source callback &optional options)
-  "Watch SOURCE (ref or computed) and call CALLBACK when it changes.
+  "Watch SOURCE (ref, computed, or getter function) and call CALLBACK when it changes.
 
 SOURCE can be:
 - A ref created with `etaf-ref'
 - A computed value created with `etaf-computed'
+- A getter function that returns a value
 
-CALLBACK is a function that receives (new-value old-value) as arguments
+CALLBACK is a function that receives (new-value old-value on-invalidate) as arguments
 and is called whenever the source changes.
 
 OPTIONS is an optional plist that can include:
 - :immediate - If t, run callback immediately with current value
 - :deep - If t, deep watch objects (not yet implemented)
+- :flush - Control callback execution timing:
+  * 'pre' - before DOM updates (default in Vue)
+  * 'post' - after DOM updates
+  * 'sync' - synchronous execution (no batching)
+
+The on-invalidate parameter in the callback is a function that can be called
+to register a cleanup function. This cleanup will run before the next callback
+execution, allowing you to handle race conditions in async operations.
 
 Returns a stop function. Call the stop function to remove the watcher:
   (funcall stop)
@@ -627,45 +785,79 @@ Example:
   (let* ((count (etaf-ref 0))
          (stop (etaf-watch
                 count
-                (lambda (new old)
-                  (message \"Count changed: %s -> %s\" old new)))))
+                (lambda (new old on-invalidate)
+                  (message \"Count changed: %s -> %s\" old new)
+                  ;; Register cleanup for async operations
+                  (funcall on-invalidate
+                           (lambda () (message \"Cleaning up...\")))))))
     (etaf-ref-set count 1)    ; logs \"Count changed: 0 -> 1\"
-    (etaf-ref-set count 2)    ; logs \"Count changed: 1 -> 2\"
+    (etaf-ref-set count 2)    ; logs \"Cleaning up...\" then \"Count changed: 1 -> 2\"
     (funcall stop)            ; stop watching
     (etaf-ref-set count 3))   ; no callback
 
-This is similar to Vue 3's watch() function."
+This is similar to Vue 3's watch() function with onInvalidate support."
   (let* ((immediate (plist-get options :immediate))
-         (old-value (cond
-                     ((etaf-ref-p source)
-                      (etaf-ref-get source))
-                     ((etaf-computed-p source)
-                      (etaf-computed-get source))))
-         (watcher (lambda ()
-                    (let ((new-value (cond
-                                      ((etaf-ref-p source)
-                                       (etaf-ref-get source))
-                                      ((etaf-computed-p source)
-                                       (etaf-computed-get source)))))
-                      (unless (equal new-value old-value)
-                        (funcall callback new-value old-value)
-                        (setq old-value new-value))))))
-    ;; Add watcher to source's deps
-    (let ((deps (plist-get source :deps)))
-      (plist-put source :deps (cons watcher deps)))
+         (flush (or (plist-get options :flush) 'pre))
+         (cleanup-fn nil)
+         (old-value 'etaf-watch-uninitialized)
+         (getter (cond
+                  ((functionp source) source)
+                  ((etaf-ref-p source)
+                   (lambda () (etaf-ref-get source)))
+                  ((etaf-computed-p source)
+                   (lambda () (etaf-computed-get source)))
+                  (t (error "Invalid watch source"))))
+         (on-invalidate (lambda (fn)
+                         "Register cleanup function for next callback."
+                         (setq cleanup-fn fn)))
+         (job nil)
+         (runner (etaf-reactive-effect
+                  (lambda ()
+                    (let ((new-value (funcall getter)))
+                      ;; Only trigger callback on changes (not on first collection)
+                      (when (and (not (eq old-value 'etaf-watch-uninitialized))
+                                 (not (equal new-value old-value)))
+                        (let ((run-callback
+                               (lambda ()
+                                 ;; Run cleanup before callback
+                                 (when cleanup-fn
+                                   (funcall cleanup-fn)
+                                   (setq cleanup-fn nil))
+                                 ;; Call user callback
+                                 (funcall callback new-value old-value on-invalidate)
+                                 (setq old-value new-value))))
+                          (cond
+                           ;; Sync flush - run immediately
+                           ((eq flush 'sync)
+                            (funcall run-callback))
+                           ;; Pre/post flush - use scheduler
+                           (t
+                            (setq job run-callback)
+                            (etaf-reactive--queue-job job)))))
+                      ;; Update old value for next comparison
+                      (when (eq old-value 'etaf-watch-uninitialized)
+                        (setq old-value new-value))))
+                  (list :lazy (not immediate)))))
+    
     ;; Run immediately if requested
     (when immediate
-      (funcall callback old-value nil))
+      (setq old-value (funcall getter))
+      (funcall callback old-value nil on-invalidate))
+    
     ;; Return stop function
     (lambda ()
-      (let ((deps (plist-get source :deps)))
-        (plist-put source :deps (delete watcher deps))))))
+      (when cleanup-fn
+        (funcall cleanup-fn))
+      ;; Mark effect as inactive
+      (when (and (listp runner) (plist-get runner :active))
+        (plist-put runner :active nil))
+      (etaf-reactive--cleanup-effect runner))))
 
 ;;; ============================================================================
 ;;; Reactive System - WatchEffect
 ;;; ============================================================================
 
-(defun etaf-watch-effect (effect-fn)
+(defun etaf-watch-effect (effect-fn &optional options)
   "Run EFFECT-FN immediately and re-run when dependencies change.
 
 EFFECT-FN is a function that will be run immediately and then
@@ -674,6 +866,9 @@ automatically re-run whenever any reactive values it accesses change.
 Dependencies are automatically tracked - you don't need to explicitly
 declare them. Any ref or computed value accessed during effect execution
 is automatically registered as a dependency.
+
+OPTIONS is an optional plist that can include:
+- :flush - Control effect execution timing ('pre', 'post', or 'sync')
 
 Returns a stop function. Call the stop function to stop the effect:
   (funcall stop)
@@ -695,36 +890,26 @@ Example:
 
 This is similar to Vue 3's watchEffect() function and is the most
 commonly used watch function due to its automatic dependency tracking."
-  (let* ((tracked-deps nil)  ; refs/computed that this effect depends on
-         (runner nil)
-         (active t))         ; whether the effect is still active
-    ;; Create the runner that will execute the effect
-    (setq runner
-          (lambda ()
-            (when active
-              ;; Clear old dependencies before re-running
-              (dolist (dep tracked-deps)
-                (let ((old-deps (plist-get dep :deps)))
-                  (plist-put dep :deps (delete runner old-deps))))
-              (setq tracked-deps nil)
-              ;; Run effect with dependency tracking
-              ;; When refs are accessed, they add runner to their deps
-              (let ((etaf-reactive--current-effect runner)
-                    (etaf-reactive--effect-deps-tracker (list :deps nil)))
-                (push runner etaf-reactive--effect-stack)
-                (unwind-protect
-                    (funcall effect-fn)
-                  (pop etaf-reactive--effect-stack)
-                  ;; Capture tracked deps for cleanup later
-                  (setq tracked-deps (plist-get etaf-reactive--effect-deps-tracker :deps)))))))
-    ;; Run immediately
-    (funcall runner)
+  (let* ((flush (or (plist-get options :flush) 'pre))
+         (scheduler (if (eq flush 'sync)
+                       nil  ; No scheduler for sync
+                     (lambda (effect)
+                       (etaf-reactive--queue-job 
+                        (plist-get effect :run)))))
+         (runner (etaf-reactive-effect
+                  effect-fn
+                  (list :scheduler scheduler))))
     ;; Return stop function
     (lambda ()
-      (setq active nil)
-      (dolist (dep tracked-deps)
-        (let ((old-deps (plist-get dep :deps)))
-          (plist-put dep :deps (delete runner old-deps)))))))
+      ;; Mark effect as inactive (stops it from running)
+      (when (listp runner)
+        (let ((effect (car (last etaf-reactive--effect-stack))))
+          (when effect
+            (plist-put effect :active nil))))
+      ;; Clean up dependencies
+      (when (listp runner)
+        (etaf-reactive--cleanup-effect 
+         (car (last etaf-reactive--effect-stack)))))))
 
 ;;; ============================================================================
 ;;; Reactive System - Reactive Objects
