@@ -665,7 +665,7 @@ This is a convenience function equivalent to:
 Example:
 
   (let ((count (etaf-ref 5)))
-    (etaf-ref-update count #\\='1+)    ; increment by 1
+    (etaf-ref-update count #'1+)    ; increment by 1
     (etaf-ref-get count))           ; => 6
 
 Returns the new value."
@@ -831,35 +831,36 @@ This is similar to Vue 3's watch() function with onInvalidate support."
                           (old-value (car old-value-box))
                           (is-first-run (car is-first-run-box)))
                       
-                      ;; Handle first run
+                      ;; Handle first run - initialize old value and optionally run callback
                       (when is-first-run
                         (setcar is-first-run-box nil)
                         (setcar old-value-box new-value)
                         ;; If immediate, run callback on first run
                         (when immediate
                           (funcall callback new-value nil on-invalidate))
-                        (setq new-value nil))  ; Skip change detection below
+                        ;; Don't check for changes on first run
+                        (setq is-first-run t))  ; Reuse as skip flag
                       
                       ;; Only trigger callback on changes (not on first collection)
-                      (when (and new-value  ; nil means we're on first run
-                                 (not (equal new-value old-value)))
-                        (let ((run-callback
-                               (lambda ()
-                                 ;; Run cleanup before callback
-                                 (when (car cleanup-fn-box)
-                                   (funcall (car cleanup-fn-box))
-                                   (setcar cleanup-fn-box nil))
-                                 ;; Call user callback
-                                 (funcall callback new-value old-value on-invalidate)
-                                 (setcar old-value-box new-value))))
-                          (cond
-                           ;; Sync flush - run immediately
-                           ((eq flush 'sync)
-                            (funcall run-callback))
-                           ;; Pre/post flush - use scheduler
-                           (t
-                            (setq job run-callback)
-                            (etaf-reactive--queue-job job)))))))
+                      (unless is-first-run  ; If we skipped above, this is nil
+                        (when (not (equal new-value old-value))
+                          (let ((run-callback
+                                 (lambda ()
+                                   ;; Run cleanup before callback
+                                   (when (car cleanup-fn-box)
+                                     (funcall (car cleanup-fn-box))
+                                     (setcar cleanup-fn-box nil))
+                                   ;; Call user callback
+                                   (funcall callback new-value old-value on-invalidate)
+                                   (setcar old-value-box new-value))))
+                            (cond
+                             ;; Sync flush - run immediately
+                             ((eq flush 'sync)
+                              (funcall run-callback))
+                             ;; Pre/post flush - use scheduler
+                             (t
+                              (setq job run-callback)
+                              (etaf-reactive--queue-job job))))))))
                   nil)))  ; No options - always run immediately to track dependencies
     
     ;; Return stop function
