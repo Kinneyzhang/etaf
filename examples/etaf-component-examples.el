@@ -40,7 +40,9 @@
            "基础计数器组件，演示 ref 的使用。
 Basic counter component demonstrating ref usage."
            (let* ((initial (or (plist-get props :initial-count) 0))
-                  (step (or (plist-get props :step) 1))
+                  (step-val (plist-get props :step))
+                  ;; Validate step parameter
+                  (step (if (and step-val (numberp step-val)) step-val 1))
                   (count (etaf-ref initial))
                   (increment (lambda ()
                               (etaf-ref-update count

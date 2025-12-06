@@ -128,15 +128,11 @@ git clone https://github.com/Kinneyzhang/etaf.git
 
 ## Examples
 
-Run interactive demos:
+Run interactive component demos:
 ```elisp
 ;; Component system examples - Options API and Composition API
 (load-file "examples/etaf-component-examples.el")
 M-x etaf-component-demo
-
-;; Other interactive examples
-(load-file "examples/etaf-interactive-examples.el")
-M-x etaf-interactive-demo
 ```
 
 Example files:
@@ -352,15 +348,11 @@ git clone https://github.com/Kinneyzhang/etaf.git
 
 ## 示例
 
-运行交互式演示：
+运行交互式组件演示：
 ```elisp
 ;; 组件系统示例 - 选项式 API 和组合式 API
 (load-file "examples/etaf-component-examples.el")
 M-x etaf-component-demo
-
-;; 其他交互式演示
-(load-file "examples/etaf-interactive-examples.el")
-M-x etaf-interactive-demo
 ```
 
 示例文件：
