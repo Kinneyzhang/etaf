@@ -999,7 +999,7 @@ Returns t if the template has dynamic content, nil otherwise."
                (throw 'has-directive t))
              ;; Check attribute value for {{ }} interpolation
              (when (and (stringp val) 
-                       (string-match-p etaf-etml--interpolation-regex val))
+                        (string-match-p etaf-etml--interpolation-regex val))
                (throw 'has-directive t))
              ;; Move to next attribute
              (setq rest (cddr rest))))
@@ -1019,26 +1019,6 @@ Returns t if the template has dynamic content, nil otherwise."
    
    ;; Unknown type
    (t nil)))
-
-;;; ============================================================================
-;;; Public API Functions
-;;; ============================================================================
-
-(defun etaf-create-vnode-from-template (template &optional data)
-  "High-level API: Create VNode from TEMPLATE with DATA.
-This combines compilation and execution in one call.
-
-TEMPLATE - ETML template
-DATA - Optional data context
-
-Returns - VNode tree
-
-This is equivalent to:
-  (funcall (etaf-compile template) data)"
-  (let ((render-fn (etaf-compile template)))
-    (funcall render-fn data)))
-
-
 
 (defun etaf-etml--render-component (component attrs children data)
   "Render COMPONENT with ATTRS and CHILDREN using DATA context.
