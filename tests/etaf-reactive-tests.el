@@ -489,15 +489,15 @@
                      (* 2 (etaf-ref-get count)))))
          (display nil)
          (increment (lambda ()
-                     (etaf-ref-set count (1+ (etaf-ref-get count))))))
+                      (etaf-ref-set count (1+ (etaf-ref-get count))))))
     
     ;; Auto-update display
     (etaf-watch-effect
      (lambda ()
        (setq display
              (format "Count: %d, Doubled: %d"
-                    (etaf-ref-get count)
-                    (etaf-computed-get doubled)))))
+                     (etaf-ref-get count)
+                     (etaf-computed-get doubled)))))
     
     ;; Initial state
     (should (string= display "Count: 0, Doubled: 0"))
