@@ -235,10 +235,6 @@ Created comprehensive documentation covering:
 7. **Performance** - Optimization tips and considerations
 8. **Debugging** - Tips for troubleshooting
 
-## Backward Compatibility
-
-The old reactive system (`etaf-create-reactive`, `etaf-get`, `etaf-set`) is still available for compatibility. New code should use the new API.
-
 ## Future Enhancements (Optional)
 
 Possible future improvements:
@@ -257,7 +253,6 @@ Successfully implemented a complete, production-ready reactive system for ETAF t
 - ✅ Follows Vue 3's architecture closely
 - ✅ Passes all 16 comprehensive tests
 - ✅ Has complete documentation
-- ✅ Is backward compatible
 - ✅ Provides excellent developer experience
 - ✅ Has good performance characteristics
 - ✅ Handles edge cases properly
