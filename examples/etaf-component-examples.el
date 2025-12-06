@@ -41,7 +41,9 @@
 Basic counter component demonstrating ref usage."
            (let* ((initial (or (plist-get props :initial-count) 0))
                   (step-val (plist-get props :step))
-                  ;; Validate step parameter
+                  ;; Validate step parameter to prevent runtime errors.
+                  ;; If step is not a number, default to 1.
+                  ;; This ensures arithmetic operations won't fail.
                   (step (if (and step-val (numberp step-val)) step-val 1))
                   (count (etaf-ref initial))
                   (increment (lambda ()
@@ -409,6 +411,8 @@ Computed property for calculation result."
                                (etaf-ref-get (plist-get data :num1))
                                (etaf-computed-get (plist-get data :operator-symbol))
                                (etaf-ref-get (plist-get data :num2))
+                               ;; Result can be a number or error string (e.g., division by zero).
+                               ;; Format numeric results with 2 decimal places, display strings as-is.
                                (let ((result (etaf-computed-get (plist-get data :result))))
                                  (if (numberp result)
                                      (format "%.2f" result)
@@ -627,7 +631,9 @@ Launch interactive demo of component examples."
               (hr)
               (p "示例演示完成！"))
         nil
-        ;; 添加一些样式
+        ;; CSS styles using ETAF units:
+        ;; - 'cw' = character width (horizontal spacing in Emacs text buffers)
+        ;; - unitless numbers for margin = lines (vertical spacing)
         '(".demo-container { padding: 2cw; }"
           "hr { margin: 1 0; }"
           "h2 { font-weight: bold; }"
@@ -653,6 +659,9 @@ COMPONENT-NAME: 组件名称 (component name symbol)"
   (etaf-paint-to-buffer "*ETAF Component*"
     (list component-name)
     nil
+    ;; CSS styles using ETAF units:
+    ;; - 'cw' = character width (horizontal spacing)
+    ;; - unitless numbers for margin = lines (vertical spacing)
     '("div { padding: 2cw; }"
       "p { margin: 0.5 0; }")
     80))
