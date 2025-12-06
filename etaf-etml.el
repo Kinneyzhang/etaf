@@ -934,6 +934,67 @@ Returns list of VNodes with scoped CSS."
         (cons style-vnode other-vnodes)))))
 
 ;;; ============================================================================
+;;; Template Analysis - Detect Dynamic Content
+;;; ============================================================================
+
+(defun etaf-etml-has-dynamic-content-p (template)
+  "Check if TEMPLATE has dynamic content.
+A template is considered dynamic if it contains:
+- Text interpolation: {{ }}
+- Directives: :e-if, :e-for, :e-show, :e-bind:*, :e-text, :e-else, :e-else-if
+- Component usage (registered components)
+
+Returns t if the template has dynamic content, nil otherwise."
+  (cond
+   ;; String - check for {{ }} interpolation
+   ((stringp template)
+    (string-match-p "{{\\s-*[^}]+?\\s-*}}" template))
+   
+   ;; Atom - no dynamic content
+   ((atom template) nil)
+   
+   ;; List - check tag and attributes
+   ((listp template)
+    (let ((tag (car template))
+          (rest (cdr template)))
+      (or
+       ;; Check if tag is a registered component
+       (etaf-etml--is-component-p tag)
+       
+       ;; Check attributes for directives
+       (let ((has-directive nil))
+         (while (and rest (keywordp (car rest)) (not has-directive))
+           (let ((key (car rest))
+                 (val (cadr rest)))
+             ;; Check for dynamic directives
+             (when (memq key '(:e-if :e-for :e-show :e-text :e-else :e-else-if))
+               (setq has-directive t))
+             ;; Check for :e-bind:* directives
+             (when (string-prefix-p ":e-bind:" (symbol-name key))
+               (setq has-directive t))
+             ;; Check attribute value for {{ }} interpolation
+             (when (and (stringp val) (string-match-p "{{\\s-*[^}]+?\\s-*}}" val))
+               (setq has-directive t))
+             ;; Move to next attribute
+             (setq rest (cddr rest))))
+         has-directive)
+       
+       ;; Recursively check children
+       (let ((has-dynamic-child nil))
+         ;; Skip attributes (already processed above)
+         (while (and rest (keywordp (car rest)))
+           (setq rest (cddr rest)))
+         ;; Check remaining children
+         (while (and rest (not has-dynamic-child))
+           (when (etaf-etml-has-dynamic-content-p (car rest))
+             (setq has-dynamic-child t))
+           (setq rest (cdr rest)))
+         has-dynamic-child))))
+   
+   ;; Unknown type
+   (t nil)))
+
+;;; ============================================================================
 ;;; Public API Functions
 ;;; ============================================================================
 
@@ -951,22 +1012,7 @@ This is equivalent to:
   (let ((render-fn (etaf-compile template)))
     (funcall render-fn data)))
 
-;; Keep old name as alias for backward compatibility
-(defalias 'etaf-etml-create-vnode 'etaf-create-vnode-from-template
-  "Alias for backward compatibility.")
 
-;;; ============================================================================
-;;; Legacy Compatibility (Old API)
-;;; ============================================================================
-
-;; Keep old function names for backward compatibility
-
-(defalias 'etaf-etml-compile 'etaf-compile
-  "Alias for backward compatibility.")
-
-(defun etaf-etml--create-vnode (sexp)
-  "Legacy alias for etaf-vdom-create-from-etml."
-  (etaf-vdom-create-from-etml sexp))
 
 (defun etaf-etml--render-component (component attrs children data)
   "Render COMPONENT with ATTRS and CHILDREN using DATA context.
