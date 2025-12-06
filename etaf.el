@@ -38,9 +38,10 @@ DATA - 模板数据上下文
 ECSS - 额外的CSS样式
 WIDTH/HEIGHT - 视口尺寸
 
-Note: The dynamic content check is performed on each call. While memoization
-could be added for frequently rendered templates, the check itself is fast
-(O(n) tree traversal) and memoization would add cache management complexity."
+Note: The dynamic content check is performed on each call via recursive tree
+analysis. The check is O(n) where n is the number of nodes in the template tree.
+While memoization could be added for frequently rendered templates, the check
+itself is fast and memoization would add cache management complexity."
   (let* (;; Optimization: Check if template has dynamic content
          (has-dynamic (etaf-etml-has-dynamic-content-p etml))
          ;; Generate DOM: Use optimized path for static templates
