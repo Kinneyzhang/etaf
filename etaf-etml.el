@@ -937,6 +937,16 @@ Returns list of VNodes with scoped CSS."
 ;;; Template Analysis - Detect Dynamic Content
 ;;; ============================================================================
 
+(defconst etaf-etml--interpolation-regex "{{\\s-*[^}]+?\\s-*}}"
+  "Regular expression pattern for matching template interpolation {{ }}.")
+
+(defconst etaf-etml--dynamic-directives 
+  '(:e-if :e-for :e-show :e-text :e-else :e-else-if)
+  "List of directive keywords that indicate dynamic template content.")
+
+(defconst etaf-etml--bind-directive-prefix "e-bind:"
+  "Prefix for bind directives (without leading colon).")
+
 (defun etaf-etml-has-dynamic-content-p (template)
   "Check if TEMPLATE has dynamic content.
 A template is considered dynamic if it contains:
@@ -953,7 +963,7 @@ Returns t if the template has dynamic content, nil otherwise."
   (cond
    ;; String - check for {{ }} interpolation
    ((stringp template)
-    (string-match-p "{{\\s-*[^}]+?\\s-*}}" template))
+    (string-match-p etaf-etml--interpolation-regex template))
    
    ;; Atom - no dynamic content
    ((atom template) nil)
@@ -970,16 +980,17 @@ Returns t if the template has dynamic content, nil otherwise."
        (catch 'has-directive
          (while (and rest (keywordp (car rest)))
            (let* ((key (car rest))
-                  (val (cadr rest))
-                  (key-name (symbol-name key)))
+                  (val (cadr rest)))
              ;; Check for dynamic directives
-             (when (memq key '(:e-if :e-for :e-show :e-text :e-else :e-else-if))
+             (when (memq key etaf-etml--dynamic-directives)
                (throw 'has-directive t))
-             ;; Check for :e-bind:* directives - need to strip leading colon
-             (when (string-prefix-p "e-bind:" (substring key-name 1))
+             ;; Check for :e-bind:* directives using regex to avoid substring allocation
+             (when (string-match-p (concat "^:" etaf-etml--bind-directive-prefix)
+                                   (symbol-name key))
                (throw 'has-directive t))
              ;; Check attribute value for {{ }} interpolation
-             (when (and (stringp val) (string-match-p "{{\\s-*[^}]+?\\s-*}}" val))
+             (when (and (stringp val) 
+                       (string-match-p etaf-etml--interpolation-regex val))
                (throw 'has-directive t))
              ;; Move to next attribute
              (setq rest (cddr rest))))
