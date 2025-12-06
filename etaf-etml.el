@@ -754,9 +754,15 @@ Returns list of rendered nodes (usually just one)."
 
 (defun etaf-etml-to-dom (template &optional data)
   "Render TEMPLATE with DATA and convert to DOM.
-This is a convenience function combining template rendering and TML-to-DOM."
+This is a convenience function combining template rendering and TML-to-DOM.
+When DATA is nil, rendering is skipped for efficiency."
   (require 'etaf-etml)
-  (etaf-etml--to-dom (etaf-etml-render template data)))
+  (etaf-etml--to-dom 
+   (if data
+       ;; Has data - render template with data substitution
+       (etaf-etml-render template data)
+     ;; No data - skip rendering step (no substitutions needed)
+     template)))
 
 ;;; ============================================================================
 ;;; Vue 3 Style Compilation Pipeline
@@ -947,6 +953,9 @@ Returns list of VNodes with scoped CSS."
 (defconst etaf-etml--bind-directive-prefix "e-bind:"
   "Prefix for bind directives (without leading colon).")
 
+(defconst etaf-etml--bind-directive-regex "^:e-bind:"
+  "Regular expression pattern for matching bind directives.")
+
 (defun etaf-etml-has-dynamic-content-p (template)
   "Check if TEMPLATE has dynamic content.
 A template is considered dynamic if it contains:
@@ -984,8 +993,8 @@ Returns t if the template has dynamic content, nil otherwise."
              ;; Check for dynamic directives
              (when (memq key etaf-etml--dynamic-directives)
                (throw 'has-directive t))
-             ;; Check for :e-bind:* directives using regex to avoid substring allocation
-             (when (string-match-p (concat "^:" etaf-etml--bind-directive-prefix)
+             ;; Check for :e-bind:* directives using regex
+             (when (string-match-p etaf-etml--bind-directive-regex
                                    (symbol-name key))
                (throw 'has-directive t))
              ;; Check attribute value for {{ }} interpolation
