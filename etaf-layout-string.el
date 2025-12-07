@@ -203,16 +203,30 @@ during string rendering for interactive elements (button, a, input, textarea, et
 without needing it to be bound at the DOM stage.
 
 For interactive elements, original DOM attributes (like href) are preserved in
-etaf-original-attrs in the render tree, so event handlers can access them."
+etaf-original-attrs in the render tree, and event handlers from VNodes are
+preserved in etaf-event-handlers, so event handlers can be properly bound."
   (when (memq tag '(a button input textarea summary))
     ;; Extract necessary information from layout node to create tag-metadata
     (let* (;; Get children nodes
            (children (dom-children layout-node))
            ;; Get original DOM attributes (preserved during render tree building)
            (original-attrs (dom-attr layout-node 'etaf-original-attrs))
+           ;; Get event handlers from VNode (preserved during rendering)
+           (event-handlers (dom-attr layout-node 'etaf-event-handlers))
            ;; Convert alist format attributes to plist format for tag-metadata
            (attrs (when original-attrs
                     (etaf-alist-to-plist original-attrs))))
+      
+      ;; Merge event handlers into attrs as :on-* properties
+      ;; Note: (intern ":on-click") creates the keyword :on-click in Emacs Lisp
+      (when event-handlers
+        (dolist (handler event-handlers)
+          (let* ((event-name (car handler))  ; e.g., 'click (symbol)
+                 (handler-fn (cdr handler))
+                 ;; Create keyword like :on-click using symbol-name to ensure proper format
+                 (keyword (intern (concat ":on-" (symbol-name event-name)))))
+            (setq attrs (plist-put attrs keyword handler-fn)))))
+      
       ;; Create tag metadata using the VNode-based approach
       (etaf-vdom-create-tag-metadata tag attrs children))))
 

@@ -688,6 +688,8 @@ The DOM is 'clean' - it contains no VNode-specific fields like
            (text-content (plist-get props :textContent))
            ;; Convert props plist to attrs alist for DOM
            (attrs (etaf-vdom--props-to-attrs props))
+           ;; Extract event handlers to preserve them
+           (event-handlers (etaf-vdom--extract-event-handlers props))
            ;; Render children
            (child-doms (cond
                         ;; If textContent is specified, use it as the only child
@@ -702,6 +704,9 @@ The DOM is 'clean' - it contains no VNode-specific fields like
                         ;; Other (nil, etc.)
                         (t nil))))
       ;; Build DOM: (tag ((attrs...)) children...)
+      ;; If there are event handlers, store them in a special attribute
+      (when event-handlers
+        (push (cons 'etaf-event-handlers event-handlers) attrs))
       (cons type (cons attrs child-doms))))
    
    ;; Unknown type - return nil
@@ -728,6 +733,342 @@ Event handlers (:on-*) are not included in DOM attributes."
                           (eq attr-name 'innerHTML))
                 (push (cons attr-name value) result))))))
       (nreverse result))))
+
+(defun etaf-vdom--extract-event-handlers (props)
+  "Extract event handlers from VNode PROPS.
+Returns an alist of (event-name . handler-function).
+
+Event handlers are identified by :on-* keys in props."
+  (when props
+    (let ((result nil))
+      (while props
+        (let ((key (pop props))
+              (value (pop props)))
+          (when (keywordp key)
+            (let ((key-str (symbol-name key))) ; e.g., ":on-click"
+              ;; Check if this is an event handler (starts with :on-)
+              (when (string-prefix-p ":on-" key-str)
+                ;; Extract event name by removing ":on-" prefix
+                (let ((event-name (intern (substring key-str 4)))) ; "click"
+                  (push (cons event-name value) result)))))))
+      (nreverse result))))
+
+;;; ============================================================================
+;;; Renderer API - Mount, Unmount, Patch (Vue 3 compatible)
+;;; ============================================================================
+
+;; These functions implement the Vue 3 renderer API for mounting, unmounting,
+;; and patching VNodes. This is the core of the reactive rendering system.
+
+(defvar etaf-vdom--mounted-vnodes (make-hash-table :test 'eq)
+  "Hash table mapping container elements to mounted VNode trees.
+Keys are buffer positions or container identifiers, values are VNodes.")
+
+(defvar etaf-vdom--container-regions (make-hash-table :test 'eq)
+  "Hash table mapping containers to their buffer regions.
+Keys are container identifiers, values are (start . end) cons cells.")
+
+;;; Mount Function
+
+(defun etaf-vdom-mount (vnode container)
+  "Mount VNODE to CONTAINER following Vue 3's mount semantics.
+
+VNODE is the virtual node tree to mount.
+CONTAINER is a buffer position or buffer name where to mount.
+
+This function:
+1. Renders the VNode tree to DOM
+2. Converts DOM to buffer string (via layout system)
+3. Inserts into buffer at position
+4. Stores the VNode for later patching
+5. Sets up event handlers
+
+Returns the mounted VNode with :el set to buffer region."
+  (let* ((buffer (if (bufferp container)
+                     container
+                   (get-buffer-create container)))
+         (dom (etaf-vdom-render vnode))
+         ;; Store the mounted vnode
+         (container-key (or container (current-buffer))))
+    
+    ;; Render DOM to buffer string using existing pipeline
+    (with-current-buffer buffer
+      (let* ((start-pos (point))
+             ;; Create CSSOM for the DOM
+             (cssom (etaf-css-build-cssom dom))
+             ;; Build render tree
+             (render-tree (etaf-render-build-tree dom cssom))
+             ;; Convert to layout tree
+             (layout-tree (etaf-layout-build-tree render-tree))
+             ;; Convert to buffer string
+             (buffer-string (etaf-layout-to-string layout-tree))
+             (end-pos nil))
+        
+        ;; Insert the string
+        (insert buffer-string)
+        (setq end-pos (point))
+        
+        ;; Store the region
+        (puthash container-key (cons start-pos end-pos) 
+                 etaf-vdom--container-regions)
+        
+        ;; Store the mounted VNode
+        (puthash container-key vnode etaf-vdom--mounted-vnodes)
+        
+        ;; Set :el property on vnode to reference the buffer region
+        (plist-put vnode :el (cons start-pos end-pos))
+        
+        ;; Initialize event system if needed
+        (require 'etaf-event)
+        (etaf-event-init buffer)
+        
+        ;; Register interactive elements
+        (etaf-vdom--register-event-handlers vnode start-pos buffer)
+        
+        vnode))))
+
+(defun etaf-vdom--register-event-handlers (vnode base-pos buffer)
+  "Recursively register event handlers for VNODE starting at BASE-POS in BUFFER.
+This sets up the event system for interactive elements."
+  (when (etaf-vdom-vnode-p vnode)
+    (let ((props (etaf-vdom-get-props vnode))
+          (children (etaf-vdom-get-children vnode))
+          (type (etaf-vdom-get-type vnode)))
+      
+      ;; Register event handlers for this node if it's an interactive element
+      (when (and (symbolp type) 
+                 (memq type '(button a input textarea summary))
+                 props)
+        (let ((uuid (or (plist-get props :uuid)
+                        (format "elem-%s-%s" type (random 1000000))))
+              (on-click (plist-get props :on-click))
+              (start base-pos)
+              ;; Estimate end position (simplified)
+              (end (+ base-pos 20)))
+          
+          (when on-click
+            ;; Ensure UUID is set
+            (unless (plist-get props :uuid)
+              (plist-put props :uuid uuid))
+            
+            ;; Register with event system
+            (with-current-buffer buffer
+              (etaf-event-register-element uuid vnode start end)
+              (etaf-event-add-listener uuid 'mouse-down on-click)
+              ;; Also bind to click events
+              (etaf-event-add-listener uuid 'state-change
+                (lambda (uuid data)
+                  (when (and (eq (plist-get data :key) :active)
+                             (not (plist-get data :new-value)))
+                    ;; Active state changed from t to nil = click
+                    (funcall on-click))))))))
+      
+      ;; Recursively register children
+      (when (listp children)
+        (dolist (child children)
+          (when (etaf-vdom-vnode-p child)
+            (etaf-vdom--register-event-handlers child base-pos buffer)))))))
+
+;;; Unmount Function
+
+(defun etaf-vdom-unmount (container)
+  "Unmount the VNode tree from CONTAINER following Vue 3's unmount semantics.
+
+CONTAINER is the buffer position or buffer name used during mount.
+
+This function:
+1. Removes the rendered content from buffer
+2. Cleans up event handlers
+3. Removes stored VNode reference
+
+Returns t if successfully unmounted, nil if nothing was mounted."
+  (let* ((container-key (or container (current-buffer)))
+         (vnode (gethash container-key etaf-vdom--mounted-vnodes))
+         (region (gethash container-key etaf-vdom--container-regions)))
+    
+    (when (and vnode region)
+      (let ((buffer (if (bufferp container)
+                        container
+                      (get-buffer container))))
+        (when buffer
+          (with-current-buffer buffer
+            ;; Remove event handlers
+            (etaf-vdom--unregister-event-handlers vnode)
+            
+            ;; Delete the buffer region
+            (delete-region (car region) (cdr region))
+            
+            ;; Clean up stored data
+            (remhash container-key etaf-vdom--mounted-vnodes)
+            (remhash container-key etaf-vdom--container-regions)
+            
+            ;; Clear :el property
+            (plist-put vnode :el nil)
+            
+            t))))))
+
+(defun etaf-vdom--unregister-event-handlers (vnode)
+  "Recursively unregister event handlers for VNODE."
+  (when (etaf-vdom-vnode-p vnode)
+    (let ((props (etaf-vdom-get-props vnode))
+          (children (etaf-vdom-get-children vnode)))
+      
+      ;; Unregister this node's handlers
+      (when-let ((uuid (plist-get props :uuid)))
+        (etaf-event-unregister-element uuid))
+      
+      ;; Recursively unregister children
+      (when (listp children)
+        (dolist (child children)
+          (when (etaf-vdom-vnode-p child)
+            (etaf-vdom--unregister-event-handlers child)))))))
+
+;;; Patch Function (Diff Algorithm)
+
+(defun etaf-vdom-patch (old-vnode new-vnode container)
+  "Patch OLD-VNODE with NEW-VNODE following Vue 3's patch algorithm.
+
+This implements the Vue 3 diff algorithm with optimizations:
+1. Check if nodes are same type (type + key)
+2. If same type, patch props and children
+3. If different type, replace entire subtree
+4. Use patchFlags for optimization
+
+CONTAINER is the buffer position or buffer name.
+
+Returns the patched VNode."
+  (cond
+   ;; Case 1: Old node is nil - mount new node
+   ((null old-vnode)
+    (etaf-vdom-mount new-vnode container))
+   
+   ;; Case 2: New node is nil - unmount old node
+   ((null new-vnode)
+    (etaf-vdom-unmount container)
+    nil)
+   
+   ;; Case 3: Same VNode type - patch in place
+   ((etaf-vdom-same-type-p old-vnode new-vnode)
+    (etaf-vdom--patch-element old-vnode new-vnode container))
+   
+   ;; Case 4: Different types - replace
+   (t
+    (etaf-vdom-unmount container)
+    (etaf-vdom-mount new-vnode container))))
+
+(defun etaf-vdom--patch-element (old-vnode new-vnode container)
+  "Patch element VNode OLD-VNODE to NEW-VNODE.
+This handles prop updates and children patching."
+  (let ((old-props (etaf-vdom-get-props old-vnode))
+        (new-props (etaf-vdom-get-props new-vnode))
+        (old-children (etaf-vdom-get-children old-vnode))
+        (new-children (etaf-vdom-get-children new-vnode))
+        (patch-flag (etaf-vdom-get-patch-flag new-vnode)))
+    
+    ;; Check if we can skip patching (static content)
+    (unless (etaf-vdom-is-static-p new-vnode)
+      ;; Patch props if needed
+      (when (or (null patch-flag)
+                (> patch-flag 0))
+        (etaf-vdom--patch-props old-vnode new-vnode old-props new-props))
+      
+      ;; Patch children
+      (etaf-vdom--patch-children old-vnode new-vnode old-children new-children container))
+    
+    ;; Update the stored VNode
+    (puthash container new-vnode etaf-vdom--mounted-vnodes)
+    
+    ;; Copy :el reference
+    (plist-put new-vnode :el (plist-get old-vnode :el))
+    
+    new-vnode))
+
+(defun etaf-vdom--patch-props (old-vnode new-vnode old-props new-props)
+  "Patch props from OLD-PROPS to NEW-PROPS on vnodes.
+Updates event handlers and attributes."
+  ;; For now, we do a full re-render on prop changes
+  ;; A more optimized version would update props in-place
+  ;; This is a simplified implementation
+  
+  ;; Update props on the vnode
+  (plist-put old-vnode :props new-props)
+  
+  ;; If event handlers changed, update them
+  (let ((old-click (plist-get old-props :on-click))
+        (new-click (plist-get new-props :on-click))
+        (uuid (plist-get new-props :uuid)))
+    (when (and uuid (not (equal old-click new-click)))
+      ;; Update event handler
+      (when old-click
+        (etaf-event-remove-listener uuid 'mouse-down old-click))
+      (when new-click
+        (etaf-event-add-listener uuid 'mouse-down new-click)))))
+
+(defun etaf-vdom--patch-children (old-vnode new-vnode old-children new-children container)
+  "Patch children from OLD-CHILDREN to NEW-CHILDREN.
+Implements a simplified diff algorithm."
+  (cond
+   ;; Both are text - simple replacement
+   ((and (stringp old-children) (stringp new-children))
+    (unless (equal old-children new-children)
+      ;; Text changed - need to re-render
+      (etaf-vdom-unmount container)
+      (etaf-vdom-mount new-vnode container)))
+   
+   ;; One is text, other is array - replace
+   ((or (and (stringp old-children) (listp new-children))
+        (and (listp old-children) (stringp new-children)))
+    (etaf-vdom-unmount container)
+    (etaf-vdom-mount new-vnode container))
+   
+   ;; Both are arrays - diff children
+   ((and (listp old-children) (listp new-children))
+    (etaf-vdom--patch-children-array old-vnode new-vnode old-children new-children container))
+   
+   ;; Default - re-render
+   (t
+    (etaf-vdom-unmount container)
+    (etaf-vdom-mount new-vnode container))))
+
+(defun etaf-vdom--patch-children-array (old-vnode new-vnode old-children new-children container)
+  "Patch array children using a simple diff algorithm.
+This is a simplified version of Vue 3's optimized diff."
+  (let ((old-len (length old-children))
+        (new-len (length new-children)))
+    
+    ;; Simple strategy: if lengths match, patch in order
+    ;; Otherwise, do a full re-render
+    (if (= old-len new-len)
+        ;; Patch each child in order
+        (cl-loop for old-child in old-children
+                 for new-child in new-children
+                 do (when (and (etaf-vdom-vnode-p old-child)
+                              (etaf-vdom-vnode-p new-child))
+                      (if (etaf-vdom-same-type-p old-child new-child)
+                          (etaf-vdom--patch-element old-child new-child container)
+                        ;; Different types - would need to handle insertion/deletion
+                        nil)))
+      ;; Length mismatch - do full re-render for simplicity
+      ;; A full implementation would handle keyed diff
+      (etaf-vdom-unmount container)
+      (etaf-vdom-mount new-vnode container))))
+
+;;; Helper Functions for Testing
+
+(defun etaf-vdom-create-test-button (label on-click-handler)
+  "Create a test button VNode with LABEL and ON-CLICK-HANDLER.
+Useful for testing the renderer."
+  (etaf-create-vnode 'button
+                     (list :on-click on-click-handler
+                           :class "test-button")
+                     (list (etaf-vdom-text label))))
+
+(defun etaf-vdom-create-test-container (children)
+  "Create a test container div VNode with CHILDREN.
+Useful for testing the renderer."
+  (etaf-create-vnode 'div
+                     (list :class "test-container")
+                     children))
 
 (provide 'etaf-vdom)
 ;;; etaf-vdom.el ends here
