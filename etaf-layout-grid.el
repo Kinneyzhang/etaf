@@ -47,7 +47,7 @@
 
 (require 'cl-lib)
 (eval-and-compile (require 'dom))
-(require 'etaf-css-parse)
+(require 'etaf-css-parser)
 (require 'etaf-layout-box)
 
 ;;; Constants

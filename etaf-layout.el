@@ -51,7 +51,7 @@
 (require 'etaf-utils)
 
 ;; 引入子模块
-(require 'etaf-css-parse)
+(require 'etaf-css-parser)
 (require 'etaf-layout-box)
 
 ;; Forward declarations
