@@ -21,6 +21,7 @@
 
 ;;; Code:
 
+(require 'cl-lib)
 (require 'etaf-vdom)
 (require 'etaf-event)
 (require 'etaf-css)
