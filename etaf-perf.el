@@ -212,7 +212,7 @@ If N is provided, include average of last N measurements."
         (dolist (stage (plist-get last :stages))
           (let ((name (car stage))
                 (duration (cdr stage)))
-            (insert (format "    %-30s: %8.4f ms (%5.1f%%)\n"
+            (insert (format "    %-30s: %10.4f ms (%5.1f%%)\n"
                            name
                            duration
                            (* 100.0 (/ duration (plist-get last :total)))))))
@@ -227,7 +227,7 @@ If N is provided, include average of last N measurements."
         (dolist (stage (plist-get avg :stages))
           (let ((name (car stage))
                 (duration (cdr stage)))
-            (insert (format "    %-30s: %8.4f ms (%5.1f%%)\n"
+            (insert (format "    %-30s: %10.4f ms (%5.1f%%)\n"
                            name
                            duration
                            (* 100.0 (/ duration (plist-get avg :total)))))))
