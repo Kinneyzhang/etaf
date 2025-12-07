@@ -913,8 +913,10 @@ w-20px 应该产生 20px。"
                 '((width . "auto")))
   (should-equal (etaf-tailwind-to-css "w-full")
                 '((width . "100%")))
-  (should-equal (etaf-tailwind-to-css "w-screen")
-                '((width . "100cw")))
+  ;; w-screen 现在使用实际窗口宽度，测试格式是否正确
+  (let ((result (etaf-tailwind-to-css "w-screen")))
+    (should (equal (car (car result)) 'width))
+    (should (string-match-p "^[0-9]+cw$" (cdr (car result)))))
   (should-equal (etaf-tailwind-to-css "w-fit")
                 '((width . "fit-content")))
   (should-equal (etaf-tailwind-to-css "w-min")

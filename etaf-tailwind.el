@@ -1609,7 +1609,10 @@ Use px suffix for explicit pixels (e.g., \"20px\")."
                 ((string= value "0") "0")
                 ((string= value "full") "100%")
                 ((string= value "screen")
-                 (if is-width "100cw" "100vh"))
+                 (if is-width
+                     ;; min-w-screen/max-w-screen: 使用当前窗口的实际宽度
+                     (format "%dcw" (window-body-width))
+                   "100vh"))
                 ((string= value "none") "none")
                 ((string= value "min") "min-content")
                 ((string= value "max") "max-content")
@@ -1657,6 +1660,9 @@ Default unit is cw (character width). Use px suffix for explicit pixels."
                ;; Special keywords
                ((string= value "none") "none")
                ((string= value "full") "100%")
+               ((string= value "screen")
+                ;; max-w-screen: 使用当前窗口的实际宽度
+                (format "%dcw" (window-body-width)))
                ((string= value "min") "min-content")
                ((string= value "max") "max-content")
                ((string= value "fit") "fit-content")
@@ -1808,7 +1814,12 @@ Emacs特有的单位处理：
 (defun etaf-tailwind-convert-size (property value)
   "转换尺寸类（width/height）到CSS。
 Width使用cw（水平方向字符宽度），Height使用lh（垂直方向行高）。
-如果值以px结尾（如20px），则使用像素。"
+如果值以px结尾（如20px），则使用像素。
+
+特殊值：
+- full: 100%
+- screen: 对于width，使用当前窗口的实际宽度（字符单位）；对于height，使用100vh
+- auto, min, max, fit: 对应的CSS关键字"
   (let* ((direction (if (eq property 'width) 'horizontal 'vertical))
          (size (cond
                 ;; 检查是否是带px后缀的值
@@ -1826,7 +1837,10 @@ Width使用cw（水平方向字符宽度），Height使用lh（垂直方向行�
                 ;; 特殊值
                 ((string= value "full") "100%")
                 ((string= value "screen")
-                 (if (eq property 'width) "100cw" "100vh"))
+                 (if (eq property 'width)
+                     ;; w-screen: 使用当前窗口的实际宽度（字符单位）
+                     (format "%dcw" (window-body-width))
+                   "100vh"))
                 ((string= value "auto") "auto")
                 ((string= value "min") "min-content")
                 ((string= value "max") "max-content")
