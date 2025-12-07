@@ -28,14 +28,9 @@ ETML (Emacs Template Markup Language) / ETAF (Emacs Text Application Framework) 
         ▼                       ▼                       │
 ┌───────────────┐      ┌─────────────────┐              │
 │  etaf-dom.el  │◄─────│  CSS 子模块     │              │
-│  DOM 操作     │      │  ├ selector     │              │
+│  DOM 操作     │      │  ├ core         │              │
 └───────────────┘      │  ├ parser       │              │
-                       │  ├ cascade      │              │
-                       │  ├ inheritance  │              │
-                       │  ├ shorthand    │              │
-                       │  ├ media        │              │
-                       │  ├ cache        │              │
-                       │  ├ index        │              │
+                       │  ├ selector     │              │
                        │  └ face         │              │
                        └────────┬────────┘              │
                                 │                       │
@@ -281,9 +276,32 @@ DOM + <style> 标签
 
 ---
 
-### 6. etaf-css-parser.el - CSS 解析器
+### 6. etaf-css-parser.el - 完整 CSS 解析模块
 
-**职责**: 解析 CSS 声明、规则和样式表。
+**职责**: 解析 CSS 声明、规则、样式表、值、媒体查询和复合属性展开。
+
+#### 主要功能
+
+**CSS 解析**
+- 解析 CSS 声明字符串（支持 !important）
+- 解析 CSS 规则和样式表
+- 处理 @media 规则
+
+**值解析**
+- 支持单位：px, %, em, lh, cw
+- 长度值和高度值解析
+- Flex 数值属性解析
+
+**媒体查询**
+- 解析和评估 @media 规则
+- 支持媒体类型和特性匹配
+- 默认媒体环境：screen, width: 1024, height: 768
+
+**复合属性展开**
+- border, margin, padding
+- flex, flex-flow, gap
+- place-content, place-items, place-self
+- grid-column, grid-row, grid-area
 
 #### 函数
 
@@ -293,17 +311,21 @@ DOM + <style> 标签
 | `etaf-css-parse-declarations-compat` | 兼容格式解析 | `((property . value) ...)` |
 | `etaf-css-parse-rule` | 解析单个 CSS 规则 | `(:selector ... :declarations ... :specificity ...)` |
 | `etaf-css-parse-stylesheet` | 解析完整样式表 | 规则列表 |
-| `etaf-css-parse-stylesheet-simple` | 简单解析 (不处理 @media) | 规则列表 |
-| `etaf-css-remove-at-media-blocks` | 移除 @media 块 | CSS 字符串 |
+| `etaf-css-parse-length` | 解析 CSS 长度值 | 像素值或 'auto/'none |
+| `etaf-css-parse-height` | 解析 CSS 高度值 | 行数或 'auto/'none |
+| `etaf-css-media-match-p` | 检查媒体查询是否匹配 | t/nil |
+| `etaf-css-expand-shorthand` | 展开单个复合属性 | 声明列表 |
+| `etaf-css-expand-declarations` | 展开声明列表中所有复合属性 | 展开后的声明列表 |
 
 ---
 
-### 7. etaf-css-cascade.el - CSS 层叠算法
+### 7. etaf-css-core.el - 核心 CSS 系统
 
-**职责**: 实现 CSS 层叠规则和特异性计算。
+**职责**: CSS 层叠算法、特异性计算、属性继承、样式缓存和规则索引。
 
-#### 特异性计算
+#### 层叠算法
 
+**特异性计算**
 ```
 特异性格式: (id-count class-count type-count)
 
@@ -315,6 +337,31 @@ DOM + <style> 标签
   '#main .text'  => (1 1 0)
 ```
 
+**层叠规则优先级 (从低到高)**
+1. 正常声明（按特异性和顺序）
+2. `!important` 声明（按特异性和顺序）
+3. 内联样式正常声明
+4. 内联样式 `!important` 声明
+
+#### 属性继承
+
+**可继承的属性**: color, font-family, font-size, font-style, font-weight, line-height, text-align, text-indent, visibility, white-space, cursor, direction 等
+
+#### 样式缓存
+
+缓存节点的计算样式，避免重复计算，提高性能。
+
+#### 规则索引
+
+**索引结构**
+```elisp
+(:by-tag   <hash-table>   ;; 按标签索引
+ :by-class <hash-table>   ;; 按类索引
+ :by-id    <hash-table>)  ;; 按 ID 索引
+```
+
+按选择器类型索引 CSS 规则，优化查询性能。
+
 #### 函数
 
 | 函数 | 功能 |
@@ -325,161 +372,17 @@ DOM + <style> 标签
 | `etaf-css-cascade-compare-declarations` | 比较两个声明的优先级 |
 | `etaf-css-cascade-apply` | 应用层叠算法 |
 | `etaf-css-cascade-merge-rules` | 合并多个规则的声明 |
-
-#### 层叠规则优先级 (从低到高)
-
-1. 正常声明（按特异性和顺序）
-2. `!important` 声明（按特异性和顺序）
-3. 内联样式正常声明
-4. 内联样式 `!important` 声明
-
----
-
-### 8. etaf-css-shorthand.el - CSS 复合属性展开
-
-**职责**: 展开 CSS 复合属性为具体属性。
-
-#### 支持的复合属性
-
-| 复合属性 | 展开为 |
-|---------|--------|
-| `border` | `border-{top,right,bottom,left}-{width,style,color}` |
-| `border-width` | `border-{top,right,bottom,left}-width` |
-| `border-color` | `border-{top,right,bottom,left}-color` |
-| `border-style` | `border-{top,right,bottom,left}-style` |
-| `border-{top,right,bottom,left}` | 对应方向的 width/style/color |
-| `margin` | `margin-{top,right,bottom,left}` |
-| `margin-inline` | `margin-left`, `margin-right` |
-| `margin-block` | `margin-top`, `margin-bottom` |
-| `padding` | `padding-{top,right,bottom,left}` |
-| `padding-inline` | `padding-left`, `padding-right` |
-| `padding-block` | `padding-top`, `padding-bottom` |
-| `flex` | `flex-grow`, `flex-shrink`, `flex-basis` |
-| `flex-flow` | `flex-direction`, `flex-wrap` |
-| `gap` | `row-gap`, `column-gap` |
-| `place-content` | `align-content`, `justify-content` |
-| `place-items` | `align-items`, `justify-items` |
-| `place-self` | `align-self`, `justify-self` |
-
-#### 主要函数
-
-| 函数 | 功能 |
-|------|------|
-| `etaf-css-expand-shorthand` | 展开单个复合属性 |
-| `etaf-css-expand-declarations` | 展开声明列表中所有复合属性 |
-| `etaf-css--parse-border-value` | 解析 border 值 |
-| `etaf-css--parse-four-values` | 解析四值语法 |
-| `etaf-css--is-length-p` | 检查是否为长度值 |
-| `etaf-css--is-color-p` | 检查是否为颜色值 |
-| `etaf-css--is-border-style-p` | 检查是否为边框样式 |
-
----
-
-### 9. etaf-css-inheritance.el - CSS 属性继承
-
-**职责**: 实现 CSS 属性从父元素到子元素的继承。
-
-#### 可继承的属性
-
-| 属性 | 说明 |
-|------|------|
-| `color` | 文本颜色 |
-| `font-family` | 字体族 |
-| `font-size` | 字体大小 |
-| `font-style` | 字体样式 |
-| `font-variant` | 字体变体 |
-| `font-weight` | 字体粗细 |
-| `font` | 字体复合属性 |
-| `letter-spacing` | 字母间距 |
-| `line-height` | 行高 |
-| `list-style` | 列表样式 |
-| `list-style-image` | 列表图像 |
-| `list-style-position` | 列表标记位置 |
-| `list-style-type` | 列表标记类型 |
-| `text-align` | 文本对齐 |
-| `text-indent` | 文本缩进 |
-| `text-transform` | 文本转换 |
-| `visibility` | 可见性 |
-| `white-space` | 空白处理 |
-| `word-spacing` | 单词间距 |
-| `cursor` | 光标样式 |
-| `direction` | 文本方向 |
-| `quotes` | 引号样式 |
-
-#### 函数
-
-| 函数 | 功能 |
-|------|------|
 | `etaf-css-property-inherits-p` | 检查属性是否可继承 |
 | `etaf-css-apply-inheritance` | 应用继承属性到子元素 |
-
----
-
-### 10. etaf-css-media.el - CSS 媒体查询
-
-**职责**: 支持 CSS 媒体查询的解析和评估。
-
-#### 默认媒体环境
-
-```elisp
-'((type . screen)
-  (width . 1024)
-  (height . 768))
-```
-
-#### 函数
-
-| 函数 | 功能 |
-|------|------|
-| `etaf-css-media-match-p` | 检查媒体查询是否匹配 |
-| `etaf-css-media-match-query-p` | 匹配完整查询字符串 |
-| `etaf-css-media-match-type-p` | 匹配媒体类型 |
-| `etaf-css-media-parse-feature` | 解析媒体特性表达式 |
-| `etaf-css-media-evaluate-feature` | 评估单个特性 |
-| `etaf-css-media-extract-at-media-blocks` | 提取 @media 块 |
-| `etaf-css-media-parse-at-media` | 解析 @media 规则 |
-
----
-
-### 11. etaf-css-cache.el - CSS 缓存
-
-**职责**: 缓存节点的计算样式，提高性能。
-
-#### 函数
-
-| 函数 | 功能 |
-|------|------|
 | `etaf-css-cache-create` | 创建缓存 |
 | `etaf-css-cache-get` | 获取缓存 |
 | `etaf-css-cache-set` | 设置缓存 |
 | `etaf-css-cache-clear` | 清空缓存 |
-| `etaf-css-cache-remove` | 移除指定节点缓存 |
-| `etaf-css-cache-size` | 获取缓存大小 |
-
----
-
-### 12. etaf-css-index.el - CSS 规则索引
-
-**职责**: 按选择器类型索引 CSS 规则，优化查询性能。
-
-#### 索引结构
-
-```elisp
-(:by-tag   <hash-table>   ;; 按标签索引
- :by-class <hash-table>   ;; 按类索引
- :by-id    <hash-table>)  ;; 按 ID 索引
-```
-
-#### 函数
-
-| 函数 | 功能 |
-|------|------|
 | `etaf-css-index-create` | 创建索引结构 |
 | `etaf-css-index-build` | 从规则列表构建索引 |
-| `etaf-css-index-add-rule` | 添加规则到索引 |
-| `etaf-css-index-extract-selector-keys` | 提取选择器的索引键 |
 | `etaf-css-index-query-candidates` | 查询候选规则 |
 
+---
 ---
 
 ### 13. etaf-css-face.el - CSS 到 Emacs Face 映射
@@ -906,28 +809,28 @@ etaf-paint-string(etaf.el)
 │   ├── etaf-css-extract-inline-styles
 │   │   ├── etaf-dom-map (etaf-dom.el)
 │   │   └── etaf-css-parse-declarations (etaf-css-parser.el)
-│   │       └── etaf-css-expand-shorthand (etaf-css-shorthand.el)
+│   │       └── etaf-css-expand-shorthand (etaf-css-parser.el)
 │   │
 │   ├── etaf-css-extract-style-tags
 │   │   └── etaf-css-parse-stylesheet (etaf-css-parser.el)
 │   │       ├── etaf-css-parse-rule
 │   │       │   ├── etaf-css-parse-declarations
-│   │       │   └── etaf-css-calculate-specificity (etaf-css-cascade.el)
-│   │       └── etaf-css-media-extract-at-media-blocks (etaf-css-media.el)
+│   │       │   └── etaf-css-calculate-specificity (etaf-css-core.el)
+│   │       └── etaf-css-media-extract-at-media-blocks (etaf-css-parser.el)
 │   │
-│   ├── etaf-css-index-build (etaf-css-index.el)
+│   ├── etaf-css-index-build (etaf-css-core.el)
 │   │   └── etaf-css-index-add-rule
 │   │       └── etaf-css-index-extract-selector-keys
 │   │
-│   └── etaf-css-cache-create (etaf-css-cache.el)
+│   └── etaf-css-cache-create (etaf-css-core.el)
 │
 ├── etaf-render-build-tree (etaf-render.el)
 │   └── etaf-render--build-node (递归)
 │       ├── etaf-css-get-computed-style (etaf-css.el)
-│       │   ├── etaf-css-cache-get/set (etaf-css-cache.el)
+│       │   ├── etaf-css-cache-get/set (etaf-css-core.el)
 │       │   ├── etaf-css-get-rules-for-node
-│       │   │   ├── etaf-css-index-query-candidates (etaf-css-index.el)
-│       │   │   ├── etaf-css-media-match-p (etaf-css-media.el)
+│       │   │   ├── etaf-css-index-query-candidates (etaf-css-core.el)
+│       │   │   ├── etaf-css-media-match-p (etaf-css-parser.el)
 │       │   │   └── etaf-css-selector-node-matches-p (etaf-css-selector.el)
 │       │   │       ├── etaf-css-selector-parse
 │       │   │       ├── etaf-css-selector-basic-match-p
@@ -937,7 +840,7 @@ etaf-paint-string(etaf.el)
 │       │   │       │   └── etaf-css-selector-pseudo-match-p
 │       │   │       └── etaf-css-selector-combinator-match-p
 │       │   │
-│       │   ├── etaf-css-cascade-merge-rules (etaf-css-cascade.el)
+│       │   ├── etaf-css-cascade-merge-rules (etaf-css-core.el)
 │       │   │   └── etaf-css-cascade-apply
 │       │   │       └── etaf-css-cascade-compare-declarations
 │       │   │
@@ -945,7 +848,7 @@ etaf-paint-string(etaf.el)
 │       │   │   └── etaf-tailwind-to-css
 │       │   │       └── etaf-tailwind-convert-standard
 │       │   │
-│       │   └── etaf-css-apply-inheritance (etaf-css-inheritance.el)
+│       │   └── etaf-css-apply-inheritance (etaf-css-core.el)
 │       │
 │       ├── etaf-render-node-visible-p
 │       └── etaf-render-create-node
@@ -1091,13 +994,9 @@ etaf.el
 ├── etaf-css.el
 │   ├── etaf-dom.el
 │   ├── etaf-css-selector.el
-│   ├── etaf-css-parser.el
-│   │   ├── etaf-css-cascade.el
-│   │   └── etaf-css-shorthand.el
-│   ├── etaf-css-media.el
-│   ├── etaf-css-inheritance.el
-│   ├── etaf-css-cache.el
-│   ├── etaf-css-index.el
+│   ├── etaf-css-parser.el (包含解析、值解析、媒体查询、复合属性展开)
+│   ├── etaf-css-core.el (包含层叠、继承、缓存、索引)
+│   ├── etaf-css-face.el
 │   └── etaf-tailwind.el
 │       └── etaf-dom.el
 ├── etaf-render.el

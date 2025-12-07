@@ -64,53 +64,21 @@ Kept separate as Emacs-specific functionality:
 - Handles color, font, text decoration properties
 - Dual-mode style support for light/dark themes
 
-### Backward Compatibility
-
-To ensure smooth migration, all old module files are kept as deprecation stubs that redirect to the new modules:
-
-```elisp
-;;; etaf-css-cascade.el --- DEPRECATED: Use etaf-css-core.el
-(require 'etaf-css-core)
-(provide 'etaf-css-cascade)
-```
-
-This allows existing code to continue working without changes.
-
 ## Migration Guide
 
-### For Library Maintainers
+All code, tests, and documentation have been updated to use the new module structure:
 
-If you maintain code that depends on ETAF, update your requires:
-
-**Old:**
-```elisp
-(require 'etaf-css-cascade)
-(require 'etaf-css-inheritance)
-(require 'etaf-css-cache)
-(require 'etaf-css-index)
-```
-
-**New:**
+**For core CSS systems, use:**
 ```elisp
 (require 'etaf-css-core)
 ```
+This provides: cascade algorithm, specificity calculation, property inheritance, style caching, and rule indexing.
 
-**Old:**
-```elisp
-(require 'etaf-css-parser)
-(require 'etaf-css-parse)
-(require 'etaf-css-media)
-(require 'etaf-css-shorthand)
-```
-
-**New:**
+**For CSS parsing, use:**
 ```elisp
 (require 'etaf-css-parser)
 ```
-
-### For End Users
-
-No changes required! The deprecation stubs ensure backward compatibility.
+This provides: CSS parser, value parsing (px/em/lh/cw), media query evaluation, and shorthand property expansion.
 
 ## Benefits
 
@@ -119,7 +87,7 @@ No changes required! The deprecation stubs ensure backward compatibility.
 3. **Clearer Architecture**: Easier to understand the CSS system structure
 4. **Better Maintainability**: Less context switching between files
 5. **Improved Documentation**: Each module has a clear, focused purpose
-6. **Backward Compatible**: Existing code continues to work
+6. **Clean API**: All old module references removed, only new modules remain
 
 ## Design Principles
 
@@ -129,7 +97,7 @@ The reorganization follows these principles:
 2. **Separation of Concerns**: Keep distinct responsibilities in separate modules
 3. **Size Balance**: Modules should be large enough to be meaningful but not overwhelming
 4. **Clear Interfaces**: Each module exposes a well-defined API
-5. **Backward Compatibility**: Preserve existing APIs through deprecation stubs
+5. **Clean Break**: Old module files removed, all references updated to new modules
 
 ## Module Responsibilities
 
@@ -178,4 +146,4 @@ Potential improvements for the future:
 
 ## Conclusion
 
-This reorganization significantly improves the CSS module structure while maintaining complete backward compatibility. The new structure is more maintainable, easier to understand, and better reflects the logical organization of CSS functionality.
+This reorganization significantly improves the CSS module structure. The new structure is more maintainable, easier to understand, and better reflects the logical organization of CSS functionality. All old module files have been removed and all references updated to use the new consolidated modules.
