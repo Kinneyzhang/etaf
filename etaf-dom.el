@@ -37,7 +37,7 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'dom)
+(eval-and-compile (require 'dom))
 
 ;;; Utility functions
 

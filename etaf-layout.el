@@ -46,7 +46,7 @@
 ;;; Code:
 
 (require 'cl-lib)
-(require 'dom)
+(eval-and-compile (require 'dom))
 (require 'etaf-render)
 (require 'etaf-utils)
 
