@@ -34,7 +34,7 @@
 
 ;;; Scoped CSS (ecss tag) support
 ;; ecss tags can be used at any position in ETML to define locally scoped styling.
-;; The scope includes sibling elements and their descendants.
+;; The scope includes sibling elements (within the same parent) and their descendants.
 ;;
 ;; How scoping works (pre-compilation approach):
 ;; - When an ecss tag is found among children, its Tailwind classes are extracted
@@ -250,6 +250,11 @@ To achieve this, ecss classes are prepended to the class attribute, so original
 When ecss tags are found, their Tailwind classes are applied directly to matching
 child elements' class attributes, enabling dual-mode (light/dark) support.
 Scoping is handled by matching within the sibling element tree only.
+
+Note: This replaces the previous scope-ID approach. The scope parameter has been
+removed as scoping is now achieved through tree-based matching rather than
+CSS selector prefixing.
+
 Returns processed children list."
   (let ((ecss-tags nil)
         (other-children nil))
@@ -383,7 +388,6 @@ the final string with keymap properties."
           (setq attr-alist (etaf-etml--merge-tag-styles tag attr-alist))
           
           ;; Process children based on tag type and content
-          ;; Check for ecss children first
           (let* ((has-ecss-children (and rest 
                                          (not (eq tag 'style))
                                          (cl-some #'etaf-etml--ecss-tag-p rest))))
@@ -395,7 +399,7 @@ the final string with keymap properties."
                           rest
                           (cl-some #'etaf-etml--ecss-item-p rest))
                      (list (etaf-etml--process-style-children rest)))
-                    ;; Other tags with ecss children - local scope
+                    ;; Other tags with ecss children - apply classes via pre-compilation
                     (has-ecss-children
                      (etaf-etml--process-children-with-ecss rest))
                     ;; Normal processing
