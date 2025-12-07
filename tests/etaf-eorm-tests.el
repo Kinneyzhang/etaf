@@ -23,7 +23,8 @@
   "Set up test database and schemas."
   ;; Create temporary database
   (setq etaf-eorm-test-db-path (make-temp-file "etaf-eorm-test-" nil ".db"))
-  (setq etaf-eorm-test-db (etaf-eorm-connect etaf-eorm-test-db-path))
+  ;; Test new API with explicit :sqlite keyword
+  (setq etaf-eorm-test-db (etaf-eorm-connect :sqlite etaf-eorm-test-db-path))
   
   ;; Define test schemas
   (etaf-eorm-define-table users
@@ -74,14 +75,27 @@
   (remhash 'test-table etaf-eorm--schemas))
 
 (ert-deftest etaf-eorm-test-create-table-sql ()
-  "Test CREATE TABLE SQL generation."
+  "Test CREATE TABLE SQL generation for different database types."
   (etaf-eorm-define-table test-table
     (id integer :primary-key t :autoincrement t)
     (name text :not-null t)
     (email text :unique t))
-  (let ((sql (etaf-eorm--create-table-sql 'test-table)))
+  ;; Test SQLite
+  (let ((sql (etaf-eorm--create-table-sql 'test-table 'sqlite)))
     (should (string-match-p "CREATE TABLE IF NOT EXISTS test_table" sql))
     (should (string-match-p "id INTEGER PRIMARY KEY AUTOINCREMENT" sql))
+    (should (string-match-p "name TEXT NOT NULL" sql))
+    (should (string-match-p "email TEXT UNIQUE" sql)))
+  ;; Test PostgreSQL
+  (let ((sql (etaf-eorm--create-table-sql 'test-table 'postgresql)))
+    (should (string-match-p "CREATE TABLE IF NOT EXISTS test_table" sql))
+    (should (string-match-p "id SERIAL PRIMARY KEY" sql))
+    (should (string-match-p "name TEXT NOT NULL" sql))
+    (should (string-match-p "email TEXT UNIQUE" sql)))
+  ;; Test MySQL
+  (let ((sql (etaf-eorm--create-table-sql 'test-table 'mysql)))
+    (should (string-match-p "CREATE TABLE IF NOT EXISTS test_table" sql))
+    (should (string-match-p "id INT PRIMARY KEY AUTO_INCREMENT" sql))
     (should (string-match-p "name TEXT NOT NULL" sql))
     (should (string-match-p "email TEXT UNIQUE" sql)))
   (remhash 'test-table etaf-eorm--schemas))
@@ -96,15 +110,26 @@
     (should-error (etaf-eorm--ensure-sqlite))))
 
 (ert-deftest etaf-eorm-test-connect-disconnect ()
-  "Test database connection and disconnection."
+  "Test database connection and disconnection with new API."
   (skip-unless (and (fboundp 'sqlite-available-p)
                     (sqlite-available-p)))
   (let* ((db-path (make-temp-file "etaf-eorm-test-" nil ".db"))
-         (db (etaf-eorm-connect db-path)))
-    (should db)
-    (should (gethash db-path etaf-eorm--connections))
-    (etaf-eorm-disconnect db)
-    (should-not (gethash db-path etaf-eorm--connections))
+         (conn (etaf-eorm-connect :sqlite db-path)))
+    (should conn)
+    (should (etaf-eorm-connection-p conn))
+    (should (eq (etaf-eorm-connection-type conn) 'sqlite))
+    (etaf-eorm-disconnect conn)
+    (delete-file db-path)))
+
+(ert-deftest etaf-eorm-test-backward-compatible-connection ()
+  "Test backward compatible connection via get-connection."
+  (skip-unless (and (fboundp 'sqlite-available-p)
+                    (sqlite-available-p)))
+  (let* ((db-path (make-temp-file "etaf-eorm-test-" nil ".db"))
+         (conn (etaf-eorm-get-connection db-path)))
+    (should conn)
+    (should (etaf-eorm-connection-p conn))
+    (etaf-eorm-disconnect conn)
     (delete-file db-path)))
 
 ;;; Migration Tests
@@ -124,20 +149,20 @@
     (etaf-eorm-test-teardown)))
 
 (ert-deftest etaf-eorm-test-migrate ()
-  "Test migration system."
+  "Test migration system with new connection API."
   (skip-unless (and (fboundp 'sqlite-available-p)
                     (sqlite-available-p)))
   (let* ((db-path (make-temp-file "etaf-eorm-test-" nil ".db"))
-         (db (etaf-eorm-connect db-path)))
+         (conn (etaf-eorm-connect :sqlite db-path)))
     (unwind-protect
         (progn
           (etaf-eorm-define-table migrate-test
             (id integer :primary-key t)
             (data text))
-          (should-not (etaf-eorm-table-exists-p db 'migrate-test))
-          (etaf-eorm-migrate db)
-          (should (etaf-eorm-table-exists-p db 'migrate-test)))
-      (etaf-eorm-disconnect db)
+          (should-not (etaf-eorm-table-exists-p conn 'migrate-test))
+          (etaf-eorm-migrate conn)
+          (should (etaf-eorm-table-exists-p conn 'migrate-test)))
+      (etaf-eorm-disconnect conn)
       (delete-file db-path)
       (remhash 'migrate-test etaf-eorm--schemas))))
 
@@ -147,8 +172,8 @@
                     (sqlite-available-p)))
   (let* ((db1-path (make-temp-file "etaf-eorm-test-db1-" nil ".db"))
          (db2-path (make-temp-file "etaf-eorm-test-db2-" nil ".db"))
-         (db1 (etaf-eorm-connect db1-path))
-         (db2 (etaf-eorm-connect db2-path)))
+         (db1 (etaf-eorm-connect :sqlite db1-path))
+         (db2 (etaf-eorm-connect :sqlite db2-path)))
     (unwind-protect
         (progn
           ;; Define multiple tables
