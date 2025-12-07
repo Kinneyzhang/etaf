@@ -596,5 +596,98 @@
              (ecss ".box{bg-red-500}")
              (div :class "box" "Hello")))))
 
+;;; Complex Selector Tests (Issue Fix)
+
+(ert-deftest etaf-ecss-test-complex-selector-child-with-pseudo ()
+  "Test that complex selectors with child combinator and pseudo-class work.
+This tests the fix for: ul>li:nth-child(odd)>p not working."
+  (require 'etaf-etml)
+  (let* ((dom (etaf-etml-to-dom
+               '(div :id "parent-div"
+                     (ecss "ul>li:nth-child(odd)>p{text-green-400}")
+                     (ul (li (p "First item"))
+                         (li (p "Second item"))
+                         (li (p "Third item"))
+                         (li (p "Fourth item"))))))
+         (p-elements (dom-search dom (lambda (node) (eq (dom-tag node) 'p)))))
+    ;; Should have 4 p elements
+    (should (= (length p-elements) 4))
+    ;; First and third p elements (odd li children) should have text-green-400 class
+    (let ((first-p (nth 0 p-elements))
+          (second-p (nth 1 p-elements))
+          (third-p (nth 2 p-elements))
+          (fourth-p (nth 3 p-elements)))
+      (should (string-match-p "text-green-400" (or (dom-attr first-p 'class) "")))
+      (should-not (string-match-p "text-green-400" (or (dom-attr second-p 'class) "")))
+      (should (string-match-p "text-green-400" (or (dom-attr third-p 'class) "")))
+      (should-not (string-match-p "text-green-400" (or (dom-attr fourth-p 'class) ""))))))
+
+(ert-deftest etaf-ecss-test-complex-selector-descendant-with-child ()
+  "Test that complex selectors with mixed descendant and child combinators work.
+This tests the fix for: ul li>p code not working."
+  (require 'etaf-etml)
+  (let* ((dom (etaf-etml-to-dom
+               '(div :id "parent-div"
+                     (ecss "ul li>p code{text-orange-400}")
+                     (ul (li (p "Text with " (code "code1")))
+                         (li (div (p "Nested " (code "code2"))))
+                         (li (p (span (code "code3"))))))))
+         (code-elements (dom-search dom (lambda (node) (eq (dom-tag node) 'code)))))
+    ;; Should have 3 code elements
+    (should (= (length code-elements) 3))
+    ;; code1 should have text-orange-400 (matches ul li>p code)
+    ;; code2 should NOT have text-orange-400 (p is not direct child of li, it's child of div)
+    ;; code3 SHOULD have text-orange-400 (code is descendant of p, selector is "p code" with space)
+    (let ((code1 (nth 0 code-elements))
+          (code2 (nth 1 code-elements))
+          (code3 (nth 2 code-elements)))
+      (should (string-match-p "text-orange-400" (or (dom-attr code1 'class) "")))
+      (should-not (string-match-p "text-orange-400" (or (dom-attr code2 'class) "")))
+      (should (string-match-p "text-orange-400" (or (dom-attr code3 'class) ""))))))
+
+(ert-deftest etaf-ecss-test-complex-selector-full-example ()
+  "Test the full example from the issue with multiple complex selectors."
+  (require 'etaf-etml)
+  (let* ((dom (etaf-etml-to-dom
+               '(div :class "border px-2 py-1 w-50"
+                     (div :id "parent-div"
+                          (ecss "p{text-red-200}"
+                                "ul>li:nth-child(odd)>p{text-green-400}"
+                                "ul li>p code{text-orange-400}"
+                                "a{text-blue-400}")
+                          (h3 "Tailwindcss")
+                          (p "An advanced online playground for Tailwind CSS")
+                          (ul (li (p "Customizing your theme with" (code "@theme")))
+                              (li (p "Adding custom utilities with" (code "@utility")))
+                              (li (p "Adding custom variants with" (code "@variant")))
+                              (li (p "Code completion with instant preview")))
+                          (span :class "italic line-through overline underline"
+                                "Perfect for learning how the framework works.")
+                          (a :href "https://tailwindcss.com/docs" "Read the docs →")))))
+         (all-p-elements (dom-search dom (lambda (node) (eq (dom-tag node) 'p))))
+         (ul-p-elements (dom-search (car (dom-by-tag dom 'ul))
+                                    (lambda (node) (eq (dom-tag node) 'p))))
+         (code-elements (dom-search dom (lambda (node) (eq (dom-tag node) 'code))))
+         (a-element (car (dom-by-tag dom 'a))))
+    
+    ;; All p elements should have text-red-200 class
+    (dolist (p all-p-elements)
+      (should (string-match-p "text-red-200" (or (dom-attr p 'class) ""))))
+    
+    ;; Odd li>p elements (1st and 3rd) should also have text-green-400
+    (should (= (length ul-p-elements) 4))
+    (should (string-match-p "text-green-400" (or (dom-attr (nth 0 ul-p-elements) 'class) "")))
+    (should-not (string-match-p "text-green-400" (or (dom-attr (nth 1 ul-p-elements) 'class) "")))
+    (should (string-match-p "text-green-400" (or (dom-attr (nth 2 ul-p-elements) 'class) "")))
+    (should-not (string-match-p "text-green-400" (or (dom-attr (nth 3 ul-p-elements) 'class) "")))
+    
+    ;; All code elements inside ul li>p should have text-orange-400
+    (should (= (length code-elements) 3))
+    (dolist (code code-elements)
+      (should (string-match-p "text-orange-400" (or (dom-attr code 'class) ""))))
+    
+    ;; a element should have text-blue-400
+    (should (string-match-p "text-blue-400" (or (dom-attr a-element 'class) "")))))
+
 (provide 'etaf-ecss-tests)
 ;;; etaf-ecss-tests.el ends here
