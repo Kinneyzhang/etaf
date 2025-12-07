@@ -383,9 +383,8 @@ DOM + <style> 标签
 | `etaf-css-index-query-candidates` | 查询候选规则 |
 
 ---
----
 
-### 13. etaf-css-face.el - CSS 到 Emacs Face 映射
+### 8. etaf-css-face.el - CSS 到 Emacs Face 映射
 
 **职责**: 将 CSS 样式转换为 Emacs face 属性。
 
@@ -416,7 +415,7 @@ DOM + <style> 标签
 
 ---
 
-### 14. etaf-render.el - 渲染树构建
+### 9. etaf-render.el - 渲染树构建
 
 **职责**: 从 DOM 和 CSSOM 构建渲染树。
 
@@ -450,7 +449,7 @@ DOM + <style> 标签
 
 ---
 
-### 15. etaf-layout.el - 布局计算
+### 10. etaf-layout.el - 布局计算
 
 **职责**: 实现 CSS 盒模型和布局算法。
 
@@ -511,7 +510,7 @@ DOM + <style> 标签
 
 ---
 
-### 16. etaf-box.el - 盒模型渲染
+### 11. etaf-box.el - 盒模型渲染
 
 **职责**: 实现底层的盒模型渲染和滚动功能。
 
@@ -568,7 +567,7 @@ DOM + <style> 标签
 
 ---
 
-### 17. etaf-scroll-bar.el - 滚动条
+### 12. etaf-scroll-bar.el - 滚动条
 
 **职责**: 实现滚动条的模型和渲染。
 
@@ -600,7 +599,7 @@ DOM + <style> 标签
 
 ---
 
-### 18. etaf-etml.el - 模板指令支持（原 etaf-template.el 已合并）
+### 13. etaf-etml.el - 模板指令支持（原 etaf-template.el 已合并）
 
 **职责**: 实现类 Vue.js 的模板语法。模板功能现已合并到 etaf-etml.el 中，函数名从 `etaf-template-*` 更名为 `etaf-etml-*`。
 
@@ -653,7 +652,7 @@ DOM + <style> 标签
 
 ---
 
-### 19. etaf-tailwind.el - Tailwind CSS 支持
+### 14. etaf-tailwind.el - Tailwind CSS 支持
 
 **职责**: 支持 Tailwind CSS 实用类的解析和转换。
 
@@ -705,7 +704,7 @@ DOM + <style> 标签
 
 ---
 
-### 20. etaf-utils.el - 工具函数
+### 15. etaf-utils.el - 工具函数
 
 **职责**: 提供各种通用工具函数。
 
@@ -772,7 +771,7 @@ DOM + <style> 标签
 
 ---
 
-### 21. etaf-pixel.el - 像素级操作
+### 16. etaf-pixel.el - 像素级操作
 
 **职责**: 提供像素级的字符串操作。
 
