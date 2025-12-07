@@ -1166,7 +1166,9 @@ NODE 是要检查的 DOM 节点。
 DOM 是完整的 DOM 树根节点，用于查找父节点和兄弟节点。
 SELECTOR-AST 是通过 etaf-css-selector-parse 解析得到的选择器 AST。
 返回 t 如果节点匹配选择器，否则返回 nil。"
-  (let ((parts (etaf-css-selector-split-by-combinators selector-ast)))
+  ;; Set query root for pseudo-class checks that need parent/sibling context
+  (let ((etaf-dom--query-root dom)
+        (parts (etaf-css-selector-split-by-combinators selector-ast)))
     (if (= (length parts) 1)
         ;; 简单选择器，无组合器
         (etaf-css-selector-part-match-p node (caar parts))
