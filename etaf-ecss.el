@@ -159,7 +159,12 @@ Examples of Tailwind declarations:
   "Convert Tailwind CLASS-NAME to CSS declaration string(s).
 Returns a list of CSS declaration strings like (\"display: flex\" ...).
 Returns nil if the class cannot be converted.
-Respects dark mode: dark: prefixed classes only apply in dark mode."
+
+IMPORTANT: This function processes Tailwind classes at parse time based on
+the current theme. Classes with dark: variants will be filtered according to
+the theme at the time ECSS is parsed, NOT at render time. For theme-aware
+styles that adapt automatically, use class attributes on elements instead of
+embedding dark: variant classes in ECSS/style rules."
   (when-let ((css-props (etaf-tailwind-classes-to-css-with-mode class-name)))
     (mapcar (lambda (prop)
               (format "%s: %s" (car prop) (cdr prop)))
@@ -397,7 +402,13 @@ which uses `frame-char-width' as the base value."
 CLASS-STRING is a string like \"flex items-center bg-red-500\".
 Returns a list of CSS declaration strings.
 Unrecognized classes are skipped with a warning message.
-Respects dark mode: dark: prefixed classes only apply in dark mode."
+
+IMPORTANT: This function processes Tailwind classes at parse time based on
+the current theme. Classes with dark: variants will be filtered according to
+the theme at the time ECSS is parsed, NOT at render time. For theme-aware
+styles that adapt automatically, use class attributes on elements instead of
+embedding dark: variant classes in ECSS/style rules. See etaf-playground.el
+for an example of the correct approach."
   (let* ((css-props (etaf-tailwind-classes-to-css-with-mode class-string))
          (css-strings '()))
     (dolist (prop css-props)
