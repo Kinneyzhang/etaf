@@ -489,13 +489,13 @@ IMPORTANT 是否为 !important。
   "展开 grid-area 属性。
 VALUE 可以是命名区域（如 \"header\"）或位置（如 \"1 / 1 / 3 / 3\"）。
 IMPORTANT 是否为 !important。
-返回展开后的声明列表：grid-row-start, grid-column-start, grid-row-end, grid-column-end。
 
-如果是命名区域，则所有四个值都设为该名称。
-如果是位置，则按 row-start / column-start / row-end / column-end 顺序解析。"
+如果是命名区域，返回单个 grid-area 属性。
+如果是位置，按 row-start / column-start / row-end / column-end 顺序解析，
+返回展开后的声明列表：grid-row-start, grid-column-start, grid-row-end, grid-column-end。"
   (let ((parts (split-string value "/" t)))
     (if (= (length parts) 1)
-        ;; 命名区域，所有值设为同一个名称
+        ;; 命名区域，不展开
         (let ((area-name (string-trim value)))
           (list (list 'grid-area area-name important)))
       ;; 位置值：row-start / column-start / row-end / column-end

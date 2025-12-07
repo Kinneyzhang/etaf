@@ -50,6 +50,11 @@
 (require 'etaf-css-parse)
 (require 'etaf-layout-box)
 
+;;; Constants
+
+(defconst etaf-layout-grid-default-row-height 100
+  "Default height for auto-generated grid rows.")
+
 ;; Forward declarations
 (declare-function etaf-layout-get-box-model "etaf-layout")
 (declare-function etaf-layout-create-node "etaf-layout")
@@ -269,9 +274,9 @@ AVAILABLE-SIZE 是可用空间。
          ;; 百分比
          ((string-match "^\\([0-9.]+\\)%$" part)
           (push (list :type '% 
-                     :value (/ (* (string-to-number (match-string 1 part))
-                                  available-size)
-                              100.0))
+                     :value (floor (* (string-to-number (match-string 1 part))
+                                     available-size)
+                                  100))
                 tracks))
          ;; auto
          ((string= part "auto")
@@ -327,12 +332,12 @@ AVAILABLE-SIZE 是可用空间。
     
     ;; 第二遍：分配 fr 和 auto
     (let* ((remaining-size (max 0 (- available-size fixed-size)))
-           (fr-unit (if (> fr-count 0) 
-                       (/ (float remaining-size) fr-count)
-                     0))
-           (auto-size (if (> auto-count 0)
-                         (/ (float remaining-size) auto-count)
-                       0))
+           (fr-unit (if (zerop fr-count)
+                       0
+                     (/ (float remaining-size) fr-count)))
+           (auto-size (if (zerop auto-count)
+                         0
+                       (/ (float remaining-size) auto-count)))
            (result '())
            (index 0))
       
@@ -376,7 +381,7 @@ ROW-GAP/COLUMN-GAP 是间隙值。"
                      (make-list (- num-rows (length row-heights))
                                (if (> (length row-heights) 0)
                                    (car (last row-heights))
-                                 100)))  ; default row height
+                                 etaf-layout-grid-default-row-height)))
             row-heights))
          (placement-grid (make-vector (* num-columns num-rows) nil))
          (auto-row 0)
@@ -483,7 +488,7 @@ LINE-SPEC 是线位置规范（数字字符串或 \"auto\"）。
 DEFAULT 是默认值。
 MAX-LINES 是最大线数。
 
-返回线位置（从 0 开始）或 \\='auto。"
+返回线位置（从 0 开始）或符号 auto。"
   (cond
    ((or (null line-spec) (string= line-spec "auto"))
     'auto)
