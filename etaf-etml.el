@@ -209,12 +209,17 @@ only handles custom inline styles. Returns the ATTR-ALIST unchanged."
 NODE is a DOM node: (tag ((attrs...)) children...).
 DOM is the root DOM node (for selector matching context).
 ECSS-RULES is a list of (:selector selector :classes classes :ast ast) plists.
-Returns the modified node."
+Returns the modified node.
+
+Priority order: :style > :class > ecss
+To achieve this, ecss classes are prepended to the class attribute, so original
+:class classes come later and have higher priority in CSS cascade."
   (require 'etaf-css-selector)
   (when (and (listp node) (symbolp (car node)))
     (let ((attrs (cadr node))
-          (children (cddr node)))
-      ;; Check if this node matches any ecss selector
+          (children (cddr node))
+          (ecss-classes-to-add nil))
+      ;; Collect all ecss classes that match this node
       (dolist (rule ecss-rules)
         (let* ((selector (plist-get rule :selector))
                (classes (plist-get rule :classes))
@@ -222,15 +227,22 @@ Returns the modified node."
           
           ;; Use the CSS selector matching engine to check if node matches
           (when (and ast (etaf-css-selector-node-matches-p node dom ast))
-            ;; Node matches! Add the Tailwind classes to class attribute
-            (let ((existing-class (cdr (assq 'class attrs))))
-              (if existing-class
-                  ;; Append to existing class
-                  (setcdr (assq 'class attrs) 
-                         (concat existing-class " " classes))
-                ;; Add new class attribute
-                (setcar (cdr node) 
-                       (cons (cons 'class classes) attrs)))))))
+            ;; Node matches! Collect the classes
+            (when ecss-classes-to-add
+              (setq ecss-classes-to-add (concat ecss-classes-to-add " " classes)))
+            (unless ecss-classes-to-add
+              (setq ecss-classes-to-add classes)))))
+      
+      ;; Apply collected ecss classes if any
+      (when ecss-classes-to-add
+        (let ((existing-class (cdr (assq 'class attrs))))
+          (if existing-class
+              ;; Prepend ecss classes to existing class (so original class has higher priority)
+              (setcdr (assq 'class attrs) 
+                     (concat ecss-classes-to-add " " existing-class))
+            ;; Add new class attribute with ecss classes only
+            (setcar (cdr node) 
+                   (cons (cons 'class ecss-classes-to-add) attrs)))))
       
       ;; Recursively process all children
       (when children
