@@ -6,7 +6,7 @@
 ;;  cause multiple duplicate styles in child elements during inheritance.)
 
 (require 'etaf-css)
-(require 'etaf-css-inheritance)
+(require 'etaf-css-core)
 (require 'etaf-etml)
 (require 'etaf-dom)
 (require 'etaf-ert)

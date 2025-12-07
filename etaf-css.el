@@ -16,14 +16,10 @@
 ;; 将 DOM 中的内联/外部样式解析为 CSSOM (CSS Object Model)
 ;;
 ;; 这是 ETAF CSS 系统的主入口点，整合了以下模块：
-;; - etaf-css-parser: CSS 解析（支持 !important 和 @media）
-;; - etaf-css-specificity: 选择器特异性计算
-;; - etaf-css-cascade: 层叠算法（支持 !important）
-;; - etaf-css-inheritance: 属性继承
-;; - etaf-css-cache: 计算样式缓存
-;; - etaf-css-index: 规则索引（性能优化）
-;; - etaf-css-media: 媒体查询支持
-;; - etaf-css-parse: CSS 值解析（单位转换：px, %, em, lh, cw）
+;; - etaf-css-parser: 完整 CSS 解析（声明、规则、样式表、媒体查询、复合属性、值解析）
+;; - etaf-css-core: 核心 CSS 系统（层叠算法、选择器特异性、属性继承、样式缓存、规则索引）
+;; - etaf-css-selector: CSS 选择器解析和匹配
+;; - etaf-css-face: CSS 到 Emacs face 属性转换
 ;;
 ;; CSSOM 结构（扁平的 plist）：
 ;; - :ua-rules - User Agent 样式规则列表
@@ -55,14 +51,8 @@
 (require 'cl-lib)
 (require 'etaf-dom)
 (require 'etaf-css-selector)
-(require 'etaf-css-media)
-(require 'etaf-css-parser)
-(require 'etaf-css-cascade)
-(require 'etaf-css-inheritance)
-(require 'etaf-css-cache)
-(require 'etaf-css-index)
-(require 'etaf-css-shorthand)
-(require 'etaf-css-parse)
+(require 'etaf-css-parser)  ; Now includes media, value parsing, and shorthand
+(require 'etaf-css-core)    ; Now includes cascade, inheritance, cache, and index
 (require 'etaf-tailwind)
 (require 'etaf-ua-stylesheet)
 

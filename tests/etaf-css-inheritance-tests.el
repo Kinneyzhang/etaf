@@ -1,7 +1,7 @@
 ;;; etaf-css-inheritance-tests.el --- Tests for CSS property inheritance -*- lexical-binding: t; -*-
 
 (require 'etaf-css)
-(require 'etaf-css-inheritance)
+(require 'etaf-css-core)
 (require 'etaf-etml)
 (require 'etaf-dom)
 (require 'etaf-ert)

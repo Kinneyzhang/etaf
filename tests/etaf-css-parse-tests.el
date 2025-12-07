@@ -6,7 +6,7 @@
 ;;; Code:
 
 (require 'ert)
-(require 'etaf-css-parse)
+(require 'etaf-css-parser)
 
 ;;; Tests for etaf-css-parse-length
 

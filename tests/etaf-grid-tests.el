@@ -17,7 +17,7 @@
 
 (ert-deftest etaf-css-shorthand-test-grid-column-simple ()
   "Test expanding grid-column: <start>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-grid-column "1" nil)))
     (should (equal (length result) 2))
     (should (equal (nth 0 result) '(grid-column-start "1" nil)))
@@ -25,7 +25,7 @@
 
 (ert-deftest etaf-css-shorthand-test-grid-column-with-end ()
   "Test expanding grid-column: <start> / <end>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-grid-column "1 / 3" nil)))
     (should (equal (length result) 2))
     (should (equal (nth 0 result) '(grid-column-start "1" nil)))
@@ -33,7 +33,7 @@
 
 (ert-deftest etaf-css-shorthand-test-grid-column-span ()
   "Test expanding grid-column: span <count>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-grid-column "span 2" nil)))
     (should (equal (length result) 2))
     (should (equal (nth 0 result) '(grid-column-start "span 2" nil)))
@@ -41,7 +41,7 @@
 
 (ert-deftest etaf-css-shorthand-test-grid-row-simple ()
   "Test expanding grid-row: <start>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-grid-row "1" nil)))
     (should (equal (length result) 2))
     (should (equal (nth 0 result) '(grid-row-start "1" nil)))
@@ -49,7 +49,7 @@
 
 (ert-deftest etaf-css-shorthand-test-grid-row-with-end ()
   "Test expanding grid-row: <start> / <end>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-grid-row "2 / 4" nil)))
     (should (equal (length result) 2))
     (should (equal (nth 0 result) '(grid-row-start "2" nil)))
@@ -57,14 +57,14 @@
 
 (ert-deftest etaf-css-shorthand-test-grid-area-named ()
   "Test expanding grid-area: <area-name>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-grid-area "header" nil)))
     (should (equal (length result) 1))
     (should (equal (nth 0 result) '(grid-area "header" nil)))))
 
 (ert-deftest etaf-css-shorthand-test-grid-area-position ()
   "Test expanding grid-area: <row-start> / <col-start> / <row-end> / <col-end>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-grid-area "1 / 2 / 3 / 4" nil)))
     (should (equal (length result) 4))
     (should (equal (nth 0 result) '(grid-row-start "1" nil)))

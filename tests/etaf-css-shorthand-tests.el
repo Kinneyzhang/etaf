@@ -6,7 +6,7 @@
 ;;; Code:
 
 (require 'ert)
-(require 'etaf-css-shorthand)
+(require 'etaf-css-parser)
 (require 'etaf-css-parser)
 
 ;;; Tests for internal functions

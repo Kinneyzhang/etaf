@@ -1,7 +1,7 @@
 ;;; etaf-css-index-tests.el --- Tests for CSS rule indexing -*- lexical-binding: t; -*-
 
 (require 'etaf-css)
-(require 'etaf-css-index)
+(require 'etaf-css-core)
 (require 'etaf-css-parser)
 (require 'etaf-etml)
 (require 'etaf-dom)

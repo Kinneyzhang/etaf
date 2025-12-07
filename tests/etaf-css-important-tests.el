@@ -2,7 +2,7 @@
 
 (require 'etaf-css)
 (require 'etaf-css-parser)
-(require 'etaf-css-cascade)
+(require 'etaf-css-core)
 (require 'etaf-etml)
 (require 'etaf-dom)
 (require 'etaf-ert)

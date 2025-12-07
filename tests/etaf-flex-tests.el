@@ -13,7 +13,7 @@
 
 (ert-deftest etaf-css-shorthand-test-flex-expand-single-number ()
   "Test expanding flex: <number>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-flex "1" nil)))
     (should (equal (length result) 3))
     (should (equal (nth 0 result) '(flex-grow "1" nil)))
@@ -22,7 +22,7 @@
 
 (ert-deftest etaf-css-shorthand-test-flex-expand-none ()
   "Test expanding flex: none."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-flex "none" nil)))
     (should (equal (length result) 3))
     (should (equal (nth 0 result) '(flex-grow "0" nil)))
@@ -31,7 +31,7 @@
 
 (ert-deftest etaf-css-shorthand-test-flex-expand-auto ()
   "Test expanding flex: auto."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-flex "auto" nil)))
     (should (equal (length result) 3))
     (should (equal (nth 0 result) '(flex-grow "1" nil)))
@@ -40,7 +40,7 @@
 
 (ert-deftest etaf-css-shorthand-test-flex-expand-three-values ()
   "Test expanding flex: <grow> <shrink> <basis>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-flex "1 0 100px" nil)))
     (should (equal (length result) 3))
     (should (equal (nth 0 result) '(flex-grow "1" nil)))
@@ -49,7 +49,7 @@
 
 (ert-deftest etaf-css-shorthand-test-flex-flow-row-wrap ()
   "Test expanding flex-flow: row wrap."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-flex-flow "row wrap" nil)))
     (should (equal (length result) 2))
     (should (member '(flex-direction "row" nil) result))
@@ -57,14 +57,14 @@
 
 (ert-deftest etaf-css-shorthand-test-flex-flow-column ()
   "Test expanding flex-flow: column."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-flex-flow "column" nil)))
     (should (equal (length result) 1))
     (should (equal (nth 0 result) '(flex-direction "column" nil)))))
 
 (ert-deftest etaf-css-shorthand-test-gap-single-value ()
   "Test expanding gap: <value>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-gap "10px" nil)))
     (should (equal (length result) 2))
     (should (equal (nth 0 result) '(row-gap "10px" nil)))
@@ -72,7 +72,7 @@
 
 (ert-deftest etaf-css-shorthand-test-gap-two-values ()
   "Test expanding gap: <row-gap> <column-gap>."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-gap "10px 20px" nil)))
     (should (equal (length result) 2))
     (should (equal (nth 0 result) '(row-gap "10px" nil)))
@@ -371,7 +371,7 @@ children with flex-shrink > 0 should be reduced proportionally."
 
 (ert-deftest etaf-css-shorthand-test-place-content-single ()
   "Test expanding place-content with a single value."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-place-content "center" nil)))
     (should (equal (length result) 2))
     (should (member '(align-content "center" nil) result))
@@ -379,7 +379,7 @@ children with flex-shrink > 0 should be reduced proportionally."
 
 (ert-deftest etaf-css-shorthand-test-place-content-two-values ()
   "Test expanding place-content with two values."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-place-content "center space-between" nil)))
     (should (equal (length result) 2))
     (should (member '(align-content "center" nil) result))
@@ -387,7 +387,7 @@ children with flex-shrink > 0 should be reduced proportionally."
 
 (ert-deftest etaf-css-shorthand-test-place-items-single ()
   "Test expanding place-items with a single value."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-place-items "stretch" nil)))
     (should (equal (length result) 2))
     (should (member '(align-items "stretch" nil) result))
@@ -395,7 +395,7 @@ children with flex-shrink > 0 should be reduced proportionally."
 
 (ert-deftest etaf-css-shorthand-test-place-self-two-values ()
   "Test expanding place-self with two values."
-  (require 'etaf-css-shorthand)
+  (require 'etaf-css-parser)
   (let ((result (etaf-css--expand-place-self "start end" nil)))
     (should (equal (length result) 2))
     (should (member '(align-self "start" nil) result))

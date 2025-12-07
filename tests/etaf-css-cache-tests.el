@@ -1,7 +1,7 @@
 ;;; etaf-css-cache-tests.el --- Tests for CSS caching -*- lexical-binding: t; -*-
 
 (require 'etaf-css)
-(require 'etaf-css-cache)
+(require 'etaf-css-core)
 (require 'etaf-etml)
 (require 'etaf-dom)
 (require 'etaf-ert)

@@ -1,7 +1,7 @@
 ;;; etaf-css-media-tests.el --- Tests for etaf-css-media -*- lexical-binding: t; -*-
 
 (require 'etaf-css)
-(require 'etaf-css-media)
+(require 'etaf-css-parser)
 (require 'etaf-etml)
 (require 'etaf-dom)
 (require 'etaf-ert)
