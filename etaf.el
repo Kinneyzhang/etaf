@@ -11,6 +11,17 @@
 (require 'etaf-utils)
 (require 'etaf-eorm)
 
+(defun etaf-html-to-etml (html)
+  (with-temp-buffer
+    (insert html)
+    (etaf-dom-to-tml
+     (libxml-parse-html-region
+      (point-min) (point-max)))))
+
+(defun etaf-html-file-to-etml (html-file)
+  (etaf-html-to-etml
+   (princ (etaf-get-buffer-string html-file t))))
+
 ;; Optional performance monitoring
 (defvar etaf-perf-available
   (require 'etaf-perf nil t)

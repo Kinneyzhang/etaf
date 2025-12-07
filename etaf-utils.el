@@ -3,6 +3,13 @@
 (require 'etaf-pixel)
 (require 'cl-lib)
 
+(defun etaf-get-buffer-string (buffer-name &optional raw)
+  (when-let ((buffer (get-buffer buffer-name)))
+    (with-current-buffer buffer
+      (if raw
+          (buffer-substring-no-properties (point-min) (point-max))
+        (buffer-string)))))
+
 (defun etaf-pop-to-buffer (buffer-or-name &optional action norecord)
   (pop-to-buffer buffer-or-name action norecord)
   (local-set-key "q" (lambda ()
