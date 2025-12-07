@@ -120,7 +120,12 @@
 ;;   - p-*, px-*, py-*, pt-*, pr-*, pb-*, pl-*, ps-*, pe-* -> padding
 ;;   - m-*, mx-*, my-*, mt-*, mr-*, mb-*, ml-*, ms-*, me-* -> margin
 ;;   - w-*, min-w-*, max-w-* -> width
+;;     特别支持内容尺寸工具类：
+;;     * w-fit, min-w-fit, max-w-fit -> fit-content (适应内容)
+;;     * w-min, min-w-min, max-w-min -> min-content (最小内容宽度)
+;;     * w-max, min-w-max, max-w-max -> max-content (最大内容宽度)
 ;;   - h-*, min-h-*, max-h-* -> height
+;;     也支持：h-fit, h-min, h-max (同上)
 ;;   - size-* -> width 和 height
 ;;   - space-x-*, space-y-* -> 子元素间距
 ;;

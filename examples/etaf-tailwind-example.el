@@ -230,6 +230,33 @@
     (message "Margin classes: %S"
              (etaf-tailwind-get-classes-by-property node "m"))))
 
+;;; Example 11: Intrinsic Width Utilities
+
+(defun etaf-tailwind-example-intrinsic-widths ()
+  "演示内容尺寸工具类（w-fit, w-min, w-max）。"
+  (interactive)
+  (message "=== Intrinsic Width Utilities Example ===\n")
+  
+  (let ((width-classes '("w-fit" "w-min" "w-max"
+                         "min-w-fit" "min-w-min" "min-w-max"
+                         "max-w-fit" "max-w-min" "max-w-max"
+                         "h-fit" "h-min" "h-max")))
+    (message "These utilities allow elements to size based on their content:\n")
+    (message "  - w-fit/h-fit: 适应内容大小 (fit-content)")
+    (message "  - w-min/h-min: 收缩到最小内容宽度/高度 (min-content)")
+    (message "  - w-max/h-max: 扩展到最大内容宽度/高度 (max-content)\n")
+    
+    (dolist (class width-classes)
+      (let ((css (etaf-tailwind-to-css class)))
+        (message "'%s' -> %S" class css)))
+    (message "\n")
+    
+    ;; 实际应用示例
+    (message "实际应用示例:")
+    (message "  <button :class=\"w-fit\">适应按钮文本的宽度</button>")
+    (message "  <div :class=\"w-min\">收缩到最小内容宽度</div>")
+    (message "  <div :class=\"w-max\">扩展到最大内容宽度</div>")))
+
 ;;; Run All Examples
 
 (defun etaf-tailwind-run-all-examples ()
@@ -245,6 +272,7 @@
   (etaf-tailwind-example-describe)
   (etaf-tailwind-example-filter)
   (etaf-tailwind-example-by-property)
+  (etaf-tailwind-example-intrinsic-widths)
   (message "\n=== All Tailwind Examples Complete ==="))
 
 ;; To run all examples interactively, use M-x etaf-tailwind-run-all-examples
