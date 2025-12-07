@@ -145,7 +145,7 @@
     (expand-file-name (concat "target/release/" filename) module-dir)))
 
 (defun etaf-kp-module-load ()
-  "Load rust module of ekp."
+  "Load rust module of etaf-kp."
   (if (executable-find "cargo")
       (let ((file (etaf-kp-module-file)))
         (if file
@@ -154,7 +154,7 @@
     (error "Please install cargo and add it to executable path!")))
 
 (defun etaf-kp-module-build ()
-  "Reload ekp rust module."
+  "Build and reload etaf-kp rust module."
   (interactive)
   (if (executable-find "cargo")
       (etaf-kp-start-process-with-callback

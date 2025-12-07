@@ -1,8 +1,27 @@
 ;;; etaf-kp-tests.el --- Tests for etaf-kp integration -*- lexical-binding: t; -*-
 
-;; Test basic etaf-kp integration with ETAF
-;; Note: Full etaf-kp functionality requires interactive Emacs with proper font/window context
-;; These tests verify that the library loads and basic functions are available
+;; Copyright (C) 2024 ETAF Contributors
+
+;; Author: ETAF Contributors
+;; Keywords: layout, typesetting, knuth-plass
+;; Version: 1.0.0
+
+;; This file is free software; you can redistribute it and/or modify
+;; it under the terms of the GNU General Public License as published by
+;; the Free Software Foundation; either version 3, or (at your option)
+;; any later version.
+
+;;; Commentary:
+
+;; Tests for etaf-kp integration with ETAF framework.
+;; The etaf-kp module implements the Knuth-Plass typesetting algorithm
+;; for hybrid CJK and Latin text justification.
+;;
+;; Note: Full etaf-kp functionality requires interactive Emacs with proper
+;; font/window context. These tests verify that the library loads correctly
+;; and basic functions are available.
+
+;;; Code:
 
 (require 'etaf-kp)
 (require 'etaf-kp-utils)
