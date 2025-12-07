@@ -21,8 +21,8 @@
 ;;
 ;; Usage:
 ;;
-;;   ;; Enable performance monitoring
-;;   (etaf-perf-enable)
+;;   ;; Enable performance monitoring (single command)
+;;   (etaf-perf-toggle)
 ;;
 ;;   ;; Render content (timing will be collected automatically)
 ;;   (etaf-paint-to-buffer "*demo*"
@@ -37,8 +37,8 @@
 ;;   ;; Clear performance data
 ;;   (etaf-perf-clear)
 ;;
-;;   ;; Disable performance monitoring
-;;   (etaf-perf-disable)
+;;   ;; Disable performance monitoring (toggle again)
+;;   (etaf-perf-toggle)
 
 ;;; Code:
 
@@ -75,14 +75,31 @@ Each entry is a plist with :timestamp, :total, and :stages.")
 
 ;;; Core API
 
+;;;###autoload
+(defun etaf-perf-toggle ()
+  "Toggle performance monitoring on or off.
+This is the main command users should use to enable/disable monitoring.
+It handles both the monitoring state and hook installation automatically."
+  (interactive)
+  (if etaf-perf-enabled
+      (progn
+        (setq etaf-perf-enabled nil)
+        (advice-remove 'etaf-paint-string #'etaf-perf-wrap-paint-string)
+        (message "ETAF performance monitoring disabled"))
+    (setq etaf-perf-enabled t)
+    (advice-add 'etaf-paint-string :around #'etaf-perf-wrap-paint-string)
+    (message "ETAF performance monitoring enabled")))
+
 (defun etaf-perf-enable ()
-  "Enable performance monitoring."
+  "Enable performance monitoring.
+Note: Use `etaf-perf-toggle' for simple on/off switching."
   (interactive)
   (setq etaf-perf-enabled t)
   (message "ETAF performance monitoring enabled"))
 
 (defun etaf-perf-disable ()
-  "Disable performance monitoring."
+  "Disable performance monitoring.
+Note: Use `etaf-perf-toggle' for simple on/off switching."
   (interactive)
   (setq etaf-perf-enabled nil)
   (message "ETAF performance monitoring disabled"))
@@ -189,13 +206,13 @@ If N is provided, include average of last N measurements."
       ;; Last measurement
       (when last
         (insert "Last Measurement:\n")
-        (insert (format "  Total Time: %.2f ms\n"
+        (insert (format "  Total Time: %.4f ms\n"
                        (plist-get last :total)))
         (insert "  Stages:\n")
         (dolist (stage (plist-get last :stages))
           (let ((name (car stage))
                 (duration (cdr stage)))
-            (insert (format "    %-30s: %6.2f ms (%5.1f%%)\n"
+            (insert (format "    %-30s: %10.4f ms (%5.1f%%)\n"
                            name
                            duration
                            (* 100.0 (/ duration (plist-get last :total)))))))
@@ -204,13 +221,13 @@ If N is provided, include average of last N measurements."
       ;; Average measurements
       (when avg
         (insert (format "Average of Last %d Measurements:\n" (plist-get avg :count)))
-        (insert (format "  Total Time: %.2f ms\n"
+        (insert (format "  Total Time: %.4f ms\n"
                        (plist-get avg :total)))
         (insert "  Stages:\n")
         (dolist (stage (plist-get avg :stages))
           (let ((name (car stage))
                 (duration (cdr stage)))
-            (insert (format "    %-30s: %6.2f ms (%5.1f%%)\n"
+            (insert (format "    %-30s: %10.4f ms (%5.1f%%)\n"
                            name
                            duration
                            (* 100.0 (/ duration (plist-get avg :total)))))))
@@ -252,7 +269,7 @@ If N is provided, include average of last N measurements."
                  (duration (cdr stage))
                  (percentage (* 100.0 (/ duration total))))
             (when (> percentage 30.0)
-              (push (format "- %s takes %.1f%% of total time (%.2f ms)"
+              (push (format "- %s takes %.1f%% of total time (%.4f ms)"
                            name percentage duration)
                     suggestions))))
         
