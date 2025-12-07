@@ -745,10 +745,11 @@ Event handlers are identified by :on-* keys in props."
         (let ((key (pop props))
               (value (pop props)))
           (when (keywordp key)
-            (let ((attr-name (symbol-name key)))
-              ;; Check if this is an event handler
-              (when (string-prefix-p ":on-" attr-name)
-                (let ((event-name (intern (substring attr-name 4)))) ; Remove ":on-"
+            (let ((key-str (symbol-name key))) ; e.g., ":on-click"
+              ;; Check if this is an event handler (starts with :on-)
+              (when (string-prefix-p ":on-" key-str)
+                ;; Extract event name by removing ":on-" prefix
+                (let ((event-name (intern (substring key-str 4)))) ; "click"
                   (push (cons event-name value) result)))))))
       (nreverse result))))
 

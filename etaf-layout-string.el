@@ -218,14 +218,14 @@ preserved in etaf-event-handlers, so event handlers can be properly bound."
                     (etaf-alist-to-plist original-attrs))))
       
       ;; Merge event handlers into attrs as :on-* properties
+      ;; Note: (intern ":on-click") creates the keyword :on-click in Emacs Lisp
       (when event-handlers
         (dolist (handler event-handlers)
-          (let ((event-name (car handler))
-                (handler-fn (cdr handler)))
-            ;; Add handler to attrs as :on-<event-name>
-            (setq attrs (plist-put attrs 
-                                  (intern (format ":on-%s" event-name))
-                                  handler-fn)))))
+          (let* ((event-name (car handler))  ; e.g., 'click
+                 (handler-fn (cdr handler))
+                 ;; Create keyword like :on-click
+                 (keyword (intern (format ":on-%s" event-name))))
+            (setq attrs (plist-put attrs keyword handler-fn)))))
       
       ;; Create tag metadata using the VNode-based approach
       (etaf-vdom-create-tag-metadata tag attrs children))))
