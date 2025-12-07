@@ -166,7 +166,7 @@ evaluated expression."
   "Build the playground UI as ETML structure."
   `(div
     (ecss "#pannel-input > div {border-x border-t border-gray-500}"
-          "#pannel-input > div > p {pl-2 italic bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400}"
+          "#pannel-input > div > p {pl-2 italic bg-green-800 dark:bg-gray-600 text-white dark:text-rose-400}"
           "#pannel-input > div > div {px-2 py-1}")
     (div :class "ml-2 mt-1"
          (div :class "flex justify-between w-50"
