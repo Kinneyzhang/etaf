@@ -9,6 +9,7 @@
 (require 'etaf-vdom)
 (require 'etaf-layout-interactive)
 (require 'etaf-utils)
+(require 'etaf-eorm)
 
 (defun etaf-viewport-width (width)
   "Parse WIDTH of viewport to pixel"
