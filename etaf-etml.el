@@ -168,10 +168,17 @@ To achieve this, ecss classes are prepended to the class attribute, so original
       (dolist (rule ecss-rules)
         (let* ((selector (plist-get rule :selector))
                (classes (plist-get rule :classes))
-               (ast (plist-get rule :ast)))
+               (ast (plist-get rule :ast))
+               ;; Extract the selector node from the AST root
+               ;; AST structure: (:type root :nodes ((:type selector :nodes ...) ...))
+               (selector-node (when ast
+                                (car (plist-get ast :nodes)))))
           
           ;; Use the CSS selector matching engine to check if node matches
-          (when (and ast (etaf-css-selector-node-matches-p node dom ast))
+          ;; We need to pass the selector node, not the root AST
+          (when (and selector-node 
+                     (eq (plist-get selector-node :type) 'selector)
+                     (etaf-css-selector-node-matches-p node dom selector-node))
             ;; Node matches! Collect the classes
             (setq ecss-classes-to-add 
                   (if ecss-classes-to-add
