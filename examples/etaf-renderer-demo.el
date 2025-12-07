@@ -314,7 +314,7 @@
                                          (list (etaf-vdom-text
                                                (format "Tasks: %d total, %d completed"
                                                       (length etaf-renderer-demo-5-tasks)
-                                                      (cl-count-if (lambda (t) (plist-get t :done))
+                                                      (cl-count-if (lambda (task) (plist-get task :done))
                                                                   etaf-renderer-demo-5-tasks)))))
                       (etaf-create-vnode 'ul
                                          (list :class "task-list")

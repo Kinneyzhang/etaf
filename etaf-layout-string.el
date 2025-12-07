@@ -221,10 +221,10 @@ preserved in etaf-event-handlers, so event handlers can be properly bound."
       ;; Note: (intern ":on-click") creates the keyword :on-click in Emacs Lisp
       (when event-handlers
         (dolist (handler event-handlers)
-          (let* ((event-name (car handler))  ; e.g., 'click
+          (let* ((event-name (car handler))  ; e.g., 'click (symbol)
                  (handler-fn (cdr handler))
-                 ;; Create keyword like :on-click
-                 (keyword (intern (format ":on-%s" event-name))))
+                 ;; Create keyword like :on-click using symbol-name to ensure proper format
+                 (keyword (intern (concat ":on-" (symbol-name event-name)))))
             (setq attrs (plist-put attrs keyword handler-fn)))))
       
       ;; Create tag metadata using the VNode-based approach
