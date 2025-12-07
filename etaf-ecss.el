@@ -137,6 +137,27 @@ Useful when testing or debugging ECSS conversions."
   "Regex pattern for unified ECSS format: \"selector{tailwind-classes}\".
 Group 1 captures the selector, group 2 captures the Tailwind classes.")
 
+(defun etaf-ecss-parse-to-classes (ecss-string)
+  "Parse unified ECSS string and return selector with Tailwind classes.
+Returns a plist with :selector and :classes keys, where :classes is the
+raw Tailwind class string that can be applied directly to matching elements.
+
+This function is designed for pre-compilation: instead of generating CSS rules,
+the Tailwind classes are applied directly to DOM elements' class attributes.
+This allows dual-mode (light/dark) support as class attributes are processed
+by etaf-css-compute-style-for-node-dual-mode.
+
+Example:
+  (etaf-ecss-parse-to-classes \"#id>p{bg-green-700 dark:bg-gray-600 text-white}\")
+  ;; => (:selector \"#id>p\" :classes \"bg-green-700 dark:bg-gray-600 text-white\")"
+  (when (and (stringp ecss-string)
+             (string-match etaf-ecss--unified-regex ecss-string))
+    (let* ((selector (string-trim (match-string 1 ecss-string)))
+           (tailwind-classes (string-trim (match-string 2 ecss-string))))
+      (when (and (not (string-empty-p selector))
+                 (not (string-empty-p tailwind-classes)))
+        (list :selector selector :classes tailwind-classes)))))
+
 ;;; Tailwind CSS Support
 
 (defun etaf-ecss--tailwind-class-p (decl)
@@ -159,12 +180,7 @@ Examples of Tailwind declarations:
   "Convert Tailwind CLASS-NAME to CSS declaration string(s).
 Returns a list of CSS declaration strings like (\"display: flex\" ...).
 Returns nil if the class cannot be converted.
-
-IMPORTANT: This function processes Tailwind classes at parse time based on
-the current theme. Classes with dark: variants will be filtered according to
-the theme at the time ECSS is parsed, NOT at render time. For theme-aware
-styles that adapt automatically, use class attributes on elements instead of
-embedding dark: variant classes in ECSS/style rules."
+Respects dark mode: dark: prefixed classes only apply in dark mode."
   (when-let ((css-props (etaf-tailwind-classes-to-css-with-mode class-name)))
     (mapcar (lambda (prop)
               (format "%s: %s" (car prop) (cdr prop)))
@@ -402,13 +418,7 @@ which uses `frame-char-width' as the base value."
 CLASS-STRING is a string like \"flex items-center bg-red-500\".
 Returns a list of CSS declaration strings.
 Unrecognized classes are skipped with a warning message.
-
-IMPORTANT: This function processes Tailwind classes at parse time based on
-the current theme. Classes with dark: variants will be filtered according to
-the theme at the time ECSS is parsed, NOT at render time. For theme-aware
-styles that adapt automatically, use class attributes on elements instead of
-embedding dark: variant classes in ECSS/style rules. See etaf-playground.el
-for an example of the correct approach."
+Respects dark mode: dark: prefixed classes only apply in dark mode."
   (let* ((css-props (etaf-tailwind-classes-to-css-with-mode class-string))
          (css-strings '()))
     (dolist (prop css-props)
