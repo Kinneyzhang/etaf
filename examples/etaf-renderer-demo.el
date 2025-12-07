@@ -42,10 +42,10 @@
          ;; Create a button VNode with click handler
          (button-vnode (etaf-create-vnode 'button
                                           (list :on-click (lambda ()
-                                                           (setq click-count (1+ click-count))
-                                                           (message "Button clicked! Count: %d" click-count))
-                                               :class "demo-button"
-                                               :uuid "demo-btn-1")
+                                                            (setq click-count (1+ click-count))
+                                                            (message "Button clicked! Count: %d" click-count))
+                                                :class "demo-button"
+                                                :uuid "demo-btn-1")
                                           (list (etaf-vdom-text "Click Me!")))))
     
     ;; Switch to buffer
@@ -83,22 +83,22 @@
                                          (list :class "button-group")
                                          (list
                                           (etaf-create-vnode 'button
-                                                            (list :on-click #'etaf-renderer-demo-2-increment
-                                                                 :class "btn-increment"
-                                                                 :uuid "demo2-inc")
-                                                            (list (etaf-vdom-text "Increment")))
+                                                             (list :on-click #'etaf-renderer-demo-2-increment
+                                                                   :class "btn-increment"
+                                                                   :uuid "demo2-inc")
+                                                             (list (etaf-vdom-text "Increment")))
                                           (etaf-vdom-text " ")
                                           (etaf-create-vnode 'button
-                                                            (list :on-click #'etaf-renderer-demo-2-decrement
-                                                                 :class "btn-decrement"
-                                                                 :uuid "demo2-dec")
-                                                            (list (etaf-vdom-text "Decrement")))
+                                                             (list :on-click #'etaf-renderer-demo-2-decrement
+                                                                   :class "btn-decrement"
+                                                                   :uuid "demo2-dec")
+                                                             (list (etaf-vdom-text "Decrement")))
                                           (etaf-vdom-text " ")
                                           (etaf-create-vnode 'button
-                                                            (list :on-click #'etaf-renderer-demo-2-reset
-                                                                 :class "btn-reset"
-                                                                 :uuid "demo2-reset")
-                                                            (list (etaf-vdom-text "Reset"))))))))
+                                                             (list :on-click #'etaf-renderer-demo-2-reset
+                                                                   :class "btn-reset"
+                                                                   :uuid "demo2-reset")
+                                                             (list (etaf-vdom-text "Reset"))))))))
 
 (defun etaf-renderer-demo-2-increment ()
   "Increment counter and update display."
@@ -171,24 +171,24 @@
          ;; Create nested structure
          (child-button (etaf-create-vnode 'button
                                           (list :on-click (lambda ()
-                                                           (setq child-clicked t)
-                                                           (message "Child button clicked!"))
-                                               :class "child-button"
-                                               :uuid "demo3-child")
+                                                            (setq child-clicked t)
+                                                            (message "Child button clicked!"))
+                                                :class "child-button"
+                                                :uuid "demo3-child")
                                           (list (etaf-vdom-text "Child Button"))))
          (parent-div (etaf-create-vnode 'div
                                         (list :on-click (lambda ()
-                                                         (setq parent-clicked t)
-                                                         (message "Parent div clicked! (bubbled from child)"))
-                                             :class "parent-container"
-                                             :uuid "demo3-parent")
+                                                          (setq parent-clicked t)
+                                                          (message "Parent div clicked! (bubbled from child)"))
+                                              :class "parent-container"
+                                              :uuid "demo3-parent")
                                         (list
                                          (etaf-create-vnode 'p
-                                                           nil
-                                                           (list (etaf-vdom-text "Event Bubbling Demo")))
+                                                            nil
+                                                            (list (etaf-vdom-text "Event Bubbling Demo")))
                                          (etaf-create-vnode 'p
-                                                           nil
-                                                           (list (etaf-vdom-text "Click the button - both handlers will fire:")))
+                                                            nil
+                                                            (list (etaf-vdom-text "Click the button - both handlers will fire:")))
                                          child-button))))
     
     ;; Set up parent reference for bubbling
@@ -203,13 +203,13 @@
     
     ;; Set up bubbling handlers
     (etaf-event-add-listener "demo3-child" 'click
-                            (lambda (uuid data)
-                              (message "1. Child click handler called")
-                              (setq child-clicked t)))
+                             (lambda (uuid data)
+                               (message "1. Child click handler called")
+                               (setq child-clicked t)))
     (etaf-event-add-listener "demo3-parent" 'click
-                            (lambda (uuid data)
-                              (message "2. Parent click handler called (bubbled)")
-                              (setq parent-clicked t)))
+                             (lambda (uuid data)
+                               (message "2. Parent click handler called (bubbled)")
+                               (setq parent-clicked t)))
     
     (message "Demo 3: Event bubbling demo loaded.")
     (message "Click the button to see both child and parent handlers fire.")))
@@ -242,19 +242,19 @@
                                       (list :class "lifecycle-demo")
                                       (list
                                        (etaf-create-vnode 'h2
-                                                         nil
-                                                         (list (etaf-vdom-text "Lifecycle Demo")))
+                                                          nil
+                                                          (list (etaf-vdom-text "Lifecycle Demo")))
                                        (etaf-create-vnode 'p
-                                                         nil
-                                                         (list (etaf-vdom-text "This content is MOUNTED.")))
+                                                          nil
+                                                          (list (etaf-vdom-text "This content is MOUNTED.")))
                                        (etaf-create-vnode 'p
-                                                         nil
-                                                         (list (etaf-vdom-text "Run command again to UNMOUNT.")))
+                                                          nil
+                                                          (list (etaf-vdom-text "Run command again to UNMOUNT.")))
                                        (etaf-create-vnode 'button
-                                                         (list :on-click (lambda ()
-                                                                          (message "Button still works while mounted!"))
-                                                              :uuid "demo4-btn")
-                                                         (list (etaf-vdom-text "Test Button")))))))
+                                                          (list :on-click (lambda ()
+                                                                            (message "Button still works while mounted!"))
+                                                                :uuid "demo4-btn")
+                                                          (list (etaf-vdom-text "Test Button")))))))
         (etaf-vdom-mount vnode buffer)
         (setq etaf-renderer-demo-4-mounted t)
         (message "Demo 4: Content MOUNTED. Run command again to unmount.")))))
@@ -281,25 +281,25 @@
                        (list :class (if task-done "task-done" "task-pending"))
                        (list
                         (etaf-create-vnode 'span
-                                          nil
-                                          (list (etaf-vdom-text
-                                                (format "[%s] %s"
-                                                       (if task-done "✓" " ")
-                                                       task-text))))
+                                           nil
+                                           (list (etaf-vdom-text
+                                                  (format "[%s] %s"
+                                                          (if task-done "✓" " ")
+                                                          task-text))))
                         (etaf-vdom-text " ")
                         (etaf-create-vnode 'button
-                                          (list :on-click
-                                               (lambda ()
-                                                 (etaf-renderer-demo-5-toggle-task task-id))
-                                               :uuid (format "demo5-toggle-%d" task-id))
-                                          (list (etaf-vdom-text "Toggle")))
+                                           (list :on-click
+                                                 (lambda ()
+                                                   (etaf-renderer-demo-5-toggle-task task-id))
+                                                 :uuid (format "demo5-toggle-%d" task-id))
+                                           (list (etaf-vdom-text "Toggle")))
                         (etaf-vdom-text " ")
                         (etaf-create-vnode 'button
-                                          (list :on-click
-                                               (lambda ()
-                                                 (etaf-renderer-demo-5-delete-task task-id))
-                                               :uuid (format "demo5-delete-%d" task-id))
-                                          (list (etaf-vdom-text "Delete")))))))
+                                           (list :on-click
+                                                 (lambda ()
+                                                   (etaf-renderer-demo-5-delete-task task-id))
+                                                 :uuid (format "demo5-delete-%d" task-id))
+                                           (list (etaf-vdom-text "Delete")))))))
 
 (defun etaf-renderer-demo-5-create-app-vnode ()
   "Create the main app VNode for demo 5."
@@ -312,26 +312,26 @@
                       (etaf-create-vnode 'p
                                          nil
                                          (list (etaf-vdom-text
-                                               (format "Tasks: %d total, %d completed"
-                                                      (length etaf-renderer-demo-5-tasks)
-                                                      (cl-count-if (lambda (task) (plist-get task :done))
-                                                                  etaf-renderer-demo-5-tasks)))))
+                                                (format "Tasks: %d total, %d completed"
+                                                        (length etaf-renderer-demo-5-tasks)
+                                                        (cl-count-if (lambda (task) (plist-get task :done))
+                                                                     etaf-renderer-demo-5-tasks)))))
                       (etaf-create-vnode 'ul
                                          (list :class "task-list")
                                          (mapcar #'etaf-renderer-demo-5-create-task-vnode
-                                                etaf-renderer-demo-5-tasks))
+                                                 etaf-renderer-demo-5-tasks))
                       (etaf-create-vnode 'div
                                          (list :class "controls")
                                          (list
                                           (etaf-create-vnode 'button
-                                                            (list :on-click #'etaf-renderer-demo-5-add-task
-                                                                 :uuid "demo5-add")
-                                                            (list (etaf-vdom-text "Add Task")))
+                                                             (list :on-click #'etaf-renderer-demo-5-add-task
+                                                                   :uuid "demo5-add")
+                                                             (list (etaf-vdom-text "Add Task")))
                                           (etaf-vdom-text " ")
                                           (etaf-create-vnode 'button
-                                                            (list :on-click #'etaf-renderer-demo-5-clear-completed
-                                                                 :uuid "demo5-clear")
-                                                            (list (etaf-vdom-text "Clear Completed"))))))))
+                                                             (list :on-click #'etaf-renderer-demo-5-clear-completed
+                                                                   :uuid "demo5-clear")
+                                                             (list (etaf-vdom-text "Clear Completed"))))))))
 
 (defun etaf-renderer-demo-5-add-task ()
   "Add a new task."
@@ -348,19 +348,19 @@
   "Toggle completion status of task with TASK-ID."
   (setq etaf-renderer-demo-5-tasks
         (mapcar (lambda (task)
-                 (if (= (plist-get task :id) task-id)
-                     (plist-put (copy-sequence task) :done
-                               (not (plist-get task :done)))
-                   task))
-               etaf-renderer-demo-5-tasks))
+                  (if (= (plist-get task :id) task-id)
+                      (plist-put (copy-sequence task) :done
+                                 (not (plist-get task :done)))
+                    task))
+                etaf-renderer-demo-5-tasks))
   (etaf-renderer-demo-5-update))
 
 (defun etaf-renderer-demo-5-delete-task (task-id)
   "Delete task with TASK-ID."
   (setq etaf-renderer-demo-5-tasks
         (cl-remove-if (lambda (task)
-                       (= (plist-get task :id) task-id))
-                     etaf-renderer-demo-5-tasks))
+                        (= (plist-get task :id) task-id))
+                      etaf-renderer-demo-5-tasks))
   (etaf-renderer-demo-5-update))
 
 (defun etaf-renderer-demo-5-clear-completed ()
@@ -368,7 +368,7 @@
   (interactive)
   (setq etaf-renderer-demo-5-tasks
         (cl-remove-if (lambda (task) (plist-get task :done))
-                     etaf-renderer-demo-5-tasks))
+                      etaf-renderer-demo-5-tasks))
   (etaf-renderer-demo-5-update))
 
 (defun etaf-renderer-demo-5-update ()
