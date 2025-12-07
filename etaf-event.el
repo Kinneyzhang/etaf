@@ -417,6 +417,75 @@ Returns t if the element is in the required state."
        (t nil)))))
 
 ;;; ============================================================
+;;; Event Bubbling and Propagation
+;;; ============================================================
+
+(defun etaf-event-get-parent-uuid (uuid)
+  "Get the parent element UUID for UUID.
+Returns nil if no parent found."
+  (when-let ((element (etaf-event-get-element uuid)))
+    (when-let ((node (etaf-event-element-node element)))
+      ;; Try to get parent from VNode structure
+      (when (and (listp node) (plist-get node :parent))
+        (let ((parent-node (plist-get node :parent)))
+          (when-let ((parent-props (plist-get parent-node :props)))
+            (plist-get parent-props :uuid)))))))
+
+(defun etaf-event-dispatch-with-bubbling (uuid event-type &optional event-data)
+  "Dispatch an event to UUID and propagate up the parent chain (bubbling).
+EVENT-TYPE is the type of event to dispatch.
+EVENT-DATA is passed to each listener.
+
+This implements event bubbling like in browsers:
+1. Dispatch to target element
+2. Propagate up to parent elements
+3. Stop if any handler calls stopPropagation
+
+Returns t if event was not stopped, nil if propagation was stopped."
+  (let ((current-uuid uuid)
+        (propagate t)
+        (stop-propagation nil))
+    
+    ;; Add stopPropagation function to event data
+    (setq event-data (plist-put (or event-data (list))
+                                :stopPropagation
+                                (lambda () (setq stop-propagation t))))
+    
+    ;; Bubble up the tree
+    (while (and current-uuid propagate (not stop-propagation))
+      ;; Dispatch to current element
+      (etaf-event-dispatch current-uuid event-type event-data)
+      
+      ;; Check if propagation was stopped
+      (unless stop-propagation
+        ;; Move to parent
+        (setq current-uuid (etaf-event-get-parent-uuid current-uuid))
+        (unless current-uuid
+          (setq propagate nil))))
+    
+    (not stop-propagation)))
+
+(defun etaf-event-trigger-click (uuid)
+  "Trigger a click event on element UUID with bubbling.
+This is the main entry point for click events."
+  (etaf-event-dispatch-with-bubbling uuid 'click
+                                     (list :type 'click
+                                           :target uuid)))
+
+;;; ============================================================
+;;; Enhanced Mouse Event Handlers with Bubbling
+;;; ============================================================
+
+(defun etaf-event-handle-click (event)
+  "Handle click event with bubbling support."
+  (interactive "e")
+  (when etaf-event--elements
+    (let* ((pos (posn-point (event-start event)))
+           (uuid (etaf-event-find-element-at-pos pos)))
+      (when uuid
+        (etaf-event-trigger-click uuid)))))
+
+;;; ============================================================
 ;;; Utilities
 ;;; ============================================================
 
@@ -438,6 +507,20 @@ Returns t if the element is in the required state."
         :active-element etaf-event--active-element
         :focus-element etaf-event--focus-element
         :tracking-active (not (null etaf-event--tracking-timer))))
+
+(defun etaf-event-test-setup ()
+  "Setup a simple test environment for event system.
+Returns a test element UUID for testing."
+  (etaf-event-init)
+  (let ((test-uuid "test-button-1")
+        (test-node (list :type 'button
+                         :props (list :uuid "test-button-1"
+                                     :on-click (lambda ()
+                                                (message "Test button clicked!")))))
+        (start-pos 1)
+        (end-pos 20))
+    (etaf-event-register-element test-uuid test-node start-pos end-pos)
+    test-uuid))
 
 (provide 'etaf-event)
 ;;; etaf-event.el ends here
