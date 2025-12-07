@@ -120,6 +120,11 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (parent-width (plist-get parent-context :content-width))
          (parent-height (plist-get parent-context :content-height))
          (is-root (plist-get parent-context :is-root))
+         ;; 当parent-width为nil时（viewport width未指定），使用window宽度作为临时值
+         ;; 这样子元素可以正常布局，然后根据实际内容调整父容器宽度
+         (effective-parent-width (or parent-width 
+                                     (when is-root
+                                       (* (window-body-width) (frame-char-width)))))
          
          ;; 提取样式值
          (box-sizing (etaf-css-parse-style-value
@@ -129,37 +134,37 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (padding-top (etaf-css-parse-length 
                        (etaf-css-parse-style-value
                         style 'padding-top "0") 
-                       parent-width))
+                       effective-parent-width))
          (padding-right (etaf-css-parse-length 
                          (etaf-css-parse-style-value
                           style 'padding-right "0") 
-                         parent-width))
+                         effective-parent-width))
          (padding-bottom (etaf-css-parse-length 
                           (etaf-css-parse-style-value
                            style 'padding-bottom "0") 
-                          parent-width))
+                          effective-parent-width))
          (padding-left (etaf-css-parse-length 
                         (etaf-css-parse-style-value
                          style 'padding-left "0") 
-                        parent-width))
+                        effective-parent-width))
          
          ;; Border
          (border-top (etaf-css-parse-length 
                       (etaf-css-parse-style-value
                        style 'border-top-width "0") 
-                      parent-width))
+                      effective-parent-width))
          (border-right (etaf-css-parse-length 
                         (etaf-css-parse-style-value
                          style 'border-right-width "0") 
-                        parent-width))
+                        effective-parent-width))
          (border-bottom (etaf-css-parse-length 
                          (etaf-css-parse-style-value
                           style 'border-bottom-width "0") 
-                         parent-width))
+                         effective-parent-width))
          (border-left (etaf-css-parse-length 
                        (etaf-css-parse-style-value
                         style 'border-left-width "0") 
-                       parent-width))
+                       effective-parent-width))
          
          (border-top-color (etaf-css-parse-style-value
                             style 'border-top-color
@@ -178,23 +183,23 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (margin-top (etaf-css-parse-length 
                       (etaf-css-parse-style-value
                        style 'margin-top "0") 
-                      parent-width))
+                      effective-parent-width))
          (margin-right (etaf-css-parse-length 
                         (etaf-css-parse-style-value
                          style 'margin-right "0") 
-                        parent-width))
+                        effective-parent-width))
          (margin-bottom
           (etaf-css-parse-length 
            (etaf-css-parse-style-value style 'margin-bottom "0") 
-           parent-width))
+           effective-parent-width))
          (margin-left (etaf-css-parse-length 
                        (etaf-css-parse-style-value style 'margin-left "0") 
-                       parent-width))
+                       effective-parent-width))
          
          ;; Width and Height
          (width-value (etaf-css-parse-length 
                        (etaf-css-parse-style-value style 'width "auto") 
-                       parent-width))
+                       effective-parent-width))
          (height-value (etaf-css-parse-height 
                         (etaf-css-parse-style-value style 'height "auto") 
                         parent-height))
@@ -203,11 +208,11 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (min-width-value (etaf-css-parse-length
                            (etaf-css-parse-style-value
                             style 'min-width "0")
-                           parent-width))
+                           effective-parent-width))
          (max-width-value (etaf-css-parse-length
                            (etaf-css-parse-style-value
                             style 'max-width "none")
-                           parent-width))
+                           effective-parent-width))
          
          ;; min-height, max-height
          (min-height-value (etaf-css-parse-height
@@ -295,9 +300,9 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; flex 容器自身没有指定宽度时，应该使用父容器的可用宽度，这样 justify-content 才能正常工作
          (base-content-width
           (if (eq width-value 'auto)
-              (if (or is-inline is-in-flex-container (null parent-width))
+              (if (or is-inline is-in-flex-container (null effective-parent-width))
                   0
-                (max 0 (- parent-width
+                (max 0 (- effective-parent-width
                           padding-left-val padding-right-val
                           border-left-val border-right-val
                           margin-left-val margin-right-val)))
@@ -362,6 +367,9 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                      render-node parent-context))
          (content-width (etaf-layout-box-content-width box-model))
          (content-height (etaf-layout-box-content-height box-model))
+         ;; Check if we need shrink-to-fit: original parent-width was nil and we're at root with auto width
+         (need-shrink-to-fit (and (null (plist-get parent-context :content-width))
+                                  (plist-get parent-context :is-root)))
          (layout-node (etaf-layout-create-node render-node box-model)))
     
     ;; 递归布局子元素
@@ -371,6 +379,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                                    :content-height content-height))
               (child-layouts '())
               (accumulated-height 0)
+              (max-child-width 0)  ; Track maximum child width for auto-sizing
               ;; 检查是否有inline元素子节点
               (has-inline-element nil))
           
@@ -399,7 +408,14 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                        (child-total-height
                         (+ (etaf-layout-box-content-height child-box)
                            (etaf-layout-box-padding-height child-box)
-                           (etaf-layout-box-margin-height child-box))))
+                           (etaf-layout-box-margin-height child-box)))
+                       (child-total-width
+                        (+ (etaf-layout-box-content-width child-box)
+                           (etaf-layout-box-padding-width child-box)
+                           (etaf-layout-box-border-width child-box)
+                           (etaf-layout-box-margin-width child-box))))
+                  ;; Track maximum child width for auto-sizing
+                  (setq max-child-width (max max-child-width child-total-width))
                   ;; 只有block子元素才累加高度
                   (when (string= child-display "block")
                     (setq accumulated-height
@@ -419,7 +435,14 @@ PARENT-CONTEXT 包含父容器的上下文信息。
           (when (= content-height 0)
             (let ((box (etaf-layout-get-box-model layout-node)))
               (plist-put (plist-get box :content)
-                         :height accumulated-height))))))
+                         :height accumulated-height)))
+          
+          ;; 宽度shrink-to-fit：当viewport width为nil且根元素width为auto时，
+          ;; 使用子元素最大宽度作为容器宽度
+          (when need-shrink-to-fit
+            (let ((box (etaf-layout-get-box-model layout-node)))
+              (plist-put (plist-get box :content)
+                         :width max-child-width))))))
     
     layout-node))
 
