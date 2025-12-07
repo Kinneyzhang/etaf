@@ -688,6 +688,8 @@ The DOM is 'clean' - it contains no VNode-specific fields like
            (text-content (plist-get props :textContent))
            ;; Convert props plist to attrs alist for DOM
            (attrs (etaf-vdom--props-to-attrs props))
+           ;; Extract event handlers to preserve them
+           (event-handlers (etaf-vdom--extract-event-handlers props))
            ;; Render children
            (child-doms (cond
                         ;; If textContent is specified, use it as the only child
@@ -702,6 +704,9 @@ The DOM is 'clean' - it contains no VNode-specific fields like
                         ;; Other (nil, etc.)
                         (t nil))))
       ;; Build DOM: (tag ((attrs...)) children...)
+      ;; If there are event handlers, store them in a special attribute
+      (when event-handlers
+        (push (cons 'etaf-event-handlers event-handlers) attrs))
       (cons type (cons attrs child-doms))))
    
    ;; Unknown type - return nil
@@ -727,6 +732,24 @@ Event handlers (:on-*) are not included in DOM attributes."
                           (eq attr-name 'textContent)
                           (eq attr-name 'innerHTML))
                 (push (cons attr-name value) result))))))
+      (nreverse result))))
+
+(defun etaf-vdom--extract-event-handlers (props)
+  "Extract event handlers from VNode PROPS.
+Returns an alist of (event-name . handler-function).
+
+Event handlers are identified by :on-* keys in props."
+  (when props
+    (let ((result nil))
+      (while props
+        (let ((key (pop props))
+              (value (pop props)))
+          (when (keywordp key)
+            (let ((attr-name (symbol-name key)))
+              ;; Check if this is an event handler
+              (when (string-prefix-p ":on-" attr-name)
+                (let ((event-name (intern (substring attr-name 4)))) ; Remove ":on-"
+                  (push (cons event-name value) result)))))))
       (nreverse result))))
 
 ;;; ============================================================================

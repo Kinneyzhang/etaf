@@ -87,6 +87,7 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
 - computed-style: 亮色模式计算样式（包含 display 属性）
 - computed-style-dark: 暗色模式计算样式（如果与亮色不同）
 - etaf-original-attrs: 原始 DOM 属性（仅保留交互元素需要的关键属性）
+- etaf-event-handlers: VNode 事件处理器（如果有）
 注意：不保留大多数原始 DOM 属性（class、id 等），只保留计算后的样式和交互相关属性"
   (let* ((tag (dom-tag dom-node))
          ;; 从 computed-style 获取 display，如果没有则根据标签类型使用默认值
@@ -101,6 +102,8 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
          ;; Check using VNode metadata approach - tag names that have interactive capability
          (original-attrs (when (memq tag '(a button input textarea summary))
                            (dom-attributes dom-node)))
+         ;; Extract event handlers if present in DOM node
+         (event-handlers (cdr (assq 'etaf-event-handlers (dom-attributes dom-node))))
          ;; 构建新的属性 alist，只添加渲染信息，不保留大多数原始 DOM 属性
          ;; 只有当暗色样式与亮色样式不同时才添加 computed-style-dark
          (render-attrs (if (and computed-style-dark
@@ -116,6 +119,9 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
     ;; 如果是交互元素，保留原始属性用于事件处理
     (when original-attrs
       (push (cons 'etaf-original-attrs original-attrs) render-attrs))
+    ;; 保留事件处理器（如果有）
+    (when event-handlers
+      (push (cons 'etaf-event-handlers event-handlers) render-attrs))
     ;; 返回渲染节点
     (list tag render-attrs)))
 
