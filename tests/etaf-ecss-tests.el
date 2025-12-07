@@ -635,9 +635,11 @@ This tests the fix for: ul li>p code not working."
          (code-elements (dom-search dom (lambda (node) (eq (dom-tag node) 'code)))))
     ;; Should have 3 code elements
     (should (= (length code-elements) 3))
-    ;; code1 should have text-orange-400 (matches ul li>p code)
-    ;; code2 should NOT have text-orange-400 (p is not direct child of li, it's child of div)
-    ;; code3 SHOULD have text-orange-400 (code is descendant of p, selector is "p code" with space)
+    ;; Selector "ul li>p code" means: code elements that are descendants of p,
+    ;; where p is a direct child of li, and li is a descendant of ul.
+    ;; code1: ul → li, li>p (direct child), p → code (descendant) ✓
+    ;; code2: ul → li → div, div>p (p is NOT direct child of li) ✗
+    ;; code3: ul → li, li>p (direct child), p → span → code (code is descendant of p) ✓
     (let ((code1 (nth 0 code-elements))
           (code2 (nth 1 code-elements))
           (code3 (nth 2 code-elements)))
@@ -669,7 +671,7 @@ This tests the fix for: ul li>p code not working."
                                     (lambda (node) (eq (dom-tag node) 'p))))
          (code-elements (dom-search dom (lambda (node) (eq (dom-tag node) 'code))))
          (a-element (car (dom-by-tag dom 'a))))
-    
+
     ;; All p elements should have text-red-200 class
     (dolist (p all-p-elements)
       (should (string-match-p "text-red-200" (or (dom-attr p 'class) ""))))
