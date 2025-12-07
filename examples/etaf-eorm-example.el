@@ -339,6 +339,78 @@
       
       (etaf-eorm-disconnect db))))
 
+;;; Example 6: Multiple Databases (Pure Function Approach)
+
+(defun etaf-eorm-example-multiple-databases ()
+  "Demonstrate working with multiple databases using pure function approach."
+  (interactive)
+  
+  (setq etaf-eorm-enable-logging t)
+  
+  ;; Define schemas for different domains
+  (etaf-eorm-define-table users
+    (id integer :primary-key t :autoincrement t)
+    (name text :not-null t)
+    (email text :unique t))
+  
+  (etaf-eorm-define-table products
+    (id integer :primary-key t :autoincrement t)
+    (name text :not-null t)
+    (price real :not-null t))
+  
+  (etaf-eorm-define-table orders
+    (id integer :primary-key t :autoincrement t)
+    (user-id integer :not-null t)
+    (product-id integer :not-null t)
+    (quantity integer :not-null t))
+  
+  ;; Connect to separate databases
+  (let ((user-db (etaf-eorm-connect "~/etaf-users.db"))
+        (product-db (etaf-eorm-connect "~/etaf-products.db"))
+        (order-db (etaf-eorm-connect "~/etaf-orders.db")))
+    (unwind-protect
+        (progn
+          ;; Migrate specific tables to specific databases (pure function approach)
+          (message "\n=== Migrating Tables to Specific Databases ===")
+          (etaf-eorm-migrate user-db 'users)              ; only users
+          (etaf-eorm-migrate product-db 'products)        ; only products
+          (etaf-eorm-migrate order-db 'orders)            ; only orders
+          (message "Each database has only its relevant tables")
+          
+          ;; Insert data into each database
+          (message "\n=== Inserting Data ===")
+          (etaf-eorm-insert user-db 'users
+            :name "Alice" :email "alice@example.com")
+          (etaf-eorm-insert user-db 'users
+            :name "Bob" :email "bob@example.com")
+          
+          (etaf-eorm-insert product-db 'products
+            :name "Laptop" :price 999.99)
+          (etaf-eorm-insert product-db 'products
+            :name "Mouse" :price 29.99)
+          
+          (etaf-eorm-insert order-db 'orders
+            :user-id 1 :product-id 1 :quantity 1)
+          (etaf-eorm-insert order-db 'orders
+            :user-id 2 :product-id 2 :quantity 2)
+          
+          ;; Query from each database
+          (message "\n=== Querying from Each Database ===")
+          (let ((users (etaf-eorm-select user-db 'users))
+                (products (etaf-eorm-select product-db 'products))
+                (orders (etaf-eorm-select order-db 'orders)))
+            (message "Users: %d" (length users))
+            (message "Products: %d" (length products))
+            (message "Orders: %d" (length orders)))
+          
+          (message "\n=== Benefit: Each database is independent and focused ===")
+          (message "This approach prevents accidental table creation in wrong databases"))
+      
+      ;; Cleanup
+      (etaf-eorm-disconnect user-db)
+      (etaf-eorm-disconnect product-db)
+      (etaf-eorm-disconnect order-db))))
+
 ;;; Run all examples
 
 (defun etaf-eorm-run-all-examples ()
@@ -355,6 +427,8 @@
     (etaf-eorm-example-reactive))
   (sit-for 1)
   (etaf-eorm-example-ui)
+  (sit-for 1)
+  (etaf-eorm-example-multiple-databases)
   (message "\n========== Examples Complete ==========\n"))
 
 (provide 'etaf-eorm-example)

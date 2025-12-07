@@ -38,9 +38,9 @@
 ;; - Transaction support
 ;; - Integration with ETAF's reactive system
 ;;
-;; Usage:
+;; Basic Usage:
 ;;
-;;   ;; Define a schema
+;;   ;; Define schemas (stored globally for convenience)
 ;;   (etaf-eorm-define-table users
 ;;     (id integer :primary-key t :autoincrement t)
 ;;     (name text :not-null t)
@@ -48,27 +48,38 @@
 ;;     (age integer)
 ;;     (created-at datetime :default current-timestamp))
 ;;
-;;   ;; Create a connection
-;;   (setq db (etaf-eorm-connect "~/my-app.db"))
+;;   (etaf-eorm-define-table posts
+;;     (id integer :primary-key t :autoincrement t)
+;;     (user-id integer :not-null t :references (users id))
+;;     (title text :not-null t)
+;;     (content text))
+;;
+;;   ;; Create database connections
+;;   (setq db1 (etaf-eorm-connect "~/app1.db"))
+;;   (setq db2 (etaf-eorm-connect "~/app2.db"))
+;;
+;;   ;; Migrate specific tables to specific databases (pure function approach)
+;;   (etaf-eorm-migrate db1 'users)              ; only users in db1
+;;   (etaf-eorm-migrate db2 '(users posts))      ; users and posts in db2
 ;;
 ;;   ;; Insert data
-;;   (etaf-eorm-insert db 'users
+;;   (etaf-eorm-insert db1 'users
 ;;     :name "Alice"
 ;;     :email "alice@example.com"
 ;;     :age 30)
 ;;
 ;;   ;; Query data
-;;   (etaf-eorm-select db 'users
+;;   (etaf-eorm-select db1 'users
 ;;     :where '(> age 25)
 ;;     :order-by 'name)
 ;;
 ;;   ;; Update data
-;;   (etaf-eorm-update db 'users
+;;   (etaf-eorm-update db1 'users
 ;;     :set '(:age 31)
 ;;     :where '(= name "Alice"))
 ;;
 ;;   ;; Delete data
-;;   (etaf-eorm-delete db 'users
+;;   (etaf-eorm-delete db1 'users
 ;;     :where '(= email "alice@example.com"))
 
 ;;; Code:
@@ -367,14 +378,42 @@ Returns a database handle."
                   (list sql-table-name))))
     (not (null result))))
 
-(defun etaf-eorm-migrate (db)
+(defun etaf-eorm-migrate (db &optional table-names)
   "Run migrations for database DB.
-Creates all defined tables that don't exist yet."
-  (maphash (lambda (table-name _schema)
-             (unless (etaf-eorm-table-exists-p db table-name)
-               (etaf-eorm-create-table db table-name)
-               (etaf-eorm--log "Created table: %s" table-name)))
-           etaf-eorm--schemas))
+Creates tables specified in TABLE-NAMES that don't exist yet.
+If TABLE-NAMES is nil, creates all defined tables (legacy behavior).
+TABLE-NAMES can be:
+  - nil: migrate all tables in etaf-eorm--schemas (global)
+  - a single table name symbol: migrate that table
+  - a list of table name symbols: migrate those tables
+
+Example:
+  (etaf-eorm-migrate db)                    ; migrate all tables
+  (etaf-eorm-migrate db 'users)             ; migrate users table
+  (etaf-eorm-migrate db '(users posts))     ; migrate users and posts"
+  (let ((tables-to-migrate
+         (cond
+          ;; No table names specified - use all defined schemas (legacy)
+          ((null table-names)
+           (let (tables)
+             (maphash (lambda (table-name _schema)
+                        (push table-name tables))
+                      etaf-eorm--schemas)
+             tables))
+          ;; Single table name
+          ((symbolp table-names)
+           (list table-names))
+          ;; List of table names
+          ((listp table-names)
+           table-names)
+          (t
+           (error "TABLE-NAMES must be nil, a symbol, or a list of symbols")))))
+    (dolist (table-name tables-to-migrate)
+      (unless (etaf-eorm-get-schema table-name)
+        (error "Table schema not defined: %s" table-name))
+      (unless (etaf-eorm-table-exists-p db table-name)
+        (etaf-eorm-create-table db table-name)
+        (etaf-eorm--log "Created table: %s" table-name)))))
 
 ;;; Query Building - Value Formatting
 

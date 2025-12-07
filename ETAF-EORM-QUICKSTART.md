@@ -42,8 +42,8 @@ Create a simple todo application:
 ;; Connect to database
 (setq db (etaf-eorm-connect "~/todos.db"))
 
-;; Create table
-(etaf-eorm-migrate db)
+;; Create table (specify which tables to migrate)
+(etaf-eorm-migrate db 'todos)
 
 ;; Insert some todos
 (etaf-eorm-insert db 'todos
@@ -77,6 +77,41 @@ Create a simple todo application:
 
 ;; Close connection when done
 (etaf-eorm-disconnect db)
+```
+
+### 4. Working with Multiple Databases (Recommended Approach)
+
+When working with multiple databases, **always specify which tables to migrate** to avoid accidentally creating all tables in all databases:
+
+```elisp
+;; Define schemas for different purposes
+(etaf-eorm-define-table users
+  (id integer :primary-key t :autoincrement t)
+  (name text :not-null t))
+
+(etaf-eorm-define-table posts
+  (id integer :primary-key t :autoincrement t)
+  (title text :not-null t))
+
+(etaf-eorm-define-table logs
+  (id integer :primary-key t :autoincrement t)
+  (message text :not-null t))
+
+;; Connect to different databases
+(setq user-db (etaf-eorm-connect "~/users.db"))
+(setq content-db (etaf-eorm-connect "~/content.db"))
+(setq log-db (etaf-eorm-connect "~/logs.db"))
+
+;; Migrate specific tables to specific databases (pure function approach)
+(etaf-eorm-migrate user-db 'users)              ; only users in user-db
+(etaf-eorm-migrate content-db 'posts)           ; only posts in content-db
+(etaf-eorm-migrate log-db 'logs)                ; only logs in log-db
+
+;; Or migrate multiple tables to one database
+(etaf-eorm-migrate content-db '(users posts))   ; users and posts in content-db
+
+;; Each database now has only its relevant tables
+;; This prevents confusion and accidental data in wrong databases
 ```
 
 ## Examples

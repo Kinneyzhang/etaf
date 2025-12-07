@@ -388,6 +388,15 @@ Find a single row by ID:
 Create tables based on defined schemas:
 
 ```elisp
+;; Define schemas first
+(etaf-eorm-define-table users
+  (id integer :primary-key t :autoincrement t)
+  (name text :not-null t))
+
+(etaf-eorm-define-table posts
+  (id integer :primary-key t :autoincrement t)
+  (title text :not-null t))
+
 ;; Create a single table
 (etaf-eorm-create-table db 'users)
 
@@ -398,9 +407,33 @@ Create tables based on defined schemas:
 (etaf-eorm-table-exists-p db 'users)
 ;; => t or nil
 
-;; Migrate all defined tables
+;; Migrate specific tables (recommended for multiple databases)
+(etaf-eorm-migrate db1 'users)              ; only users in db1
+(etaf-eorm-migrate db2 '(users posts))      ; users and posts in db2
+
+;; Migrate all defined tables (legacy, not recommended for multiple DBs)
 (etaf-eorm-migrate db)
 ```
+
+**Best Practice for Multiple Databases:**
+
+When working with multiple databases, always specify which tables to migrate to avoid accidentally creating all tables in all databases:
+
+```elisp
+;; Define all schemas
+(etaf-eorm-define-table users ...)
+(etaf-eorm-define-table posts ...)
+(etaf-eorm-define-table comments ...)
+
+;; Connect to different databases
+(setq user-db (etaf-eorm-connect "~/users.db"))
+(setq content-db (etaf-eorm-connect "~/content.db"))
+
+;; Migrate specific tables to specific databases
+(etaf-eorm-migrate user-db 'users)                    ; only users
+(etaf-eorm-migrate content-db '(posts comments))      ; posts and comments
+```
+
 
 ## API Reference
 
@@ -418,6 +451,10 @@ Create tables based on defined schemas:
 ### Migrations
 
 - `(etaf-eorm-create-table db table-name)` - Create table
+- `(etaf-eorm-drop-table db table-name)` - Drop table
+- `(etaf-eorm-table-exists-p db table-name)` - Check if table exists
+- `(etaf-eorm-migrate db &optional table-names)` - Run migrations
+  - `table-names` can be nil (all tables), a symbol (single table), or a list of symbols (multiple tables)
 - `(etaf-eorm-drop-table db table-name)` - Drop table
 - `(etaf-eorm-table-exists-p db table-name)` - Check if table exists
 - `(etaf-eorm-migrate db)` - Run migrations
