@@ -45,29 +45,26 @@ etaf-perf 模块已包含在 ETAF 中，无需额外安装：
 ### 基础用法 (Basic Usage)
 
 ```elisp
-;; 1. 启用性能监控
-(etaf-perf-enable)
+;; 1. 启用性能监控（单个命令）
+(etaf-perf-toggle)
 
-;; 2. 安装监控钩子
-(etaf-perf-install-hooks)
-
-;; 3. 正常渲染内容（自动收集性能数据）
+;; 2. 正常渲染内容（自动收集性能数据）
 (etaf-paint-to-buffer "*demo*"
   '(div :class "container"
      (h1 "Hello ETAF!")
      (p "Performance monitoring is active.")))
 
-;; 4. 查看性能报告
+;; 3. 查看性能报告
 (etaf-perf-show-report)
 
-;; 5. 分析性能瓶颈
+;; 4. 分析性能瓶颈
 (etaf-perf-analyze)
 
-;; 6. 清除数据
+;; 5. 清除数据
 (etaf-perf-clear)
 
-;; 7. 禁用监控
-(etaf-perf-disable)
+;; 6. 禁用性能监控（再次切换）
+(etaf-perf-toggle)
 ```
 
 ### 查看最近的性能数据 (View Recent Performance Data)
@@ -86,7 +83,7 @@ etaf-perf 模块已包含在 ETAF 中，无需额外安装：
 ### 手动测量代码段 (Manual Code Measurement)
 
 ```elisp
-(etaf-perf-enable)
+(etaf-perf-toggle)  ; Enable monitoring
 (etaf-perf-start)
 
 ;; 测量特定操作
@@ -106,8 +103,7 @@ etaf-perf 模块已包含在 ETAF 中，无需额外安装：
 ```elisp
 (require 'etaf-perf)
 
-(etaf-perf-enable)
-(etaf-perf-install-hooks)
+(etaf-perf-toggle)
 (etaf-perf-clear)
 
 ;; 渲染简单模板
@@ -127,8 +123,7 @@ etaf-perf 模块已包含在 ETAF 中，无需额外安装：
 ### 示例 2: 复杂 Tailwind 模板 (Complex Tailwind Template)
 
 ```elisp
-(etaf-perf-enable)
-(etaf-perf-install-hooks)
+(etaf-perf-toggle)
 (etaf-perf-clear)
 
 ;; 渲染复杂模板
@@ -156,8 +151,7 @@ etaf-perf 模块已包含在 ETAF 中，无需额外安装：
 ### 示例 3: 动态模板性能测试 (Dynamic Template)
 
 ```elisp
-(etaf-perf-enable)
-(etaf-perf-install-hooks)
+(etaf-perf-toggle)
 (etaf-perf-clear)
 
 (let ((data '(:title "Dynamic Content"
@@ -178,8 +172,7 @@ etaf-perf 模块已包含在 ETAF 中，无需额外安装：
 ### 示例 4: 批量测试和平均性能 (Batch Testing)
 
 ```elisp
-(etaf-perf-enable)
-(etaf-perf-install-hooks)
+(etaf-perf-toggle)
 (etaf-perf-clear)
 
 ;; 运行 20 次渲染
@@ -199,8 +192,7 @@ etaf-perf 模块已包含在 ETAF 中，无需额外安装：
 ### 示例 5: 性能对比 - 静态 vs 动态 (Static vs Dynamic Comparison)
 
 ```elisp
-(etaf-perf-enable)
-(etaf-perf-install-hooks)
+(etaf-perf-toggle)
 
 ;; 测试静态模板
 (etaf-perf-clear)
@@ -231,28 +223,28 @@ etaf-perf 模块已包含在 ETAF 中，无需额外安装：
 === ETAF Performance Report ===
 
 Last Measurement:
-  Total Time: 15.42 ms
+  Total Time: 15.4235 ms
   Stages:
-    check-dynamic-content          :   0.05 ms (  0.3%)
-    etml-to-dom                    :   2.15 ms ( 13.9%)
-    build-stylesheet               :   0.02 ms (  0.1%)
-    build-cssom                    :   3.45 ms ( 22.4%)
-    add-stylesheet                 :   0.18 ms (  1.2%)
-    build-render-tree              :   4.23 ms ( 27.4%)
-    build-layout-tree              :   3.89 ms ( 25.2%)
-    layout-to-string               :   1.45 ms (  9.4%)
+    check-dynamic-content          :   0.0512 ms (  0.3%)
+    etml-to-dom                    :   2.1523 ms ( 13.9%)
+    build-stylesheet               :   0.0234 ms (  0.1%)
+    build-cssom                    :   3.4512 ms ( 22.4%)
+    add-stylesheet                 :   0.1845 ms (  1.2%)
+    build-render-tree              :   4.2312 ms ( 27.4%)
+    build-layout-tree              :   3.8934 ms ( 25.2%)
+    layout-to-string               :   1.4523 ms (  9.4%)
 
 Average of Last 10 Measurements:
-  Total Time: 14.85 ms
+  Total Time: 14.8512 ms
   Stages:
-    check-dynamic-content          :   0.04 ms (  0.3%)
-    etml-to-dom                    :   2.02 ms ( 13.6%)
-    build-stylesheet               :   0.02 ms (  0.1%)
-    build-cssom                    :   3.28 ms ( 22.1%)
-    add-stylesheet                 :   0.17 ms (  1.1%)
-    build-render-tree              :   4.15 ms ( 27.9%)
-    build-layout-tree              :   3.76 ms ( 25.3%)
-    layout-to-string               :   1.41 ms (  9.5%)
+    check-dynamic-content          :   0.0445 ms (  0.3%)
+    etml-to-dom                    :   2.0201 ms ( 13.6%)
+    build-stylesheet               :   0.0223 ms (  0.1%)
+    build-cssom                    :   3.2801 ms ( 22.1%)
+    add-stylesheet                 :   0.1734 ms (  1.1%)
+    build-render-tree              :   4.1512 ms ( 27.9%)
+    build-layout-tree              :   3.7601 ms ( 25.3%)
+    layout-to-string               :   1.4112 ms (  9.5%)
 
 Total Measurements: 10
 ```
@@ -302,11 +294,8 @@ Performance Bottlenecks:
 
 ### 控制函数 (Control Functions)
 
-- `(etaf-perf-enable)` - 启用性能监控
-- `(etaf-perf-disable)` - 禁用性能监控
+- `(etaf-perf-toggle)` - 开启/关闭性能监控（推荐使用，自动处理钩子安装）
 - `(etaf-perf-clear)` - 清除所有性能数据
-- `(etaf-perf-install-hooks)` - 安装监控钩子
-- `(etaf-perf-uninstall-hooks)` - 卸载监控钩子
 
 ### 测量函数 (Measurement Functions)
 
@@ -322,6 +311,14 @@ Performance Bottlenecks:
 - `(etaf-perf-report &optional N)` - 生成性能报告字符串
 - `(etaf-perf-show-report &optional N)` - 在缓冲区显示报告
 - `(etaf-perf-analyze)` - 分析性能瓶颈
+
+### 高级函数 (Advanced Functions)
+
+仅在需要细粒度控制时使用：
+- `(etaf-perf-enable)` - 仅启用监控（不安装钩子）
+- `(etaf-perf-disable)` - 仅禁用监控（不卸载钩子）
+- `(etaf-perf-install-hooks)` - 手动安装监控钩子
+- `(etaf-perf-uninstall-hooks)` - 手动卸载监控钩子
 
 ### 配置变量 (Configuration Variables)
 
@@ -340,8 +337,7 @@ Performance Bottlenecks:
    ```elisp
    ;; 在 init.el 中
    (when (getenv "ETAF_PERF")
-     (etaf-perf-enable)
-     (etaf-perf-install-hooks))
+     (etaf-perf-toggle)
    ```
 
 2. **性能测试**
@@ -368,10 +364,7 @@ Performance Bottlenecks:
 **解决方案:**
 ```elisp
 ;; 确保监控已启用
-(etaf-perf-enable)
-
-;; 确保钩子已安装
-(etaf-perf-install-hooks)
+(etaf-perf-toggle)
 
 ;; 检查状态
 (message "Enabled: %s, History: %d"

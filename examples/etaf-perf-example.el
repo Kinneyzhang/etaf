@@ -15,9 +15,8 @@
   "Basic performance monitoring example."
   (interactive)
   
-  ;; Enable performance monitoring
-  (etaf-perf-enable)
-  (etaf-perf-install-hooks)
+  ;; Enable performance monitoring (single command)
+  (etaf-perf-toggle)
   
   ;; Clear any existing data
   (etaf-perf-clear)
@@ -43,9 +42,8 @@
   "Performance monitoring with complex template and Tailwind CSS."
   (interactive)
   
-  ;; Enable performance monitoring
-  (etaf-perf-enable)
-  (etaf-perf-install-hooks)
+  ;; Enable performance monitoring (single command)
+  (etaf-perf-toggle)
   
   ;; Clear any existing data
   (etaf-perf-clear)
@@ -83,9 +81,8 @@
   "Performance monitoring with dynamic template."
   (interactive)
   
-  ;; Enable performance monitoring
-  (etaf-perf-enable)
-  (etaf-perf-install-hooks)
+  ;; Enable performance monitoring (single command)
+  (etaf-perf-toggle)
   
   ;; Clear any existing data
   (etaf-perf-clear)
@@ -114,9 +111,8 @@
   "Run multiple renders and show average performance."
   (interactive)
   
-  ;; Enable performance monitoring
-  (etaf-perf-enable)
-  (etaf-perf-install-hooks)
+  ;; Enable performance monitoring (single command)
+  (etaf-perf-toggle)
   
   ;; Clear any existing data
   (etaf-perf-clear)
@@ -145,9 +141,8 @@
   "Run renders and analyze for bottlenecks."
   (interactive)
   
-  ;; Enable performance monitoring
-  (etaf-perf-enable)
-  (etaf-perf-install-hooks)
+  ;; Enable performance monitoring (single command)
+  (etaf-perf-toggle)
   
   ;; Clear any existing data
   (etaf-perf-clear)
@@ -184,9 +179,8 @@
   "Compare performance of static vs dynamic templates."
   (interactive)
   
-  ;; Enable performance monitoring
-  (etaf-perf-enable)
-  (etaf-perf-install-hooks)
+  ;; Enable performance monitoring (single command)
+  (etaf-perf-toggle)
   
   ;; Test static template
   (message "Testing static template performance...")

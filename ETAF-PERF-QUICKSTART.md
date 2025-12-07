@@ -8,11 +8,8 @@
 ;; 加载性能监控模块
 (require 'etaf-perf)
 
-;; 启用性能监控
-(etaf-perf-enable)
-
-;; 安装监控钩子
-(etaf-perf-install-hooks)
+;; 启用性能监控（单个命令）
+(etaf-perf-toggle)
 
 ;; 正常渲染内容
 (etaf-paint-to-buffer "*demo*"
@@ -22,6 +19,9 @@
 
 ;; 查看性能报告
 (etaf-perf-show-report)
+
+;; 再次切换以禁用
+(etaf-perf-toggle)
 ```
 
 ### 2. 运行示例 (Run Examples)
@@ -55,9 +55,8 @@ M-x etaf-perf-demo
 ### 3. 性能分析 (Performance Analysis)
 
 ```elisp
-;; 启用监控
-(etaf-perf-enable)
-(etaf-perf-install-hooks)
+;; 启用监控（单个命令）
+(etaf-perf-toggle)
 
 ;; 渲染多次以获得平均数据
 (dotimes (i 10)
@@ -104,8 +103,7 @@ M-x etaf-perf-demo
 
 | 命令 | 说明 |
 |------|------|
-| `M-x etaf-perf-enable` | 启用性能监控 |
-| `M-x etaf-perf-disable` | 禁用性能监控 |
+| `M-x etaf-perf-toggle` | 开启/关闭性能监控（推荐） |
 | `M-x etaf-perf-clear` | 清除性能数据 |
 | `M-x etaf-perf-show-report` | 显示性能报告 |
 | `M-x etaf-perf-analyze` | 分析性能瓶颈 |
@@ -117,19 +115,19 @@ M-x etaf-perf-demo
 === ETAF Performance Report ===
 
 Last Measurement:
-  Total Time: 15.42 ms
+  Total Time: 15.4235 ms
   Stages:
-    check-dynamic-content          :   0.05 ms (  0.3%)
-    etml-to-dom                    :   2.15 ms ( 13.9%)
-    build-stylesheet               :   0.02 ms (  0.1%)
-    build-cssom                    :   3.45 ms ( 22.4%)
-    add-stylesheet                 :   0.18 ms (  1.2%)
-    build-render-tree              :   4.23 ms ( 27.4%)
-    build-layout-tree              :   3.89 ms ( 25.2%)
-    layout-to-string               :   1.45 ms (  9.4%)
+    check-dynamic-content          :   0.0512 ms (  0.3%)
+    etml-to-dom                    :   2.1523 ms ( 13.9%)
+    build-stylesheet               :   0.0234 ms (  0.1%)
+    build-cssom                    :   3.4512 ms ( 22.4%)
+    add-stylesheet                 :   0.1845 ms (  1.2%)
+    build-render-tree              :   4.2312 ms ( 27.4%)
+    build-layout-tree              :   3.8934 ms ( 25.2%)
+    layout-to-string               :   1.4523 ms (  9.4%)
 
 Average of Last 10 Measurements:
-  Total Time: 14.85 ms
+  Total Time: 14.8512 ms
   (Similar breakdown...)
 
 Total Measurements: 10
