@@ -274,23 +274,25 @@ Returns processed children list."
                            (selector (plist-get parsed :selector))
                            (classes (plist-get parsed :classes))
                            ;; Parse selector to AST for matching
-                           (ast (condition-case nil
+                           (ast (condition-case err
                                     (etaf-css-selector-parse selector)
-                                  (error nil))))
+                                  (error 
+                                   (message "Warning: Failed to parse ecss selector '%s': %s" 
+                                           selector (error-message-string err))
+                                   nil))))
                   ;; Store selector, classes, and AST
-                  (push (list :selector selector 
-                             :classes classes 
-                             :ast ast)
-                        ecss-rules))))))
+                  (when ast
+                    (push (list :selector selector 
+                               :classes classes 
+                               :ast ast)
+                          ecss-rules)))))))
         (setq ecss-rules (nreverse ecss-rules))
         
         ;; Process children to DOM first
         (let ((processed-children (mapcar #'etaf-etml-to-dom other-children)))
           ;; Build a temporary DOM tree for selector matching context
           ;; We need a root node to provide context for descendant selectors
-          (let ((temp-root (list 'div nil)))
-            ;; Add processed children to temp root
-            (setcdr (cdr temp-root) processed-children)
+          (let ((temp-root (cons 'div (cons nil processed-children))))
             
             ;; Apply ecss classes to all matching elements in the tree
             (dolist (child processed-children)
