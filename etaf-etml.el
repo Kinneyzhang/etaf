@@ -228,10 +228,10 @@ To achieve this, ecss classes are prepended to the class attribute, so original
           ;; Use the CSS selector matching engine to check if node matches
           (when (and ast (etaf-css-selector-node-matches-p node dom ast))
             ;; Node matches! Collect the classes
-            (when ecss-classes-to-add
-              (setq ecss-classes-to-add (concat ecss-classes-to-add " " classes)))
-            (unless ecss-classes-to-add
-              (setq ecss-classes-to-add classes)))))
+            (setq ecss-classes-to-add 
+                  (if ecss-classes-to-add
+                      (concat ecss-classes-to-add " " classes)
+                    classes)))))
       
       ;; Apply collected ecss classes if any
       (when ecss-classes-to-add
@@ -258,7 +258,7 @@ To achieve this, ecss classes are prepended to the class attribute, so original
   "Process CHILDREN list, handling ecss tags by applying classes to matching elements.
 When ecss tags are found, their Tailwind classes are applied directly to matching
 child elements' class attributes, enabling dual-mode (light/dark) support.
-The SCOPE-ID is not used in this implementation as scoping is handled by selector matching.
+SCOPE-ID is kept for backward compatibility but not used in the new implementation.
 Returns processed children list."
   (let ((ecss-tags nil)
         (other-children nil))
