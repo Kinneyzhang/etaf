@@ -471,14 +471,14 @@ Returns a database connection object."
   (let ((db (etaf-eorm-connection-handle conn)))
     (if params
         (sqlite-execute db sql params)
-      (etaf-eorm--backend-call conn \'execute sql))))
+      (sqlite-execute db sql))))
 
 (defun etaf-eorm-sqlite-backend-select (conn sql &optional params)
   "Execute SELECT SQL on SQLite connection CONN with PARAMS."
   (let ((db (etaf-eorm-connection-handle conn)))
     (if params
-        (etaf-eorm--backend-call conn \'select sql params)
-      (etaf-eorm--backend-call conn \'select sql))))
+        (sqlite-select db sql params)
+      (sqlite-select db sql))))
 
 (defun etaf-eorm-sqlite-backend-table-exists-p (conn table-name)
   "Check if TABLE-NAME exists in SQLite connection CONN."
@@ -512,7 +512,15 @@ Returns a database connection object."
 ;;; PostgreSQL Backend
 
 (defun etaf-eorm-postgresql-backend-connect (conn)
-  "Connect to PostgreSQL database using CONN parameters."
+  "Connect to PostgreSQL database using CONN parameters.
+
+WARNING: This implementation passes the password via PGPASSWORD environment
+variable in the command line, which may be visible in process listings.
+For production use, consider:
+  - Using .pgpass file for password storage
+  - Using peer or ident authentication
+  - Using certificate-based authentication
+  - Setting up a secure connection tunnel"
   (let* ((params (etaf-eorm-connection-params conn))
          (host (or (plist-get params :host) "localhost"))
          (port (or (plist-get params :port) 5432))
@@ -592,7 +600,15 @@ Returns a database connection object."
 ;;; MySQL Backend
 
 (defun etaf-eorm-mysql-backend-connect (conn)
-  "Connect to MySQL database using CONN parameters."
+  "Connect to MySQL database using CONN parameters.
+
+WARNING: This implementation passes the password via command-line argument
+(-p flag), which may be visible in process listings.
+For production use, consider:
+  - Using ~/.my.cnf configuration file for credentials
+  - Using mysql_config_editor for encrypted credential storage
+  - Setting up socket-based authentication
+  - Using certificate-based authentication"
   (let* ((params (etaf-eorm-connection-params conn))
          (host (or (plist-get params :host) "localhost"))
          (port (or (plist-get params :port) 3306))
