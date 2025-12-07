@@ -1,7 +1,7 @@
 ;; -*- lexical-binding: t -*-
 
 (require 'eieio)
-(require 'ekp)
+(require 'etaf-kp)
 (require 'etaf-box)
 
 ;;; type check functions
@@ -173,7 +173,7 @@ This is used for nested flex container calculations.
          ;; (block (oref item content))
          ;; (content (oref block content))
          ;; 最长的单词的宽度作为最小单位长度
-         (block-min-pixel (seq-max (ekp-boxes-widths string)))
+         (block-min-pixel (seq-max (etaf-kp-boxes-widths string)))
          (content (oref item content))
          (block-side-pixel
           (pcase content

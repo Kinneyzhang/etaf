@@ -25,6 +25,7 @@ ETAF (Emacs Text-based Application Framework) is a comprehensive framework for b
 - 🌳 **Virtual DOM** - Vue 3-inspired virtual DOM with diff/patch algorithm for efficient updates
 - 🎯 **Tailwind CSS** - Built-in support for Tailwind utility classes
 - 📐 **Layout Engine** - Box model and Flexbox layout support
+- 📝 **Smart Typesetting** - Integrated Knuth-Plass algorithm for hybrid CJK and Latin text justification
 - ⚡ **Performance Optimized** - Rule indexing and style caching
 
 ### Rendering Pipeline
@@ -164,6 +165,7 @@ ETAF（Emacs Text-based Application Framework）是一个在 Emacs 中构建丰�
 - 🌳 **虚拟 DOM** - 参考 Vue 3 设计的虚拟 DOM，支持 diff/patch 算法实现高效更新
 - 🎯 **Tailwind CSS** - 内置 Tailwind 工具类支持
 - 📐 **布局引擎** - 盒模型和 Flexbox 布局支持
+- 📝 **智能排版** - 集成 Knuth-Plass 算法，支持 CJK 与拉丁系语言的混合排版
 - ⚡ **性能优化** - 规则索引和样式缓存
 
 ### 渲染流程
@@ -306,6 +308,40 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
   "nav>a{text-white}")
 ```
 
+### 智能文本排版：etaf-kp
+
+ETAF 集成了 Knuth-Plass 排版算法（etaf-kp），实现了 CJK 与拉丁系语言的混合排版，支持智能断词和文本对齐。
+
+```elisp
+(require 'etaf-kp)
+
+;; 设置排版语言（默认为 "en_US"）
+(setq etaf-kp-latin-lang "en_US")
+
+;; 设置排版参数（可选）
+;; 参数依次为：拉丁语单词间的理想/拉伸/压缩像素宽度，
+;;           拉丁语与 CJK 间的理想/拉伸/压缩像素宽度，
+;;           CJK 字符间的理想/拉伸/压缩像素宽度
+(etaf-kp-param-set 7 3 2 5 2 1 0 2 0)
+
+;; 将文本按指定像素宽度排版（自动换行和对齐）
+(etaf-kp-pixel-justify
+ "This is a test string with English words and 中文字符 mixed together."
+ 400)
+
+;; 在像素范围内寻找最优排版
+(etaf-kp-pixel-range-justify
+ "测试文本 test text 测试"
+ 300 500)  ;; 返回 (排版后文本 . 最优像素值)
+
+;; 在 ETAF 布局中使用（通过 etaf-pixel-wrap）
+(etaf-paint-to-buffer "*demo*"
+  '(div :style "width: 400px"
+     (p "Long text that will be automatically wrapped and justified 这是一段会被自动换行和对齐的长文本。")))
+```
+
+支持的语言包括：英语、德语、法语、西班牙语、中文、日文、韩文等（完整列表见 `dictionaries/` 目录）。
+
 ## 文档
 
 | 文档 | 说明 |
@@ -335,6 +371,8 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 | `etaf-tailwind.el` | Tailwind CSS 支持 |
 | `etaf-ecss.el` | Emacs 风格的 CSS 表达式 |
 | `etaf-eorm.el` | 多数据库 ORM 库（SQLite、PostgreSQL、MySQL），参考 Diesel 设计 |
+| `etaf-kp.el` | Knuth-Plass 排版算法实现，支持 CJK 与拉丁系语言的混合排版 |
+| `etaf-pixel.el` | 像素级字符串操作，集成 etaf-kp 实现文本自动换行和对齐 |
 
 ## 安装
 
@@ -385,3 +423,4 @@ GNU General Public License v3.0 或更高版本。
 - [CSS 规范](https://www.w3.org/Style/CSS/)
 - [CSSOM 规范](https://www.w3.org/TR/cssom-1/)
 - [CSS 盒模型规范](https://www.w3.org/TR/css-box-3/)
+- [emacs-kp](https://github.com/Kinneyzhang/emacs-kp) - ETAF 的 etaf-kp 模块基于此项目集成
