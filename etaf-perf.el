@@ -257,8 +257,17 @@ If N is provided, include average of last N measurements."
                     suggestions))))
         
         (if suggestions
-            (message "Performance Bottlenecks:\n%s"
-                    (mapconcat #'identity (nreverse suggestions) "\n"))
+            (let ((msg (concat "Performance Bottlenecks:\n"
+                              (mapconcat #'identity (nreverse suggestions) "\n"))))
+              (with-current-buffer (get-buffer-create "*ETAF Performance Analysis*")
+                (let ((inhibit-read-only t))
+                  (erase-buffer)
+                  (insert "=== ETAF Performance Analysis ===\n\n")
+                  (insert msg)
+                  (goto-char (point-min))
+                  (read-only-mode 1))
+                (display-buffer (current-buffer)))
+              (message "Performance analysis complete. See *ETAF Performance Analysis* buffer."))
           (message "No significant bottlenecks detected. Performance looks good!"))))))
 
 ;;; Integration with existing code

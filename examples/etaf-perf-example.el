@@ -252,13 +252,28 @@
 (defun etaf-perf-demo ()
   "Show performance monitoring demo menu."
   (interactive)
-  (message "ETAF Performance Monitoring Examples:
-1. M-x etaf-perf-example-1-basic       - Basic monitoring
-2. M-x etaf-perf-example-2-complex     - Complex template with Tailwind
-3. M-x etaf-perf-example-3-dynamic     - Dynamic template with data
-4. M-x etaf-perf-example-4-multiple    - Multiple renders with averages
-5. M-x etaf-perf-example-5-analyze     - Performance analysis
-6. M-x etaf-perf-example-6-comparison  - Static vs Dynamic comparison"))
+  (with-current-buffer (get-buffer-create "*ETAF Performance Examples*")
+    (let ((inhibit-read-only t))
+      (erase-buffer)
+      (insert "=== ETAF Performance Monitoring Examples ===\n\n")
+      (insert "Run the following commands to see different examples:\n\n")
+      (insert "1. M-x etaf-perf-example-1-basic\n")
+      (insert "   Basic performance monitoring\n\n")
+      (insert "2. M-x etaf-perf-example-2-complex\n")
+      (insert "   Complex template with Tailwind CSS\n\n")
+      (insert "3. M-x etaf-perf-example-3-dynamic\n")
+      (insert "   Dynamic template with data binding\n\n")
+      (insert "4. M-x etaf-perf-example-4-multiple\n")
+      (insert "   Multiple renders with average statistics\n\n")
+      (insert "5. M-x etaf-perf-example-5-analyze\n")
+      (insert "   Performance analysis and bottleneck detection\n\n")
+      (insert "6. M-x etaf-perf-example-6-comparison\n")
+      (insert "   Static vs Dynamic template comparison\n\n")
+      (insert "Press 'q' to quit this buffer.\n")
+      (goto-char (point-min))
+      (read-only-mode 1)
+      (local-set-key "q" 'quit-window))
+    (display-buffer (current-buffer))))
 
 (provide 'etaf-perf-example)
 ;;; etaf-perf-example.el ends here
