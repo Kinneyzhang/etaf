@@ -164,13 +164,6 @@ evaluated expression."
 
 (defun etaf-playground--build-etml ()
   "Build the playground UI as ETML structure."
-  ;; Note: Theme-aware Tailwind classes (with dark: variants) must be placed
-  ;; in element class attributes, NOT in ECSS style rules. ECSS processes
-  ;; Tailwind classes at parse time using the current theme, resulting in
-  ;; theme-specific CSS that doesn't adapt when the theme changes. In contrast,
-  ;; class attributes are processed by etaf-css-compute-style-for-node-dual-mode
-  ;; which uses etaf-tailwind-classes-to-css-dual-mode to generate both light
-  ;; and dark mode styles, allowing automatic theme switching.
   `(div
     (ecss "#pannel-input > div {border-x border-t border-gray-500}"
           "#pannel-input > div > p {pl-2 italic bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400}"
