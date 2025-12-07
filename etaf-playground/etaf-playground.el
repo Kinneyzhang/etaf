@@ -166,6 +166,7 @@ evaluated expression."
   "Build the playground UI as ETML structure."
   `(div
     (ecss "#pannel-input > div {border-x border-t border-gray-500}"
+          ;; FIXME: In light theme, why bg-green-700 is not work here，but bg-green-600 works
           "#pannel-input > div > p {pl-2 bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400 italic}"
           "#pannel-input > div > div {px-2 py-1}")
     (div :class "ml-2 mt-1"
@@ -204,7 +205,7 @@ evaluated expression."
       (let ((inhibit-read-only t)
             (etml (etaf-playground--build-etml)))
         (erase-buffer)
-        (insert (etaf-paint-string etml nil nil)))
+        (insert (etaf-paint-string etml)))
       (goto-char (point-min))
       (setq buffer-read-only t))
     buffer))
