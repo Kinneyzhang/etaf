@@ -539,7 +539,7 @@ For production use, consider:
   "Disconnect from PostgreSQL database CONN."
   (when-let ((proc (etaf-eorm-connection-handle conn)))
     (when (process-live-p proc)
-      (process-send-string proc "\\\\q\n")
+      (process-send-string proc "\\q\n")
       (delete-process proc))))
 
 (defun etaf-eorm-postgresql-backend-execute (conn sql &optional params)
@@ -554,16 +554,12 @@ For production use, consider:
   "Execute SELECT SQL on PostgreSQL connection CONN with PARAMS."
   (let* ((proc (etaf-eorm-connection-handle conn))
          (sql-with-params (etaf-eorm--substitute-params sql params))
-         (buffer (generate-new-buffer " *etaf-eorm-pg-temp*"))
          output)
-    (unwind-protect
-        (progn
-          (process-send-string proc (format "%s;\n" sql-with-params))
-          (accept-process-output proc 2)
-          (with-current-buffer (process-buffer proc)
-            (setq output (buffer-substring-no-properties (point-min) (point-max))))
-          (etaf-eorm--parse-psql-output output))
-      (kill-buffer buffer))))
+    (process-send-string proc (format "%s;\n" sql-with-params))
+    (accept-process-output proc 2)
+    (with-current-buffer (process-buffer proc)
+      (setq output (buffer-substring-no-properties (point-min) (point-max))))
+    (etaf-eorm--parse-psql-output output)))
 
 (defun etaf-eorm-postgresql-backend-table-exists-p (conn table-name)
   "Check if TABLE-NAME exists in PostgreSQL connection CONN."
@@ -642,16 +638,12 @@ For production use, consider:
   "Execute SELECT SQL on MySQL connection CONN with PARAMS."
   (let* ((proc (etaf-eorm-connection-handle conn))
          (sql-with-params (etaf-eorm--substitute-params sql params))
-         (buffer (generate-new-buffer " *etaf-eorm-mysql-temp*"))
          output)
-    (unwind-protect
-        (progn
-          (process-send-string proc (format "%s;\n" sql-with-params))
-          (accept-process-output proc 2)
-          (with-current-buffer (process-buffer proc)
-            (setq output (buffer-substring-no-properties (point-min) (point-max))))
-          (etaf-eorm--parse-mysql-output output))
-      (kill-buffer buffer))))
+    (process-send-string proc (format "%s;\n" sql-with-params))
+    (accept-process-output proc 2)
+    (with-current-buffer (process-buffer proc)
+      (setq output (buffer-substring-no-properties (point-min) (point-max))))
+    (etaf-eorm--parse-mysql-output output)))
 
 (defun etaf-eorm-mysql-backend-table-exists-p (conn table-name)
   "Check if TABLE-NAME exists in MySQL connection CONN."
