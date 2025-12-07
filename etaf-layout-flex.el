@@ -183,6 +183,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
             (setcdr (cdr layout-node) (nreverse sorted-children)))
           
           ;; 计算主轴分配
+          (message "content-width:%S" content-width)
           (etaf-layout-flex-compute-main-axis
            layout-node flex-items content-width content-height
            flex-direction justify-content row-gap column-gap should-wrap)

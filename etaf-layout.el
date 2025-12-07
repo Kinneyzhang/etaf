@@ -90,6 +90,7 @@ VIEWPORT 是视口大小 (:width w :height h)。
   (let ((root-context (list :content-width (plist-get viewport :width)
                             :content-height (plist-get viewport :height)
                             :is-root t)))
+    (message "root-context:%S" root-context)
     (etaf-layout-node render-tree root-context)))
 
 (defun etaf-layout-walk (layout-tree func)
@@ -118,6 +119,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
 返回盒模型 plist。"
   (let* ((style (etaf-render-get-computed-style render-node))
          (parent-width (plist-get parent-context :content-width))
+         (_ (message "parent-width:%S" parent-width))
          (parent-height (plist-get parent-context :content-height))
          (is-root (plist-get parent-context :is-root))
          
@@ -428,6 +430,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
 RENDER-NODE 是渲染节点。
 PARENT-CONTEXT 是父容器上下文。
 返回布局节点或 nil。"
+  ;; (message "render-node:%S" render-node)
   (when render-node
     (let ((display (etaf-render-get-display render-node)))
       (cond
@@ -437,6 +440,7 @@ PARENT-CONTEXT 是父容器上下文。
         (etaf-layout-grid-format render-node parent-context))
        ((or (string= display "block")
             (null display))
+        (message "parent-context:%S" parent-context)
         (etaf-layout-block-formatting-context render-node parent-context))
        ((string= display "inline")
         (etaf-layout-block-formatting-context render-node parent-context))
