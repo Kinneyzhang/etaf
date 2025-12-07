@@ -364,9 +364,20 @@ TRACKS 是轨道信息。
 TEMPLATE-AREAS 是命名区域定义。
 ROW-GAP/COLUMN-GAP 是间隙值。"
   (let* ((num-columns (plist-get tracks :num-columns))
-         (num-rows (plist-get tracks :num-rows))
+         (num-rows (max (plist-get tracks :num-rows)
+                       ;; Ensure we have enough rows for auto-placement
+                       (ceiling (/ (float (length grid-items)) num-columns))))
          (column-widths (plist-get tracks :columns))
          (row-heights (plist-get tracks :rows))
+         ;; Expand row heights if needed
+         (expanded-row-heights 
+          (if (< (length row-heights) num-rows)
+              (append row-heights 
+                     (make-list (- num-rows (length row-heights))
+                               (if (> (length row-heights) 0)
+                                   (car (last row-heights))
+                                 100)))  ; default row height
+            row-heights))
          (placement-grid (make-vector (* num-columns num-rows) nil))
          (auto-row 0)
          (auto-col 0))
@@ -445,14 +456,17 @@ ROW-GAP/COLUMN-GAP 是间隙值。"
               
               ;; 计算 y 和 height
               (dotimes (i start-row)
-                (setq y (+ y (nth i row-heights)))
-                (when (> i 0)
-                  (setq y (+ y row-gap))))
+                (when (< i (length expanded-row-heights))
+                  (setq y (+ y (nth i expanded-row-heights)))
+                  (when (> i 0)
+                    (setq y (+ y row-gap)))))
               
               (dotimes (i (- end-row start-row))
-                (setq height (+ height (nth (+ start-row i) row-heights)))
-                (when (> i 0)
-                  (setq height (+ height row-gap))))
+                (let ((row-idx (+ start-row i)))
+                  (when (< row-idx (length expanded-row-heights))
+                    (setq height (+ height (nth row-idx expanded-row-heights)))
+                    (when (> i 0)
+                      (setq height (+ height row-gap))))))
               
               ;; 更新项目的盒模型尺寸
               (let ((box-model (etaf-layout-get-box-model layout)))
@@ -492,11 +506,13 @@ START-ROW/START-COL 是起始搜索位置。
 返回 (row . col)。"
   (let ((row start-row)
         (col start-col)
-        (found nil))
+        (found nil)
+        (grid-size (length grid)))
     (while (and (not found) (< row num-rows))
       (while (and (not found) (< col num-cols))
-        (when (null (aref grid (+ (* row num-cols) col)))
-          (setq found t))
+        (let ((idx (+ (* row num-cols) col)))
+          (when (and (< idx grid-size) (null (aref grid idx)))
+            (setq found t)))
         (unless found
           (setq col (1+ col))))
       (unless found
@@ -512,9 +528,12 @@ NUM-COLS 是列数。
 START-ROW/END-ROW 是行范围。
 START-COL/END-COL 是列范围。
 ITEM 是占用单元格的项目。"
-  (cl-loop for row from start-row below end-row do
-           (cl-loop for col from start-col below end-col do
-                    (aset grid (+ (* row num-cols) col) item))))
+  (let ((grid-size (length grid)))
+    (cl-loop for row from start-row below end-row do
+             (cl-loop for col from start-col below end-col do
+                      (let ((idx (+ (* row num-cols) col)))
+                        (when (< idx grid-size)
+                          (aset grid idx item)))))))
 
 (defun etaf-layout-grid-parse-areas (_template-areas)
   "解析 grid-template-areas 定义。
