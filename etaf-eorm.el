@@ -471,14 +471,14 @@ Returns a database connection object."
   (let ((db (etaf-eorm-connection-handle conn)))
     (if params
         (sqlite-execute db sql params)
-      (sqlite-execute db sql))))
+      (etaf-eorm--backend-call conn \'execute sql))))
 
 (defun etaf-eorm-sqlite-backend-select (conn sql &optional params)
   "Execute SELECT SQL on SQLite connection CONN with PARAMS."
   (let ((db (etaf-eorm-connection-handle conn)))
     (if params
-        (sqlite-select db sql params)
-      (sqlite-select db sql))))
+        (etaf-eorm--backend-call conn \'select sql params)
+      (etaf-eorm--backend-call conn \'select sql))))
 
 (defun etaf-eorm-sqlite-backend-table-exists-p (conn table-name)
   "Check if TABLE-NAME exists in SQLite connection CONN."
@@ -830,12 +830,12 @@ WHERE-EXPR can be:
 
 ;;; CRUD Operations
 
-(defun etaf-eorm-insert (db table-name &rest values)
-  "Insert a row into TABLE-NAME in database DB.
+(defun etaf-eorm-insert (conn table-name &rest values)
+  "Insert a row into TABLE-NAME in database CONN.
 VALUES is a plist of column names and values.
 
 Example:
-  (etaf-eorm-insert db 'users
+  (etaf-eorm-insert conn 'users
     :name \"Alice\"
     :email \"alice@example.com\"
     :age 30)"
@@ -863,12 +863,12 @@ Example:
                        (string-join (nreverse columns) ", ")
                        (string-join (nreverse placeholders) ", "))))
       (etaf-eorm--log "INSERT: %s with params: %S" sql params)
-      (sqlite-execute db sql (nreverse params))
+      (etaf-eorm--backend-call conn 'execute sql (nreverse params))
       ;; Return the last inserted row id
-      (caar (sqlite-select db "SELECT last_insert_rowid()")))))
+      (etaf-eorm--backend-call conn 'last-insert-id))))
 
-(defun etaf-eorm-select (db table-name &rest args)
-  "Select rows from TABLE-NAME in database DB.
+(defun etaf-eorm-select (conn table-name &rest args)
+  "Select rows from TABLE-NAME in database CONN.
 
 ARGS is a plist with the following optional keys:
   :columns - list of columns to select (default: all)
@@ -880,7 +880,7 @@ ARGS is a plist with the following optional keys:
 Returns a list of rows, where each row is a plist.
 
 Example:
-  (etaf-eorm-select db 'users
+  (etaf-eorm-select conn 'users
     :columns '(name email)
     :where '(> age 25)
     :order-by 'name
@@ -920,7 +920,7 @@ Example:
                  (if limit (format " LIMIT %d" limit) "")
                  (if offset (format " OFFSET %d" offset) ""))))
       (etaf-eorm--log "SELECT: %s" sql)
-      (let ((results (sqlite-select db sql)))
+      (let ((results (etaf-eorm--backend-call conn \'select sql)))
         ;; Convert results to plists
         (when results
           (let* ((all-columns (or columns
@@ -938,8 +938,8 @@ Example:
                         result))
                     results)))))))
 
-(defun etaf-eorm-update (db table-name &rest args)
-  "Update rows in TABLE-NAME in database DB.
+(defun etaf-eorm-update (conn table-name &rest args)
+  "Update rows in TABLE-NAME in database CONN.
 
 ARGS is a plist with the following keys:
   :set - plist of columns and new values
@@ -948,7 +948,7 @@ ARGS is a plist with the following keys:
 Returns the number of affected rows.
 
 Example:
-  (etaf-eorm-update db 'users
+  (etaf-eorm-update conn 'users
     :set '(:age 31 :email \"newemail@example.com\")
     :where '(= name \"Alice\"))"
   (let* ((schema (etaf-eorm-get-schema table-name))
@@ -981,11 +981,11 @@ Example:
                           (string-join (nreverse set-clauses) ", "))
                   (etaf-eorm--build-where-clause where))))
         (etaf-eorm--log "UPDATE: %s" sql)
-        (sqlite-execute db sql)
-        (caar (sqlite-select db "SELECT changes()"))))))
+        (etaf-eorm--backend-call conn \'execute sql)
+        (or (etaf-eorm--backend-call conn \'changes) 0)))))
 
-(defun etaf-eorm-delete (db table-name &rest args)
-  "Delete rows from TABLE-NAME in database DB.
+(defun etaf-eorm-delete (conn table-name &rest args)
+  "Delete rows from TABLE-NAME in database CONN.
 
 ARGS is a plist with the following keys:
   :where - WHERE clause expression (required to prevent accidental mass deletion)
@@ -993,7 +993,7 @@ ARGS is a plist with the following keys:
 Returns the number of deleted rows.
 
 Example:
-  (etaf-eorm-delete db 'users
+  (etaf-eorm-delete conn 'users
     :where '(= email \"alice@example.com\"))"
   (let* ((schema (etaf-eorm-get-schema table-name))
          (sql-table-name (etaf-eorm--symbol-to-sql table-name))
@@ -1006,26 +1006,26 @@ Example:
                 (format "DELETE FROM %s" sql-table-name)
                 (etaf-eorm--build-where-clause where))))
       (etaf-eorm--log "DELETE: %s" sql)
-      (sqlite-execute db sql)
-      (caar (sqlite-select db "SELECT changes()")))))
+      (etaf-eorm--backend-call conn \'execute sql)
+      (or (etaf-eorm--backend-call conn \'changes) 0))))
 
 ;;; Transaction Support
 
-(defun etaf-eorm-transaction (db func)
-  "Execute FUNC within a transaction on database DB.
+(defun etaf-eorm-transaction (conn func)
+  "Execute FUNC within a transaction on database CONN.
 If FUNC completes successfully, commit the transaction.
 If FUNC signals an error, rollback the transaction."
-  (sqlite-transaction db)
+  (etaf-eorm--backend-call conn \'begin-transaction)
   (condition-case err
       (prog1
           (funcall func)
-        (sqlite-commit db))
+        (etaf-eorm--backend-call conn \'commit))
     (error
-     (sqlite-rollback db)
+     (etaf-eorm--backend-call conn \'rollback)
      (signal (car err) (cdr err)))))
 
 (defmacro etaf-eorm-with-transaction (db &rest body)
-  "Execute BODY within a transaction on database DB.
+  "Execute BODY within a transaction on database CONN.
 If BODY completes successfully, commit the transaction.
 If BODY signals an error, rollback the transaction."
   (declare (indent 1))
@@ -1035,7 +1035,7 @@ If BODY signals an error, rollback the transaction."
 
 (cl-defstruct etaf-eorm-query
   "Query builder structure."
-  db
+  conn
   table
   (columns nil)
   (where-clause nil)
@@ -1043,9 +1043,9 @@ If BODY signals an error, rollback the transaction."
   (limit-value nil)
   (offset-value nil))
 
-(defun etaf-eorm-query (db table-name)
-  "Create a new query builder for TABLE-NAME on database DB."
-  (make-etaf-eorm-query :db db :table table-name))
+(defun etaf-eorm-query (conn table-name)
+  "Create a new query builder for TABLE-NAME on database CONN."
+  (make-etaf-eorm-query :conn conn :table table-name))
 
 (defun etaf-eorm-query-select (query &rest columns)
   "Add SELECT columns to QUERY."
@@ -1075,7 +1075,7 @@ If BODY signals an error, rollback the transaction."
 (defun etaf-eorm-query-get (query)
   "Execute QUERY and return results."
   (apply #'etaf-eorm-select
-         (etaf-eorm-query-db query)
+         (etaf-eorm-query-conn query)
          (etaf-eorm-query-table query)
          (append
           (when (etaf-eorm-query-columns query)
@@ -1098,47 +1098,50 @@ If BODY signals an error, rollback the transaction."
 (defvar etaf-eorm--reactive-queries (make-hash-table :test 'equal)
   "Hash table storing reactive query watchers.")
 
-(defun etaf-eorm-reactive-query (db table-name query-fn)
+(defun etaf-eorm-reactive-query (conn table-name query-fn)
   "Create a reactive query that automatically updates when data changes.
-DB is the database connection.
+CONN is the database connection.
 TABLE-NAME is the table to watch.
-QUERY-FN is a function that takes DB and TABLE-NAME and returns query results.
+QUERY-FN is a function that takes CONN and TABLE-NAME and returns query results.
 
 Returns a ref that contains the query results and updates automatically."
   (when (require 'etaf-component nil t)
-    (let* ((query-key (format "%s:%s" db table-name))
-           (results (funcall query-fn db table-name))
+    (let* ((conn-id (etaf-eorm-connection-id conn))
+           (query-key (format "%s:%s" conn-id table-name))
+           (results (funcall query-fn conn table-name))
            (ref (etaf-ref results)))
       ;; Store the reactive query
-      (puthash query-key (list :ref ref :query-fn query-fn)
+      (puthash query-key (list :ref ref :query-fn query-fn :conn conn)
                etaf-eorm--reactive-queries)
       ref)))
 
-(defun etaf-eorm--trigger-reactive-update (db table-name)
-  "Trigger reactive query updates for TABLE-NAME in database DB."
+(defun etaf-eorm--trigger-reactive-update (conn table-name)
+  "Trigger reactive query updates for TABLE-NAME in database CONN."
   (when (require 'etaf-component nil t)
-    (let ((query-key (format "%s:%s" db table-name)))
+    (let* ((conn-id (etaf-eorm-connection-id conn))
+           (query-key (format "%s:%s" conn-id table-name)))
       (when-let ((reactive-query (gethash query-key etaf-eorm--reactive-queries)))
         (let ((ref (plist-get reactive-query :ref))
-              (query-fn (plist-get reactive-query :query-fn)))
-          (etaf-ref-set ref (funcall query-fn db table-name)))))))
+              (query-fn (plist-get reactive-query :query-fn))
+              (stored-conn (plist-get reactive-query :conn)))
+          (etaf-ref-set ref (funcall query-fn stored-conn table-name)))))))
 
 ;; Hook into insert/update/delete to trigger reactive updates
 (advice-add 'etaf-eorm-insert :after
-            (lambda (db table-name &rest _)
-              (etaf-eorm--trigger-reactive-update db table-name)))
+            (lambda (conn table-name &rest _)
+              (etaf-eorm--trigger-reactive-update conn table-name)))
 
 (advice-add 'etaf-eorm-update :after
-            (lambda (db table-name &rest _)
-              (etaf-eorm--trigger-reactive-update db table-name)))
+            (lambda (conn table-name &rest _)
+              (etaf-eorm--trigger-reactive-update conn table-name)))
 
 (advice-add 'etaf-eorm-delete :after
-            (lambda (db table-name &rest _)
-              (etaf-eorm--trigger-reactive-update db table-name)))
+            (lambda (conn table-name &rest _)
+              (etaf-eorm--trigger-reactive-update conn table-name)))
 
 ;;; Utility Functions
 
-(defun etaf-eorm-count (db table-name &rest args)
+(defun etaf-eorm-count (conn table-name &rest args)
   "Count rows in TABLE-NAME matching ARGS.
 ARGS can include :where clause."
   (let* ((where (plist-get args :where))
@@ -1147,20 +1150,20 @@ ARGS can include :where clause."
                        (etaf-eorm--symbol-to-sql table-name))
                (etaf-eorm--build-where-clause where))))
     (etaf-eorm--log "COUNT: %s" sql)
-    (caar (sqlite-select db sql))))
+    (caar (etaf-eorm--backend-call conn \'select sql))))
 
-(defun etaf-eorm-exists-p (db table-name &rest args)
+(defun etaf-eorm-exists-p (conn table-name &rest args)
   "Check if any rows exist in TABLE-NAME matching ARGS.
 ARGS can include :where clause."
-  (> (apply #'etaf-eorm-count db table-name args) 0))
+  (> (apply #'etaf-eorm-count conn table-name args) 0))
 
-(defun etaf-eorm-find-by-id (db table-name id &optional id-column)
+(defun etaf-eorm-find-by-id (conn table-name id &optional id-column)
   "Find a single row by ID in TABLE-NAME.
 ID-COLUMN defaults to 'id."
   (let ((id-col (or id-column 'id)))
     (etaf-eorm-query-first
      (etaf-eorm-query-where
-      (etaf-eorm-query db table-name)
+      (etaf-eorm-query conn table-name)
       (list '= id-col id)))))
 
 ;;; Provide

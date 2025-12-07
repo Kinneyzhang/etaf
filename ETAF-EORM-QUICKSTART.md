@@ -1,12 +1,12 @@
 # Getting Started with ETAF-EORM
 
-ETAF-EORM is now available! This quick guide will help you get started with the new SQLite ORM module.
+ETAF-EORM is now available! This quick guide will help you get started with the ORM module that supports SQLite, PostgreSQL, and MySQL databases.
 
 ## Quick Start
 
 ### 1. Check Requirements
 
-First, ensure you have Emacs 29.1 or later with SQLite support:
+For SQLite support, ensure you have Emacs 29.1 or later with SQLite support:
 
 ```elisp
 ;; Check Emacs version
@@ -18,6 +18,10 @@ M-x emacs-version
 ;; Should return t
 ```
 
+For PostgreSQL and MySQL, ensure the respective command-line clients are installed:
+- PostgreSQL: `psql` command should be available
+- MySQL: `mysql` command should be available
+
 ### 2. Load ETAF-EORM
 
 ```elisp
@@ -26,7 +30,7 @@ M-x emacs-version
 
 ### 3. Your First Database
 
-Create a simple todo application:
+Create a simple todo application with SQLite:
 
 ```elisp
 ;; Enable logging to see SQL queries (optional)
@@ -39,8 +43,18 @@ Create a simple todo application:
   (completed boolean :default nil)
   (created-at datetime :default current-timestamp))
 
-;; Connect to database
-(setq db (etaf-eorm-connect "~/todos.db"))
+;; Connect to SQLite database
+(setq db (etaf-eorm-connect :sqlite "~/todos.db"))
+
+;; Or connect to PostgreSQL
+;; (setq db (etaf-eorm-connect :postgresql
+;;   :host "localhost" :port 5432
+;;   :database "mydb" :user "myuser" :password "mypass"))
+
+;; Or connect to MySQL
+;; (setq db (etaf-eorm-connect :mysql
+;;   :host "localhost" :port 3306
+;;   :database "mydb" :user "myuser" :password "mypass"))
 
 ;; Create table (specify which tables to migrate)
 (etaf-eorm-migrate db 'todos)
@@ -98,9 +112,11 @@ When working with multiple databases, **always specify which tables to migrate**
   (message text :not-null t))
 
 ;; Connect to different databases
-(setq user-db (etaf-eorm-connect "~/users.db"))
-(setq content-db (etaf-eorm-connect "~/content.db"))
-(setq log-db (etaf-eorm-connect "~/logs.db"))
+(setq user-db (etaf-eorm-connect :sqlite "~/users.db"))
+(setq content-db (etaf-eorm-connect :postgresql
+  :host "localhost" :database "content" :user "admin" :password "secret"))
+(setq log-db (etaf-eorm-connect :mysql
+  :host "localhost" :database "logs" :user "admin" :password "secret"))
 
 ;; Migrate specific tables to specific databases (pure function approach)
 (etaf-eorm-migrate user-db 'users)              ; only users in user-db
@@ -131,6 +147,48 @@ Run the comprehensive examples:
 (etaf-eorm-example-transactions)   ;; Transactions
 (etaf-eorm-example-reactive)       ;; Reactive queries
 (etaf-eorm-example-ui)             ;; UI integration
+```
+
+## Supported Databases
+
+### SQLite
+
+- **Pros**: Built-in Emacs support, no external dependencies, simple file-based storage
+- **Cons**: Limited concurrency, no network access
+- **Best for**: Local data, configuration storage, cache
+
+```elisp
+(setq db (etaf-eorm-connect :sqlite "~/myapp.db"))
+```
+
+### PostgreSQL
+
+- **Pros**: Full-featured SQL database, excellent concurrency, ACID compliance
+- **Cons**: Requires psql command-line tool, network setup
+- **Best for**: Production applications, complex queries, multi-user systems
+
+```elisp
+(setq db (etaf-eorm-connect :postgresql
+  :host "localhost"
+  :port 5432
+  :database "mydb"
+  :user "myuser"
+  :password "mypass"))
+```
+
+### MySQL
+
+- **Pros**: Wide adoption, good performance, familiar to many developers
+- **Cons**: Requires mysql command-line tool, network setup
+- **Best for**: Web applications, existing MySQL infrastructure
+
+```elisp
+(setq db (etaf-eorm-connect :mysql
+  :host "localhost"
+  :port 3306
+  :database "mydb"
+  :user "myuser"
+  :password "mypass"))
 ```
 
 ## Key Features
