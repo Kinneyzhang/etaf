@@ -7,7 +7,6 @@
 
 (require 'ert)
 (require 'etaf-css-parser)
-(require 'etaf-css-parser)
 
 ;;; Tests for internal functions
 
