@@ -11,6 +11,18 @@
 (require 'etaf-utils)
 (require 'etaf-eorm)
 
+;; Optional performance monitoring
+(defvar etaf-perf-available
+  (require 'etaf-perf nil t)
+  "Whether etaf-perf module is available.")
+
+;; Define stub macro if etaf-perf is not available
+(unless etaf-perf-available
+  (defmacro etaf-perf-measure (stage-name &rest body)
+    "Stub macro when etaf-perf is not available - just execute BODY."
+    (declare (indent 1))
+    `(progn ,@body)))
+
 (defun etaf-viewport-width (width)
   "Parse WIDTH of viewport to pixel"
   (cond
@@ -43,29 +55,38 @@ Note: The dynamic content check is performed on each call via recursive tree
 analysis. The check is O(n) where n is the number of nodes in the template tree.
 While memoization could be added for frequently rendered templates, the check
 itself is fast and memoization would add cache management complexity."
-  (let* (;; Optimization: Check if template has dynamic content
-         (has-dynamic (etaf-etml-has-dynamic-content-p etml))
-         ;; Generate DOM: Use optimized path for static templates
+  (let* (;; Stage 1: Check if template has dynamic content
+         (has-dynamic (etaf-perf-measure 'check-dynamic-content
+                        (etaf-etml-has-dynamic-content-p etml)))
+         ;; Stage 2: Generate DOM - Use optimized path for static templates
          (dom (if has-dynamic
                   ;; Dynamic path: ETML → Compiler → Render Function → VNode → DOM
-                  (let* ((render-fn (etaf-compile etml))
-                         (vnode (funcall render-fn data)))
-                    (etaf-vdom-render vnode))
+                  (etaf-perf-measure 'etml-compile-and-render
+                    (let* ((render-fn (etaf-compile etml))
+                           (vnode (funcall render-fn data)))
+                      (etaf-vdom-render vnode)))
                 ;; Static path: ETML → DOM directly (skip VNode)
-                (etaf-etml-to-dom etml data)))
-         ;; Step 6: CSSOM - Build CSS Object Model
-         (stylesheet (if ecss (apply #'etaf-ecss ecss) ""))
-         (cssom (etaf-css-build-cssom dom))
-         (cssom (etaf-css-add-stylesheet cssom stylesheet))
-         ;; Step 7: 渲染树 - Combine DOM and CSSOM
-         (render-tree (etaf-render-build-tree dom cssom))
-         ;; Step 8: 布局树 - Calculate layout
-         (layout-tree
-          (etaf-layout-build-tree
-           render-tree (list :width (etaf-viewport-width width)
-                             :height height))))
-    ;; Step 9: 最终文本 - Convert layout to string
-    (etaf-layout-to-string layout-tree)))
+                (etaf-perf-measure 'etml-to-dom
+                  (etaf-etml-to-dom etml data))))
+         ;; Stage 3: Build stylesheet
+         (stylesheet (etaf-perf-measure 'build-stylesheet
+                       (if ecss (apply #'etaf-ecss ecss) "")))
+         ;; Stage 4: CSSOM - Build CSS Object Model
+         (cssom (etaf-perf-measure 'build-cssom
+                  (etaf-css-build-cssom dom)))
+         (cssom (etaf-perf-measure 'add-stylesheet
+                  (etaf-css-add-stylesheet cssom stylesheet)))
+         ;; Stage 5: 渲染树 - Combine DOM and CSSOM
+         (render-tree (etaf-perf-measure 'build-render-tree
+                        (etaf-render-build-tree dom cssom)))
+         ;; Stage 6: 布局树 - Calculate layout
+         (layout-tree (etaf-perf-measure 'build-layout-tree
+                        (etaf-layout-build-tree
+                         render-tree (list :width (etaf-viewport-width width)
+                                           :height height)))))
+    ;; Stage 7: 最终文本 - Convert layout to string
+    (etaf-perf-measure 'layout-to-string
+      (etaf-layout-to-string layout-tree))))
 
 ;;;###autoload
 (defun etaf-paint-to-buffer (buffer-or-name

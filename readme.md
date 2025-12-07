@@ -26,6 +26,7 @@ ETAF (Emacs Text-based Application Framework) is a comprehensive framework for b
 - 🎯 **Tailwind CSS** - Built-in support for Tailwind utility classes
 - 📐 **Layout Engine** - Box model and Flexbox layout support
 - ⚡ **Performance Optimized** - Rule indexing and style caching
+- 📊 **Performance Monitoring** - Built-in profiling tool to optimize first-screen loading time
 
 ### Rendering Pipeline
 
@@ -112,6 +113,7 @@ The pipeline follows Vue 3's architecture:
 | [Data Structures](docs/DATA-STRUCTURES.md) | Detailed data structure documentation |
 | [Event Model](docs/EVENT-MODEL.md) | Interactive pseudo-classes and event system |
 | [Virtual DOM](docs/VIRTUAL-DOM.md) | Vue 3-inspired virtual DOM system |
+| [Performance Monitoring](docs/ETAF-PERF.md) | Performance profiling tool for optimizing first-screen loading |
 | [ETAF-EORM](docs/ETAF-EORM.md) | Multi-database ORM (SQLite, PostgreSQL, MySQL) inspired by Diesel |
 
 ## Installation
@@ -165,6 +167,7 @@ ETAF（Emacs Text-based Application Framework）是一个在 Emacs 中构建丰�
 - 🎯 **Tailwind CSS** - 内置 Tailwind 工具类支持
 - 📐 **布局引擎** - 盒模型和 Flexbox 布局支持
 - ⚡ **性能优化** - 规则索引和样式缓存
+- 📊 **性能监控** - 内置性能分析工具，用于优化首屏加载时间
 
 ### 渲染流程
 
@@ -317,6 +320,7 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 | [数据结构](docs/DATA-STRUCTURES.md) | 详细的数据结构文档 |
 | [事件模型](docs/EVENT-MODEL.md) | 交互式伪类和事件系统 |
 | [虚拟 DOM](docs/VIRTUAL-DOM.md) | 参考 Vue 3 设计的虚拟 DOM 系统 |
+| [性能监控](docs/ETAF-PERF.md) | 性能分析工具，用于优化首屏加载时间 |
 | [ETAF-EORM](docs/ETAF-EORM.md) | 参考 Diesel 设计的 多数据库 ORM（SQLite、PostgreSQL、MySQL） |
 
 ## 核心模块
@@ -334,6 +338,7 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 | `etaf-layout-string.el` | 布局树到最终文本字符串的转换 |
 | `etaf-tailwind.el` | Tailwind CSS 支持 |
 | `etaf-ecss.el` | Emacs 风格的 CSS 表达式 |
+| `etaf-perf.el` | 性能监控和分析工具 |
 | `etaf-eorm.el` | 多数据库 ORM 库（SQLite、PostgreSQL、MySQL），参考 Diesel 设计 |
 
 ## 安装
