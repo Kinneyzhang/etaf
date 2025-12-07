@@ -62,52 +62,6 @@ An ecss tag is (ecss ...) used at the element level."
   (and (listp item)
        (eq (car item) 'ecss)))
 
-(defun etaf-etml--process-ecss-content (ecss-form scope-id)
-  "Process ECSS-FORM and return CSS string with selectors scoped by SCOPE-ID.
-ECSS-FORM must be in unified format: (ecss \"selector{tailwind-classes}\" ...).
-Multiple unified format strings can be provided.
-Returns CSS string with selectors prefixed by scope class."
-  (require 'etaf-ecss)
-  (let* ((args (cdr ecss-form)))
-    ;; Validate that all arguments are in unified format
-    (dolist (arg args)
-      (unless (and (stringp arg)
-                   (etaf-ecss-unified-p arg))
-        (error "ecss tag only supports unified format: \"selector{tailwind-classes}\". Got: %S" arg)))
-    ;; Get the raw CSS string
-    (let ((raw-css (apply #'etaf-ecss args)))
-      ;; Handle multiple rules (separated by newlines)
-      (mapconcat
-       (lambda (rule)
-         (when (not (string-empty-p (string-trim rule)))
-           ;; Add scope prefix to the selector
-           ;; CSS format is: "selector { declarations }"
-           ;; We need to transform it to ".scope-id selector { declarations }"
-           (if (string-match "^\\([^{]+\\)\\({.*\\)$" rule)
-               (let ((selector (string-trim (match-string 1 rule)))
-                     (rest (match-string 2 rule)))
-                 (format ".%s %s %s" scope-id selector rest))
-             rule)))
-       (split-string raw-css "\n" t)
-       "\n"))))
-
-(defun etaf-etml--add-scope-class (node scope-id)
-  "Add SCOPE-ID class to NODE's class attribute.
-NODE is in DOM format: (tag ((attrs...) children...)).
-Note: This function is kept for utility purposes but is no longer used
-in the main ecss scoping flow. Scope classes are now added to parent
-elements directly in `etaf-etml--to-dom'.
-Returns modified node."
-  (when (and (listp node) (symbolp (car node)))
-    (let* ((attrs (cadr node))
-           (class-attr (assq 'class attrs)))
-      (if class-attr
-          ;; Append scope ID to existing class
-          (setcdr class-attr (concat (cdr class-attr) " " scope-id))
-        ;; Add new class attribute
-        (setcar (cdr node) (cons (cons 'class scope-id) attrs)))))
-  node)
-
 (defun etaf-plist-to-alist (plist)
   "Convert a plist to an alist.
 Example: (:class \"foo\" :id \"bar\")
@@ -918,14 +872,6 @@ Produces VNode:
       ;; Remaining items are children - recursively create VNodes
       (setq children (mapcar #'etaf-vdom-create-from-etml rest))
       
-      ;; Handle ecss in children (scoped CSS)
-      (when (cl-some (lambda (c) (and (listp c) (eq (car c) 'ecss))) rest)
-        (let ((scope-id (etaf-etml--generate-scope-id)))
-          ;; Add scope class to props
-          (setq props (etaf-vdom--add-scope-class props scope-id))
-          ;; Process ecss children
-          (setq children (etaf-vdom--process-ecss-children rest scope-id))))
-      
       ;; Create element VNode
       (etaf-vdom-element tag props children)))
    
@@ -967,40 +913,6 @@ For interactive tags like 'a', 'button', etc., add default handlers."
       ;; Add more tags as needed
       (_ result))
     result))
-
-(defun etaf-vdom--add-scope-class (props scope-id)
-  "Add SCOPE-ID to class in PROPS."
-  (let* ((class (plist-get props :class))
-         (new-class (if class
-                        (concat class " " scope-id)
-                      scope-id)))
-    (plist-put (copy-sequence props) :class new-class)))
-
-(defun etaf-vdom--process-ecss-children (children scope-id)
-  "Process CHILDREN with ecss tags, applying SCOPE-ID.
-Returns list of VNodes with scoped CSS."
-  (let ((ecss-nodes nil)
-        (other-nodes nil))
-    ;; Separate ecss from other children
-    (dolist (child children)
-      (if (and (listp child) (eq (car child) 'ecss))
-          (push child ecss-nodes)
-        (push child other-nodes)))
-    
-    (if (null ecss-nodes)
-        ;; No ecss, process normally
-        (mapcar #'etaf-vdom-create-from-etml children)
-      ;; Has ecss - create scoped style
-      (require 'etaf-ecss)
-      (let* ((css-parts (mapcar (lambda (ecss-form)
-                                  (etaf-etml--process-ecss-content ecss-form scope-id))
-                                (nreverse ecss-nodes)))
-             (css-string (mapconcat #'identity css-parts "\n"))
-             (style-vnode (etaf-vdom-element 'style
-                                             (list :textContent css-string)
-                                             nil))
-             (other-vnodes (mapcar #'etaf-vdom-create-from-etml (nreverse other-nodes))))
-        (cons style-vnode other-vnodes)))))
 
 ;;; ============================================================================
 ;;; Template Analysis - Detect Dynamic Content
