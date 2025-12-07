@@ -27,6 +27,7 @@ ETAF (Emacs Text-based Application Framework) is a comprehensive framework for b
 - 📐 **Layout Engine** - Box model and Flexbox layout support
 - 📝 **Smart Typesetting** - Integrated Knuth-Plass algorithm for hybrid CJK and Latin text justification
 - ⚡ **Performance Optimized** - Rule indexing and style caching
+- 📊 **Performance Monitoring** - Built-in profiling tool to optimize first-screen loading time
 
 ### Rendering Pipeline
 
@@ -113,6 +114,7 @@ The pipeline follows Vue 3's architecture:
 | [Data Structures](docs/DATA-STRUCTURES.md) | Detailed data structure documentation |
 | [Event Model](docs/EVENT-MODEL.md) | Interactive pseudo-classes and event system |
 | [Virtual DOM](docs/VIRTUAL-DOM.md) | Vue 3-inspired virtual DOM system |
+| [Performance Monitoring](docs/ETAF-PERF.md) | Performance profiling tool for optimizing first-screen loading |
 | [ETAF-EORM](docs/ETAF-EORM.md) | Multi-database ORM (SQLite, PostgreSQL, MySQL) inspired by Diesel |
 
 ## Installation
@@ -167,6 +169,7 @@ ETAF（Emacs Text-based Application Framework）是一个在 Emacs 中构建丰�
 - 📐 **布局引擎** - 盒模型和 Flexbox 布局支持
 - 📝 **智能排版** - 集成 Knuth-Plass 算法，支持 CJK 与拉丁系语言的混合排版
 - ⚡ **性能优化** - 规则索引和样式缓存
+- 📊 **性能监控** - 内置性能分析工具，用于优化首屏加载时间
 
 ### 渲染流程
 
@@ -353,6 +356,7 @@ ETAF 集成了 Knuth-Plass 排版算法（etaf-kp），实现了 CJK 与拉丁�
 | [数据结构](docs/DATA-STRUCTURES.md) | 详细的数据结构文档 |
 | [事件模型](docs/EVENT-MODEL.md) | 交互式伪类和事件系统 |
 | [虚拟 DOM](docs/VIRTUAL-DOM.md) | 参考 Vue 3 设计的虚拟 DOM 系统 |
+| [性能监控](docs/ETAF-PERF.md) | 性能分析工具，用于优化首屏加载时间 |
 | [ETAF-EORM](docs/ETAF-EORM.md) | 参考 Diesel 设计的 多数据库 ORM（SQLite、PostgreSQL、MySQL） |
 
 ## 核心模块
@@ -370,6 +374,7 @@ ETAF 集成了 Knuth-Plass 排版算法（etaf-kp），实现了 CJK 与拉丁�
 | `etaf-layout-string.el` | 布局树到最终文本字符串的转换 |
 | `etaf-tailwind.el` | Tailwind CSS 支持 |
 | `etaf-ecss.el` | Emacs 风格的 CSS 表达式 |
+| `etaf-perf.el` | 性能监控和分析工具 |
 | `etaf-eorm.el` | 多数据库 ORM 库（SQLite、PostgreSQL、MySQL），参考 Diesel 设计 |
 | `etaf-kp.el` | Knuth-Plass 排版算法实现，支持 CJK 与拉丁系语言的混合排版 |
 | `etaf-pixel.el` | 像素级字符串操作，集成 etaf-kp 实现文本自动换行和对齐 |
