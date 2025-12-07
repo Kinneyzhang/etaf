@@ -3,6 +3,13 @@
 (require 'etaf-pixel)
 (require 'cl-lib)
 
+(defun etaf-pop-to-buffer (buffer-or-name &optional action norecord)
+  (pop-to-buffer buffer-or-name action norecord)
+  (local-set-key "q" (lambda ()
+                       (interactive)
+                       (local-unset-key "q")
+                       (quit-window))))
+
 (defun etaf-theme-dark-p ()
   (eq (frame-parameter nil 'background-mode) 'dark))
 

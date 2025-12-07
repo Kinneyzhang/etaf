@@ -109,15 +109,9 @@ itself is fast and memoization would add cache management complexity."
         (require 'etaf-component)
         (etaf-setup-reactive-watchers buffer))
       ;; 显示 buffer
-      (pop-to-buffer buffer)
-      (local-set-key "q" 'etaf-window-quit)
+      (etaf-pop-to-buffer buffer)
       (read-only-mode 1))
     buffer))
-
-(defun etaf-window-quit ()
-  (interactive)
-  (local-unset-key "q")
-  (quit-window))
 
 (defun etaf-get-dom (etml &optional data)
   (etaf-etml-to-dom etml data))

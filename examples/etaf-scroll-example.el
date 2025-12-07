@@ -64,7 +64,7 @@ Line 10: Last line"))
       (insert "\n")
       (insert (propertize "Another Text" 'etaf-layout-content-line "text-uuid-2"))
       ;; 显示 buffer
-      (pop-to-buffer buffer))
+      (etaf-pop-to-buffer buffer))
     
     ;; 展示增量更新
     (message "正在更新文本...")

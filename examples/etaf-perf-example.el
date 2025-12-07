@@ -188,12 +188,12 @@
   (dotimes (i 5)
     (etaf-paint-to-buffer "*perf-demo-6-static*"
       '(div :class "p-4"
-         (h1 "Static Template")
-         (p "This is a static template.")
-         (ul
-          (li "Static item 1")
-          (li "Static item 2")
-          (li "Static item 3")))))
+            (h1 "Static Template")
+            (p "This is a static template.")
+            (ul
+             (li "Static item 1")
+             (li "Static item 2")
+             (li "Static item 3")))))
   
   (let ((static-avg (etaf-perf-get-average 5)))
     
@@ -203,13 +203,13 @@
     (dotimes (i 5)
       (etaf-paint-to-buffer "*perf-demo-6-dynamic*"
         '(div :class "p-4"
-           (h1 "{{ title }}")
-           (p "{{ description }}")
-           (ul
-            (li :e-for "item in items" "{{ item }}")))
+              (h1 "{{ title }}")
+              (p "{{ description }}")
+              (ul
+               (li :e-for "item in items" "{{ item }}")))
         '(:title "Dynamic Template"
-          :description "This is a dynamic template."
-          :items ("Dynamic item 1" "Dynamic item 2" "Dynamic item 3"))))
+                 :description "This is a dynamic template."
+                 :items ("Dynamic item 1" "Dynamic item 2" "Dynamic item 3"))))
     
     (let ((dynamic-avg (etaf-perf-get-average 5)))
       
@@ -219,26 +219,26 @@
           (erase-buffer)
           (insert "=== Static vs Dynamic Template Performance ===\n\n")
           (insert (format "Static Template Average:  %.2f ms\n"
-                         (plist-get static-avg :total)))
+                          (plist-get static-avg :total)))
           (insert (format "Dynamic Template Average: %.2f ms\n"
-                         (plist-get dynamic-avg :total)))
+                          (plist-get dynamic-avg :total)))
           (insert (format "\nDynamic overhead: %.2f ms (%.1f%% slower)\n"
-                         (- (plist-get dynamic-avg :total)
-                            (plist-get static-avg :total))
-                         (* 100.0 (/ (- (plist-get dynamic-avg :total)
-                                        (plist-get static-avg :total))
-                                     (plist-get static-avg :total)))))
+                          (- (plist-get dynamic-avg :total)
+                             (plist-get static-avg :total))
+                          (* 100.0 (/ (- (plist-get dynamic-avg :total)
+                                         (plist-get static-avg :total))
+                                      (plist-get static-avg :total)))))
           (insert "\n--- Static Template Stages ---\n")
           (dolist (stage (plist-get static-avg :stages))
             (insert (format "  %-30s: %6.2f ms\n"
-                           (car stage) (cdr stage))))
+                            (car stage) (cdr stage))))
           (insert "\n--- Dynamic Template Stages ---\n")
           (dolist (stage (plist-get dynamic-avg :stages))
             (insert (format "  %-30s: %6.2f ms\n"
-                           (car stage) (cdr stage))))
+                            (car stage) (cdr stage))))
           (goto-char (point-min))
           (read-only-mode 1))
-        (pop-to-buffer (current-buffer))))))
+        (etaf-pop-to-buffer (current-buffer))))))
 
 ;;; Interactive demo menu
 

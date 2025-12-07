@@ -198,45 +198,52 @@ If N is nil, use all measurements."
 (defun etaf-perf-report (&optional n)
   "Return a formatted performance report string.
 If N is provided, include average of last N measurements."
-  (let ((last (etaf-perf-get-last))
-        (avg (when n (etaf-perf-get-average n))))
-    (with-temp-buffer
-      (insert "=== ETAF Performance Report ===\n\n")
-      
-      ;; Last measurement
-      (when last
-        (insert "Last Measurement:\n")
-        (insert (format "  Total Time: %.4f ms\n"
-                       (plist-get last :total)))
-        (insert "  Stages:\n")
-        (dolist (stage (plist-get last :stages))
-          (let ((name (car stage))
-                (duration (cdr stage)))
-            (insert (format "    %-30s: %10.4f ms (%5.1f%%)\n"
-                           name
-                           duration
-                           (* 100.0 (/ duration (plist-get last :total)))))))
-        (insert "\n"))
-      
-      ;; Average measurements
-      (when avg
-        (insert (format "Average of Last %d Measurements:\n" (plist-get avg :count)))
-        (insert (format "  Total Time: %.4f ms\n"
-                       (plist-get avg :total)))
-        (insert "  Stages:\n")
-        (dolist (stage (plist-get avg :stages))
-          (let ((name (car stage))
-                (duration (cdr stage)))
-            (insert (format "    %-30s: %10.4f ms (%5.1f%%)\n"
-                           name
-                           duration
-                           (* 100.0 (/ duration (plist-get avg :total)))))))
-        (insert "\n"))
-      
-      ;; Summary
-      (insert (format "Total Measurements: %d\n" (length etaf-perf-history)))
-      
-      (buffer-string))))
+  (if etaf-perf-enabled
+      (let ((last (etaf-perf-get-last))
+            (avg (when n (etaf-perf-get-average n))))
+        (with-temp-buffer
+          (insert "=== ETAF Performance Report ===\n\n")
+          
+          ;; Last measurement
+          (when last
+            (insert "Last Measurement:\n")
+            (insert (format "  Total Time: %.4f ms\n"
+                            (plist-get last :total)))
+            (insert "  Stages:\n")
+            (dolist (stage (plist-get last :stages))
+              (let ((name (car stage))
+                    (duration (cdr stage)))
+                (insert
+                 (format "    %-30s: %10.4f ms (%5.1f%%)\n"
+                         name
+                         duration
+                         (* 100.0 (/ duration
+                                     (plist-get last :total)))))))
+            (insert "\n"))
+          
+          ;; Average measurements
+          (when avg
+            (insert (format "Average of Last %d Measurements:\n"
+                            (plist-get avg :count)))
+            (insert (format "  Total Time: %.4f ms\n"
+                            (plist-get avg :total)))
+            (insert "  Stages:\n")
+            (dolist (stage (plist-get avg :stages))
+              (let ((name (car stage))
+                    (duration (cdr stage)))
+                (insert
+                 (format "    %-30s: %10.4f ms (%5.1f%%)\n"
+                         name
+                         duration
+                         (* 100.0 (/ duration (plist-get avg :total)))))))
+            (insert "\n"))
+          
+          ;; Summary
+          (insert
+           (format "Total Measurements: %d\n" (length etaf-perf-history)))
+          
+          (buffer-string)))
+    (message "M-x `etaf-perf-toggle' to turn on etaf-perf first!")))
 
 (defun etaf-perf-show-report (&optional n)
   "Display performance report in a buffer.
@@ -249,7 +256,7 @@ If N is provided, include average of last N measurements."
         (insert report)
         (goto-char (point-min))
         (read-only-mode 1))
-      (pop-to-buffer (current-buffer)))))
+      (etaf-pop-to-buffer (current-buffer)))))
 
 ;;; Optimization suggestions
 
