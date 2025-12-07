@@ -539,7 +539,7 @@ For production use, consider:
   "Disconnect from PostgreSQL database CONN."
   (when-let ((proc (etaf-eorm-connection-handle conn)))
     (when (process-live-p proc)
-      (process-send-string proc "\\q\n")
+      (process-send-string proc "\\\\q\n")
       (delete-process proc))))
 
 (defun etaf-eorm-postgresql-backend-execute (conn sql &optional params)
@@ -936,7 +936,7 @@ Example:
                  (if limit (format " LIMIT %d" limit) "")
                  (if offset (format " OFFSET %d" offset) ""))))
       (etaf-eorm--log "SELECT: %s" sql)
-      (let ((results (etaf-eorm--backend-call conn \'select sql)))
+      (let ((results (etaf-eorm--backend-call conn 'select sql)))
         ;; Convert results to plists
         (when results
           (let* ((all-columns (or columns
@@ -997,8 +997,8 @@ Example:
                           (string-join (nreverse set-clauses) ", "))
                   (etaf-eorm--build-where-clause where))))
         (etaf-eorm--log "UPDATE: %s" sql)
-        (etaf-eorm--backend-call conn \'execute sql)
-        (or (etaf-eorm--backend-call conn \'changes) 0)))))
+        (etaf-eorm--backend-call conn 'execute sql)
+        (or (etaf-eorm--backend-call conn 'changes) 0)))))
 
 (defun etaf-eorm-delete (conn table-name &rest args)
   "Delete rows from TABLE-NAME in database CONN.
@@ -1022,8 +1022,8 @@ Example:
                 (format "DELETE FROM %s" sql-table-name)
                 (etaf-eorm--build-where-clause where))))
       (etaf-eorm--log "DELETE: %s" sql)
-      (etaf-eorm--backend-call conn \'execute sql)
-      (or (etaf-eorm--backend-call conn \'changes) 0))))
+      (etaf-eorm--backend-call conn 'execute sql)
+      (or (etaf-eorm--backend-call conn 'changes) 0))))
 
 ;;; Transaction Support
 
@@ -1031,13 +1031,13 @@ Example:
   "Execute FUNC within a transaction on database CONN.
 If FUNC completes successfully, commit the transaction.
 If FUNC signals an error, rollback the transaction."
-  (etaf-eorm--backend-call conn \'begin-transaction)
+  (etaf-eorm--backend-call conn 'begin-transaction)
   (condition-case err
       (prog1
           (funcall func)
-        (etaf-eorm--backend-call conn \'commit))
+        (etaf-eorm--backend-call conn 'commit))
     (error
-     (etaf-eorm--backend-call conn \'rollback)
+     (etaf-eorm--backend-call conn 'rollback)
      (signal (car err) (cdr err)))))
 
 (defmacro etaf-eorm-with-transaction (db &rest body)
@@ -1166,7 +1166,7 @@ ARGS can include :where clause."
                        (etaf-eorm--symbol-to-sql table-name))
                (etaf-eorm--build-where-clause where))))
     (etaf-eorm--log "COUNT: %s" sql)
-    (caar (etaf-eorm--backend-call conn \'select sql))))
+    (caar (etaf-eorm--backend-call conn 'select sql))))
 
 (defun etaf-eorm-exists-p (conn table-name &rest args)
   "Check if any rows exist in TABLE-NAME matching ARGS.
