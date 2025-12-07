@@ -56,6 +56,7 @@
 
 ;; Forward declarations
 (declare-function etaf-layout-flex-format "etaf-layout-flex")
+(declare-function etaf-layout-grid-format "etaf-layout-grid")
 (declare-function etaf-layout-string-render "etaf-layout-string")
 
 ;;; ============================================================
@@ -432,6 +433,8 @@ PARENT-CONTEXT 是父容器上下文。
       (cond
        ((string= display "flex")
         (etaf-layout-flex-format render-node parent-context))
+       ((string= display "grid")
+        (etaf-layout-grid-format render-node parent-context))
        ((or (string= display "block")
             (null display))
         (etaf-layout-block-formatting-context render-node parent-context))
@@ -447,6 +450,7 @@ PARENT-CONTEXT 是父容器上下文。
 ;;; ============================================================
 
 (require 'etaf-layout-flex)
+(require 'etaf-layout-grid)
 (require 'etaf-layout-string)
 
 (provide 'etaf-layout)
