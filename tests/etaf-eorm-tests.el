@@ -141,6 +141,48 @@
       (delete-file db-path)
       (remhash 'migrate-test etaf-eorm--schemas))))
 
+(ert-deftest etaf-eorm-test-migrate-specific-tables ()
+  "Test migration with specific table names."
+  (skip-unless (and (fboundp 'sqlite-available-p)
+                    (sqlite-available-p)))
+  (let* ((db1-path (make-temp-file "etaf-eorm-test-db1-" nil ".db"))
+         (db2-path (make-temp-file "etaf-eorm-test-db2-" nil ".db"))
+         (db1 (etaf-eorm-connect db1-path))
+         (db2 (etaf-eorm-connect db2-path)))
+    (unwind-protect
+        (progn
+          ;; Define multiple tables
+          (etaf-eorm-define-table table-a
+            (id integer :primary-key t)
+            (name text))
+          (etaf-eorm-define-table table-b
+            (id integer :primary-key t)
+            (value text))
+          (etaf-eorm-define-table table-c
+            (id integer :primary-key t)
+            (data text))
+          
+          ;; Migrate only table-a to db1
+          (etaf-eorm-migrate db1 'table-a)
+          (should (etaf-eorm-table-exists-p db1 'table-a))
+          (should-not (etaf-eorm-table-exists-p db1 'table-b))
+          (should-not (etaf-eorm-table-exists-p db1 'table-c))
+          
+          ;; Migrate table-b and table-c to db2
+          (etaf-eorm-migrate db2 '(table-b table-c))
+          (should-not (etaf-eorm-table-exists-p db2 'table-a))
+          (should (etaf-eorm-table-exists-p db2 'table-b))
+          (should (etaf-eorm-table-exists-p db2 'table-c)))
+      
+      ;; Cleanup
+      (etaf-eorm-disconnect db1)
+      (etaf-eorm-disconnect db2)
+      (delete-file db1-path)
+      (delete-file db2-path)
+      (remhash 'table-a etaf-eorm--schemas)
+      (remhash 'table-b etaf-eorm--schemas)
+      (remhash 'table-c etaf-eorm--schemas))))
+
 ;;; Insert Tests
 
 (ert-deftest etaf-eorm-test-insert ()
