@@ -11,16 +11,40 @@
 (require 'etaf-utils)
 (require 'etaf-eorm)
 
-(defun etaf-html-to-etml (html)
+(defun etaf-html-minify (html-string)
+  "简单的 HTML 压缩：移除多余空白，保留 pre/code 标签内容。"
   (with-temp-buffer
-    (insert html)
+    (insert html-string)
+    (let ((case-fold-search t))  ; 忽略大小写
+      ;; 先将 pre/code 内容中的换行标记
+      (goto-char (point-min))
+      (while (re-search-forward
+              "<\\(pre\\|code\\|textarea\\)\\([^>]*\\)>\\([^<]*\\)</\\1>"
+              nil t)
+        (let ((content (match-string 3)))
+          (save-match-data
+            (setq content (replace-regexp-in-string "\n" "&#10;" content)))
+          (replace-match (concat "<\\1\\2>" content "</\\1>") t)))
+      ;; 压缩空白
+      (goto-char (point-min))
+      (while (re-search-forward "[ \t\n\r]+" nil t)
+        (replace-match " "))
+      ;; 移除标签间空格
+      (goto-char (point-min))
+      (while (re-search-forward "> <" nil t)
+        (replace-match "><"))
+      (string-trim (buffer-string)))))
+
+(defun etaf-html-to-etml (html-string)
+  (with-temp-buffer
+    (insert (etaf-html-minify html-string))
     (etaf-dom-to-tml
      (libxml-parse-html-region
       (point-min) (point-max)))))
 
 (defun etaf-html-file-to-etml (html-file)
   (etaf-html-to-etml
-   (princ (etaf-get-buffer-string html-file t))))
+   (etaf-get-buffer-string html-file t)))
 
 ;; Optional performance monitoring
 (defvar etaf-perf-available
