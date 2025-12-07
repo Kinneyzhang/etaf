@@ -836,7 +836,7 @@ w-20px 应该产生 20px。"
   (should-equal (etaf-tailwind-to-css "basis-100px")
                 '((flex-basis . "100px"))))
 
-;;; 新增: w-fit, w-min, w-max 宽度工具类测试
+;;; 新增：w-fit, w-min, w-max 宽度工具类测试
 
 (ert-deftest etaf-tailwind-test-width-fit-content ()
   "测试 w-fit 转换为 fit-content。
