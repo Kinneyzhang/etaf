@@ -173,7 +173,7 @@ evaluated expression."
   ;; and dark mode styles, allowing automatic theme switching.
   `(div
     (ecss "#pannel-input > div {border-x border-t border-gray-500}"
-          "#pannel-input > div > p {pl-2 italic}"
+          "#pannel-input > div > p {pl-2 italic bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400}"
           "#pannel-input > div > div {px-2 py-1}")
     (div :class "ml-2 mt-1"
          (div :class "flex justify-between w-50"
@@ -184,12 +184,12 @@ evaluated expression."
          (div :class "flex w-200 mt-1"
               (div :id "pannel-input" :class "w-50"
                    (ecss "div:nth-child(2){color:red}")
-                   (div (p :class "bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400" "ETML Structure")
+                   (div (p "ETML Structure")
                         (div (p ,etaf-playground-etml-content)))
-                   (div (p :class "bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400" "CSS Styles")
+                   (div (p "CSS Styles")
                         (div (p ,etaf-playground-css-content)))
                    (div :class "border-b border-gray-500"
-                        (p :class "bg-green-700 dark:bg-gray-600 text-white dark:text-rose-400" "Elisp Data")
+                        (p "Elisp Data")
                         (div (p ,etaf-playground-elisp-content))))
               (div :id "pannel-output"
                    :class "ml-2 w-100 border border-gray-500 px-1"
