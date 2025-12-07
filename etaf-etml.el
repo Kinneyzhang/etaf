@@ -204,11 +204,125 @@ only handles custom inline styles. Returns the ATTR-ALIST unchanged."
   ;; This function is kept for backward compatibility but doesn't merge anything
   attr-alist)
 
+(defun etaf-etml--parse-simple-selector (selector)
+  "Parse a CSS selector and return the most specific part for matching.
+For complex selectors like '#id > div > p', returns 'p'.
+For simple selectors like '.class' or '#id', returns them as-is.
+Returns (:type TYPE :value VALUE) where TYPE is 'tag, 'id, or 'class."
+  (let ((trimmed (string-trim selector)))
+    ;; Handle complex selectors by taking the last part
+    (when (string-match "[ >+~]" trimmed)
+      (let ((parts (split-string trimmed "[ >+~]+" t)))
+        (setq trimmed (string-trim (car (last parts))))))
+    
+    ;; Now parse the simple selector
+    (cond
+     ;; ID selector: "#myid"
+     ((string-match "^#\\([a-zA-Z][-a-zA-Z0-9_]*\\)$" trimmed)
+      (list :type 'id :value (match-string 1 trimmed)))
+     
+     ;; Class selector: ".myclass"
+     ((string-match "^\\.\\([a-zA-Z][-a-zA-Z0-9_]*\\)$" trimmed)
+      (list :type 'class :value (match-string 1 trimmed)))
+     
+     ;; Tag selector: "p" or "div"
+     ((string-match "^[a-zA-Z][a-zA-Z0-9]*$" trimmed)
+      (list :type 'tag :value trimmed))
+     
+     ;; Tag.class selector: "p.myclass" - prioritize class
+     ((string-match "^\\([a-zA-Z][a-zA-Z0-9]*\\)\\.\\([a-zA-Z][-a-zA-Z0-9_]*\\)$" trimmed)
+      (list :type 'tag-class 
+            :tag (match-string 1 trimmed)
+            :class (match-string 2 trimmed)))
+     
+     ;; Default: return nil for unsupported selectors
+     (t nil))))
+
+(defun etaf-etml--node-matches-selector-spec (node spec)
+  "Check if NODE matches the selector SPEC.
+SPEC is a plist from etaf-etml--parse-simple-selector.
+NODE is a DOM node: (tag ((attrs...)) children...)."
+  (when (and node (listp node) (symbolp (car node)) spec)
+    (let ((type (plist-get spec :type))
+          (value (plist-get spec :value))
+          (tag (car node))
+          (attrs (cadr node)))
+      (pcase type
+        ('tag
+         (eq tag (intern value)))
+        
+        ('id
+         (let ((node-id (cdr (assq 'id attrs))))
+           (and node-id (string= node-id value))))
+        
+        ('class
+         (let ((node-classes (cdr (assq 'class attrs))))
+           (and node-classes
+                (string-match-p (concat "\\<" (regexp-quote value) "\\>")
+                               node-classes))))
+        
+        ('tag-class
+         (let ((tag-name (plist-get spec :tag))
+               (class-name (plist-get spec :class))
+               (node-classes (cdr (assq 'class attrs))))
+           (and (eq tag (intern tag-name))
+                node-classes
+                (string-match-p (concat "\\<" (regexp-quote class-name) "\\>")
+                               node-classes))))
+        
+        (_ nil)))))
+
+(defun etaf-etml--apply-ecss-classes-to-node (node ecss-rules scope-selector)
+  "Apply Tailwind classes from ECSS-RULES to NODE if it matches any selector.
+NODE is a DOM node: (tag ((attrs...)) children...).
+ECSS-RULES is a list of (:selector selector :classes classes) plists.
+SCOPE-SELECTOR is the scope prefix like \".etaf-scope-1\".
+Returns the modified node."
+  (when (and (listp node) (symbolp (car node)))
+    (let ((attrs (cadr node))
+          (children (cddr node)))
+      ;; Check if this node matches any ecss selector
+      (dolist (rule ecss-rules)
+        (let* ((selector (plist-get rule :selector))
+               (classes (plist-get rule :classes))
+               (spec (etaf-etml--parse-simple-selector selector)))
+          
+          ;; If node matches the selector spec, add the classes
+          (when (etaf-etml--node-matches-selector-spec node spec)
+            (let ((existing-class (cdr (assq 'class attrs))))
+              (if existing-class
+                  ;; Append to existing class
+                  (setcdr (assq 'class attrs) 
+                         (concat existing-class " " classes))
+                ;; Add new class attribute
+                (setcar (cdr node) 
+                       (cons (cons 'class classes) attrs)))))))
+      
+      ;; Recursively process children
+      (when children
+        (setcar (cddr node)
+                (etaf-etml--apply-ecss-classes-to-tree (car children) ecss-rules scope-selector))
+        (let ((rest (cdddr node)))
+          (while rest
+            (setcar rest (etaf-etml--apply-ecss-classes-to-tree (car rest) ecss-rules scope-selector))
+            (setq rest (cdr rest))))))
+  node)
+
+(defun etaf-etml--apply-ecss-classes-to-tree (node ecss-rules scope-selector)
+  "Recursively apply ECSS classes to NODE and all descendants.
+NODE can be a DOM node or a string.
+ECSS-RULES is a list of (:selector selector :classes classes) plists.
+Returns the modified node/tree."
+  (if (stringp node)
+      node
+    (etaf-etml--apply-ecss-classes-to-node node ecss-rules scope-selector)))
+
 (defun etaf-etml--process-children-with-ecss (children scope-id)
-  "Process CHILDREN list, handling ecss tags for local scope CSS.
-When ecss tags are found, they are converted to style elements with scoped CSS.
+  "Process CHILDREN list, handling ecss tags by applying classes to matching elements.
+When ecss tags are found, their Tailwind classes are applied directly to matching
+child elements' class attributes, enabling dual-mode (light/dark) support.
 The SCOPE-ID is required and should be added to the parent element by the caller.
-Returns processed children list (style element followed by other children)."
+Returns processed children list."
   (let ((ecss-tags nil)
         (other-children nil))
     ;; First pass: separate ecss tags from other children
@@ -222,18 +336,25 @@ Returns processed children list (style element followed by other children)."
     (if (null ecss-tags)
         ;; No ecss tags, process children normally
         (mapcar #'etaf-etml-to-dom children)
-      ;; Has ecss tags: create scoped CSS using provided scope-id
-      (let* (;; Generate scoped CSS from all ecss tags
-             (css-parts (mapcar (lambda (ecss-form)
-                                  (etaf-etml--process-ecss-content ecss-form scope-id))
-                                ecss-tags))
-             (css-string (mapconcat #'identity css-parts "\n"))
-             ;; Create style element for scoped CSS
-             (style-element (list 'style nil css-string))
-             ;; Process other children (no need to add scope class - parent has it)
-             (processed-children (mapcar #'etaf-etml-to-dom other-children)))
-        ;; Return style element followed by processed children
-        (cons style-element processed-children)))))
+      ;; Has ecss tags: parse them to get selector and classes
+      (require 'etaf-ecss)
+      (let* ((ecss-rules nil))
+        ;; Parse all ecss tags to extract selectors and classes
+        (dolist (ecss-form ecss-tags)
+          (let ((args (cdr ecss-form)))
+            (dolist (arg args)
+              (when (etaf-ecss-unified-p arg)
+                (when-let ((parsed (etaf-ecss-parse-to-classes arg)))
+                  (push parsed ecss-rules))))))
+        (setq ecss-rules (nreverse ecss-rules))
+        
+        ;; Process children and apply ecss classes to matching elements
+        (let* ((processed-children (mapcar #'etaf-etml-to-dom other-children))
+               (scope-selector (concat "." scope-id)))
+          ;; Apply ecss classes to all processed children
+          (mapcar (lambda (child)
+                   (etaf-etml--apply-ecss-classes-to-tree child ecss-rules scope-selector))
+                 processed-children))))))
 
 (defun etaf-etml--to-dom (sexp)
   "Convert S-expression from format 1 (plist) to format 2 (alist).
