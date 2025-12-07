@@ -1,0 +1,173 @@
+# Getting Started with ETAF-EORM
+
+ETAF-EORM is now available! This quick guide will help you get started with the new SQLite ORM module.
+
+## Quick Start
+
+### 1. Check Requirements
+
+First, ensure you have Emacs 29.1 or later with SQLite support:
+
+```elisp
+;; Check Emacs version
+M-x emacs-version
+
+;; Check SQLite support
+(and (fboundp 'sqlite-available-p)
+     (sqlite-available-p))
+;; Should return t
+```
+
+### 2. Load ETAF-EORM
+
+```elisp
+(require 'etaf)  ;; This now includes etaf-eorm
+```
+
+### 3. Your First Database
+
+Create a simple todo application:
+
+```elisp
+;; Enable logging to see SQL queries (optional)
+(setq etaf-eorm-enable-logging t)
+
+;; Define schema
+(etaf-eorm-define-table todos
+  (id integer :primary-key t :autoincrement t)
+  (title text :not-null t)
+  (completed boolean :default nil)
+  (created-at datetime :default current-timestamp))
+
+;; Connect to database
+(setq db (etaf-eorm-connect "~/todos.db"))
+
+;; Create table
+(etaf-eorm-migrate db)
+
+;; Insert some todos
+(etaf-eorm-insert db 'todos
+  :title "Learn ETAF-EORM"
+  :completed nil)
+
+(etaf-eorm-insert db 'todos
+  :title "Build an app"
+  :completed nil)
+
+;; Query all todos
+(etaf-eorm-select db 'todos)
+;; => List of plists with todo data
+
+;; Query incomplete todos
+(etaf-eorm-select db 'todos
+  :where '(= completed 0)
+  :order-by 'created-at)
+
+;; Complete a todo
+(etaf-eorm-update db 'todos
+  :set '(:completed 1)
+  :where '(= title "Learn ETAF-EORM"))
+
+;; Count completed todos
+(etaf-eorm-count db 'todos :where '(= completed 1))
+
+;; Delete completed todos
+(etaf-eorm-delete db 'todos
+  :where '(= completed 1))
+
+;; Close connection when done
+(etaf-eorm-disconnect db)
+```
+
+## Examples
+
+Run the comprehensive examples:
+
+```elisp
+;; Load examples
+(load-file "examples/etaf-eorm-example.el")
+
+;; Run all examples
+(etaf-eorm-run-all-examples)
+
+;; Or run individual examples
+(etaf-eorm-example-basic)          ;; Basic CRUD
+(etaf-eorm-example-query-builder)  ;; Query builder
+(etaf-eorm-example-transactions)   ;; Transactions
+(etaf-eorm-example-reactive)       ;; Reactive queries
+(etaf-eorm-example-ui)             ;; UI integration
+```
+
+## Key Features
+
+### Schema Definition
+```elisp
+(etaf-eorm-define-table users
+  (id integer :primary-key t :autoincrement t)
+  (name text :not-null t)
+  (email text :unique t)
+  (age integer)
+  (created-at datetime :default current-timestamp))
+```
+
+### Query Builder
+```elisp
+;; Chainable queries
+(etaf-eorm-query-get
+  (etaf-eorm-query-order-by
+    (etaf-eorm-query-where
+      (etaf-eorm-query db 'users)
+      '(> age 25))
+    'name))
+```
+
+### Transactions
+```elisp
+(etaf-eorm-with-transaction db
+  (etaf-eorm-insert db 'accounts :name "Alice" :balance 1000)
+  (etaf-eorm-update db 'accounts 
+    :set '(:balance 900) 
+    :where '(= name "Alice")))
+```
+
+### Reactive Integration
+```elisp
+(let ((users-ref (etaf-eorm-reactive-query
+                   db 'users
+                   (lambda (db table)
+                     (etaf-eorm-select db table)))))
+  ;; Watch for changes
+  (etaf-watch users-ref
+    (lambda (new-val old-val)
+      (message "Users updated!")))
+  
+  ;; Any insert/update/delete will trigger the watch
+  (etaf-eorm-insert db 'users :name "New User"))
+```
+
+## Documentation
+
+Full documentation available at:
+- [Complete Guide](docs/ETAF-EORM.md) - User guide and API reference
+- [Implementation Details](docs/ETAF-EORM-IMPLEMENTATION.md) - Architecture and design
+
+## Testing
+
+Run the test suite:
+
+```bash
+cd tests
+emacs -batch -L .. -l etaf-ert.el -l etaf-eorm.el -l etaf-eorm-tests.el -f ert-run-tests-batch-and-exit
+```
+
+## Need Help?
+
+- Check the [examples](examples/etaf-eorm-example.el)
+- Read the [documentation](docs/ETAF-EORM.md)
+- Review the [tests](tests/etaf-eorm-tests.el) for usage patterns
+
+## Inspiration
+
+ETAF-EORM is inspired by [Diesel](https://github.com/diesel-rs/diesel), the Rust ORM library, bringing similar type-safe, composable query building to Emacs Lisp.
+
+Enjoy building database-backed applications in Emacs! 🎉
