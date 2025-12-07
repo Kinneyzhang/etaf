@@ -112,6 +112,7 @@ The pipeline follows Vue 3's architecture:
 | [Data Structures](docs/DATA-STRUCTURES.md) | Detailed data structure documentation |
 | [Event Model](docs/EVENT-MODEL.md) | Interactive pseudo-classes and event system |
 | [Virtual DOM](docs/VIRTUAL-DOM.md) | Vue 3-inspired virtual DOM system |
+| [ETAF-EORM](docs/ETAF-EORM.md) | SQLite ORM library inspired by Diesel |
 
 ## Installation
 
@@ -316,6 +317,7 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 | [数据结构](docs/DATA-STRUCTURES.md) | 详细的数据结构文档 |
 | [事件模型](docs/EVENT-MODEL.md) | 交互式伪类和事件系统 |
 | [虚拟 DOM](docs/VIRTUAL-DOM.md) | 参考 Vue 3 设计的虚拟 DOM 系统 |
+| [ETAF-EORM](docs/ETAF-EORM.md) | 参考 Diesel 设计的 SQLite ORM 库 |
 
 ## 核心模块
 
@@ -332,6 +334,7 @@ ECSS 提供统一的字符串格式来表达 CSS 规则，选择器使用原生 
 | `etaf-layout-string.el` | 布局树到最终文本字符串的转换 |
 | `etaf-tailwind.el` | Tailwind CSS 支持 |
 | `etaf-ecss.el` | Emacs 风格的 CSS 表达式 |
+| `etaf-eorm.el` | SQLite ORM 库，参考 Diesel 设计 |
 
 ## 安装
 
