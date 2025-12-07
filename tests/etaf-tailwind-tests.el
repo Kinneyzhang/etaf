@@ -836,6 +836,101 @@ w-20px 应该产生 20px。"
   (should-equal (etaf-tailwind-to-css "basis-100px")
                 '((flex-basis . "100px"))))
 
+;;; 新增: w-fit, w-min, w-max 宽度工具类测试
+
+(ert-deftest etaf-tailwind-test-width-fit-content ()
+  "测试 w-fit 转换为 fit-content。
+这是 Tailwind CSS 的标准工具类，用于让元素宽度适应内容。"
+  (should-equal (etaf-tailwind-to-css "w-fit")
+                '((width . "fit-content"))))
+
+(ert-deftest etaf-tailwind-test-width-min-content ()
+  "测试 w-min 转换为 min-content。
+这是 Tailwind CSS 的标准工具类，用于让元素宽度收缩到最小内容宽度。"
+  (should-equal (etaf-tailwind-to-css "w-min")
+                '((width . "min-content"))))
+
+(ert-deftest etaf-tailwind-test-width-max-content ()
+  "测试 w-max 转换为 max-content。
+这是 Tailwind CSS 的标准工具类，用于让元素宽度扩展到最大内容宽度。"
+  (should-equal (etaf-tailwind-to-css "w-max")
+                '((width . "max-content"))))
+
+(ert-deftest etaf-tailwind-test-min-width-fit-content ()
+  "测试 min-w-fit 转换为 min-width: fit-content。"
+  (should-equal (etaf-tailwind-to-css "min-w-fit")
+                '((min-width . "fit-content"))))
+
+(ert-deftest etaf-tailwind-test-min-width-min-content ()
+  "测试 min-w-min 转换为 min-width: min-content。"
+  (should-equal (etaf-tailwind-to-css "min-w-min")
+                '((min-width . "min-content"))))
+
+(ert-deftest etaf-tailwind-test-min-width-max-content ()
+  "测试 min-w-max 转换为 min-width: max-content。"
+  (should-equal (etaf-tailwind-to-css "min-w-max")
+                '((min-width . "max-content"))))
+
+(ert-deftest etaf-tailwind-test-max-width-fit-content ()
+  "测试 max-w-fit 转换为 max-width: fit-content。"
+  (should-equal (etaf-tailwind-to-css "max-w-fit")
+                '((max-width . "fit-content"))))
+
+(ert-deftest etaf-tailwind-test-max-width-min-content ()
+  "测试 max-w-min 转换为 max-width: min-content。"
+  (should-equal (etaf-tailwind-to-css "max-w-min")
+                '((max-width . "min-content"))))
+
+(ert-deftest etaf-tailwind-test-max-width-max-content ()
+  "测试 max-w-max 转换为 max-width: max-content。"
+  (should-equal (etaf-tailwind-to-css "max-w-max")
+                '((max-width . "max-content"))))
+
+(ert-deftest etaf-tailwind-test-width-intrinsic-sizes-integration ()
+  "测试 w-fit, w-min, w-max 在 CSSOM 集成中的应用。"
+  (require 'etaf-etml)
+  (require 'etaf-css)
+  (let* ((dom (etaf-etml-to-dom
+               '(div
+                  (span :class "w-fit" "Fit content")
+                  (span :class "w-min" "Min content")
+                  (span :class "w-max" "Max content"))))
+         (cssom (etaf-css-build-cssom dom))
+         (spans (dom-search dom (lambda (node) (eq (dom-tag node) 'span)))))
+    ;; 验证第一个 span (w-fit)
+    (let ((span1-style (etaf-css-get-computed-style cssom (nth 0 spans) dom)))
+      (should (equal (cdr (assq 'width span1-style)) "fit-content")))
+    ;; 验证第二个 span (w-min)
+    (let ((span2-style (etaf-css-get-computed-style cssom (nth 1 spans) dom)))
+      (should (equal (cdr (assq 'width span2-style)) "min-content")))
+    ;; 验证第三个 span (w-max)
+    (let ((span3-style (etaf-css-get-computed-style cssom (nth 2 spans) dom)))
+      (should (equal (cdr (assq 'width span3-style)) "max-content")))))
+
+(ert-deftest etaf-tailwind-test-width-special-values ()
+  "测试所有特殊的宽度值（auto, full, screen, fit, min, max）。"
+  (should-equal (etaf-tailwind-to-css "w-auto")
+                '((width . "auto")))
+  (should-equal (etaf-tailwind-to-css "w-full")
+                '((width . "100%")))
+  (should-equal (etaf-tailwind-to-css "w-screen")
+                '((width . "100cw")))
+  (should-equal (etaf-tailwind-to-css "w-fit")
+                '((width . "fit-content")))
+  (should-equal (etaf-tailwind-to-css "w-min")
+                '((width . "min-content")))
+  (should-equal (etaf-tailwind-to-css "w-max")
+                '((width . "max-content"))))
+
+(ert-deftest etaf-tailwind-test-height-intrinsic-sizes ()
+  "测试 h-fit, h-min, h-max 高度工具类。"
+  (should-equal (etaf-tailwind-to-css "h-fit")
+                '((height . "fit-content")))
+  (should-equal (etaf-tailwind-to-css "h-min")
+                '((height . "min-content")))
+  (should-equal (etaf-tailwind-to-css "h-max")
+                '((height . "max-content"))))
+
 (provide 'etaf-tailwind-tests)
 
 ;;; etaf-tailwind-tests.el ends here
