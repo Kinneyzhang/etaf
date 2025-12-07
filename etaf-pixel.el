@@ -1,7 +1,7 @@
 ;; -*- lexical-binding: t -*-
 ;;; String operation related to pixel
 
-(require 'ekp)
+(require 'etaf-kp)
 
 ;; Local replacement for s-wrap to avoid external dependency
 (defun etaf-pixel--wrap-string (s left &optional right)
@@ -97,7 +97,7 @@ make it at the right of TOTAL-PIXEL width."
 ;; keep words readable
 (defun etaf-pixel-wrap (s pixel)
   "Wrap string s to make each line up to PIXEL width."
-  (ekp-pixel-justify s pixel))
+  (etaf-kp-pixel-justify s pixel))
 
 (defun etaf-pixel-typeset (s pixel &optional align)
   (let ((str-pixel (string-pixel-width s)))
