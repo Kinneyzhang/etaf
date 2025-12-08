@@ -240,6 +240,43 @@
           (read-only-mode 1))
         (etaf-pop-to-buffer (current-buffer))))))
 
+;;; Example 7: Data inspection with collapsible sections
+
+(defun etaf-perf-example-7-data-inspection ()
+  "Demonstrate data inspection with collapsible sections."
+  (interactive)
+  
+  ;; Enable performance monitoring (single command)
+  (etaf-perf-toggle)
+  
+  ;; Ensure data capture is enabled
+  (setq etaf-perf-capture-data t)
+  
+  ;; Clear any existing data
+  (etaf-perf-clear)
+  
+  ;; Render a dynamic template to generate all data structures
+  (message "Rendering dynamic template for data inspection...")
+  (etaf-paint-to-buffer "*perf-demo-7*"
+    '(div :class "flex flex-col p-4 bg-gray-100"
+       (h1 :class "text-2xl font-bold mb-4" "{{ title }}")
+       (p :class "text-gray-700 mb-2" "{{ description }}")
+       (ul :class "list-disc pl-5"
+         (li :e-for "item in items" 
+           :class "text-blue-600" 
+           "{{ item }}")))
+    '(:title "Data Inspection Demo"
+      :description "This template generates all intermediate data structures"
+      :items ("VNode" "DOM" "CSSOM" "Render Tree" "Layout Tree")))
+  
+  ;; Show the combined report with both metrics and data
+  (sit-for 0.5)
+  (message "Opening data inspection buffer...")
+  (etaf-perf-show-data)
+  
+  ;; Show instructions
+  (message "Use TAB to expand/collapse sections. Press C-h m for more help."))
+
 ;;; Interactive demo menu
 
 ;;;###autoload
@@ -263,6 +300,8 @@
       (insert "   Performance analysis and bottleneck detection\n\n")
       (insert "6. M-x etaf-perf-example-6-comparison\n")
       (insert "   Static vs Dynamic template comparison\n\n")
+      (insert "7. M-x etaf-perf-example-7-data-inspection\n")
+      (insert "   Data inspection with collapsible sections (NEW!)\n\n")
       (insert "Press 'q' to quit this buffer.\n")
       (goto-char (point-min))
       (read-only-mode 1)

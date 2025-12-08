@@ -242,6 +242,89 @@
     (when (get-buffer "*test-perf-multiple*")
       (kill-buffer "*test-perf-multiple*"))))
 
+;;; Data capture tests
+
+(ert-deftest etaf-perf-test-data-capture-enabled ()
+  "Test that data capture can be enabled."
+  (etaf-perf-tests--reset)
+  (setq etaf-perf-capture-data t)
+  (should etaf-perf-capture-data))
+
+(ert-deftest etaf-perf-test-capture-function ()
+  "Test the etaf-perf-capture function."
+  (etaf-perf-tests--reset)
+  (etaf-perf-enable)
+  (setq etaf-perf-capture-data t)
+  (etaf-perf-start)
+  (etaf-perf-capture 'test-data '(some data))
+  (let ((captured (plist-get etaf-perf-data :captured-data)))
+    (should captured)
+    (should (equal (plist-get captured 'test-data) '(some data)))))
+
+(ert-deftest etaf-perf-test-data-in-history ()
+  "Test that captured data is stored in history."
+  (etaf-perf-tests--reset)
+  (etaf-perf-enable)
+  (setq etaf-perf-capture-data t)
+  (etaf-perf-start)
+  (etaf-perf-capture 'test-data "test value")
+  (etaf-perf-finish)
+  (let* ((entry (etaf-perf-get-last))
+         (captured (plist-get entry :captured-data)))
+    (should captured)
+    (should (equal (plist-get captured 'test-data) "test value"))))
+
+(ert-deftest etaf-perf-test-integration-with-capture ()
+  "Test performance monitoring with data capture enabled."
+  (etaf-perf-tests--reset)
+  (etaf-perf-enable)
+  (setq etaf-perf-capture-data t)
+  (etaf-perf-install-hooks)
+  (unwind-protect
+      (progn
+        (etaf-paint-to-buffer "*test-perf-capture*"
+          '(div
+             (h1 "{{ title }}")
+             (p "{{ content }}"))
+          '(:title "Test" :content "Content"))
+        (let* ((last (etaf-perf-get-last))
+               (captured (plist-get last :captured-data)))
+          (should last)
+          (should captured)
+          ;; Check that we captured the expected data structures
+          ;; For dynamic templates, we should have vdom, dom, cssom, etc.
+          (should (plist-member captured 'vdom))
+          (should (plist-member captured 'dom))
+          (should (plist-member captured 'cssom))
+          (should (plist-member captured 'render-tree))
+          (should (plist-member captured 'layout-tree))
+          (should (plist-member captured 'render-function))))
+    (etaf-perf-uninstall-hooks)
+    (when (get-buffer "*test-perf-capture*")
+      (kill-buffer "*test-perf-capture*"))))
+
+(ert-deftest etaf-perf-test-show-data ()
+  "Test showing captured data in a buffer."
+  (etaf-perf-tests--reset)
+  (etaf-perf-enable)
+  (setq etaf-perf-capture-data t)
+  (etaf-perf-install-hooks)
+  (unwind-protect
+      (progn
+        (etaf-paint-to-buffer "*test-perf-data*"
+          '(div (h1 "Test")))
+        ;; Try to show the data (should not error)
+        (etaf-perf-show-data)
+        (should (get-buffer "*ETAF Performance Data*"))
+        (with-current-buffer "*ETAF Performance Data*"
+          ;; Check that the buffer has content
+          (should (> (buffer-size) 0))))
+    (etaf-perf-uninstall-hooks)
+    (when (get-buffer "*test-perf-data*")
+      (kill-buffer "*test-perf-data*"))
+    (when (get-buffer "*ETAF Performance Data*")
+      (kill-buffer "*ETAF Performance Data*"))))
+
 ;;; Test runner
 
 (defun etaf-perf-run-tests ()
