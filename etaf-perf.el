@@ -172,9 +172,9 @@ START-TIME is the time when the stage started."
 DATA-NAME is a symbol identifying the data (e.g., 'vdom, 'dom).
 DATA-VALUE is the data structure to capture."
   (when (and etaf-perf-enabled etaf-perf-data etaf-perf-capture-data)
-    (let ((captured (plist-get etaf-perf-data :captured-data)))
-      (plist-put etaf-perf-data :captured-data
-                 (plist-put captured data-name data-value)))))
+    (let* ((captured (plist-get etaf-perf-data :captured-data))
+           (updated-captured (plist-put captured data-name data-value)))
+      (plist-put etaf-perf-data :captured-data updated-captured))))
 
 (defun etaf-perf-finish ()
   "Finish the current performance measurement and save to history."
@@ -324,11 +324,7 @@ If INITIALLY-COLLAPSED is non-nil, the section starts collapsed."
       (insert content)
       (unless (string-suffix-p "\n" content)
         (insert "\n")))
-    (insert "\n")
-    ;; Apply outline properties
-    (put-text-property start (point) 'outline-level (lambda () 1))
-    (when initially-collapsed
-      (outline-hide-subtree))))
+    (insert "\n")))
 
 (defun etaf-perf-show-data (&optional entry-index)
   "Display captured rendering data in a buffer.
@@ -471,47 +467,58 @@ If N is provided, include average of last N measurements."
 (defun etaf-perf--paint-with-capture (etml data ecss width height)
   "Execute paint with data capture enabled.
 This reimplements etaf-paint-string to capture intermediate data."
-  (let* (;; Stage 1: Check if template has dynamic content
-         (has-dynamic (etaf-perf-measure 'check-dynamic-content
+  (let* ((has-dynamic (etaf-perf-measure 'check-dynamic-content
                         (etaf-etml-has-dynamic-content-p etml)))
-         ;; Capture render function for dynamic templates
-         render-fn
-         vnode
-         ;; Stage 2: Generate DOM
-         (dom (if has-dynamic
-                  ;; Dynamic path: ETML → Compiler → Render Function → VNode → DOM
-                  (etaf-perf-measure 'etml-compile-and-render
-                    (setq render-fn (etaf-compile etml))
-                    (etaf-perf-capture 'render-function render-fn)
-                    (setq vnode (funcall render-fn data))
-                    (etaf-perf-capture 'vdom vnode)
-                    (etaf-vdom-render vnode))
-                ;; Static path: ETML → DOM directly
-                (etaf-perf-measure 'etml-to-dom
-                  (etaf-etml-to-dom etml data))))
-         _ (etaf-perf-capture 'dom dom)
-         ;; Stage 3: Build stylesheet
-         (stylesheet (etaf-perf-measure 'build-stylesheet
+         (dom (etaf-perf--render-to-dom etml data has-dynamic))
+         (cssom (etaf-perf--build-cssom dom ecss))
+         (render-tree (etaf-perf--build-render-tree dom cssom))
+         (layout-tree (etaf-perf--build-layout-tree render-tree width height)))
+    (etaf-perf-measure 'layout-to-string
+      (etaf-layout-to-string layout-tree))))
+
+(defun etaf-perf--render-to-dom (etml data has-dynamic)
+  "Render ETML to DOM with data capture.
+HAS-DYNAMIC indicates if template has dynamic content."
+  (let ((dom
+         (if has-dynamic
+             (etaf-perf-measure 'etml-compile-and-render
+               (let* ((render-fn (etaf-compile etml))
+                      (vnode (progn
+                               (etaf-perf-capture 'render-function render-fn)
+                               (funcall render-fn data))))
+                 (etaf-perf-capture 'vdom vnode)
+                 (etaf-vdom-render vnode)))
+           (etaf-perf-measure 'etml-to-dom
+             (etaf-etml-to-dom etml data)))))
+    (etaf-perf-capture 'dom dom)
+    dom))
+
+(defun etaf-perf--build-cssom (dom ecss)
+  "Build CSSOM from DOM and optional ECSS with data capture."
+  (let* ((stylesheet (etaf-perf-measure 'build-stylesheet
                        (if ecss (apply #'etaf-ecss ecss) "")))
-         ;; Stage 4: CSSOM - Build CSS Object Model
          (cssom (etaf-perf-measure 'build-cssom
                   (etaf-css-build-cssom dom)))
          (cssom (etaf-perf-measure 'add-stylesheet
-                  (etaf-css-add-stylesheet cssom stylesheet)))
-         _ (etaf-perf-capture 'cssom cssom)
-         ;; Stage 5: Render tree - Combine DOM and CSSOM
-         (render-tree (etaf-perf-measure 'build-render-tree
-                        (etaf-render-build-tree dom cssom)))
-         _ (etaf-perf-capture 'render-tree render-tree)
-         ;; Stage 6: Layout tree - Calculate layout
-         (layout-tree (etaf-perf-measure 'build-layout-tree
-                        (etaf-layout-build-tree
-                         render-tree (list :width (etaf-viewport-width width)
-                                           :height height))))
-         _ (etaf-perf-capture 'layout-tree layout-tree))
-    ;; Stage 7: Final string - Convert layout to string
-    (etaf-perf-measure 'layout-to-string
-      (etaf-layout-to-string layout-tree))))
+                  (etaf-css-add-stylesheet cssom stylesheet))))
+    (etaf-perf-capture 'cssom cssom)
+    cssom))
+
+(defun etaf-perf--build-render-tree (dom cssom)
+  "Build render tree from DOM and CSSOM with data capture."
+  (let ((render-tree (etaf-perf-measure 'build-render-tree
+                       (etaf-render-build-tree dom cssom))))
+    (etaf-perf-capture 'render-tree render-tree)
+    render-tree))
+
+(defun etaf-perf--build-layout-tree (render-tree width height)
+  "Build layout tree from render tree with data capture."
+  (let ((layout-tree (etaf-perf-measure 'build-layout-tree
+                       (etaf-layout-build-tree
+                        render-tree (list :width (etaf-viewport-width width)
+                                          :height height)))))
+    (etaf-perf-capture 'layout-tree layout-tree)
+    layout-tree))
 
 ;;;###autoload
 (defun etaf-perf-install-hooks ()
