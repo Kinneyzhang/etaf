@@ -321,12 +321,9 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; flex 容器自身没有指定宽度时，应该使用父容器的可用宽度，这样 justify-content 才能正常工作
          (base-content-width
           (cond
-           ;; screen: 使用视口宽度
+           ;; screen: 直接使用视口宽度（不减去 padding/border/margin）
            ((eq width-value 'screen)
-            (max 0 (- (etaf-window-content-pixel-width)
-                      padding-left-val padding-right-val
-                      border-left-val border-right-val
-                      margin-left-val margin-right-val)))
+            (etaf-window-content-pixel-width))
            ;; fit-content, min-content, max-content: 暂时设为 0，稍后根据内容计算
            ;; 这些值需要先遍历子元素来确定内容宽度
            ((memq width-value '(fit-content min-content max-content))
@@ -355,12 +352,9 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; - 否则使用 0（后续根据内容计算）
          (base-content-height
           (cond
-           ;; screen: 使用视口高度
+           ;; screen: 直接使用视口高度（不减去 padding/border/margin）
            ((eq height-value 'screen)
-            (max 0 (- (window-body-height)
-                      padding-top-val padding-bottom-val
-                      border-top-val border-bottom-val
-                      margin-top-val margin-bottom-val)))
+            (window-body-height))
            ;; fit-content, min-content, max-content: 暂时设为 0，稍后根据内容计算
            ((memq height-value '(fit-content min-content max-content))
             0)
