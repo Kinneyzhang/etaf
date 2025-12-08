@@ -61,6 +61,7 @@
 ;;; Code:
 
 (require 'cl-lib)
+(require 'pp)  ; For pp-to-string
 
 ;; Forward declarations for functions from other modules
 (declare-function etaf-etml-has-dynamic-content-p "etaf-etml")
@@ -310,10 +311,12 @@ If N is provided, include average of last N measurements."
 ;;; Data inspection functions
 
 (defun etaf-perf--pp-to-string (obj)
-  "Pretty-print OBJ to a string."
-  (with-temp-buffer
-    (cl-prettyprint obj)
-    (buffer-string)))
+  "Pretty-print OBJ to a string.
+Uses `pp-to-string` which is more robust than `cl-prettyprint`."
+  (condition-case err
+      (pp-to-string obj)
+    (error
+     (format "Error formatting data: %s\nRaw data: %S" err obj))))
 
 (defun etaf-perf--insert-collapsible-section (title content &optional initially-collapsed)
   "Insert a collapsible section with TITLE and CONTENT.
