@@ -205,7 +205,8 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (height-value (etaf-css-parse-height 
                         (etaf-css-parse-style-value style 'height "auto") 
                         parent-height))
-         
+         (_ (message "width-value:%S" width-value))
+         (_ (message "height-value:%S" height-value))
          ;; min-width, max-width
          (min-width-value (etaf-css-parse-length
                            (etaf-css-parse-style-value
@@ -282,26 +283,31 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          
          ;; 处理 min/max 值和特殊关键字
          ;; 解析 screen 关键字为视口宽度（如果 viewport 为 nil，则使用窗口宽度）
-         (min-width-val (cond
-                         ((eq min-width-value 'screen)
-                          (or viewport-width (etaf-window-content-pixel-width)))
-                         ((or (eq min-width-value 'auto)
-                              (eq min-width-value 'none))
-                          0)
-                         ((eq min-width-value 'fit-content) 0) ; fit-content 在 min 中相当于 0
-                         ((eq min-width-value 'min-content) 0) ; min-content 在 min 中为 0（不限制）
-                         ((eq min-width-value 'max-content) 0) ; max-content 在 min 中为 0（不限制）
-                         (t min-width-value)))
-         (max-width-val (cond
-                         ((eq max-width-value 'screen)
-                          (or viewport-width (etaf-window-content-pixel-width)))
-                         ((or (eq max-width-value 'auto)
-                              (eq max-width-value 'none))
-                          nil)
-                         ;; fit-content, min-content, max-content 在 max 中不限制
-                         ((memq max-width-value '(fit-content min-content max-content))
-                          nil)
-                         (t max-width-value)))
+         (min-width-val
+          (cond
+           ((eq min-width-value 'screen)
+            (or viewport-width (etaf-window-content-pixel-width)))
+           ((or (eq min-width-value 'auto)
+                (eq min-width-value 'none))
+            0)
+           ;; fit-content 在 min 中相当于 0
+           ((eq min-width-value 'fit-content) 0)
+           ;; min-content 在 min 中为 0（不限制）
+           ((eq min-width-value 'min-content) 0)
+           ;; max-content 在 min 中为 0（不限制）
+           ((eq min-width-value 'max-content) 0)
+           (t min-width-value)))
+         (max-width-val
+          (cond
+           ((eq max-width-value 'screen)
+            (or viewport-width (etaf-window-content-pixel-width)))
+           ((or (eq max-width-value 'auto)
+                (eq max-width-value 'none))
+            nil)
+           ;; fit-content, min-content, max-content 在 max 中不限制
+           ((memq max-width-value '(fit-content min-content max-content))
+            nil)
+           (t max-width-value)))
          (min-height-val (cond
                           ((eq min-height-value 'screen)
                            (or viewport-height (window-body-height)))
@@ -318,18 +324,21 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                           ((or (eq max-height-value 'auto)
                                (eq max-height-value 'none))
                            nil)
-                          ((memq max-height-value '(fit-content min-content max-content))
+                          ((memq max-height-value
+                                 '(fit-content min-content max-content))
                            nil)
                           (t max-height-value)))
          
          ;; 计算内容宽度
          ;; 处理特殊关键字: screen, fit-content, min-content, max-content
-         ;; flex 容器自身没有指定宽度时，应该使用父容器的可用宽度，这样 justify-content 才能正常工作
+         ;; flex 容器自身没有指定宽度时，应该使用父容器的可用宽度，
+         ;; 这样 justify-content 才能正常工作
          (base-content-width
           (cond
            ;; screen: 使用视口宽度（如果 viewport 为 nil，则使用窗口宽度）
            ((eq width-value 'screen)
-            (let ((screen-width (or viewport-width (etaf-window-content-pixel-width))))
+            (let ((screen-width (or viewport-width
+                                    (etaf-window-content-pixel-width))))
               (max 0 (- screen-width
                         padding-left-val padding-right-val
                         border-left-val border-right-val
@@ -340,7 +349,9 @@ PARENT-CONTEXT 包含父容器的上下文信息：
             0)
            ;; auto: 根据上下文决定
            ((eq width-value 'auto)
-            (if (or is-inline is-in-flex-container (null effective-parent-width))
+            (if (or is-inline
+                    ;; is-in-flex-container
+                    (null effective-parent-width))
                 0
               (max 0 (- effective-parent-width
                         padding-left-val padding-right-val
@@ -348,9 +359,10 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                         margin-left-val margin-right-val))))
            ;; 具体数值
            (t width-value)))
-         
+         (_ (message "base-content-width:%S" base-content-width))
          ;; 标记是否需要根据内容计算宽度
-         (needs-content-width (memq width-value '(fit-content min-content max-content)))
+         (needs-content-width (memq width-value
+                                    '(fit-content min-content max-content)))
          
          (content-width (min (or max-width-val most-positive-fixnum)
                              (max min-width-val base-content-width)))
@@ -385,7 +397,8 @@ PARENT-CONTEXT 包含父容器的上下文信息：
            (t height-value)))
          
          ;; 标记是否需要根据内容计算高度
-         (needs-content-height (memq height-value '(fit-content min-content max-content)))
+         (needs-content-height (memq height-value
+                                     '(fit-content min-content max-content)))
          
          (content-height (min (or max-height-val most-positive-fixnum)
                               (max min-height-val base-content-height))))
@@ -435,22 +448,29 @@ PARENT-CONTEXT 包含父容器的上下文信息。
   (message "F-parent-context:%S" parent-context)
   (let* ((box-model (etaf-layout-compute-box-model
                      render-node parent-context))
+         (_ (message "box-model:%S" box-model))
          (content-width (etaf-layout-box-content-width box-model))
          (content-height (etaf-layout-box-content-height box-model))
+         (_ (message "content-width:%S" content-width))
+         (_ (message "content-height:%S" content-height))
          ;; Check if we need shrink-to-fit: original
          ;; parent-width was nil and we're at root with auto width
-         (need-shrink-to-fit (and (null (plist-get parent-context :content-width))
-                                  (plist-get parent-context :is-root)))
+         (need-shrink-to-fit
+          (and (null (plist-get parent-context :content-width))
+               (plist-get parent-context :is-root)))
          (layout-node (etaf-layout-create-node render-node box-model)))
     
     ;; 递归布局子元素
     (let ((children (dom-children render-node)))
       (when children
         (let ((child-context
-               (list :content-width content-width
-                     :content-height content-height
-                     :viewport-width (plist-get parent-context :viewport-width)
-                     :viewport-height (plist-get parent-context :viewport-height)))
+               (list
+                :content-width content-width
+                :content-height content-height
+                ;; :content-width (plist-get parent-context :content-width)
+                ;; :content-height (plist-get parent-context :content-height)
+                :viewport-width (plist-get parent-context :viewport-width)
+                :viewport-height (plist-get parent-context :viewport-height)))
               (child-layouts '())
               (accumulated-height 0)
               (max-child-width 0)  ; Track maximum child width for auto-sizing
