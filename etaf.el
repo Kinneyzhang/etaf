@@ -10,6 +10,7 @@
 (require 'etaf-layout-interactive)
 (require 'etaf-utils)
 (require 'etaf-eorm)
+(require 'etaf-perf)
 
 (defun etaf-html-minify (html-string)
   "简单的 HTML 压缩：移除多余空白，保留 pre/code 标签内容。"
