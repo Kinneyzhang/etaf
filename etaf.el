@@ -71,7 +71,6 @@
       (string-to-number
        (* (frame-char-width) (match-string 1 width))))))))
 
-;;;###autoload
 (defun etaf-paint-string (etml &optional data ecss width height)
   "将 ETML 转换为带有样式的字符串。
 
@@ -134,7 +133,10 @@ itself is fast and memoization would add cache management complexity."
   (let ((buffer (get-buffer-create buffer-or-name)))
     (etaf-switch-to-buffer buffer)
     (let* ((window (get-buffer-window buffer t))
-           (width (or width (format "%spx" (window-pixel-width window)))))
+           (width
+            (or width
+                (format "%spx"
+                        (etaf-window-content-pixel-width window)))))
       (with-current-buffer buffer
         ;; 初始化缓存和响应式绑定
         (etaf-layout-caches-init)

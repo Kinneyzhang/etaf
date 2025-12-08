@@ -3,6 +3,11 @@
 (require 'etaf-pixel)
 (require 'cl-lib)
 
+(defun etaf-window-content-pixel-width (&optional window)
+  (let ((edges (window-body-pixel-edges window)))
+    (- (nth 2 edges) (nth 0 edges)
+       (frame-char-width))))
+
 (defun etaf-get-buffer-string (buffer-name &optional raw)
   (when-let ((buffer (get-buffer buffer-name)))
     (with-current-buffer buffer

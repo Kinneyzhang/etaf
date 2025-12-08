@@ -120,11 +120,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (parent-width (plist-get parent-context :content-width))
          (parent-height (plist-get parent-context :content-height))
          (is-root (plist-get parent-context :is-root))
-         ;; 当parent-width为nil时（viewport width未指定），使用window宽度作为临时值
-         ;; 这样子元素可以正常布局，然后根据实际内容调整父容器宽度
-         (effective-parent-width (or parent-width 
-                                     (when is-root
-                                       (* (window-body-width) (frame-char-width)))))
+         (effective-parent-width parent-width)
          
          ;; 提取样式值
          (box-sizing (etaf-css-parse-style-value

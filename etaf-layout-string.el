@@ -75,7 +75,8 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
          (computed-style-dark (dom-attr layout-node 'computed-style-dark))
          ;; Create tag-metadata for interactive tags (bottom layer capability)
          (tag (dom-tag layout-node))
-         (tag-metadata (etaf-layout-string--create-tag-instance-if-needed tag layout-node))
+         (tag-metadata
+          (etaf-layout-string--create-tag-instance-if-needed tag layout-node))
          (content-width (or (etaf-layout-box-content-width box-model) 0))
          (content-height-px
           (or (etaf-layout-box-content-height box-model) 0))
@@ -319,6 +320,8 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
               (if (> (length inner-content) 0)
                   (etaf-string-linum inner-content)
                 0)))
+
+         ;; (_ (message "justify-width:%S" effective-width))
          
          ;; 1. 调整内容宽度
          (sized-content
@@ -359,7 +362,6 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
          ;; 计算是否溢出
          (is-overflow (and (> content-height-px 0)
                            (> natural-content-height content-height-px)))
-         
          ;; 根据 overflow-y 策略确定是否需要滚动条
          (v-scroll-bar-p (etaf-layout-string--v-scroll-bar-p
                           overflow-y is-overflow))
@@ -399,8 +401,9 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                        :content-linum (length original-lines)
                        :content-height display-height
                        :v-scroll-offset 0
-                       :v-scroll-steps (etaf-layout-v-scroll-steps
-                                        (length original-lines) display-height)
+                       :v-scroll-steps
+                       (etaf-layout-v-scroll-steps
+                        (length original-lines) display-height)
                        :padding-top-height padding-top
                        :padding-bottom-height padding-bottom
                        :border-top-p (> border-top 0)
@@ -559,7 +562,8 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
                              '(mouse-face highlight))
                          ,@(when has-click
                              '(pointer hand))
-                         help-echo ,(etaf-vdom-help-echo-handler tag-metadata))
+                         help-echo ,(etaf-vdom-help-echo-handler
+                                     tag-metadata))
                        result)
                       result)
                   with-v-border))

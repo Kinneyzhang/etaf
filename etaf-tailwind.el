@@ -1597,7 +1597,8 @@ Use px suffix for explicit pixels (e.g., \"20px\")."
          (direction (if is-width 'horizontal 'vertical))
          (size (cond
                 ;; Explicit px suffix
-                ((and value (string-match "^\\([0-9]+\\(?:\\.[0-9]+\\)?\\)px$" value))
+                ((and value (string-match
+                             "^\\([0-9]+\\(?:\\.[0-9]+\\)?\\)px$" value))
                  (concat (match-string 1 value) "px"))
                 ;; Numeric values from spacing scale
                 ((cdr (assoc value etaf-tailwind-spacing-scale))
@@ -1608,11 +1609,13 @@ Use px suffix for explicit pixels (e.g., \"20px\")."
                 ;; Special keywords
                 ((string= value "0") "0")
                 ((string= value "full") "100%")
+                ;; FIXME: w-screen 此时不应该被解析为具体值，
+                ;; 应该在布局阶段被解析为视口的宽度
                 ((string= value "screen")
                  (if is-width
                      ;; min-w-screen/max-w-screen: 使用当前窗口的实际宽度
-                     (format "%dcw" (window-body-width))
-                   "100vh"))
+                     (format "%spx" (etaf-window-content-pixel-width))
+                   (format "%slh" (window-body-height))))
                 ((string= value "none") "none")
                 ((string= value "min") "min-content")
                 ((string= value "max") "max-content")
@@ -1662,7 +1665,7 @@ Default unit is cw (character width). Use px suffix for explicit pixels."
                ((string= value "full") "100%")
                ((string= value "screen")
                 ;; max-w-screen: 使用当前窗口的实际宽度
-                (format "%dcw" (window-body-width)))
+                (format "%spx" (etaf-window-content-pixel-width)))
                ((string= value "min") "min-content")
                ((string= value "max") "max-content")
                ((string= value "fit") "fit-content")
@@ -1832,15 +1835,17 @@ Width使用cw（水平方向字符宽度），Height使用lh（垂直方向行�
                 ;; 百分比
                 ((string-match "^\\([0-9]+\\)/\\([0-9]+\\)$" value)
                  (let ((numerator (string-to-number (match-string 1 value)))
-                       (denominator (string-to-number (match-string 2 value))))
-                   (format "%.6f%%" (* 100.0 (/ (float numerator) denominator)))))
+                       (denominator
+                        (string-to-number (match-string 2 value))))
+                   (format "%.6f%%"
+                           (* 100.0 (/ (float numerator) denominator)))))
                 ;; 特殊值
                 ((string= value "full") "100%")
                 ((string= value "screen")
                  (if (eq property 'width)
                      ;; w-screen: 使用当前窗口的实际宽度（字符单位）
-                     (format "%dcw" (window-body-width))
-                   "100vh"))
+                     (format "%spx" (etaf-window-content-pixel-width))
+                   (format "%slh" (window-body-height))))
                 ((string= value "auto") "auto")
                 ((string= value "min") "min-content")
                 ((string= value "max") "max-content")
