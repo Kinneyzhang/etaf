@@ -89,6 +89,8 @@ VIEWPORT 是视口大小 (:width w :height h)。
 返回布局树根节点。"
   (let ((root-context (list :content-width (plist-get viewport :width)
                             :content-height (plist-get viewport :height)
+                            :viewport-width (plist-get viewport :width)
+                            :viewport-height (plist-get viewport :height)
                             :is-root t)))
     (etaf-layout-node render-tree root-context)))
 
@@ -112,13 +114,17 @@ LAYOUT-TREE 是布局树根节点。
   "从渲染节点计算盒模型。
 RENDER-NODE 是渲染节点。
 PARENT-CONTEXT 包含父容器的上下文信息：
-  :content-width  - 可用内容宽度
-  :content-height - 可用内容高度
-  :is-root        - 是否为根元素（可选）
+  :content-width   - 可用内容宽度
+  :content-height  - 可用内容高度
+  :viewport-width  - 视口宽度（用于 w-screen 等）
+  :viewport-height - 视口高度（用于 h-screen 等）
+  :is-root         - 是否为根元素（可选）
 返回盒模型 plist。"
   (let* ((style (etaf-render-get-computed-style render-node))
          (parent-width (plist-get parent-context :content-width))
          (parent-height (plist-get parent-context :content-height))
+         (viewport-width (plist-get parent-context :viewport-width))
+         (viewport-height (plist-get parent-context :viewport-height))
          (is-root (plist-get parent-context :is-root))
          (effective-parent-width parent-width)
          
@@ -275,10 +281,10 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (is-in-flex-container (plist-get parent-context :flex-container))
          
          ;; 处理 min/max 值和特殊关键字
-         ;; 解析 screen 关键字为视口宽度
+         ;; 解析 screen 关键字为视口宽度（如果 viewport 为 nil，则使用窗口宽度）
          (min-width-val (cond
                          ((eq min-width-value 'screen)
-                          (etaf-window-content-pixel-width))
+                          (or viewport-width (etaf-window-content-pixel-width)))
                          ((or (eq min-width-value 'auto)
                               (eq min-width-value 'none))
                           0)
@@ -288,7 +294,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                          (t min-width-value)))
          (max-width-val (cond
                          ((eq max-width-value 'screen)
-                          (etaf-window-content-pixel-width))
+                          (or viewport-width (etaf-window-content-pixel-width)))
                          ((or (eq max-width-value 'auto)
                               (eq max-width-value 'none))
                           nil)
@@ -298,7 +304,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                          (t max-width-value)))
          (min-height-val (cond
                           ((eq min-height-value 'screen)
-                           (window-body-height))
+                           (or viewport-height (window-body-height)))
                           ((or (eq min-height-value 'auto)
                                (eq min-height-value 'none))
                            0)
@@ -308,7 +314,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                           (t min-height-value)))
          (max-height-val (cond
                           ((eq max-height-value 'screen)
-                           (window-body-height))
+                           (or viewport-height (window-body-height)))
                           ((or (eq max-height-value 'auto)
                                (eq max-height-value 'none))
                            nil)
@@ -321,12 +327,13 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; flex 容器自身没有指定宽度时，应该使用父容器的可用宽度，这样 justify-content 才能正常工作
          (base-content-width
           (cond
-           ;; screen: 使用视口宽度
+           ;; screen: 使用视口宽度（如果 viewport 为 nil，则使用窗口宽度）
            ((eq width-value 'screen)
-            (max 0 (- (etaf-window-content-pixel-width)
-                      padding-left-val padding-right-val
-                      border-left-val border-right-val
-                      margin-left-val margin-right-val)))
+            (let ((screen-width (or viewport-width (etaf-window-content-pixel-width))))
+              (max 0 (- screen-width
+                        padding-left-val padding-right-val
+                        border-left-val border-right-val
+                        margin-left-val margin-right-val))))
            ;; fit-content, min-content, max-content: 暂时设为 0，稍后根据内容计算
            ;; 这些值需要先遍历子元素来确定内容宽度
            ((memq width-value '(fit-content min-content max-content))
@@ -355,12 +362,13 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          ;; - 否则使用 0（后续根据内容计算）
          (base-content-height
           (cond
-           ;; screen: 使用视口高度
+           ;; screen: 使用视口高度（如果 viewport 为 nil，则使用窗口高度）
            ((eq height-value 'screen)
-            (max 0 (- (window-body-height)
-                      padding-top-val padding-bottom-val
-                      border-top-val border-bottom-val
-                      margin-top-val margin-bottom-val)))
+            (let ((screen-height (or viewport-height (window-body-height))))
+              (max 0 (- screen-height
+                        padding-top-val padding-bottom-val
+                        border-top-val border-bottom-val
+                        margin-top-val margin-bottom-val))))
            ;; fit-content, min-content, max-content: 暂时设为 0，稍后根据内容计算
            ((memq height-value '(fit-content min-content max-content))
             0)
@@ -437,7 +445,9 @@ PARENT-CONTEXT 包含父容器的上下文信息。
     (let ((children (dom-children render-node)))
       (when children
         (let ((child-context (list :content-width content-width
-                                   :content-height content-height))
+                                   :content-height content-height
+                                   :viewport-width (plist-get parent-context :viewport-width)
+                                   :viewport-height (plist-get parent-context :viewport-height)))
               (child-layouts '())
               (accumulated-height 0)
               (max-child-width 0)  ; Track maximum child width for auto-sizing

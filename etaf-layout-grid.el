@@ -135,6 +135,8 @@ PARENT-CONTEXT 包含父容器的上下文信息。
       (when children
         (let ((child-context (list :content-width content-width
                                    :content-height content-height
+                                   :viewport-width (plist-get parent-context :viewport-width)
+                                   :viewport-height (plist-get parent-context :viewport-height)
                                    :grid-container t))
               (child-layouts '())
               (grid-items '()))
