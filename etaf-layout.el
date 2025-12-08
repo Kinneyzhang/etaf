@@ -283,8 +283,8 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                               (eq min-width-value 'none))
                           0)
                          ((eq min-width-value 'fit-content) 0) ; fit-content 在 min 中相当于 0
-                         ((eq min-width-value 'min-content) 0) ; min-content 需要计算内容
-                         ((eq min-width-value 'max-content) 0) ; max-content 需要计算内容
+                         ((eq min-width-value 'min-content) 0) ; min-content 在 min 中为 0（不限制）
+                         ((eq min-width-value 'max-content) 0) ; max-content 在 min 中为 0（不限制）
                          (t min-width-value)))
          (max-width-val (cond
                          ((eq max-width-value 'screen)
@@ -527,10 +527,12 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                         (if available-parent-width
                             (min available-parent-width natural-content-width)
                           natural-content-width))
-                       ;; min-content: 内容的最小宽度（这里用natural-content-width近似）
+                       ;; min-content: 内容的最小宽度
+                       ;; TODO: 应该计算最窄点宽度，当前简化为使用子元素最大宽度
                        ((eq width-keyword 'min-content)
                         natural-content-width)
                        ;; max-content: 内容的最大宽度（不换行时的宽度）
+                       ;; TODO: 应该计算无换行时的宽度，当前简化为使用子元素最大宽度
                        ((eq width-keyword 'max-content)
                         natural-content-width)
                        (t natural-content-width))))
@@ -566,9 +568,11 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                             (min available-parent-height natural-content-height)
                           natural-content-height))
                        ;; min-content: 内容的最小高度
+                       ;; TODO: 应该计算最小可能高度，当前简化为使用累积高度
                        ((eq height-keyword 'min-content)
                         natural-content-height)
                        ;; max-content: 内容的最大高度
+                       ;; TODO: 应该计算最大固有高度，当前简化为使用累积高度
                        ((eq height-keyword 'max-content)
                         natural-content-height)
                        (t natural-content-height))))
