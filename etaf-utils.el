@@ -17,6 +17,13 @@
                        (local-unset-key "q")
                        (quit-window))))
 
+(defun etaf-switch-to-buffer (buffer-or-name &optional norecord force-same-window)
+  (switch-to-buffer buffer-or-name norecord force-same-window)
+  (local-set-key "q" (lambda ()
+                       (interactive)
+                       (local-unset-key "q")
+                       (quit-window))))
+
 (defun etaf-theme-dark-p ()
   (eq (frame-parameter nil 'background-mode) 'dark))
 

@@ -132,22 +132,22 @@ itself is fast and memoization would add cache management complexity."
 支持响应式组件的增量更新（使用 etaf-reactive-span）。"
   (declare (indent defun))
   (let ((buffer (get-buffer-create buffer-or-name)))
-    (with-current-buffer buffer
-      ;; 初始化缓存和响应式绑定
-      (etaf-layout-caches-init)
-      (setq-local etaf-reactive-buffer-bindings nil)
-      ;; 渲染内容
-      (let ((inhibit-read-only t))
-        (erase-buffer)
-        (insert (etaf-paint-string etml data ecss width height)))
-      ;; 设置响应式监听器
-      (when etaf-reactive-buffer-bindings
-        (require 'etaf-component)
-        (etaf-setup-reactive-watchers buffer))
-      ;; 显示 buffer
-      (etaf-pop-to-buffer buffer)
-      (read-only-mode 1))
-    buffer))
+    (etaf-switch-to-buffer buffer)
+    (let* ((window (get-buffer-window buffer t))
+           (width (or width (format "%spx" (window-pixel-width window)))))
+      (with-current-buffer buffer
+        ;; 初始化缓存和响应式绑定
+        (etaf-layout-caches-init)
+        (setq-local etaf-reactive-buffer-bindings nil)
+        ;; 渲染内容
+        (let ((inhibit-read-only t))
+          (erase-buffer)
+          (insert (etaf-paint-string etml data ecss width height)))
+        ;; 设置响应式监听器
+        (when etaf-reactive-buffer-bindings
+          (require 'etaf-component)
+          (etaf-setup-reactive-watchers buffer))
+        (read-only-mode 1)))))
 
 (defun etaf-get-dom (etml &optional data)
   (etaf-etml-to-dom etml data))
