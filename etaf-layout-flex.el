@@ -43,7 +43,7 @@
 ;;; Code:
 
 (require 'cl-lib)
-(eval-and-compile (require 'dom))
+(require 'dom)
 (require 'etaf-css-parser)
 (require 'etaf-layout-box)
 
@@ -72,26 +72,37 @@ PARENT-CONTEXT 包含父容器的上下文信息。
 3. 递归布局子元素
 4. 计算主轴分配（flex-grow/shrink）
 5. 计算交叉轴对齐（align-items）"
-  (let* ((box-model (etaf-layout-compute-box-model render-node parent-context))
+  (let* ((box-model (etaf-layout-compute-box-model
+                     render-node parent-context))
          (computed-style (etaf-render-get-computed-style render-node))
          (content-width (etaf-layout-box-content-width box-model))
          (content-height (etaf-layout-box-content-height box-model))
          
+         (_ (message "parent-context:%S" parent-context))
+         
          ;; Flex 容器属性
-         (flex-direction (or (etaf-css-parse-style-value computed-style 'flex-direction)
+         (flex-direction (or (etaf-css-parse-style-value
+                              computed-style 'flex-direction)
                              "row"))
-         (flex-wrap (or (etaf-css-parse-style-value computed-style 'flex-wrap)
+         (flex-wrap (or (etaf-css-parse-style-value
+                         computed-style 'flex-wrap)
                         "nowrap"))
-         (justify-content (or (etaf-css-parse-style-value computed-style 'justify-content)
+         (justify-content (or (etaf-css-parse-style-value
+                               computed-style 'justify-content)
                               "flex-start"))
-         (align-items (or (etaf-css-parse-style-value computed-style 'align-items)
+         (align-items (or (etaf-css-parse-style-value
+                           computed-style 'align-items)
                           "stretch"))
-         (align-content (or (etaf-css-parse-style-value computed-style 'align-content)
+         (align-content (or (etaf-css-parse-style-value
+                             computed-style 'align-content)
                             "stretch"))
-         (row-gap-str (etaf-css-parse-style-value computed-style 'row-gap "0"))
-         (column-gap-str (etaf-css-parse-style-value computed-style 'column-gap "0"))
+         (row-gap-str (etaf-css-parse-style-value
+                       computed-style 'row-gap "0"))
+         (column-gap-str (etaf-css-parse-style-value
+                          computed-style 'column-gap "0"))
          (row-gap-parsed (etaf-css-parse-length row-gap-str content-width))
-         (column-gap-parsed (etaf-css-parse-length column-gap-str content-width))
+         (column-gap-parsed (etaf-css-parse-length
+                             column-gap-str content-width))
          (row-gap (if (eq row-gap-parsed 'auto) 0 row-gap-parsed))
          (column-gap (if (eq column-gap-parsed 'auto) 0 column-gap-parsed))
          
@@ -118,13 +129,16 @@ PARENT-CONTEXT 包含父容器的上下文信息。
     ;; 布局子元素
     (let ((children (dom-children render-node)))
       (when children
-        (let ((child-context (list :content-width content-width
-                                   :content-height content-height
-                                   :viewport-width (plist-get parent-context :viewport-width)
-                                   :viewport-height (plist-get parent-context :viewport-height)
-                                   :flex-container t
-                                   :flex-direction flex-direction
-                                   :align-items align-items))
+        (let ((child-context
+               (list :content-width content-width
+                     :content-height content-height
+                     :viewport-width
+                     (plist-get parent-context :viewport-width)
+                     :viewport-height
+                     (plist-get parent-context :viewport-height)
+                     :flex-container t
+                     :flex-direction flex-direction
+                     :align-items align-items))
               (child-layouts '())
               (flex-items '()))
           
@@ -133,20 +147,24 @@ PARENT-CONTEXT 包含父容器的上下文信息。
             (cond
              ;; 元素节点
              ((and (consp child) (symbolp (car child)))
-              (when-let ((child-layout (etaf-layout-node child child-context)))
+              (when-let ((child-layout
+                          (etaf-layout-node child child-context)))
                 (push child-layout child-layouts)
                 ;; 收集 flex item 信息
                 (let* ((child-style (etaf-render-get-computed-style child))
                        (order (or (etaf-css-parse-flex-number
-                                   (etaf-css-parse-style-value child-style 'order))
+                                   (etaf-css-parse-style-value
+                                    child-style 'order))
                                   0))
                        (flex-grow
                         (or (etaf-css-parse-flex-number
-                             (etaf-css-parse-style-value child-style 'flex-grow))
+                             (etaf-css-parse-style-value
+                              child-style 'flex-grow))
                             0))
                        (flex-shrink
                         (or (etaf-css-parse-flex-number
-                             (etaf-css-parse-style-value child-style 'flex-shrink))
+                             (etaf-css-parse-style-value
+                              child-style 'flex-shrink))
                             1))
                        (flex-basis (etaf-css-parse-style-value
                                     child-style 'flex-basis "auto"))
@@ -200,10 +218,11 @@ PARENT-CONTEXT 包含父容器的上下文信息。
 ;;; 主轴计算
 ;;; ============================================================
 
-(defun etaf-layout-flex-compute-main-axis (layout-node flex-items
-                                                       container-width container-height
-                                                       direction justify-content
-                                                       row-gap column-gap should-wrap)
+(defun etaf-layout-flex-compute-main-axis
+    (layout-node flex-items
+                 container-width container-height
+                 direction justify-content
+                 row-gap column-gap should-wrap)
   "计算 Flex 布局主轴分配。
 LAYOUT-NODE 是 Flex 容器布局节点。
 FLEX-ITEMS 是 Flex Item 列表。
@@ -242,7 +261,8 @@ SHOULD-WRAP 表示是否启用换行。"
               item-sizes)
         (setq total-flex-basis (+ total-flex-basis item-main-size))
         (setq total-flex-grow (+ total-flex-grow (plist-get item :flex-grow)))
-        (setq total-flex-shrink (+ total-flex-shrink (plist-get item :flex-shrink)))))
+        (setq total-flex-shrink
+              (+ total-flex-shrink (plist-get item :flex-shrink)))))
     
     (setq item-sizes (nreverse item-sizes))
     
@@ -254,11 +274,13 @@ SHOULD-WRAP 表示是否启用换行。"
       
       ;; 应用 flex-grow
       (when (and (> free-space 0) (> total-flex-grow 0) (> main-size 0))
-        (etaf-layout-flex--apply-grow flex-items item-sizes free-space total-flex-grow is-row))
+        (etaf-layout-flex--apply-grow
+         flex-items item-sizes free-space total-flex-grow is-row))
       
       ;; 应用 flex-shrink
       (when (and (> overflow-space 0) (> total-flex-shrink 0) (> main-size 0))
-        (etaf-layout-flex--apply-shrink flex-items item-sizes overflow-space total-flex-shrink is-row))
+        (etaf-layout-flex--apply-shrink
+         flex-items item-sizes overflow-space total-flex-shrink is-row))
       
       ;; 存储计算结果
       (dom-set-attribute layout-node 'layout-flex-free-space free-space)
@@ -272,7 +294,8 @@ SHOULD-WRAP 表示是否启用换行。"
           (dom-set-attribute layout-node 'layout-flex-space-distribution
                              space-distribution))))))
 
-(defun etaf-layout-flex--apply-grow (flex-items item-sizes free-space total-flex-grow is-row)
+(defun etaf-layout-flex--apply-grow
+    (flex-items item-sizes free-space total-flex-grow is-row)
   "应用 flex-grow 分配剩余空间。
 FLEX-ITEMS 是 Flex Item 列表。
 ITEM-SIZES 是 Item 尺寸信息列表。
@@ -298,7 +321,8 @@ IS-ROW 表示是否为行方向。"
                 (plist-put (plist-get box-model :content) :width new-content-size)
               (plist-put (plist-get box-model :content) :height new-content-size))))))))
 
-(defun etaf-layout-flex--apply-shrink (flex-items item-sizes overflow-space total-flex-shrink is-row)
+(defun etaf-layout-flex--apply-shrink
+    (flex-items item-sizes overflow-space total-flex-shrink is-row)
   "应用 flex-shrink 缩减溢出空间。
 FLEX-ITEMS 是 Flex Item 列表。
 ITEM-SIZES 是 Item 尺寸信息列表。
@@ -406,9 +430,10 @@ GAP 是行之间的间隙。
 ;;; 交叉轴计算
 ;;; ============================================================
 
-(defun etaf-layout-flex-compute-cross-axis (layout-node flex-items
-                                                        container-width container-height
-                                                        direction align-items align-content)
+(defun etaf-layout-flex-compute-cross-axis
+    (layout-node flex-items
+                 container-width container-height
+                 direction align-items align-content)
   "计算 Flex 布局交叉轴对齐。
 LAYOUT-NODE 是 Flex 容器布局节点。
 FLEX-ITEMS 是 Flex Item 列表。

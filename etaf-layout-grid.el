@@ -46,7 +46,7 @@
 ;;; Code:
 
 (require 'cl-lib)
-(eval-and-compile (require 'dom))
+(require 'dom)
 (require 'etaf-css-parser)
 (require 'etaf-layout-box)
 

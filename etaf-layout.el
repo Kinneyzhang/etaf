@@ -46,7 +46,7 @@
 ;;; Code:
 
 (require 'cl-lib)
-(eval-and-compile (require 'dom))
+(require 'dom)
 (require 'etaf-render)
 (require 'etaf-utils)
 
@@ -432,11 +432,13 @@ PARENT-CONTEXT 包含父容器的上下文信息：
 RENDER-NODE 是要布局的渲染节点。
 PARENT-CONTEXT 包含父容器的上下文信息。
 返回布局节点。"
+  (message "F-parent-context:%S" parent-context)
   (let* ((box-model (etaf-layout-compute-box-model
                      render-node parent-context))
          (content-width (etaf-layout-box-content-width box-model))
          (content-height (etaf-layout-box-content-height box-model))
-         ;; Check if we need shrink-to-fit: original parent-width was nil and we're at root with auto width
+         ;; Check if we need shrink-to-fit: original
+         ;; parent-width was nil and we're at root with auto width
          (need-shrink-to-fit (and (null (plist-get parent-context :content-width))
                                   (plist-get parent-context :is-root)))
          (layout-node (etaf-layout-create-node render-node box-model)))
@@ -444,10 +446,11 @@ PARENT-CONTEXT 包含父容器的上下文信息。
     ;; 递归布局子元素
     (let ((children (dom-children render-node)))
       (when children
-        (let ((child-context (list :content-width content-width
-                                   :content-height content-height
-                                   :viewport-width (plist-get parent-context :viewport-width)
-                                   :viewport-height (plist-get parent-context :viewport-height)))
+        (let ((child-context
+               (list :content-width content-width
+                     :content-height content-height
+                     :viewport-width (plist-get parent-context :viewport-width)
+                     :viewport-height (plist-get parent-context :viewport-height)))
               (child-layouts '())
               (accumulated-height 0)
               (max-child-width 0)  ; Track maximum child width for auto-sizing

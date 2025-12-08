@@ -31,7 +31,7 @@
 ;;; Code:
 
 (require 'cl-lib)
-(eval-and-compile (require 'dom))
+(require 'dom)
 (require 'etaf-utils)
 (require 'etaf-css-face)
 (require 'etaf-layout-box)
