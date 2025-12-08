@@ -451,7 +451,6 @@ PARENT-CONTEXT 包含父容器的上下文信息。
 RENDER-NODE 是渲染节点。
 PARENT-CONTEXT 是父容器上下文。
 返回布局节点或 nil。"
-  ;; (message "render-node:%S" render-node)
   (when render-node
     (let ((display (etaf-render-get-display render-node)))
       (cond
@@ -461,7 +460,6 @@ PARENT-CONTEXT 是父容器上下文。
         (etaf-layout-grid-format render-node parent-context))
        ((or (string= display "block")
             (null display))
-        (message "parent-context:%S" parent-context)
         (etaf-layout-block-formatting-context render-node parent-context))
        ((string= display "inline")
         (etaf-layout-block-formatting-context render-node parent-context))
