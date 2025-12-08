@@ -274,52 +274,110 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (is-flex-container (string= display "flex"))
          (is-in-flex-container (plist-get parent-context :flex-container))
          
-         ;; 处理 min/max 值
-         (min-width-val (if (or (eq min-width-value 'auto)
-                                (eq min-width-value 'none))
-                            0
-                          min-width-value))
-         (max-width-val (if (or (eq max-width-value 'auto)
-                                (eq max-width-value 'none))
-                            nil
-                          max-width-value))
-         (min-height-val (if (or (eq min-height-value 'auto)
-                                 (eq min-height-value 'none))
-                             0
-                           min-height-value))
-         (max-height-val (if (or (eq max-height-value 'auto)
-                                 (eq max-height-value 'none))
-                             nil
-                           max-height-value))
+         ;; 处理 min/max 值和特殊关键字
+         ;; 解析 screen 关键字为视口宽度
+         (min-width-val (cond
+                         ((eq min-width-value 'screen)
+                          (etaf-window-content-pixel-width))
+                         ((or (eq min-width-value 'auto)
+                              (eq min-width-value 'none))
+                          0)
+                         ((eq min-width-value 'fit-content) 0) ; fit-content 在 min 中相当于 0
+                         ((eq min-width-value 'min-content) 0) ; min-content 需要计算内容
+                         ((eq min-width-value 'max-content) 0) ; max-content 需要计算内容
+                         (t min-width-value)))
+         (max-width-val (cond
+                         ((eq max-width-value 'screen)
+                          (etaf-window-content-pixel-width))
+                         ((or (eq max-width-value 'auto)
+                              (eq max-width-value 'none))
+                          nil)
+                         ;; fit-content, min-content, max-content 在 max 中不限制
+                         ((memq max-width-value '(fit-content min-content max-content))
+                          nil)
+                         (t max-width-value)))
+         (min-height-val (cond
+                          ((eq min-height-value 'screen)
+                           (window-body-height))
+                          ((or (eq min-height-value 'auto)
+                               (eq min-height-value 'none))
+                           0)
+                          ((eq min-height-value 'fit-content) 0)
+                          ((eq min-height-value 'min-content) 0)
+                          ((eq min-height-value 'max-content) 0)
+                          (t min-height-value)))
+         (max-height-val (cond
+                          ((eq max-height-value 'screen)
+                           (window-body-height))
+                          ((or (eq max-height-value 'auto)
+                               (eq max-height-value 'none))
+                           nil)
+                          ((memq max-height-value '(fit-content min-content max-content))
+                           nil)
+                          (t max-height-value)))
          
          ;; 计算内容宽度
+         ;; 处理特殊关键字: screen, fit-content, min-content, max-content
          ;; flex 容器自身没有指定宽度时，应该使用父容器的可用宽度，这样 justify-content 才能正常工作
          (base-content-width
-          (if (eq width-value 'auto)
-              (if (or is-inline is-in-flex-container (null effective-parent-width))
-                  0
-                (max 0 (- effective-parent-width
-                          padding-left-val padding-right-val
-                          border-left-val border-right-val
-                          margin-left-val margin-right-val)))
-            width-value))
+          (cond
+           ;; screen: 使用视口宽度
+           ((eq width-value 'screen)
+            (max 0 (- (etaf-window-content-pixel-width)
+                      padding-left-val padding-right-val
+                      border-left-val border-right-val
+                      margin-left-val margin-right-val)))
+           ;; fit-content, min-content, max-content: 暂时设为 0，稍后根据内容计算
+           ;; 这些值需要先遍历子元素来确定内容宽度
+           ((memq width-value '(fit-content min-content max-content))
+            0)
+           ;; auto: 根据上下文决定
+           ((eq width-value 'auto)
+            (if (or is-inline is-in-flex-container (null effective-parent-width))
+                0
+              (max 0 (- effective-parent-width
+                        padding-left-val padding-right-val
+                        border-left-val border-right-val
+                        margin-left-val margin-right-val))))
+           ;; 具体数值
+           (t width-value)))
+         
+         ;; 标记是否需要根据内容计算宽度
+         (needs-content-width (memq width-value '(fit-content min-content max-content)))
          
          (content-width (min (or max-width-val most-positive-fixnum)
                              (max min-width-val base-content-width)))
          
          ;; 计算基础高度
+         ;; 处理特殊关键字: screen, fit-content, min-content, max-content
          ;; - 如果有显式 CSS 高度，使用该值
          ;; - 如果是根元素且有视口高度约束，使用视口高度
          ;; - 否则使用 0（后续根据内容计算）
-         (base-content-height (if (eq height-value 'auto)
-                                  (if (and is-root parent-height)
-                                      ;; 根元素使用视口高度作为约束
-                                      (max 0 (- parent-height
-                                                padding-top-val padding-bottom-val
-                                                border-top-val border-bottom-val
-                                                margin-top-val margin-bottom-val))
-                                    0)
-                                height-value))
+         (base-content-height
+          (cond
+           ;; screen: 使用视口高度
+           ((eq height-value 'screen)
+            (max 0 (- (window-body-height)
+                      padding-top-val padding-bottom-val
+                      border-top-val border-bottom-val
+                      margin-top-val margin-bottom-val)))
+           ;; fit-content, min-content, max-content: 暂时设为 0，稍后根据内容计算
+           ((memq height-value '(fit-content min-content max-content))
+            0)
+           ;; auto: 根据上下文决定
+           ((eq height-value 'auto)
+            (if (and is-root parent-height)
+                ;; 根元素使用视口高度作为约束
+                (max 0 (- parent-height
+                          padding-top-val padding-bottom-val
+                          border-top-val border-bottom-val
+                          margin-top-val margin-bottom-val))
+              0))
+           ;; 具体数值
+           (t height-value)))
+         
+         ;; 标记是否需要根据内容计算高度
+         (needs-content-height (memq height-value '(fit-content min-content max-content)))
          
          (content-height (min (or max-height-val most-positive-fixnum)
                               (max min-height-val base-content-height))))
@@ -348,7 +406,14 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                           :v-scroll-bar-type v-scroll-bar-type
                           :v-scroll-bar-direction v-scroll-bar-direction
                           :scroll-thumb-color scroll-thumb-color
-                          :scroll-track-color scroll-track-color))))
+                          :scroll-track-color scroll-track-color)
+          ;; 添加元数据用于后续处理
+          :width-keyword width-value  ; 保存原始的width关键字（fit-content等）
+          :height-keyword height-value  ; 保存原始的height关键字
+          :needs-content-width needs-content-width
+          :needs-content-height needs-content-height
+          :parent-width effective-parent-width
+          :parent-height parent-height)))
 
 ;;; ============================================================
 ;;; 布局算法
@@ -432,6 +497,83 @@ PARENT-CONTEXT 包含父容器的上下文信息。
             (let ((box (etaf-layout-get-box-model layout-node)))
               (plist-put (plist-get box :content)
                          :height accumulated-height)))
+          
+          ;; 处理特殊宽度关键字：fit-content, min-content, max-content
+          (let ((box (etaf-layout-get-box-model layout-node)))
+            (when (plist-get box :needs-content-width)
+              (let* ((width-keyword (plist-get box :width-keyword))
+                     (parent-width (plist-get box :parent-width))
+                     (padding (plist-get box :padding))
+                     (border (plist-get box :border))
+                     (margin (plist-get box :margin))
+                     ;; 计算父容器可用宽度（减去padding、border、margin）
+                     (available-parent-width
+                      (when parent-width
+                        (max 0 (- parent-width
+                                  (plist-get padding :left)
+                                  (plist-get padding :right)
+                                  (plist-get border :left-width)
+                                  (plist-get border :right-width)
+                                  (plist-get margin :left)
+                                  (plist-get margin :right)))))
+                     ;; 内容的自然宽度是子元素的最大宽度
+                     (natural-content-width max-child-width)
+                     ;; 根据关键字确定最终宽度
+                     (final-width
+                      (cond
+                       ;; fit-content: min(parent-width, max(min-content, content-width))
+                       ;; 这里简化为 min(parent-width, content-width)
+                       ((eq width-keyword 'fit-content)
+                        (if available-parent-width
+                            (min available-parent-width natural-content-width)
+                          natural-content-width))
+                       ;; min-content: 内容的最小宽度（这里用natural-content-width近似）
+                       ((eq width-keyword 'min-content)
+                        natural-content-width)
+                       ;; max-content: 内容的最大宽度（不换行时的宽度）
+                       ((eq width-keyword 'max-content)
+                        natural-content-width)
+                       (t natural-content-width))))
+                (plist-put (plist-get box :content)
+                           :width final-width))))
+          
+          ;; 处理特殊高度关键字：fit-content, min-content, max-content
+          (let ((box (etaf-layout-get-box-model layout-node)))
+            (when (plist-get box :needs-content-height)
+              (let* ((height-keyword (plist-get box :height-keyword))
+                     (parent-height (plist-get box :parent-height))
+                     (padding (plist-get box :padding))
+                     (border (plist-get box :border))
+                     (margin (plist-get box :margin))
+                     ;; 计算父容器可用高度（减去padding、border、margin）
+                     (available-parent-height
+                      (when parent-height
+                        (max 0 (- parent-height
+                                  (plist-get padding :top)
+                                  (plist-get padding :bottom)
+                                  (plist-get border :top-width)
+                                  (plist-get border :bottom-width)
+                                  (plist-get margin :top)
+                                  (plist-get margin :bottom)))))
+                     ;; 内容的自然高度是累积的子元素高度
+                     (natural-content-height accumulated-height)
+                     ;; 根据关键字确定最终高度
+                     (final-height
+                      (cond
+                       ;; fit-content: min(parent-height, content-height)
+                       ((eq height-keyword 'fit-content)
+                        (if available-parent-height
+                            (min available-parent-height natural-content-height)
+                          natural-content-height))
+                       ;; min-content: 内容的最小高度
+                       ((eq height-keyword 'min-content)
+                        natural-content-height)
+                       ;; max-content: 内容的最大高度
+                       ((eq height-keyword 'max-content)
+                        natural-content-height)
+                       (t natural-content-height))))
+                (plist-put (plist-get box :content)
+                           :height final-height))))
           
           ;; 宽度shrink-to-fit：当viewport width为nil且根元素width为auto时，
           ;; 使用子元素最大宽度作为容器宽度

@@ -1609,13 +1609,8 @@ Use px suffix for explicit pixels (e.g., \"20px\")."
                 ;; Special keywords
                 ((string= value "0") "0")
                 ((string= value "full") "100%")
-                ;; FIXME: w-screen 此时不应该被解析为具体值，
-                ;; 应该在布局阶段被解析为视口的宽度
-                ((string= value "screen")
-                 (if is-width
-                     ;; min-w-screen/max-w-screen: 使用当前窗口的实际宽度
-                     (format "%spx" (etaf-window-content-pixel-width))
-                   (format "%slh" (window-body-height))))
+                ;; w-screen/h-screen: 保留为特殊值，在布局阶段解析
+                ((string= value "screen") "screen")
                 ((string= value "none") "none")
                 ((string= value "min") "min-content")
                 ((string= value "max") "max-content")
@@ -1663,9 +1658,8 @@ Default unit is cw (character width). Use px suffix for explicit pixels."
                ;; Special keywords
                ((string= value "none") "none")
                ((string= value "full") "100%")
-               ((string= value "screen")
-                ;; max-w-screen: 使用当前窗口的实际宽度
-                (format "%spx" (etaf-window-content-pixel-width)))
+               ;; max-w-screen: 返回特殊关键字，在布局阶段解析
+               ((string= value "screen") "screen")
                ((string= value "min") "min-content")
                ((string= value "max") "max-content")
                ((string= value "fit") "fit-content")
@@ -1841,13 +1835,8 @@ Width使用cw（水平方向字符宽度），Height使用lh（垂直方向行�
                            (* 100.0 (/ (float numerator) denominator)))))
                 ;; 特殊值
                 ((string= value "full") "100%")
-                ;; FIXME: w-screen 此时不应该被解析为具体值，
-                ;; 应该在布局阶段被解析为视口的宽度
-                ((string= value "screen")
-                 (if (eq property 'width)
-                     ;; w-screen: 使用当前窗口的实际宽度（字符单位）
-                     (format "%spx" (etaf-window-content-pixel-width))
-                   (format "%slh" (window-body-height))))
+                ;; w-screen/h-screen: 保留为特殊值，在布局阶段解析
+                ((string= value "screen") "screen")
                 ((string= value "auto") "auto")
                 ((string= value "min") "min-content")
                 ((string= value "max") "max-content")

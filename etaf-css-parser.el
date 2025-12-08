@@ -57,10 +57,20 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算），可以为 nil。
 - em: 相对单位（1em = 16px）
 - lh: 行高单位
 
+特殊关键字：
+- screen: 在布局阶段解析为视口宽度
+- fit-content: 在布局阶段解析为内容宽度（取父容器宽度和内容自然宽度的最小值）
+- min-content: 最小内容宽度
+- max-content: 最大内容宽度
+
 返回值：
 - 数字: 解析后的像素值
 - \\='auto: 自动计算（包括 REFERENCE-WIDTH 为 nil 时的百分比值）
-- \\='none: 无值"
+- \\='none: 无值
+- \\='screen: screen关键字（需要在布局阶段根据视口解析）
+- \\='fit-content: fit-content关键字（需要在布局阶段根据内容解析）
+- \\='min-content: min-content关键字
+- \\='max-content: max-content关键字"
   (cond
    ((null value) 'auto)
    ((eq value 'auto) 'auto)
@@ -69,6 +79,12 @@ REFERENCE-WIDTH 是参考宽度（用于百分比计算），可以为 nil。
    ((string= value "auto") 'auto)
    ((string= value "none") 'none)
    ((string= value "0") 0)
+   ;; 特殊关键字 - 在布局阶段解析
+   ((string= value "screen") 'screen)
+   ((string= value "fit-content") 'fit-content)
+   ((string= value "min-content") 'min-content)
+   ((string= value "max-content") 'max-content)
+   ;; 单位解析
    ((string-match "\\`\\([0-9.]+\\)px\\'" value)
     (string-to-number (match-string 1 value)))
    ((string-match "\\`\\([0-9.]+\\)cw\\'" value)
@@ -98,10 +114,20 @@ REFERENCE-HEIGHT 是参考高度（用于百分比计算），可以为 nil。
 - px: 像素值（转换为行数）
 - em: 相对单位（1em = 1 行）
 
+特殊关键字：
+- screen: 在布局阶段解析为视口高度
+- fit-content: 在布局阶段解析为内容高度
+- min-content: 最小内容高度
+- max-content: 最大内容高度
+
 返回值：
 - 数字: 解析后的行数
 - \\='auto: 自动计算（包括 REFERENCE-HEIGHT 为 nil 时的百分比值）
-- \\='none: 无值"
+- \\='none: 无值
+- \\='screen: screen关键字（需要在布局阶段根据视口解析）
+- \\='fit-content: fit-content关键字（需要在布局阶段根据内容解析）
+- \\='min-content: min-content关键字
+- \\='max-content: max-content关键字"
   (cond
    ((null value) 'auto)
    ((eq value 'auto) 'auto)
@@ -110,6 +136,12 @@ REFERENCE-HEIGHT 是参考高度（用于百分比计算），可以为 nil。
    ((string= value "auto") 'auto)
    ((string= value "none") 'none)
    ((string= value "0") 0)
+   ;; 特殊关键字 - 在布局阶段解析
+   ((string= value "screen") 'screen)
+   ((string= value "fit-content") 'fit-content)
+   ((string= value "min-content") 'min-content)
+   ((string= value "max-content") 'max-content)
+   ;; 单位解析
    ((string-match "\\`\\([0-9.]+\\)lh\\'" value)
     (string-to-number (match-string 1 value)))
    ((string-match "\\`\\([0-9.]+\\)\\'" value)
