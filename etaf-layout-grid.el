@@ -133,8 +133,14 @@ PARENT-CONTEXT 包含父容器的上下文信息。
     ;; 布局子元素
     (let ((children (dom-children render-node)))
       (when children
-        (let ((child-context (list :content-width content-width
-                                   :content-height content-height
+        (let ((child-context (list ;; When parent has fit-content, min-content, or max-content,
+                                   ;; pass the parent's available width to children instead of 0
+                                   :content-width (if (plist-get box-model :needs-content-width)
+                                                      (plist-get box-model :parent-width)
+                                                    content-width)
+                                   :content-height (if (plist-get box-model :needs-content-height)
+                                                       (plist-get box-model :parent-height)
+                                                     content-height)
                                    :viewport-width (plist-get parent-context :viewport-width)
                                    :viewport-height (plist-get parent-context :viewport-height)
                                    :grid-container t))
