@@ -387,8 +387,6 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          
          ;; 计算内容宽度
          ;; 处理特殊关键字: screen, fit-content, min-content, max-content
-         ;; flex 容器自身没有指定宽度时，应该使用父容器的可用宽度，
-         ;; 这样 justify-content 才能正常工作
          (base-content-width
           (cond
            ;; screen: 使用视口宽度（如果 viewport 为 nil，则使用窗口宽度）

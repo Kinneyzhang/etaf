@@ -4,12 +4,8 @@
 (defconst etaf-log-default-buffer "*etaf-log*"
   "Default log buffer.")
 
-(defconst etaf-log-default-level 'debug
+(defconst etaf-log-default-level nil
   "Default log level.")
-
-(defvar etaf-log-default-level nil
-  "Current level of etaf-log, level higher than
-this level will be shown in `etaf-log-default-buffer'.")
 
 ;; (defvar etaf-log-max-log-num 10000)
 
