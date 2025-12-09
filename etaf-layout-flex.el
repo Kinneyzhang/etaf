@@ -114,32 +114,24 @@ PARENT-CONTEXT 包含父容器的上下文信息。
          (should-wrap (not (string= flex-wrap "nowrap")))
          (wrap-reversed (string= flex-wrap "wrap-reverse"))
          
-         ;; For fit-content elements, calculate available width for children
+         ;; Check if we need shrink-to-fit: when parent's content-width is nil
+         ;; or when this element has needs-content-width
+         (need-shrink-to-fit
+          (or (null (plist-get parent-context :content-width))
+              (plist-get box-model :needs-content-width)))
+         
+         ;; For fit-content elements or when parent passes nil width,
+         ;; children should calculate their own intrinsic width.
+         ;; Pass nil so children will shrink to their content.
          (child-available-width
-          (if (plist-get box-model :needs-content-width)
-              (let ((parent-width (plist-get box-model :parent-width)))
-                (if parent-width
-                    (max 0 (- parent-width
-                              (plist-get (plist-get box-model :padding) :left)
-                              (plist-get (plist-get box-model :padding) :right)
-                              (plist-get (plist-get box-model :border) :left-width)
-                              (plist-get (plist-get box-model :border) :right-width)
-                              (plist-get (plist-get box-model :margin) :left)
-                              (plist-get (plist-get box-model :margin) :right)))
-                  nil))
+          (if need-shrink-to-fit
+              nil
             content-width))
+         ;; For fit-content height, also pass nil so children use their intrinsic height
          (child-available-height
-          (if (plist-get box-model :needs-content-height)
-              (let ((parent-height (plist-get box-model :parent-height)))
-                (if parent-height
-                    (max 0 (- parent-height
-                              (plist-get (plist-get box-model :padding) :top)
-                              (plist-get (plist-get box-model :padding) :bottom)
-                              (plist-get (plist-get box-model :border) :top-width)
-                              (plist-get (plist-get box-model :border) :bottom-width)
-                              (plist-get (plist-get box-model :margin) :top)
-                              (plist-get (plist-get box-model :margin) :bottom)))
-                  nil))
+          (if (or (null (plist-get parent-context :content-height))
+                  (plist-get box-model :needs-content-height))
+              nil
             content-height))
          
          ;; 创建布局节点
@@ -231,6 +223,27 @@ PARENT-CONTEXT 包含父容器的上下文信息。
               (when (stringp child)
                 (push child sorted-children)))
             (setcdr (cdr layout-node) (nreverse sorted-children)))
+          
+          ;; 当需要shrink-to-fit时，计算子元素的总宽度并更新flex容器宽度
+          (when need-shrink-to-fit
+            (let* ((total-items-width 0)
+                   (total-gap (* column-gap (max 0 (1- (length flex-items))))))
+              ;; 计算所有flex item的总宽度
+              (dolist (item flex-items)
+                (let* ((item-layout (plist-get item :layout))
+                       (item-box (etaf-layout-get-box-model item-layout))
+                       (item-total-width
+                        (+ (etaf-layout-box-content-width item-box)
+                           (etaf-layout-box-padding-width item-box)
+                           (etaf-layout-box-border-width item-box)
+                           (etaf-layout-box-margin-width item-box))))
+                  (setq total-items-width (+ total-items-width item-total-width))))
+              ;; 更新flex容器的宽度
+              (let ((box (etaf-layout-get-box-model layout-node))
+                    (new-width (+ total-items-width total-gap)))
+                (plist-put (plist-get box :content) :width new-width)
+                ;; 更新 content-width 用于后续的主轴计算
+                (setq content-width new-width))))
           
           ;; 计算主轴分配
           (etaf-layout-flex-compute-main-axis

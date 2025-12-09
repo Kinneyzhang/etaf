@@ -13,9 +13,9 @@
 (require 'etaf-tailwind)
 
 (ert-deftest etaf-layout-test-w-fit-flex-children ()
-  "Test that flex children of w-fit parent receive correct parent width.
-When a parent has w-fit (fit-content), its children should have access
-to the parent's available width, not 0."
+  "Test that flex children of w-fit parent calculate their own intrinsic width.
+When a parent has w-fit (fit-content), its children should calculate their
+width based on their own content, not fill the parent's width."
   (let* ((dom (etaf-etml-to-dom
                '(div :class "border w-fit"
                      (p "this is a long line, should make the next div use this width when set w-fit")
@@ -35,24 +35,26 @@ to the parent's available width, not 0."
          (span2-box (etaf-layout-get-box-model span2-node)))
     
     ;; The root div should have w-fit, so its width should be based on content
+    ;; It should be the max of p-width and flex-width
     (should (> (etaf-layout-box-content-width root-box) 0))
     
-    ;; The flex container should have width equal to or close to the parent's width
-    ;; (it should not be 0 or very small)
+    ;; The flex container should have width based on its content (span widths)
+    ;; It should not be 0
     (should (> (etaf-layout-box-content-width flex-box) 0))
     
-    ;; Both spans should have non-zero width
+    ;; Both spans should have non-zero width based on their text content
     (should (> (etaf-layout-box-content-width span1-box) 0))
     (should (> (etaf-layout-box-content-width span2-box) 0))
     
-    ;; The flex container's width should be close to the paragraph's width
-    ;; (since both are inside a w-fit container)
+    ;; The root's width should be based on the widest child (p in this case)
     (let ((p-box (etaf-layout-get-box-model p-node)))
-      (should (>= (etaf-layout-box-content-width flex-box) 
-                  (* 0.8 (etaf-layout-box-content-width p-box)))))))
+      (should (>= (etaf-layout-box-content-width root-box)
+                  (etaf-layout-box-content-width p-box))))))
 
 (ert-deftest etaf-layout-test-w-fit-block-children ()
-  "Test that block children of w-fit parent receive correct parent width."
+  "Test that block children of w-fit parent calculate their own intrinsic width.
+When a parent has w-fit, block children should calculate width based on their
+content, not fill the parent's available width."
   (let* ((dom (etaf-etml-to-dom
                '(div :class "w-fit"
                      (p "Long line to set the width")
@@ -65,13 +67,11 @@ to the parent's available width, not 0."
          (child-div (nth 1 (dom-non-text-children layout-tree)))
          (child-box (etaf-layout-get-box-model child-div)))
     
-    ;; The root div should have w-fit
+    ;; The root div should have w-fit, its width based on widest child
     (should (> (etaf-layout-box-content-width root-box) 0))
     
-    ;; The child div should have width close to the parent's width
-    (should (> (etaf-layout-box-content-width child-box) 0))
-    (should (>= (etaf-layout-box-content-width child-box)
-                (* 0.8 (etaf-layout-box-content-width root-box))))))
+    ;; The child div should have non-zero width based on its content
+    (should (> (etaf-layout-box-content-width child-box) 0))))
 
 (ert-deftest etaf-layout-test-nested-w-fit ()
   "Test nested w-fit elements work correctly."
