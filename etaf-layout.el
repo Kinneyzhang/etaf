@@ -453,38 +453,22 @@ PARENT-CONTEXT 包含父容器的上下文信息。
          (content-height (etaf-layout-box-content-height box-model))
          (_ (etaf-log-debug etaf-logger "content-width:%S" content-width))
          (_ (etaf-log-debug etaf-logger "content-height:%S" content-height))
-         ;; Check if we need shrink-to-fit: original
-         ;; parent-width was nil and we're at root with auto width
+         ;; Check if we need shrink-to-fit: when parent's content-width is nil
+         ;; This happens when: 1) root element with nil viewport width
+         ;; 2) child of a fit-content/min-content/max-content element
          (need-shrink-to-fit
-          (and (null (plist-get parent-context :content-width))
-               (plist-get parent-context :is-root)))
-         ;; For fit-content elements, calculate available width for children
-         ;; This is parent-width minus this element's padding, border, margin
+          (null (plist-get parent-context :content-width)))
+         ;; For fit-content elements, children should calculate their own
+         ;; intrinsic width instead of filling parent's available width.
+         ;; Pass nil so children will shrink to their content.
          (child-available-width
           (if (plist-get box-model :needs-content-width)
-              (let ((parent-width (plist-get box-model :parent-width)))
-                (if parent-width
-                    (max 0 (- parent-width
-                              (plist-get (plist-get box-model :padding) :left)
-                              (plist-get (plist-get box-model :padding) :right)
-                              (plist-get (plist-get box-model :border) :left-width)
-                              (plist-get (plist-get box-model :border) :right-width)
-                              (plist-get (plist-get box-model :margin) :left)
-                              (plist-get (plist-get box-model :margin) :right)))
-                  nil))
+              nil
             content-width))
+         ;; For fit-content height, also pass nil so children use their intrinsic height
          (child-available-height
           (if (plist-get box-model :needs-content-height)
-              (let ((parent-height (plist-get box-model :parent-height)))
-                (if parent-height
-                    (max 0 (- parent-height
-                              (plist-get (plist-get box-model :padding) :top)
-                              (plist-get (plist-get box-model :padding) :bottom)
-                              (plist-get (plist-get box-model :border) :top-width)
-                              (plist-get (plist-get box-model :border) :bottom-width)
-                              (plist-get (plist-get box-model :margin) :top)
-                              (plist-get (plist-get box-model :margin) :bottom)))
-                  nil))
+              nil
             content-height))
          (layout-node (etaf-layout-create-node render-node box-model)))
     
@@ -544,10 +528,14 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                           (+ accumulated-height child-total-height))))))
              ((stringp child)
               (push child child-layouts)
-              ;; 只有在没有inline元素时，字符串才计入高度
-              ;; 如果有inline元素，内容会在渲染时合并，高度由渲染结果决定
-              (unless has-inline-element
-                (let ((string-height (etaf-string-linum child)))
+              ;; 计算字符串的宽度和高度
+              (let ((string-width (string-pixel-width child))
+                    (string-height (etaf-string-linum child)))
+                ;; 当父容器需要根据内容计算宽度时，也要追踪文本宽度
+                (setq max-child-width (max max-child-width string-width))
+                ;; 只有在没有inline元素时，字符串才计入高度
+                ;; 如果有inline元素，内容会在渲染时合并，高度由渲染结果决定
+                (unless has-inline-element
                   (setq accumulated-height
                         (+ accumulated-height string-height)))))))
           
