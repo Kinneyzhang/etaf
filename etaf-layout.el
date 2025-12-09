@@ -350,7 +350,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
            ;; auto: 根据上下文决定
            ((eq width-value 'auto)
             (if (or is-inline
-                    ;; is-in-flex-container
+                    is-in-flex-container
                     (null effective-parent-width))
                 0
               (max 0 (- effective-parent-width
