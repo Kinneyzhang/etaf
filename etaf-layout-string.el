@@ -320,8 +320,6 @@ NATURAL-CONTENT-HEIGHT 是内容的自然高度（未裁剪）。"
               (if (> (length inner-content) 0)
                   (etaf-string-linum inner-content)
                 0)))
-
-         ;; (_ (message "justify-width:%S" effective-width))
          
          ;; 1. 调整内容宽度
          (sized-content

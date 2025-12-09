@@ -347,10 +347,10 @@ ENTRY-INDEX specifies which history entry to show (default: 0 = most recent)."
                 (erase-buffer)
                 (insert "=== ETAF Rendering Pipeline Data ===\n\n")
                 (insert (format "Measurement timestamp: %s\n"
-                               (format-time-string "%Y-%m-%d %H:%M:%S"
-                                                   (plist-get entry :timestamp))))
+                                (format-time-string "%Y-%m-%d %H:%M:%S"
+                                                    (plist-get entry :timestamp))))
                 (insert (format "Total render time: %.4f ms\n\n"
-                               (plist-get entry :total)))
+                                (plist-get entry :total)))
                 (insert "Use TAB to expand/collapse sections, C-c C-a to show all, C-c C-t to hide all.\n\n")
                 
                 ;; Insert each data structure as a collapsible section

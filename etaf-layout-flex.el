@@ -78,7 +78,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
          (content-width (etaf-layout-box-content-width box-model))
          (content-height (etaf-layout-box-content-height box-model))
          
-         (_ (message "parent-context:%S" parent-context))
+         (_ (etaf-log-debug etaf-logger "parent-context:%S" parent-context))
          
          ;; Flex 容器属性
          (flex-direction (or (etaf-css-parse-style-value

@@ -205,8 +205,8 @@ PARENT-CONTEXT 包含父容器的上下文信息：
          (height-value (etaf-css-parse-height 
                         (etaf-css-parse-style-value style 'height "auto") 
                         parent-height))
-         (_ (message "width-value:%S" width-value))
-         (_ (message "height-value:%S" height-value))
+         (_ (etaf-log-debug etaf-logger "width-value:%S" width-value))
+         (_ (etaf-log-debug etaf-logger "height-value:%S" height-value))
          ;; min-width, max-width
          (min-width-value (etaf-css-parse-length
                            (etaf-css-parse-style-value
@@ -359,7 +359,7 @@ PARENT-CONTEXT 包含父容器的上下文信息：
                         margin-left-val margin-right-val))))
            ;; 具体数值
            (t width-value)))
-         (_ (message "base-content-width:%S" base-content-width))
+         (_ (etaf-log-debug etaf-logger "base-content-width:%S" base-content-width))
          ;; 标记是否需要根据内容计算宽度
          (needs-content-width (memq width-value
                                     '(fit-content min-content max-content)))
@@ -445,14 +445,14 @@ PARENT-CONTEXT 包含父容器的上下文信息：
 RENDER-NODE 是要布局的渲染节点。
 PARENT-CONTEXT 包含父容器的上下文信息。
 返回布局节点。"
-  (message "F-parent-context:%S" parent-context)
+  (etaf-log-debug etaf-logger "F-parent-context:%S" parent-context)
   (let* ((box-model (etaf-layout-compute-box-model
                      render-node parent-context))
-         (_ (message "box-model:%S" box-model))
+         (_ (etaf-log-debug etaf-logger "box-model:%S" box-model))
          (content-width (etaf-layout-box-content-width box-model))
          (content-height (etaf-layout-box-content-height box-model))
-         (_ (message "content-width:%S" content-width))
-         (_ (message "content-height:%S" content-height))
+         (_ (etaf-log-debug etaf-logger "content-width:%S" content-width))
+         (_ (etaf-log-debug etaf-logger "content-height:%S" content-height))
          ;; Check if we need shrink-to-fit: original
          ;; parent-width was nil and we're at root with auto width
          (need-shrink-to-fit
