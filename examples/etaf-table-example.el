@@ -78,10 +78,10 @@
 (defun etaf-table-example-1-basic ()
   "Basic table example with simple data display."
   (interactive)
-  (let ((columns '((:prop "name" :label "Name" :width 150)
-                   (:prop "email" :label "Email" :width 200)
-                   (:prop "department" :label "Department" :width 120)
-                   (:prop "age" :label "Age" :width 80)))
+  (let ((columns '((:prop "name" :label "Name" :width 20)
+                   (:prop "email" :label "Email" :width 30)
+                   (:prop "department" :label "Department" :width 15)
+                   (:prop "age" :label "Age" :width 5)))
         (data (seq-take etaf-table-example-users 5)))
     (etaf-paint-to-buffer "*etaf-table-basic*"
       `(div
@@ -100,13 +100,13 @@
 (defun etaf-table-example-2-striped-border ()
   "Table with striped rows and borders."
   (interactive)
-  (let ((columns '((:prop "id" :label "ID" :width 60)
-                   (:prop "name" :label "Product" :width 150)
-                   (:prop "category" :label "Category" :width 120)
-                   (:prop "price" :label "Price" :width 100
+  (let ((columns '((:prop "id" :label "ID" :width 5)
+                   (:prop "name" :label "Product" :width 15)
+                   (:prop "category" :label "Category" :width 12)
+                   (:prop "price" :label "Price" :width 10
                     :formatter (lambda (row col value)
                                 (format "$%.2f" value)))
-                   (:prop "stock" :label "Stock" :width 80)))
+                   (:prop "stock" :label "Stock" :width 8)))
         (data etaf-table-example-products))
     (etaf-paint-to-buffer "*etaf-table-striped*"
       `(div
@@ -126,13 +126,13 @@
 (defun etaf-table-example-3-sortable ()
   "Table with sortable columns."
   (interactive)
-  (let ((columns '((:prop "name" :label "Name" :width 150 :sortable t)
-                   (:prop "age" :label "Age" :width 80 :sortable t)
-                   (:prop "department" :label "Department" :width 120 :sortable t)
-                   (:prop "salary" :label "Salary" :width 120 :sortable t
+  (let ((columns '((:prop "name" :label "Name" :width 20 :sortable t)
+                   (:prop "age" :label "Age" :width 5 :sortable t)
+                   (:prop "department" :label "Department" :width 15 :sortable t)
+                   (:prop "salary" :label "Salary" :width 12 :sortable t
                     :formatter (lambda (row col value)
                                 (format "$%d" value)))
-                   (:prop "status" :label "Status" :width 100)))
+                   (:prop "status" :label "Status" :width 10)))
         (data etaf-table-example-users))
     (etaf-paint-to-buffer "*etaf-table-sortable*"
       `(div
@@ -152,10 +152,10 @@
 (defun etaf-table-example-4-selection ()
   "Table with row selection."
   (interactive)
-  (let ((columns '((:prop "id" :label "ID" :width 60)
-                   (:prop "name" :label "Name" :width 150)
-                   (:prop "department" :label "Department" :width 120)
-                   (:prop "status" :label "Status" :width 100
+  (let ((columns '((:prop "id" :label "ID" :width 5)
+                   (:prop "name" :label "Name" :width 20)
+                   (:prop "department" :label "Department" :width 15)
+                   (:prop "status" :label "Status" :width 12
                     :formatter (lambda (row col value)
                                 (if (equal value "active")
                                     "✓ Active"
@@ -180,12 +180,12 @@
 (defun etaf-table-example-5-index ()
   "Table with index column."
   (interactive)
-  (let ((columns '((:prop "name" :label "Product" :width 150)
-                   (:prop "category" :label "Category" :width 120)
-                   (:prop "price" :label "Price" :width 100
+  (let ((columns '((:prop "name" :label "Product" :width 15)
+                   (:prop "category" :label "Category" :width 12)
+                   (:prop "price" :label "Price" :width 10
                     :formatter (lambda (row col value)
                                 (format "$%.2f" value)))
-                   (:prop "rating" :label "Rating" :width 80
+                   (:prop "rating" :label "Rating" :width 8
                     :formatter (lambda (row col value)
                                 (format "%.1f ★" value)))))
         (data etaf-table-example-products))
@@ -207,11 +207,11 @@
 (defun etaf-table-example-6-formatters ()
   "Table with custom cell formatters."
   (interactive)
-  (let ((columns '((:prop "name" :label "Name" :width 150)
-                   (:prop "age" :label "Age" :width 80
+  (let ((columns '((:prop "name" :label "Name" :width 20)
+                   (:prop "age" :label "Age" :width 10
                     :formatter (lambda (row col value)
                                 (format "%d years" value)))
-                   (:prop "salary" :label "Salary" :width 120
+                   (:prop "salary" :label "Salary" :width 12
                     :sortable t
                     :formatter (lambda (row col value)
                                 (let ((formatted (format "$%,d" value)))
@@ -219,12 +219,12 @@
                                   (replace-regexp-in-string
                                    "\\([0-9]\\)\\([0-9]\\{3\\}\\)$"
                                    "\\1,\\2" formatted))))
-                   (:prop "status" :label "Status" :width 120
+                   (:prop "status" :label "Status" :width 12
                     :formatter (lambda (row col value)
                                 (if (equal value "active")
                                     "✓ Active"
                                   "✗ Inactive")))
-                   (:prop "department" :label "Dept" :width 100)))
+                   (:prop "department" :label "Dept" :width 12)))
         (data (seq-take etaf-table-example-users 6)))
     (etaf-paint-to-buffer "*etaf-table-formatters*"
       `(div
@@ -244,11 +244,11 @@
 (defun etaf-table-example-7-pagination ()
   "Table with pagination."
   (interactive)
-  (let ((columns '((:prop "id" :label "ID" :width 60)
-                   (:prop "name" :label "Name" :width 150 :sortable t)
-                   (:prop "email" :label "Email" :width 200)
-                   (:prop "department" :label "Department" :width 120)
-                   (:prop "status" :label "Status" :width 100)))
+  (let ((columns '((:prop "id" :label "ID" :width 5)
+                   (:prop "name" :label "Name" :width 20 :sortable t)
+                   (:prop "email" :label "Email" :width 30)
+                   (:prop "department" :label "Department" :width 15)
+                   (:prop "status" :label "Status" :width 10)))
         (data etaf-table-example-users))
     (etaf-paint-to-buffer "*etaf-table-pagination*"
       `(div
@@ -270,9 +270,9 @@
 (defun etaf-table-example-8-empty ()
   "Table with empty state."
   (interactive)
-  (let ((columns '((:prop "name" :label "Name" :width 150)
-                   (:prop "email" :label "Email" :width 200)
-                   (:prop "department" :label "Department" :width 120)))
+  (let ((columns '((:prop "name" :label "Name" :width 20)
+                   (:prop "email" :label "Email" :width 30)
+                   (:prop "department" :label "Department" :width 15)))
         (data '()))
     (etaf-paint-to-buffer "*etaf-table-empty*"
       `(div
@@ -291,9 +291,9 @@
 (defun etaf-table-example-9-loading ()
   "Table with loading state."
   (interactive)
-  (let ((columns '((:prop "name" :label "Name" :width 150)
-                   (:prop "email" :label "Email" :width 200)
-                   (:prop "department" :label "Department" :width 120)))
+  (let ((columns '((:prop "name" :label "Name" :width 20)
+                   (:prop "email" :label "Email" :width 30)
+                   (:prop "department" :label "Department" :width 15)))
         (data (seq-take etaf-table-example-users 5)))
     (etaf-paint-to-buffer "*etaf-table-loading*"
       `(div
@@ -314,13 +314,13 @@
 (defun etaf-table-example-10-complete ()
   "Comprehensive table with all features."
   (interactive)
-  (let ((columns '((:prop "name" :label "Employee" :width 150 :sortable t)
-                   (:prop "age" :label "Age" :width 70 :sortable t)
-                   (:prop "department" :label "Department" :width 120 :sortable t)
-                   (:prop "salary" :label "Salary" :width 120 :sortable t
+  (let ((columns '((:prop "name" :label "Employee" :width 20 :sortable t)
+                   (:prop "age" :label "Age" :width 5 :sortable t)
+                   (:prop "department" :label "Department" :width 15 :sortable t)
+                   (:prop "salary" :label "Salary" :width 12 :sortable t
                     :formatter (lambda (row col value)
                                 (format "$%,d" value)))
-                   (:prop "status" :label "Status" :width 100
+                   (:prop "status" :label "Status" :width 12
                     :formatter (lambda (row col value)
                                 (if (equal value "active")
                                     "✓ Active"
