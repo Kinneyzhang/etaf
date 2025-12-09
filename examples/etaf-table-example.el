@@ -88,6 +88,7 @@
         (h1 "Example 1: Basic Table")
         (p "Simple table with column definitions and data binding")
         (etaf-table :data ,data
+                    :class "w-screen"
                     :columns ,columns
                     :show-header t
                     :row-key "id")))))
