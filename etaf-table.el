@@ -334,7 +334,8 @@ ROW is the current row data, COLUMN is the column definition."
               (etaf-ref-set current-page 1))))
       
       ;; Return component state
-      (list :data data
+      (list :$props props  ; Include original props for template access
+            :data data
             :columns columns
             :row-key row-key
             :show-selection show-selection
