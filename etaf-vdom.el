@@ -1,9 +1,9 @@
 ;;; etaf-vdom.el --- Virtual DOM for ETAF -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024
+;; Copyright (C) 2024-2025 ETAF Contributors
 
 ;; Author: ETAF Contributors
-;; Keywords: dom, virtual dom, vdom
+;; Keywords: dom, virtual-dom, vnode, rendering
 ;; Version: 2.0.0
 
 ;; This file is free software; you can redistribute it and/or modify
@@ -13,29 +13,69 @@
 
 ;;; Commentary:
 
-;; Virtual DOM (VNode) System for ETAF - Following Vue 3 Standards
+;; Virtual DOM (VNode) System for ETAF
+;; ====================================
 ;;
-;; This module implements a Vue 3 compatible virtual DOM layer.
-;; VNode is a pure data structure describing the UI, NOT storing actual DOM.
+;; This module implements a Vue 3 compatible virtual DOM layer for ETAF.
+;; The virtual DOM provides an efficient way to describe UI state and
+;; minimize actual DOM updates through diffing algorithms.
+;;
+;; Key Concepts:
+;; -------------
+;; - VNode: A pure data structure describing UI, not actual DOM
+;; - Patch: Process of updating real DOM to match new VNode tree
+;; - Diff: Algorithm to find minimal changes between VNode trees
+;;
+;; Module Structure:
+;; -----------------
+;; 1. PatchFlags - Optimization hints for patching
+;; 2. ShapeFlags - Node type identification flags
+;; 3. VNode Types - Special node type constants
+;; 4. Tag Metadata - Interactive element handling
+;; 5. VNode Creation - Core VNode factory functions
+;; 6. VNode Accessors - Property access functions
+;; 7. VNode Predicates - Type checking functions
+;; 8. Renderer - VNode to DOM conversion
+;; 9. Mount/Unmount/Patch - Renderer lifecycle
 ;;
 ;; VNode Structure (Vue 3 compatible):
-;;   (:type element                    ; Node type
-;;    :tag div                         ; Tag name
-;;    :props (:class "box" :id "main") ; Properties (attrs + events)
-;;    :children (child-vnode1 ...)     ; Child VNodes
-;;    :key "unique-key"                ; Key for diff optimization
-;;    :ref nil                         ; Reference
-;;    :patchFlag 3                     ; Optimization flags
-;;    :dynamicProps ("class" "style")) ; Dynamic prop names
+;; -----------------------------------
+;;   (:__v_isVNode t                     ; VNode marker
+;;    :type element                      ; Node type (symbol or component)
+;;    :props (:class "box" :id "main")   ; Properties (attrs + events)
+;;    :children (child-vnode1 ...)       ; Child VNodes or text
+;;    :key "unique-key"                  ; Key for diff optimization
+;;    :patchFlag 3                       ; Optimization flags (bitmask)
+;;    :shapeFlag 1                       ; Node shape flags (bitmask)
+;;    :dynamicProps ("class" "style")    ; Dynamic prop names
+;;    :el nil)                           ; Real element (set by renderer)
 ;;
-;; PatchFlags indicate which parts of the VNode are dynamic:
-;; - Enables compiler optimizations
-;; - Skips static content during patch
-;; - Targets only changed properties
+;; PatchFlags (optimization hints):
+;; --------------------------------
+;; - TEXT (1): Dynamic text content
+;; - CLASS (2): Dynamic class binding
+;; - STYLE (4): Dynamic style binding
+;; - PROPS (8): Dynamic props (except class/style)
+;; - HOISTED (-1): Static node, never needs update
 ;;
-;; Based on Vue 3's design:
-;; - https://github.com/vuejs/core/blob/main/packages/runtime-core/src/vnode.ts
-;; - https://github.com/vuejs/core/blob/main/packages/shared/src/patchFlags.ts
+;; Usage Example:
+;; --------------
+;;   ;; Create a VNode
+;;   (setq vnode (etaf-create-vnode 'div
+;;                 '(:class "container" :on-click handler)
+;;                 (list (etaf-vdom-text "Hello"))))
+;;
+;;   ;; Mount to buffer
+;;   (etaf-vdom-mount vnode my-buffer)
+;;
+;;   ;; Later, patch with new state
+;;   (etaf-vdom-patch old-vnode new-vnode my-buffer)
+;;
+;; References:
+;; -----------
+;; - Vue 3 VNode: https://github.com/vuejs/core/blob/main/packages/runtime-core/src/vnode.ts
+;; - Vue 3 PatchFlags: https://github.com/vuejs/core/blob/main/packages/shared/src/patchFlags.ts
+;; - Vue 3 Renderer: https://github.com/vuejs/core/blob/main/packages/runtime-core/src/renderer.ts
 
 ;;; Code:
 

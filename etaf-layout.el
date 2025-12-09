@@ -1,10 +1,10 @@
 ;;; etaf-layout.el --- Layout computation for render tree -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 ETAF Contributors
+;; Copyright (C) 2024-2025 ETAF Contributors
 
 ;; Author: ETAF Contributors
-;; Keywords: layout, box-model, css
-;; Version: 1.0.0
+;; Keywords: layout, box-model, css, flex, grid
+;; Version: 2.0.0
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -13,35 +13,91 @@
 
 ;;; Commentary:
 
-;; 布局系统主模块
+;; Layout Computation System for ETAF
+;; ====================================
 ;;
-;; 本模块是布局系统的主协调器，负责从渲染树构建布局树。
-;; 所有函数使用 `etaf-layout-' 前缀。
+;; This module is the main coordinator for layout computation, transforming
+;; the render tree into a layout tree with computed box model dimensions.
 ;;
-;; 模块结构：
-;; - etaf-layout.el (本模块): 主协调器和布局树构建
-;; - etaf-css-parse.el: CSS 值解析（由 CSS 模块提供）
-;; - etaf-layout-box.el: 盒模型数据结构和操作
-;; - etaf-layout-flex.el: Flex 布局格式化上下文
-;; - etaf-layout-string.el: 布局到字符串转换
+;; Rendering Pipeline Position:
+;; ----------------------------
 ;;
-;; 公共接口：
-;; - `etaf-layout-build-tree' - 从渲染树构建布局树（主入口）
-;; - `etaf-layout-get-box-model' - 获取布局节点的盒模型
-;; - `etaf-layout-create-node' - 创建布局节点
-;; - `etaf-layout-compute-box-model' - 计算盒模型
-;; - `etaf-layout-node' - 递归布局节点
-;; - `etaf-layout-walk' - 遍历布局树
-;; - `etaf-layout-to-string' - 将布局树转换为字符串
+;;   Render Tree
+;;        │
+;;        ▼ etaf-layout-build-tree (this module)
+;;   Layout Tree
+;;        │
+;;        ▼ etaf-layout-to-string
+;;   Rendered String (insertable into buffer)
 ;;
-;; 布局树结构：
-;; (tag ((layout-box-model . <box-model>)
-;;       (computed-style . ((display . "block") (color . "red") ...)))
-;;   child1 child2 ...)
+;; Module Architecture:
+;; --------------------
+;; The layout system is split into focused sub-modules:
 ;;
-;; 使用示例：
-;;   (setq layout-tree (etaf-layout-build-tree render-tree viewport))
-;;   (setq layout-string (etaf-layout-to-string layout-tree))
+;;   etaf-layout.el (this file)
+;;     ├── etaf-layout-box.el - Box model data structure
+;;     ├── etaf-layout-flex.el - Flexbox layout algorithm
+;;     ├── etaf-layout-grid.el - CSS Grid layout algorithm
+;;     └── etaf-layout-string.el - Layout to string conversion
+;;
+;; Layout Algorithms:
+;; ------------------
+;; 1. Block Formatting Context (BFC) - Default block layout
+;;    - Block elements stack vertically
+;;    - Width fills available space
+;;    - Height based on content
+;;
+;; 2. Flex Formatting Context - `display: flex`
+;;    - Main axis / cross axis alignment
+;;    - flex-grow, flex-shrink, flex-basis
+;;    - justify-content, align-items
+;;
+;; 3. Grid Formatting Context - `display: grid`
+;;    - Two-dimensional layout
+;;    - Rows and columns
+;;    - grid-template-*, gap
+;;
+;; Layout Tree Structure:
+;; ----------------------
+;;   (tag ((layout-box-model . <box-model-plist>)
+;;         (computed-style . ((display . "block") ...)))
+;;     child1 child2 ...)
+;;
+;; Box Model Structure:
+;; --------------------
+;; See etaf-layout-box.el for complete documentation.
+;;
+;;   (:box-sizing "content-box"
+;;    :content (:width W :height H)
+;;    :padding (:top T :right R :bottom B :left L)
+;;    :border (:top-width W ... :top-color C ...)
+;;    :margin (:top T :right R :bottom B :left L)
+;;    :overflow (:overflow-y "visible" ...))
+;;
+;; Public API:
+;; -----------
+;; Main Entry:
+;;   - `etaf-layout-build-tree' - Build layout tree from render tree
+;;   - `etaf-layout-to-string' - Convert layout tree to string
+;;
+;; Node Operations:
+;;   - `etaf-layout-create-node' - Create layout node
+;;   - `etaf-layout-get-box-model' - Get node's box model
+;;   - `etaf-layout-compute-box-model' - Compute box model from styles
+;;
+;; Layout:
+;;   - `etaf-layout-node' - Layout single node (dispatches by display)
+;;   - `etaf-layout-block-formatting-context' - Block layout
+;;
+;; Traversal:
+;;   - `etaf-layout-walk' - Walk layout tree
+;;
+;; Usage Example:
+;; --------------
+;;   (let* ((layout-tree (etaf-layout-build-tree render-tree
+;;                         '(:width 800 :height 600)))
+;;          (layout-string (etaf-layout-to-string layout-tree)))
+;;     (insert layout-string))
 
 ;;; Code:
 

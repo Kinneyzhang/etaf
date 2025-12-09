@@ -1,10 +1,10 @@
 ;;; etaf-component.el --- Vue3-style component system for ETAF -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024
+;; Copyright (C) 2024-2025 ETAF Contributors
 
 ;; Author: ETAF Contributors
-;; Keywords: components, reactive, vue3
-;; Version: 1.0.0
+;; Keywords: components, reactive, vue3, composition-api
+;; Version: 2.0.0
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -13,34 +13,76 @@
 
 ;;; Commentary:
 
-;; Vue3-style Component System for ETAF
+;; Vue 3-Style Component System for ETAF
+;; ======================================
 ;;
 ;; This module provides a complete component system inspired by Vue 3's
-;; Composition API. It includes:
+;; Composition API, enabling reactive UI development in Emacs Lisp.
 ;;
-;; 1. Component Definition and Management
-;;    - Define components with props, setup, and templates
-;;    - Component registry for global component management
-;;    - Support for slots (children) and prop validation
+;; Module Structure:
+;; -----------------
+;; 1. Component Registry - Global component registration and lookup
+;; 2. Component Definition - Define components with props, setup, templates
+;; 3. Options API Conversion - Vue 2 style to Vue 3 style conversion
+;; 4. Component Rendering - Template evaluation and rendering
+;; 5. Reactive System Core - Effect tracking infrastructure
+;; 6. Reactive Primitives - ref, computed, reactive
+;; 7. Watch System - watch, watchEffect
+;; 8. Reactive Buffer Binding - DOM update automation
 ;;
-;; 2. Reactive System (Vue 3 Composition API)
-;;    - ref: Basic reactive references
-;;    - computed: Derived reactive values with caching
-;;    - watch: Explicit dependency watching
-;;    - watchEffect: Automatic dependency tracking
-;;    - reactive: Reactive objects for plist-like data
+;; Reactive System Overview:
+;; -------------------------
+;; The reactive system follows Vue 3's design principles:
 ;;
-;; 3. Component Lifecycle
-;;    - Setup function runs before component renders
-;;    - Integration with virtual DOM lifecycle hooks
+;;   ┌─────────────┐
+;;   │   ref(0)    │  ← Reactive reference holding a value
+;;   └──────┬──────┘
+;;          │
+;;          │ dependency tracking
+;;          ▼
+;;   ┌─────────────┐
+;;   │   effect    │  ← Automatically re-runs when deps change
+;;   └──────┬──────┘
+;;          │
+;;          │ triggers update
+;;          ▼
+;;   ┌─────────────┐
+;;   │   UI/DOM    │  ← Rendered output
+;;   └─────────────┘
 ;;
-;; Design Philosophy (from Vue 3):
-;; - Composition over Inheritance
-;; - Explicit over Implicit
-;; - Flexible and Composable
-;; - TypeScript-friendly structure (adapted to Elisp)
+;; Key Concepts:
+;; - ref: Basic reactive container for a single value
+;; - computed: Cached, derived value that updates when deps change
+;; - effect: Function that tracks deps and re-runs automatically
+;; - watch: Explicit dependency watching with callbacks
+;; - watchEffect: Automatic dependency tracking
+;;
+;; Component API Styles:
+;; ---------------------
+;; Composition API (Vue 3 - recommended):
+;;   (etaf-define-component my-counter
+;;     :props '(:initial-count)
+;;     :setup (lambda (props)
+;;              (let ((count (etaf-ref 0)))
+;;                (list :count count
+;;                      :increment (lambda () (etaf-ref-update count #'1+)))))
+;;     :template (lambda (data)
+;;                 `(div (span ,(etaf-ref-get (plist-get data :count)))
+;;                       (button :on-click ,(plist-get data :increment) "+"))))
+;;
+;; Options API (Vue 2 - also supported):
+;;   (etaf-define-component my-counter
+;;     :data (lambda () '(:count 0))
+;;     :methods '(:increment (lambda () (etaf-ref-update count #'1+)))
+;;     :template ...)
+;;
+;; Related Modules:
+;; ----------------
+;; - etaf-vdom.el: Virtual DOM that renders component output
+;; - etaf-type.el: Type definitions (etaf-ref, etaf-computed, etaf-component-def)
 ;;
 ;; References:
+;; -----------
 ;; - Vue 3 Composition API: https://vuejs.org/guide/extras/composition-api-faq.html
 ;; - Vue 3 Reactivity: https://vuejs.org/guide/extras/reactivity-in-depth.html
 ;; - Vue 3 Core: https://github.com/vuejs/core

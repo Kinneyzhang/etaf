@@ -1,6 +1,6 @@
 ;;; etaf-type.el --- Core Type Definitions for ETAF -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 ETAF Contributors
+;; Copyright (C) 2024-2025 ETAF Contributors
 
 ;; Author: ETAF Contributors
 ;; Keywords: types, structs, data-structures

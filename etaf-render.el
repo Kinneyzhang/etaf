@@ -1,10 +1,10 @@
 ;;; etaf-render.el --- Build render tree from DOM and CSSOM -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024
+;; Copyright (C) 2024-2025 ETAF Contributors
 
 ;; Author: ETAF Contributors
-;; Keywords: render, tree, layout
-;; Version: 1.0.0
+;; Keywords: render, tree, layout, css
+;; Version: 2.0.0
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -13,43 +13,82 @@
 
 ;;; Commentary:
 
-;; 从 DOM 和 CSSOM 构建渲染树 (Render Tree)
+;; Render Tree Construction for ETAF
+;; ==================================
 ;;
-;; 渲染树使用 DOM 格式表示，保留原本的 DOM 结构，附加的渲染信息用属性表示：
-;; - computed-style: 计算后的样式 ((property . value) ...)
-;;   其中包含 display 属性
+;; This module builds the Render Tree from the DOM and CSSOM. The render tree
+;; is an intermediate representation that combines document structure with
+;; computed styles, ready for layout computation.
 ;;
-;; 渲染树结构：
-;; (tag ((computed-style . ((display . "block") (color . "red") ...)))
-;;   child1 child2 ...)   ;; 子渲染节点
+;; Rendering Pipeline Position:
+;; ----------------------------
 ;;
-;; 这种结构可以直接使用 etaf-dom.el 中的函数，如：
-;; - (dom-tag render-node) => 'tag
-;; - (etaf-render-get-style render-node 'display) => "block"
-;; - (dom-children render-node) => (child1 child2 ...)
-;; - etaf-dom-map, etaf-dom-get-parent 等
+;;   DOM + CSSOM
+;;        │
+;;        ▼ etaf-render-build-tree
+;;   Render Tree (this module)
+;;        │
+;;        ▼ etaf-layout-build-tree
+;;   Layout Tree
+;;        │
+;;        ▼ etaf-layout-to-string
+;;   Rendered String
 ;;
-;; 渲染树与 DOM 的区别：
-;; 1. 不包含不可见元素（display: none, <head>, <script> 等）
-;; 2. 每个节点都附加了计算样式
-;; 3. 不保留原始 DOM 属性（class、id 等已被解析为样式）
-;; 4. 某些元素可能产生多个渲染节点（如 ::before, ::after）
+;; Render Tree vs DOM:
+;; -------------------
+;; The render tree differs from the DOM in several ways:
 ;;
-;; 使用示例：
+;; 1. No invisible elements (display: none, <head>, <script>, etc.)
+;; 2. Each node has computed styles (CSS cascade applied)
+;; 3. Original DOM attributes not preserved (only computed styles)
+;; 4. May have generated content (::before, ::after - future)
 ;;
-;;   ;; 构建渲染树
-;;   (setq render-tree (etaf-render-build-tree dom cssom))
+;; Render Tree Structure:
+;; ----------------------
+;; Uses DOM format for compatibility with dom.el functions:
 ;;
-;;   ;; 遍历渲染树 - 可以直接使用 etaf-dom-map
-;;   (etaf-dom-map
-;;     (lambda (render-node)
-;;       (message "Node: %s, Display: %s"
-;;                (dom-tag render-node)
-;;                (etaf-render-get-display render-node)))
-;;     render-tree)
+;;   (tag ((computed-style . ((display . "block") (color . "red") ...))
+;;         (computed-style-dark . ((color . "white") ...))  ; optional
+;;         (etaf-original-attrs . ...)                       ; for interactive elements
+;;         (etaf-event-handlers . ...))                      ; preserved handlers
+;;     child1 child2 ...)
 ;;
-;;   ;; 查询渲染节点的样式
-;;   (etaf-render-get-style render-node 'color)
+;; Key Features:
+;; -------------
+;; - Dual-mode styles: Light and dark mode computed separately
+;; - Event handler preservation: Interactive elements keep their handlers
+;; - Display type resolution: Default display based on HTML semantics
+;;
+;; Public API:
+;; -----------
+;; Construction:
+;;   - `etaf-render-build-tree' - Build render tree from DOM + CSSOM
+;;
+;; Accessors:
+;;   - `etaf-render-get-style' - Get a specific style property
+;;   - `etaf-render-get-display' - Get display type
+;;   - `etaf-render-get-computed-style' - Get full computed style
+;;
+;; Traversal:
+;;   - `etaf-render-walk' - Walk all render nodes
+;;   - `etaf-render-find-by-tag' - Find nodes by tag
+;;   - `etaf-render-find-by-display' - Find nodes by display type
+;;
+;; Utilities:
+;;   - `etaf-render-to-string' - Pretty-print render tree
+;;   - `etaf-render-stats' - Get tree statistics
+;;
+;; Usage Example:
+;; --------------
+;;   (let* ((dom (etaf-etml-to-dom '(div :class "box" "Hello")))
+;;          (cssom (etaf-css-build-cssom dom))
+;;          (render-tree (etaf-render-build-tree dom cssom)))
+;;     ;; Query styles
+;;     (etaf-render-get-style render-tree 'display)  ;; => "block"
+;;     ;; Traverse tree
+;;     (etaf-render-walk render-tree
+;;       (lambda (node)
+;;         (message "Node: %s" (dom-tag node)))))
 
 ;;; Code:
 

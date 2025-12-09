@@ -1,6 +1,6 @@
 ;;; etaf-css-core.el --- Core CSS Systems -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 ETAF Contributors
+;; Copyright (C) 2024-2025 ETAF Contributors
 
 ;; Author: ETAF Contributors
 ;; Keywords: css, cascade, inheritance, cache, index

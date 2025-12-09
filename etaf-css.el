@@ -1,10 +1,10 @@
 ;;; etaf-css.el --- Parse inline and external styles to CSSOM -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024
+;; Copyright (C) 2024-2025 ETAF Contributors
 
 ;; Author: ETAF Contributors
-;; Keywords: css, cssom, parser
-;; Version: 1.0.0
+;; Keywords: css, cssom, parser, styling
+;; Version: 2.0.0
 
 ;; This file is free software; you can redistribute it and/or modify
 ;; it under the terms of the GNU General Public License as published by
@@ -13,38 +13,90 @@
 
 ;;; Commentary:
 
-;; 将 DOM 中的内联/外部样式解析为 CSSOM (CSS Object Model)
+;; CSS Object Model (CSSOM) for ETAF
+;; ==================================
 ;;
-;; 这是 ETAF CSS 系统的主入口点，整合了以下模块：
-;; - etaf-css-parser: 完整 CSS 解析（声明、规则、样式表、媒体查询、复合属性、值解析）
-;; - etaf-css-core: 核心 CSS 系统（层叠算法、选择器特异性、属性继承、样式缓存、规则索引）
-;; - etaf-css-selector: CSS 选择器解析和匹配
-;; - etaf-css-face: CSS 到 Emacs face 属性转换
+;; This is the main entry point for ETAF's CSS system. It integrates all
+;; CSS sub-modules to provide complete CSS parsing, cascade, and style
+;; computation functionality.
 ;;
-;; CSSOM 结构（扁平的 plist）：
-;; - :ua-rules - User Agent 样式规则列表
-;; - :style-rules - 样式表规则列表
-;; - :inline-rules - 内联样式规则列表
-;; - :all-rules - 所有规则（按顺序）
-;; - :rule-index - 规则索引（按标签、类、ID）
-;; - :cache - 计算样式缓存
-;; - :media-env - 媒体查询环境
+;; Rendering Pipeline Position:
+;; ----------------------------
 ;;
-;; 这种扁平结构参考了 Chromium 浏览器的实现：
-;; CSSOM 就是一个全局的规则集合，加上索引方便查询。
-;; 不需要树形结构，避免不必要的 DOM 复制。
+;;   DOM Tree
+;;     │
+;;     ├─────────────────────┐
+;;     │                     │
+;;     ▼                     ▼
+;;   Extract Styles    etaf-css-build-cssom
+;;   (<style> tags,    ─────────────────────►  CSSOM
+;;    inline styles)
+;;     │
+;;     ▼
+;;   etaf-css-get-computed-style
+;;     │
+;;     ▼
+;;   Computed Style Alist
 ;;
-;; 使用示例：
+;; Sub-Modules:
+;; ------------
+;; - etaf-css-parser.el: CSS parsing (declarations, rules, stylesheets, media)
+;; - etaf-css-core.el: Core algorithms (cascade, inheritance, cache, index)
+;; - etaf-css-selector.el: CSS selector parsing and matching
+;; - etaf-css-face.el: CSS to Emacs face conversion
 ;;
-;;   ;; 从 DOM 构建 CSSOM（返回扁平的 plist）
-;;   (etaf-css-build-cssom dom)
-;;   
-;;   ;; 解析 CSS 声明（支持 !important）
-;;   (etaf-css-parse-declarations "color: red !important; font-size: 14px;")
-;;   ;; => ((color "red" t) (font-size "14px" nil))
+;; CSSOM Structure:
+;; ----------------
+;; The CSSOM is a flat plist (inspired by Chromium's design):
 ;;
-;;   ;; 查询匹配节点的样式（使用缓存和索引）
-;;   (etaf-css-get-computed-style cssom node dom)
+;;   (:ua-rules       <list>      ; User Agent default styles
+;;    :style-rules    <list>      ; Author styles from <style>
+;;    :inline-rules   <list>      ; Inline style= attributes
+;;    :all-rules      <list>      ; All rules in cascade order
+;;    :rule-index     <plist>     ; Index for fast lookup
+;;    :cache          <hash>      ; Computed style cache
+;;    :media-env      <alist>)    ; Media query environment
+;;
+;; CSS Rule Structure:
+;; -------------------
+;;   (:selector ".button"
+;;    :declarations ((color "red" nil) (font-size "14px" nil))
+;;    :specificity (0 1 0)
+;;    :source style-tag
+;;    :media nil
+;;    :node nil)
+;;
+;; Public API:
+;; -----------
+;; CSSOM Construction:
+;;   - `etaf-css-build-cssom' - Build CSSOM from DOM tree
+;;   - `etaf-css-add-stylesheet' - Add CSS to existing CSSOM
+;;
+;; Style Computation:
+;;   - `etaf-css-get-computed-style' - Get element's computed style
+;;   - `etaf-css-get-computed-style-dual-mode' - Get light/dark styles
+;;   - `etaf-css-get-rules-for-node' - Get matching rules
+;;
+;; Cache Management:
+;;   - `etaf-css-clear-cache' - Clear computed style cache
+;;
+;; Utilities:
+;;   - `etaf-css-cssom-to-string' - Debug: CSSOM as string
+;;   - `etaf-css-rule-to-string' - Debug: Rule as string
+;;
+;; Usage Example:
+;; --------------
+;;   ;; Build CSSOM from DOM
+;;   (let* ((dom (etaf-etml-to-dom
+;;                 '(html
+;;                   (head (style ".box { color: red; }"))
+;;                   (body (div :class "box" "Hello")))))
+;;          (cssom (etaf-css-build-cssom dom)))
+;;
+;;     ;; Query computed style for an element
+;;     (let ((box-node (car (dom-by-class dom "box"))))
+;;       (etaf-css-get-computed-style cssom box-node dom)))
+;;   ;; => ((color . "red") ...)
 
 ;;; Code:
 

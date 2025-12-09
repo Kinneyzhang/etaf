@@ -1,6 +1,6 @@
 ;;; etaf-layout-box.el --- Box model for layout computation -*- lexical-binding: t; -*-
 
-;; Copyright (C) 2024 ETAF Contributors
+;; Copyright (C) 2024-2025 ETAF Contributors
 
 ;; Author: ETAF Contributors
 ;; Keywords: layout, box-model, css
