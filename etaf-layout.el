@@ -547,9 +547,18 @@ PARENT-CONTEXT 包含父容器的上下文信息。
               (plist-put (plist-get box :content)
                          :height accumulated-height)))
           
-          ;; 处理特殊宽度关键字：fit-content, min-content, max-content
-          (let ((box (etaf-layout-get-box-model layout-node)))
-            (when (plist-get box :needs-content-width)
+          ;; 处理宽度计算：
+          ;; 1. needs-content-width: 元素有 fit-content/min-content/max-content
+          ;; 2. need-shrink-to-fit: 父容器传递了 nil 作为 :content-width
+          ;; 3. inline elements: inline/inline-block 元素需要根据内容计算宽度
+          ;; 这些情况都需要根据子元素宽度来计算
+          (let* ((box (etaf-layout-get-box-model layout-node))
+                 (display (or (etaf-render-get-display render-node) "block"))
+                 (is-inline-element (or (string= display "inline")
+                                        (string= display "inline-block"))))
+            (when (or (plist-get box :needs-content-width) 
+                      need-shrink-to-fit
+                      is-inline-element)
               (let* ((width-keyword (plist-get box :width-keyword))
                      (parent-width (plist-get box :parent-width))
                      (padding (plist-get box :padding))
@@ -626,14 +635,7 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                         natural-content-height)
                        (t natural-content-height))))
                 (plist-put (plist-get box :content)
-                           :height final-height))))
-          
-          ;; 宽度shrink-to-fit：当viewport width为nil且根元素width为auto时，
-          ;; 使用子元素最大宽度作为容器宽度
-          (when need-shrink-to-fit
-            (let ((box (etaf-layout-get-box-model layout-node)))
-              (plist-put (plist-get box :content)
-                         :width max-child-width))))))
+                           :height final-height)))))))
     
     layout-node))
 
