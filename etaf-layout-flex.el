@@ -114,6 +114,34 @@ PARENT-CONTEXT 包含父容器的上下文信息。
          (should-wrap (not (string= flex-wrap "nowrap")))
          (wrap-reversed (string= flex-wrap "wrap-reverse"))
          
+         ;; For fit-content elements, calculate available width for children
+         (child-available-width
+          (if (plist-get box-model :needs-content-width)
+              (let ((parent-width (plist-get box-model :parent-width)))
+                (if parent-width
+                    (max 0 (- parent-width
+                              (plist-get (plist-get box-model :padding) :left)
+                              (plist-get (plist-get box-model :padding) :right)
+                              (plist-get (plist-get box-model :border) :left-width)
+                              (plist-get (plist-get box-model :border) :right-width)
+                              (plist-get (plist-get box-model :margin) :left)
+                              (plist-get (plist-get box-model :margin) :right)))
+                  nil))
+            content-width))
+         (child-available-height
+          (if (plist-get box-model :needs-content-height)
+              (let ((parent-height (plist-get box-model :parent-height)))
+                (if parent-height
+                    (max 0 (- parent-height
+                              (plist-get (plist-get box-model :padding) :top)
+                              (plist-get (plist-get box-model :padding) :bottom)
+                              (plist-get (plist-get box-model :border) :top-width)
+                              (plist-get (plist-get box-model :border) :bottom-width)
+                              (plist-get (plist-get box-model :margin) :top)
+                              (plist-get (plist-get box-model :margin) :bottom)))
+                  nil))
+            content-height))
+         
          ;; 创建布局节点
          (layout-node (etaf-layout-create-node render-node box-model)))
     
@@ -130,33 +158,10 @@ PARENT-CONTEXT 包含父容器的上下文信息。
     (let ((children (dom-children render-node)))
       (when children
         (let ((child-context
-               (list ;; When parent has fit-content, min-content, or max-content,
-                     ;; pass the parent's available width to children instead of 0
-                     ;; BUT subtract this element's padding and border first
-                     :content-width (if (plist-get box-model :needs-content-width)
-                                        (let ((parent-width (plist-get box-model :parent-width)))
-                                          (if parent-width
-                                              (max 0 (- parent-width
-                                                        (plist-get (plist-get box-model :padding) :left)
-                                                        (plist-get (plist-get box-model :padding) :right)
-                                                        (plist-get (plist-get box-model :border) :left-width)
-                                                        (plist-get (plist-get box-model :border) :right-width)
-                                                        (plist-get (plist-get box-model :margin) :left)
-                                                        (plist-get (plist-get box-model :margin) :right)))
-                                            0))
-                                        content-width)
-                     :content-height (if (plist-get box-model :needs-content-height)
-                                         (let ((parent-height (plist-get box-model :parent-height)))
-                                           (if parent-height
-                                               (max 0 (- parent-height
-                                                         (plist-get (plist-get box-model :padding) :top)
-                                                         (plist-get (plist-get box-model :padding) :bottom)
-                                                         (plist-get (plist-get box-model :border) :top-width)
-                                                         (plist-get (plist-get box-model :border) :bottom-width)
-                                                         (plist-get (plist-get box-model :margin) :top)
-                                                         (plist-get (plist-get box-model :margin) :bottom)))
-                                             0))
-                                         content-height)
+               (list ;; When parent has fit-content, pass available width after
+                     ;; subtracting parent's padding, border, margin
+                     :content-width child-available-width
+                     :content-height child-available-height
                      :viewport-width
                      (plist-get parent-context :viewport-width)
                      :viewport-height
