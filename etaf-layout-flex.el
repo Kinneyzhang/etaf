@@ -493,5 +493,59 @@ ALIGN-CONTENT 是多行对齐方式。"
     (dom-set-attribute layout-node 'layout-flex-align-content align-content)
     (dom-set-attribute layout-node 'layout-flex-cross-size cross-size)))
 
+(defun etaf-layout-flex-recompute-main-axis (layout-node new-width)
+  "重新计算 flex 容器的主轴分配。
+当父容器（如 w-fit）确定最终宽度后，需要更新 flex 容器的
+主轴分配以支持 justify-between 等属性。
+
+LAYOUT-NODE 是 flex 容器布局节点。
+NEW-WIDTH 是新的容器宽度。"
+  (let* ((flex-direction (or (dom-attr layout-node 'layout-flex-direction) "row"))
+         (justify-content (or (dom-attr layout-node 'layout-justify-content) "flex-start"))
+         (column-gap (or (dom-attr layout-node 'layout-column-gap) 0))
+         (row-gap (or (dom-attr layout-node 'layout-row-gap) 0))
+         (is-row (or (string= flex-direction "row")
+                     (string= flex-direction "row-reverse")))
+         (main-size (if is-row new-width (etaf-layout-box-content-height
+                                           (etaf-layout-get-box-model layout-node))))
+         (main-gap (if is-row column-gap row-gap))
+         ;; 收集 flex items
+         (flex-items '())
+         (total-flex-basis 0))
+    
+    ;; 遍历子元素收集 flex items
+    (dolist (child (dom-children layout-node))
+      (when (and (consp child) (symbolp (car child)))
+        (let* ((box-model (etaf-layout-get-box-model child))
+               (item-main-size (if is-row
+                                   (etaf-layout-box-total-width box-model)
+                                 (etaf-layout-box-total-height box-model)))
+               (flex-grow (or (dom-attr child 'layout-flex-grow) 0))
+               (flex-shrink (or (dom-attr child 'layout-flex-shrink) 1)))
+          (push (list :layout child
+                      :flex-grow flex-grow
+                      :flex-shrink flex-shrink)
+                flex-items)
+          (setq total-flex-basis (+ total-flex-basis item-main-size)))))
+    
+    (setq flex-items (nreverse flex-items))
+    
+    ;; 计算空间分配
+    (let* ((items-count (length flex-items))
+           (total-gap (* main-gap (max 0 (1- items-count))))
+           (available-space (- main-size total-flex-basis total-gap))
+           (free-space (max 0 available-space)))
+      
+      ;; 存储计算结果
+      (dom-set-attribute layout-node 'layout-flex-free-space free-space)
+      
+      ;; 计算 justify-content 分布
+      (when (> items-count 0)
+        (let ((space-distribution
+               (etaf-layout-flex-justify-space
+                justify-content free-space items-count main-gap)))
+          (dom-set-attribute layout-node 'layout-flex-space-distribution
+                             space-distribution))))))
+
 (provide 'etaf-layout-flex)
 ;;; etaf-layout-flex.el ends here

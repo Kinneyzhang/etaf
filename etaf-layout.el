@@ -595,7 +595,39 @@ PARENT-CONTEXT 包含父容器的上下文信息。
                         natural-content-width)
                        (t natural-content-width))))
                 (plist-put (plist-get box :content)
-                           :width final-width))))
+                           :width final-width)
+                
+                ;; 对于 fit-content 容器，需要更新块级子元素的宽度
+                ;; 使它们填满父容器的最终宽度（用于 justify-between 等）
+                (when (and (plist-get box :needs-content-width)
+                           (> final-width 0))
+                  (dolist (child-layout child-layouts)
+                    (when (and (consp child-layout) (symbolp (car child-layout)))
+                      (let* ((child-box (etaf-layout-get-box-model child-layout))
+                             (child-display (or (etaf-render-get-display child-layout) "block"))
+                             (child-is-block (or (string= child-display "block")
+                                                 (string= child-display "flex")
+                                                 (string= child-display "grid")))
+                             (child-content-width (etaf-layout-box-content-width child-box)))
+                        ;; 如果是块级元素且宽度小于父容器，更新其宽度
+                        (when (and child-is-block
+                                   (< child-content-width final-width))
+                          (let ((child-padding (plist-get child-box :padding))
+                                (child-border (plist-get child-box :border))
+                                (child-margin (plist-get child-box :margin)))
+                            (let ((available-child-width
+                                   (max 0 (- final-width
+                                             (plist-get child-padding :left)
+                                             (plist-get child-padding :right)
+                                             (plist-get child-border :left-width)
+                                             (plist-get child-border :right-width)
+                                             (plist-get child-margin :left)
+                                             (plist-get child-margin :right)))))
+                              (plist-put (plist-get child-box :content) :width available-child-width)
+                              ;; 如果是 flex 容器，需要重新计算主轴分配
+                              (when (string= child-display "flex")
+                                (etaf-layout-flex-recompute-main-axis
+                                 child-layout available-child-width))))))))))))
           
           ;; 处理特殊高度关键字：fit-content, min-content, max-content
           (let ((box (etaf-layout-get-box-model layout-node)))
