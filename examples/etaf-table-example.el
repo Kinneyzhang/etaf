@@ -130,7 +130,7 @@
                    (:prop "department" :label "Department" :width 120 :sortable t)
                    (:prop "salary" :label "Salary" :width 120 :sortable t
                     :formatter (lambda (row col value)
-                                (format "$%s" (number-to-string value))))
+                                (format "$%d" value)))
                    (:prop "status" :label "Status" :width 100)))
         (data etaf-table-example-users))
     (etaf-paint-to-buffer "*etaf-table-sortable*"
