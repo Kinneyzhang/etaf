@@ -60,7 +60,7 @@
 ;;
 ;;   (require 'etaf-table)
 ;;
-;;   ;; Define columns
+;;   ;; Define columns (width values are in character widths, not pixels)
 ;;   (setq my-columns
 ;;     '((:prop "name" :label "Name" :width 150 :sortable t)
 ;;       (:prop "age" :label "Age" :width 80 :sortable t)
@@ -429,16 +429,16 @@ ROW is the current row data, COLUMN is the column definition."
                                            (cond
                                             ((equal type "selection")
                                              `(th :class ,cell-class
-                                                  :style ,(when width (format "width: %dpx" width))
+                                                  :style ,(when width (format "width: %dcw" width))
                                                   (input :type "checkbox"
                                                          :on-change ,toggle-all-selection)))
                                             ((equal type "index")
                                              `(th :class ,cell-class
-                                                  :style ,(when width (format "width: %dpx" width))
+                                                  :style ,(when width (format "width: %dcw" width))
                                                   ,label))
                                             (t
                                              `(th :class ,cell-class
-                                                  :style ,(when width (format "width: %dpx" width))
+                                                  :style ,(when width (format "width: %dcw" width))
                                                   :on-click ,(when sortable
                                                               (lambda () (funcall handle-sort col)))
                                                   ,label
@@ -482,19 +482,19 @@ ROW is the current row data, COLUMN is the column definition."
                                                  (cond
                                                   ((equal type "selection")
                                                    `(td :class ,cell-class
-                                                        :style ,(when width (format "width: %dpx" width))
+                                                        :style ,(when width (format "width: %dcw" width))
                                                         (input :type "checkbox"
                                                                :checked ,is-selected
                                                                :on-change ,(lambda ()
                                                                             (funcall toggle-row-selection row)))))
                                                   ((equal type "index")
                                                    `(td :class ,cell-class
-                                                        :style ,(when width (format "width: %dpx" width))
+                                                        :style ,(when width (format "width: %dcw" width))
                                                         ,(format "%d" (+ (* (1- current-page) page-size)
                                                                         row-index))))
                                                   (t
                                                    `(td :class ,cell-class
-                                                        :style ,(when width (format "width: %dpx" width))
+                                                        :style ,(when width (format "width: %dcw" width))
                                                         ,formatted)))))
                                              all-columns))))
                                  paginated-data)))))

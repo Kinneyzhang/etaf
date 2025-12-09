@@ -49,11 +49,11 @@ The ETAF table component provides a comprehensive solution for displaying and ma
 ```elisp
 (require 'etaf-table)
 
-;; Define columns
+;; Define columns (width is in character widths for text-based rendering)
 (setq my-columns
-  '((:prop "name" :label "Name" :width 150)
-    (:prop "age" :label "Age" :width 80)
-    (:prop "email" :label "Email" :width 200)))
+  '((:prop "name" :label "Name" :width 20)
+    (:prop "age" :label "Age" :width 5)
+    (:prop "email" :label "Email" :width 30)))
 
 ;; Define data
 (setq my-data
@@ -134,7 +134,7 @@ Each column is defined as a plist with the following properties:
 |----------|------|-------------|
 | `:prop` | string | Property name in data object |
 | `:label` | string | Column header text |
-| `:width` | number | Fixed column width in pixels |
+| `:width` | number | Fixed column width in character widths (cw) |
 | `:type` | string | Special column type (`"selection"`, `"index"`) |
 
 ### Display Properties
@@ -164,9 +164,9 @@ Each column is defined as a plist with the following properties:
 
 ```elisp
 (setq columns
-  '((:prop "name" :label "Name" :width 150)
-    (:prop "email" :label "Email" :width 200)
-    (:prop "department" :label "Department" :width 120)))
+  '((:prop "name" :label "Name" :width 20)
+    (:prop "email" :label "Email" :width 30)
+    (:prop "department" :label "Department" :width 15)))
 
 (setq data
   '((:id 1 :name "Alice" :email "alice@example.com" :department "Engineering")
@@ -180,9 +180,9 @@ Each column is defined as a plist with the following properties:
 
 ```elisp
 (setq columns
-  '((:prop "name" :label "Name" :width 150 :sortable t)
-    (:prop "age" :label "Age" :width 80 :sortable t)
-    (:prop "salary" :label "Salary" :width 120 :sortable t
+  '((:prop "name" :label "Name" :width 20 :sortable t)
+    (:prop "age" :label "Age" :width 5 :sortable t)
+    (:prop "salary" :label "Salary" :width 12 :sortable t
      :formatter (lambda (row col value) (format "$%d" value)))))
 
 (etaf-paint-to-buffer "*table*"
@@ -229,13 +229,13 @@ Each column is defined as a plist with the following properties:
 
 ```elisp
 (setq columns
-  '((:prop "name" :label "Name" :width 150)
-    (:prop "status" :label "Status" :width 120
+  '((:prop "name" :label "Name" :width 20)
+    (:prop "status" :label "Status" :width 12
      :formatter (lambda (row col value)
                  (if (equal value "active")
                      "✓ Active"
                    "✗ Inactive")))
-    (:prop "created" :label "Created" :width 150
+    (:prop "created" :label "Created" :width 15
      :formatter (lambda (row col value)
                  (format-time-string "%Y-%m-%d" value)))))
 
@@ -278,12 +278,12 @@ Each column is defined as a plist with the following properties:
 
 ```elisp
 (setq columns
-  '((:prop "name" :label "Employee" :width 150 :sortable t)
-    (:prop "age" :label "Age" :width 70 :sortable t)
-    (:prop "department" :label "Department" :width 120 :sortable t)
-    (:prop "salary" :label "Salary" :width 120 :sortable t
+  '((:prop "name" :label "Employee" :width 20 :sortable t)
+    (:prop "age" :label "Age" :width 5 :sortable t)
+    (:prop "department" :label "Department" :width 15 :sortable t)
+    (:prop "salary" :label "Salary" :width 12 :sortable t
      :formatter (lambda (row col value) (format "$%,d" value)))
-    (:prop "status" :label "Status" :width 100
+    (:prop "status" :label "Status" :width 12
      :formatter (lambda (row col value)
                  (if (equal value "active") "✓ Active" "✗ Inactive")))))
 
