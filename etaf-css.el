@@ -272,9 +272,11 @@ DOM 是根 DOM 节点。
                ;; 4. 处理 Tailwind CSS 类名并展开复合属性
                ;; 使用 when-let* 组合条件，避免不必要的中间变量
                ;; 使用 etaf-tailwind-classes-to-css-with-mode 以支持 dark: 变体
-               (tailwind-style (when-let* ((class-attr (dom-attr node 'class))
-                                           (tailwind-raw (etaf-tailwind-classes-to-css-with-mode class-attr)))
-                                 (etaf-css--expand-tailwind-shorthand tailwind-raw)))
+               (tailwind-style
+                (when-let* ((class-attr (dom-attr node 'class))
+                            (tailwind-raw (etaf-tailwind-classes-to-css-with-mode
+                                           class-attr)))
+                  (etaf-css--expand-tailwind-shorthand tailwind-raw)))
                ;; 5. 合并 Tailwind 样式到计算样式
                ;; Tailwind 类的优先级介于普通 CSS 规则和内联样式之间
                (computed-with-tailwind

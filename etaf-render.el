@@ -145,16 +145,17 @@ COMPUTED-STYLE-DARK 是暗色模式下的计算样式 alist（可选）。
          (event-handlers (cdr (assq 'etaf-event-handlers (dom-attributes dom-node))))
          ;; 构建新的属性 alist，只添加渲染信息，不保留大多数原始 DOM 属性
          ;; 只有当暗色样式与亮色样式不同时才添加 computed-style-dark
-         (render-attrs (if (and computed-style-dark
-                                (not (equal computed-style-with-display computed-style-dark)))
-                           ;; 确保暗色模式样式也包含 display
-                           (let ((dark-display (or (cdr (assq 'display computed-style-dark)) display)))
-                             (list (cons 'computed-style computed-style-with-display)
-                                   (cons 'computed-style-dark 
-                                         (if (assq 'display computed-style-dark)
-                                             computed-style-dark
-                                           (cons (cons 'display dark-display) computed-style-dark)))))
-                         (list (cons 'computed-style computed-style-with-display)))))
+         (render-attrs
+          (if (and computed-style-dark
+                   (not (equal computed-style-with-display computed-style-dark)))
+              ;; 确保暗色模式样式也包含 display
+              (let ((dark-display (or (cdr (assq 'display computed-style-dark)) display)))
+                (list (cons 'computed-style computed-style-with-display)
+                      (cons 'computed-style-dark 
+                            (if (assq 'display computed-style-dark)
+                                computed-style-dark
+                              (cons (cons 'display dark-display) computed-style-dark)))))
+            (list (cons 'computed-style computed-style-with-display)))))
     ;; 如果是交互元素，保留原始属性用于事件处理
     (when original-attrs
       (push (cons 'etaf-original-attrs original-attrs) render-attrs))
@@ -196,7 +197,8 @@ ROOT-DOM 是 DOM 树根节点。
            (computed-style-dark (plist-get dual-style :dark)))
       ;; computed-style can be nil or empty list, both are acceptable
       (when (etaf-render-node-visible-p node computed-style)
-        (let ((render-node (etaf-render-create-node node computed-style computed-style-dark)))
+        (let ((render-node (etaf-render-create-node
+                            node computed-style computed-style-dark)))
           ;; 递归处理子节点
           (let ((children '()))
             (dolist (child (dom-children node))
