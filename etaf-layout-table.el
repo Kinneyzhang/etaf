@@ -178,8 +178,12 @@ This function is the main entry point for table layout:
 
 (defun etaf-layout-table--collect-structure (children)
   "Collect table structure from CHILDREN.
-Returns a plist with :caption, :row-groups, :direct-rows, and :all-rows.
-:direct-rows contains rows directly inside the table (without thead/tbody/tfoot wrapper)."
+Returns a plist with:
+  :caption - the table caption element (if any)
+  :row-groups - list of row group elements (thead, tbody, tfoot)
+  :direct-rows - rows directly inside table (without thead/tbody/tfoot wrapper)
+  :all-rows - ALL rows for column width calculation (includes both
+              rows inside row-groups AND direct-rows)"
   (let ((caption nil)
         (row-groups '())
         (direct-rows '())
@@ -199,7 +203,7 @@ Returns a plist with :caption, :row-groups, :direct-rows, and :all-rows.
                 (string= display "table-row-group")
                 (string= display "table-footer-group"))
             (push child row-groups)
-            ;; Collect rows from this group
+            ;; Collect rows from this group into all-rows
             (dolist (row-child (dom-children child))
               (when (and (consp row-child) (symbolp (car row-child)))
                 (let ((row-display (or (etaf-render-get-display row-child)
@@ -207,7 +211,7 @@ Returns a plist with :caption, :row-groups, :direct-rows, and :all-rows.
                   (when (string= row-display "table-row")
                     (push row-child all-rows))))))
            
-           ;; Direct rows (without wrapper)
+           ;; Direct rows (without wrapper) - added to both direct-rows and all-rows
            ((string= display "table-row")
             (push child direct-rows)
             (push child all-rows))))))
