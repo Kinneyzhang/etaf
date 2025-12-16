@@ -820,14 +820,14 @@ Returns the merged row string."
                                str)))
                          valid-strings)))
             ;; Concatenate with spacing
+            ;; For n cells, we need n+1 spacing elements: spacing|cell1|spacing|cell2|...|cellN|spacing
             (if (> border-spacing 0)
-                (let ((spacing-str (etaf-pixel-spacing border-spacing)))
+                (let ((spacing-str (etaf-pixel-spacing border-spacing))
+                      ;; Create spacing list with exactly (count + 1) elements
+                      (spacings (make-list (1+ count) nil)))
+                  (setq spacings (mapcar (lambda (_) spacing-str) spacings))
                   (etaf-lines-concat
-                   (etaf-interleave
-                    (append (list spacing-str)
-                            (make-list (1- count) spacing-str)
-                            (list spacing-str))
-                    aligned-strings)))
+                   (etaf-interleave spacings aligned-strings)))
               (etaf-lines-concat aligned-strings))))))))
 
 ;;; ============================================================

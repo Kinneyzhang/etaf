@@ -236,10 +236,15 @@ Returns a list of column widths in pixels.
 
 Algorithm:
 1. If column has explicit width, use it
-2. Otherwise, distribute remaining space equally among auto columns"
+2. Otherwise, distribute remaining space equally among auto columns
+
+For border-spacing calculation:
+- We use (n + 1) spacing elements for n columns: |spacing|cell1|spacing|cell2|...|cellN|spacing|
+- This provides outer margins and gaps between all cells."
   (if (= column-count 0)
       '()
     ;; Calculate available width (minus spacing)
+    ;; Total spacing = border-spacing * (column-count + 1) for outer + inner gaps
     (let* ((total-spacing (* border-spacing (1+ column-count)))
            (available-width (max 0 (- container-width total-spacing)))
            ;; For now, distribute equally (basic implementation)

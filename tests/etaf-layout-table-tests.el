@@ -11,10 +11,6 @@
 (require 'ert)
 (require 'etaf)
 
-(defmacro should-equal (a b)
-  "Assert that A equals B."
-  `(should (equal ,a ,b)))
-
 ;;; ============================================================
 ;;; Basic table structure tests
 ;;; ============================================================
@@ -31,7 +27,7 @@
     ;; Table should have layout-table attribute
     (should (dom-attr layout-tree 'layout-table))
     ;; Table should have correct column count
-    (should-equal (dom-attr layout-tree 'layout-table-column-count) 2)))
+    (should (equal (dom-attr layout-tree 'layout-table-column-count) 2))))
 
 (ert-deftest etaf-layout-table-test-with-thead-tbody ()
   "Test table with thead and tbody."
@@ -45,7 +41,7 @@
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 400 :height 200))))
     (should (dom-attr layout-tree 'layout-table))
-    (should-equal (dom-attr layout-tree 'layout-table-column-count) 2)))
+    (should (equal (dom-attr layout-tree 'layout-table-column-count) 2))))
 
 (ert-deftest etaf-layout-table-test-column-widths ()
   "Test that column widths are calculated correctly."
@@ -56,7 +52,7 @@
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 500 :height 200))))
     ;; Should have 4 columns
-    (should-equal (dom-attr layout-tree 'layout-table-column-count) 4)
+    (should (equal (dom-attr layout-tree 'layout-table-column-count) 4))
     ;; Each column should have equal width (400 - spacing) / 4
     (let ((column-widths (dom-attr layout-tree 'layout-table-column-widths)))
       (should (= (length column-widths) 4)))))
@@ -68,7 +64,7 @@
          (render-tree (etaf-render-build-tree dom cssom))
          (layout-tree (etaf-layout-build-tree render-tree '(:width 400 :height 200))))
     (should (dom-attr layout-tree 'layout-table))
-    (should-equal (dom-attr layout-tree 'layout-table-column-count) 0)))
+    (should (equal (dom-attr layout-tree 'layout-table-column-count) 0))))
 
 ;;; ============================================================
 ;;; Table rendering tests
