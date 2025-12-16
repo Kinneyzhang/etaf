@@ -56,6 +56,8 @@
    "tr{table-row}"
    "th, td{table-cell}"
    "caption{table-caption}"
+   "colgroup{table-column-group}"
+   "col{table-column}"
    "li{list-item}"
 
    "button{inline-block}"

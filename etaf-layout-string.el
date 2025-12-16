@@ -128,6 +128,8 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
          ;; 处理子元素
          (children (dom-children layout-node))
          (is-flex-container (dom-attr layout-node 'layout-flex-direction))
+         (is-table-row (dom-attr layout-node 'layout-table-row))
+         (table-border-spacing (or (dom-attr layout-node 'layout-border-spacing) 0))
          (child-infos
           (mapcar (lambda (child)
                     (cond
@@ -143,18 +145,26 @@ CSS 文本样式会转换为 Emacs face 属性应用到文本上。
          
          ;; 合并子节点
          (children-text
-          (if is-flex-container
-              (etaf-layout-string--merge-flex-children
-               (mapcar #'car child-infos)
-               (dom-attr layout-node 'layout-flex-direction)
-               (or (dom-attr layout-node 'layout-row-gap) 0)
-               (or (dom-attr layout-node 'layout-column-gap) 0)
-               (dom-attr layout-node 'layout-justify-content)
-               content-width content-height-px
-               (or (dom-attr layout-node 'layout-flex-wrap) "nowrap")
-               (or (dom-attr layout-node 'layout-align-items) "stretch")
-               (or (dom-attr layout-node 'layout-align-content) "stretch"))
-            (etaf-layout-string--merge-by-display child-infos content-width)))
+          (cond
+           ;; Flex container: use flex layout
+           (is-flex-container
+            (etaf-layout-string--merge-flex-children
+             (mapcar #'car child-infos)
+             (dom-attr layout-node 'layout-flex-direction)
+             (or (dom-attr layout-node 'layout-row-gap) 0)
+             (or (dom-attr layout-node 'layout-column-gap) 0)
+             (dom-attr layout-node 'layout-justify-content)
+             content-width content-height-px
+             (or (dom-attr layout-node 'layout-flex-wrap) "nowrap")
+             (or (dom-attr layout-node 'layout-align-items) "stretch")
+             (or (dom-attr layout-node 'layout-align-content) "stretch")))
+           ;; Table row: concatenate cells horizontally with spacing
+           (is-table-row
+            (etaf-layout-string--merge-table-row
+             (mapcar #'car child-infos) table-border-spacing))
+           ;; Default: merge by display type
+           (t
+            (etaf-layout-string--merge-by-display child-infos content-width))))
          
          (inner-content children-text)
          
@@ -775,6 +785,50 @@ CONTAINER-WIDTH 是容器宽度。"
           (if lines
               (etaf-lines-stack (nreverse lines))
             ""))))))
+
+;;; ============================================================
+;;; 内部函数：Table 布局合并
+;;; ============================================================
+
+(defun etaf-layout-string--merge-table-row (cell-strings border-spacing)
+  "Merge table cell strings horizontally with spacing.
+CELL-STRINGS is a list of cell content strings.
+BORDER-SPACING is the spacing between cells in pixels.
+
+Returns the merged row string."
+  (if (null cell-strings)
+      ""
+    (let* ((valid-strings (seq-filter (lambda (s) (> (length s) 0)) cell-strings))
+           (count (length valid-strings)))
+      (if (<= count 0)
+          ""
+        ;; Calculate max height for vertical alignment
+        (let ((max-height (if valid-strings
+                              (apply #'max (mapcar #'etaf-string-linum valid-strings))
+                            0)))
+          ;; Align all cells to the same height
+          (let ((aligned-strings
+                 (mapcar (lambda (str)
+                           (let ((str-height (etaf-string-linum str)))
+                             (if (< str-height max-height)
+                                 ;; Add padding below to align
+                                 (etaf-lines-stack
+                                  (list str
+                                        (etaf-pixel-blank
+                                         (string-pixel-width str)
+                                         (- max-height str-height))))
+                               str)))
+                         valid-strings)))
+            ;; Concatenate with spacing
+            (if (> border-spacing 0)
+                (let ((spacing-str (etaf-pixel-spacing border-spacing)))
+                  (etaf-lines-concat
+                   (etaf-interleave
+                    (append (list spacing-str)
+                            (make-list (1- count) spacing-str)
+                            (list spacing-str))
+                    aligned-strings)))
+              (etaf-lines-concat aligned-strings))))))))
 
 ;;; ============================================================
 ;;; 内部函数：Flex 布局合并
