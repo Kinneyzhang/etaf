@@ -262,13 +262,12 @@ For border-spacing calculation:
       '()
     ;; Calculate available width (minus spacing)
     ;; Total spacing = border-spacing * (column-count + 1) for outer + inner gaps
+    ;; At this point, column-count > 0
     (let* ((total-spacing (* border-spacing (1+ column-count)))
            (available-width (max 0 (- container-width total-spacing)))
            ;; For now, distribute equally (basic implementation)
-           ;; Ensure each column has at least 1 pixel width if there's any available width
-           (equal-width (if (> column-count 0)
-                            (max 1 (/ available-width column-count))
-                          1)))
+           ;; Ensure each column has at least 1 pixel width
+           (equal-width (max 1 (/ available-width column-count))))
       (make-list column-count equal-width))))
 
 ;;; ============================================================
