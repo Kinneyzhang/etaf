@@ -104,17 +104,33 @@
   '(div p h1 h2 h3 h4 h5 h6 ul ol li dl dt dd
     article aside section nav header footer main
     blockquote pre address figure figcaption
-    form fieldset table thead tbody tfoot tr th td
+    form fieldset
     hr html body)
   "HTML 块级元素标签列表。这些元素默认 display 为 block。")
+
+;; Table-related element display types
+(defconst etaf-render-table-display-map
+  '((table . "table")
+    (thead . "table-header-group")
+    (tbody . "table-row-group")
+    (tfoot . "table-footer-group")
+    (tr . "table-row")
+    (th . "table-cell")
+    (td . "table-cell")
+    (caption . "table-caption")
+    (colgroup . "table-column-group")
+    (col . "table-column"))
+  "Table-related element to display type mapping.")
 
 (defun etaf-render-get-default-display (tag)
   "根据元素标签返回默认的 display 值。
 TAG 是元素标签名（symbol）。
+Table elements get their proper display types.
 块级元素返回 \"block\"，其他返回 \"inline\"。"
-  (if (memq tag etaf-render-block-level-tags)
-      "block"
-    "inline"))
+  (or (cdr (assq tag etaf-render-table-display-map))
+      (if (memq tag etaf-render-block-level-tags)
+          "block"
+        "inline")))
 
 (defun etaf-render-create-node (dom-node computed-style &optional computed-style-dark)
   "创建渲染节点（使用 DOM 格式）。

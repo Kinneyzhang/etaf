@@ -103,6 +103,7 @@ This function is the main entry point for table layout:
            (table-structure (etaf-layout-table--collect-structure children))
            (caption (plist-get table-structure :caption))
            (row-groups (plist-get table-structure :row-groups))
+           (direct-rows (plist-get table-structure :direct-rows))
            (all-rows (plist-get table-structure :all-rows))
            
            ;; Calculate column count and widths
@@ -137,7 +138,7 @@ This function is the main entry point for table layout:
                        (etaf-layout-box-padding-height caption-box)
                        (etaf-layout-box-margin-height caption-box)))))))
       
-      ;; Layout row groups and rows
+      ;; Layout row groups (thead, tbody, tfoot)
       (dolist (group row-groups)
         (let ((group-layout (etaf-layout-table--layout-row-group
                              group child-context column-widths border-spacing)))
@@ -148,6 +149,18 @@ This function is the main entry point for table layout:
                     (+ accumulated-height
                        (etaf-layout-box-content-height group-box)
                        (etaf-layout-box-padding-height group-box)))))))
+      
+      ;; Layout direct rows (rows without thead/tbody/tfoot wrapper)
+      (dolist (row direct-rows)
+        (let ((row-layout (etaf-layout-table--layout-row
+                           row child-context column-widths border-spacing)))
+          (when row-layout
+            (push row-layout child-layouts)
+            (let ((row-box (etaf-layout-get-box-model row-layout)))
+              (setq accumulated-height
+                    (+ accumulated-height
+                       (etaf-layout-box-content-height row-box)
+                       (etaf-layout-box-padding-height row-box)))))))
       
       ;; Set children
       (setcdr (cdr layout-node) (nreverse child-layouts))
@@ -165,11 +178,12 @@ This function is the main entry point for table layout:
 
 (defun etaf-layout-table--collect-structure (children)
   "Collect table structure from CHILDREN.
-Returns a plist with :caption, :row-groups, and :all-rows."
+Returns a plist with :caption, :row-groups, :direct-rows, and :all-rows.
+:direct-rows contains rows directly inside the table (without thead/tbody/tfoot wrapper)."
   (let ((caption nil)
         (row-groups '())
-        (all-rows '())
-        (implicit-tbody-rows '()))
+        (direct-rows '())
+        (all-rows '()))
     
     (dolist (child children)
       (when (and (consp child) (symbolp (car child)))
@@ -193,20 +207,14 @@ Returns a plist with :caption, :row-groups, and :all-rows."
                   (when (string= row-display "table-row")
                     (push row-child all-rows))))))
            
-           ;; Direct rows (create implicit tbody)
+           ;; Direct rows (without wrapper)
            ((string= display "table-row")
-            (push child implicit-tbody-rows)
+            (push child direct-rows)
             (push child all-rows))))))
-    
-    ;; If there are direct rows without row-groups, they form an implicit tbody
-    ;; For layout purposes, we wrap them in a pseudo row-group
-    (when implicit-tbody-rows
-      (let ((implicit-tbody (list 'tbody nil)))
-        (setcdr (cdr implicit-tbody) (nreverse implicit-tbody-rows))
-        (push implicit-tbody row-groups)))
     
     (list :caption caption
           :row-groups (nreverse row-groups)
+          :direct-rows (nreverse direct-rows)
           :all-rows (nreverse all-rows))))
 
 ;;; ============================================================
