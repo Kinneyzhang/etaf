@@ -134,7 +134,9 @@ itself is fast and memoization would add cache management complexity."
 支持响应式组件的增量更新（使用 etaf-reactive-span）。"
   (declare (indent defun))
   (let ((buffer (get-buffer-create buffer-or-name)))
-    (etaf-switch-to-buffer buffer)
+    (if-let ((win (get-buffer-window buffer)))
+        (select-window win)
+      (etaf-switch-to-buffer buffer))
     (let* ((window (get-buffer-window buffer t))
            (width
             (or width
