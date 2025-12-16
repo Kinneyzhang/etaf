@@ -76,7 +76,12 @@ This function is the main entry point for table layout:
 6. Calculate row heights"
   (let* ((box-model (etaf-layout-compute-box-model render-node parent-context))
          (computed-style (etaf-render-get-computed-style render-node))
-         (content-width (etaf-layout-box-content-width box-model))
+         ;; Get content width from box model, fallback to parent context
+         (box-content-width (etaf-layout-box-content-width box-model))
+         (parent-content-width (plist-get parent-context :content-width))
+         (content-width (if (and box-content-width (> box-content-width 0))
+                            box-content-width
+                          (or parent-content-width 0)))
          (content-height (etaf-layout-box-content-height box-model))
          
          ;; Table properties
@@ -260,11 +265,10 @@ For border-spacing calculation:
     (let* ((total-spacing (* border-spacing (1+ column-count)))
            (available-width (max 0 (- container-width total-spacing)))
            ;; For now, distribute equally (basic implementation)
-           ;; TODO: Implement more sophisticated width calculation
-           ;; that respects explicit widths and content-based sizing
+           ;; Ensure each column has at least 1 pixel width if there's any available width
            (equal-width (if (> column-count 0)
-                            (/ available-width column-count)
-                          0)))
+                            (max 1 (/ available-width column-count))
+                          1)))
       (make-list column-count equal-width))))
 
 ;;; ============================================================

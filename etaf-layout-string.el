@@ -41,6 +41,7 @@
 (require 'etaf-layout-interactive)
 
 ;; Forward declarations
+(declare-function etaf-render-get-display "etaf-render")
 (declare-function etaf-render-get-default-display "etaf-render")
 (declare-function etaf-flex-line-breaks "etaf-flex")
 (declare-function etaf-layout-get-box-model "etaf-layout")

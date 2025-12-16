@@ -72,31 +72,35 @@
 
 (ert-deftest etaf-layout-table-test-render-simple ()
   "Test simple table rendering."
-  (let* ((dom (etaf-etml-to-dom
-               '(table
-                 (tr (td "A") (td "B")))))
-         (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 400 :height 200)))
-         (result (etaf-layout-to-string layout-tree)))
+  (let ((result (etaf-paint-string
+                 '(table
+                   (tr (td "A") (td "B")))
+                 nil nil 400)))
     ;; Result should contain both cells
     (should (stringp result))
-    (should (> (length result) 0))))
+    (should (> (length result) 0))
+    ;; Result should contain the cell text
+    (should (string-match-p "A" result))
+    (should (string-match-p "B" result))))
 
 (ert-deftest etaf-layout-table-test-render-with-content ()
   "Test table rendering with actual content."
-  (let* ((dom (etaf-etml-to-dom
-               '(table
-                 (thead (tr (th "Name") (th "Age")))
-                 (tbody
-                  (tr (td "Alice") (td "25"))
-                  (tr (td "Bob") (td "30"))))))
-         (cssom (etaf-css-build-cssom dom))
-         (render-tree (etaf-render-build-tree dom cssom))
-         (layout-tree (etaf-layout-build-tree render-tree '(:width 400 :height 200)))
-         (result (etaf-layout-to-string layout-tree)))
+  (let ((result (etaf-paint-string
+                 '(table
+                   (thead (tr (th "Name") (th "Age")))
+                   (tbody
+                    (tr (td "Alice") (td "25"))
+                    (tr (td "Bob") (td "30"))))
+                 nil nil 400)))
+    ;; Result should contain the text
     (should (stringp result))
-    (should (> (length result) 0))))
+    (should (> (length result) 0))
+    (should (string-match-p "Name" result))
+    (should (string-match-p "Age" result))
+    (should (string-match-p "Alice" result))
+    (should (string-match-p "25" result))
+    (should (string-match-p "Bob" result))
+    (should (string-match-p "30" result))))
 
 ;;; ============================================================
 ;;; Integration with etaf-paint
