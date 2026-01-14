@@ -103,37 +103,6 @@ The pipeline follows Vue 3's architecture:
   (etaf-computed-get doubled)) ;; => 10
 ```
 
-### Table Component
-
-```elisp
-(require 'etaf-table)
-
-;; Define columns
-(setq columns
-  '((:prop "name" :label "Name" :width 150 :sortable t)
-    (:prop "age" :label "Age" :width 80 :sortable t)
-    (:prop "email" :label "Email" :width 200)
-    (:prop "status" :label "Status" :width 100
-     :formatter (lambda (row col value)
-                 (if (equal value "active") "✓ Active" "✗ Inactive")))))
-
-;; Define data
-(setq data
-  '((:id 1 :name "Alice" :age 28 :email "alice@example.com" :status "active")
-    (:id 2 :name "Bob" :age 32 :email "bob@example.com" :status "inactive")))
-
-;; Render table with features
-(etaf-paint-to-buffer "*table-demo*"
-  '(etaf-table :data data
-               :columns columns
-               :stripe t
-               :border t
-               :show-selection t
-               :show-pagination t
-               :page-size 10
-               :row-key "id"))
-```
-
 ## Documentation
 
 | Document | Description |
@@ -271,37 +240,6 @@ ETAF 支持 Vue 风格的模板指令：
   (etaf-ref-get count)      ;; => 0
   (etaf-ref-set count 5)
   (etaf-computed-get doubled)) ;; => 10
-```
-
-### 表格组件
-
-```elisp
-(require 'etaf-table)
-
-;; 定义列
-(setq columns
-  '((:prop "name" :label "姓名" :width 150 :sortable t)
-    (:prop "age" :label "年龄" :width 80 :sortable t)
-    (:prop "email" :label "邮箱" :width 200)
-    (:prop "status" :label "状态" :width 100
-     :formatter (lambda (row col value)
-                 (if (equal value "active") "✓ 活跃" "✗ 停用")))))
-
-;; 定义数据
-(setq data
-  '((:id 1 :name "张三" :age 28 :email "zhang@example.com" :status "active")
-    (:id 2 :name "李四" :age 32 :email "li@example.com" :status "inactive")))
-
-;; 渲染带功能的表格
-(etaf-paint-to-buffer "*table-demo*"
-  '(etaf-table :data data
-               :columns columns
-               :stripe t
-               :border t
-               :show-selection t
-               :show-pagination t
-               :page-size 10
-               :row-key "id"))
 ```
 
 ### Tailwind CSS 支持
